@@ -1,6 +1,6 @@
 Voici le **`README.md`** révisé, complété et restructuré en profondeur.
 
-Il intègre la structure de table des matières globale (avec le contexte applicatif/métier et la vision AGI), enrichie de toute l'architecture neuro-mimétique de l'agent **Naulthène AGI** (réservoir dopaminergique, cursus à 7 paliers, mode libre, planification à horizon 3 pas, consolidation nocturne adaptative et détecteurs génériques).
+Il intègre la structure de table des matières globale (avec le contexte applicatif/métier et la vision AGI), enrichie de toute l'architecture neuro-mimétique de l'agent **Naulthène AGI** (réservoir dopaminergique, cursus à 7 paliers, mode libre, planification multi-échelle non-linéaire, consolidation nocturne adaptative, détecteurs génériques, pression cinétique et patience adaptative).
 
 ---
 
@@ -16,28 +16,30 @@ Il intègre la structure de table des matières globale (avec le contexte applic
 1. [Vue d'Ensemble du Projet](https://www.google.com/search?q=%23vue-densemble-du-projet)
 2. [Journal des Mises à Jour (Changelog)](https://www.google.com/search?q=%23journal-des-mises-%C3%A0-jour)
 3. [Plan d'Action](https://www.google.com/search?q=%23plan-daction)
-4. [Nouveautés v14.0 — Rêves Adaptatifs & Planification Étendue à 3 Pas](https://www.google.com/search?q=%23nouveaut%C3%A9s-v140---r%C3%AAves-adaptatifs--planification-%C3%A9tendue-%C3%A0-3-pas-2026-07-22)
-5. [Nouveautés v13.0 — Décision Autonome & Mode Libre](https://www.google.com/search?q=%23nouveaut%C3%A9s-v130---d%C3%A9cision-autonome--mode-libre-2026-07-22)
-6. [Nouveautés v12.0 — Cursus à 7 Paliers & Correctif d'Épisodes](https://www.google.com/search?q=%23nouveaut%C3%A9s-v120---cursus-%C3%A0-7-paliers--correctif-d%C3%A9pisodes-2026-07-22)
-7. [Nouveautés v11.0 — Réservoir Dopaminergique V3](https://www.google.com/search?q=%23nouveaut%C3%A9s-v110---r%C3%A9servoir-dopaminergique-v3-2026-07-22)
-8. [Nouveautés v10.0-fix1 — Correctif de Stabilité JEPA & Thermostat](https://www.google.com/search?q=%23nouveaut%C3%A9s-v100-fix1---correctif-de-stabilit%C3%A9-jepa--thermostat)
-9. [Nouveautés v10.0 — Système 2 & Rollout Mental Vectorisé](https://www.google.com/search?q=%23nouveaut%C3%A9s-v100---syst%C3%A8me-2--rollout-mental-vectoris%C3%A9)
-10. [Nouveautés v9.1 — Intégration du Tampon Épisodique (Université)](https://www.google.com/search?q=%23nouveaut%C3%A9s-v91---int%C3%A9gration-du-tampon-%C3%A9pisodique-universit%C3%A9)
-11. [Nouveautés v9.0-fix1 — Correctif de la Neurogenèse Bloc par Bloc](https://www.google.com/search?q=%23nouveaut%C3%A9s-v90-fix1---correctif-de-la-neurogen%C3%A8se-bloc-par-bloc)
-12. [Nouveautés v9.0 — Cursus Académique Progressif (Primaire à Doctorat)](https://www.google.com/search?q=%23nouveaut%C3%A9s-v90---cursus-acad%C3%A9mique-progressif-primaire-%C3%A0-doctorat)
-13. [Nouveautés v8.0 — Alignement Graph-Gradient RL & Rêve Nocturne](https://www.google.com/search?q=%23nouveaut%C3%A9s-v80---alignement-graph-gradient-rl--r%C3%AAve-nocturne)
-14. [Nouveautés v7.0 — Phase 7 Initiale (Architecture Hybride Duale)](https://www.google.com/search?q=%23nouveaut%C3%A9s-v70---phase-7-initiale-architecture-hybride-duale)
-15. [Architecture Cognitico-Biologique Complète](https://www.google.com/search?q=%23architecture-cognitico-biologique-compl%C3%A8te)
-16. [Cursus Académique & Paliers Comportementaux](https://www.google.com/search?q=%23cursus-acad%C3%A9mique--paliers-comportementaux)
-17. [Moteur Émotionnel & Réservoir Dopaminergique](https://www.google.com/search?q=%23moteur-%C3%A9motionnel--r%C3%A9servoir-dopaminergique)
-18. [Algorithme de Rêve Nocturne Adaptatif](https://www.google.com/search?q=%23algorithme-de-r%C3%AAve-nocturne-adaptatif)
-19. [Détecteurs Génériques d'Intention & Quêtes Auto](https://www.google.com/search?q=%23d%C3%A9tecteurs-g%C3%A9n%C3%A9riques-dintention--qu%C3%AAtes-auto)
-20. [Stack Technique](https://www.google.com/search?q=%23stack-technique)
-21. [Modèle de Données & Métriques W&B](https://www.google.com/search?q=%23mod%C3%A8le-de-donn%C3%A9es--m%C3%A9triques-wb)
-22. [Démarrage Rapide](https://www.google.com/search?q=%23d%C3%A9marrage-rapide)
-23. [Mise en Production & Monitoring](https://www.google.com/search?q=%23mise-en-production--monitoring)
-24. [Configuration](https://www.google.com/search?q=%23configuration)
-25. [Troubleshooting & Guide de Dépannage](https://www.google.com/search?q=%23troubleshooting--guide-de-d%C3%A9pannage)
+4. [Nouveautés v15.0 — Planification Non-Linéaire, Pression Cinétique & Patience Adaptative](#nouveautés-v150--planification-non-linéaire-pression-cinétique--patience-adaptative-2026-07-22)
+5. [Nouveautés v14.0 — Rêves Adaptatifs & Planification Étendue à 3 Pas](https://www.google.com/search?q=%23nouveaut%C3%A9s-v140---r%C3%AAves-adaptatifs--planification-%C3%A9tendue-%C3%A0-3-pas-2026-07-22)
+6. [Nouveautés v13.0 — Décision Autonome & Mode Libre](https://www.google.com/search?q=%23nouveaut%C3%A9s-v130---d%C3%A9cision-autonome--mode-libre-2026-07-22)
+7. [Nouveautés v12.0 — Cursus à 7 Paliers & Correctif d'Épisodes](https://www.google.com/search?q=%23nouveaut%C3%A9s-v120---cursus-%C3%A0-7-paliers--correctif-d%C3%A9pisodes-2026-07-22)
+8. [Nouveautés v11.0 — Réservoir Dopaminergique V3](https://www.google.com/search?q=%23nouveaut%C3%A9s-v110---r%C3%A9servoir-dopaminergique-v3-2026-07-22)
+9. [Nouveautés v10.0-fix1 — Correctif de Stabilité JEPA & Thermostat](https://www.google.com/search?q=%23nouveaut%C3%A9s-v100-fix1---correctif-de-stabilit%C3%A9-jepa--thermostat)
+10. [Nouveautés v10.0 — Système 2 & Rollout Mental Vectorisé](https://www.google.com/search?q=%23nouveaut%C3%A9s-v100---syst%C3%A8me-2--rollout-mental-vectoris%C3%A9)
+11. [Nouveautés v9.1 — Intégration du Tampon Épisodique (Université)](https://www.google.com/search?q=%23nouveaut%C3%A9s-v91---int%C3%A9gration-du-tampon-%C3%A9pisodique-universit%C3%A9)
+12. [Nouveautés v9.0-fix1 — Correctif de la Neurogenèse Bloc par Bloc](https://www.google.com/search?q=%23nouveaut%C3%A9s-v90-fix1---correctif-de-la-neurogen%C3%A8se-bloc-par-bloc)
+13. [Nouveautés v9.0 — Cursus Académique Progressif (Primaire à Doctorat)](https://www.google.com/search?q=%23nouveaut%C3%A9s-v90---cursus-acad%C3%A9mique-progressif-primaire-%C3%A0-doctorat)
+14. [Nouveautés v8.0 — Alignement Graph-Gradient RL & Rêve Nocturne](https://www.google.com/search?q=%23nouveaut%C3%A9s-v80---alignement-graph-gradient-rl--r%C3%AAve-nocturne)
+15. [Nouveautés v7.0 — Phase 7 Initiale (Architecture Hybride Duale)](https://www.google.com/search?q=%23nouveaut%C3%A9s-v70---phase-7-initiale-architecture-hybride-duale)
+16. [Architecture Cognitico-Biologique Complète](https://www.google.com/search?q=%23architecture-cognitico-biologique-compl%C3%A8te)
+17. [Cursus Académique & Paliers Comportementaux](https://www.google.com/search?q=%23cursus-acad%C3%A9mique--paliers-comportementaux)
+18. [Moteur Émotionnel & Réservoir Dopaminergique](https://www.google.com/search?q=%23moteur-%C3%A9motionnel--r%C3%A9servoir-dopaminergique)
+19. [Algorithme de Rêve Nocturne Adaptatif](https://www.google.com/search?q=%23algorithme-de-r%C3%AAve-nocturne-adaptatif)
+20. [Détecteurs Génériques d'Intention & Quêtes Auto](https://www.google.com/search?q=%23d%C3%A9tecteurs-g%C3%A9n%C3%A9riques-dintention--qu%C3%AAtes-auto)
+21. [Pression Cinétique & Patience Adaptative](#pression-cinétique--patience-adaptative)
+22. [Stack Technique](https://www.google.com/search?q=%23stack-technique)
+23. [Modèle de Données & Métriques W&B](https://www.google.com/search?q=%23mod%C3%A8le-de-donn%C3%A9es--m%C3%A9triques-wb)
+24. [Démarrage Rapide](https://www.google.com/search?q=%23d%C3%A9marrage-rapide)
+25. [Mise en Production & Monitoring](https://www.google.com/search?q=%23mise-en-production--monitoring)
+26. [Configuration](https://www.google.com/search?q=%23configuration)
+27. [Troubleshooting & Guide de Dépannage](https://www.google.com/search?q=%23troubleshooting--guide-de-d%C3%A9pannage)
 
 ---
 
@@ -58,6 +60,12 @@ L'agent évolue à travers un cursus scolaire modélisé sous forme d'environnem
 ## 📜 Journal des Mises à Jour
 
 Pour un historique complet commit par commit, consultez [CHANGELOG.md](https://www.google.com/search?q=CHANGELOG.md).
+
+### Nouveautés v15.0 — Planification Non-Linéaire, Pression Cinétique & Patience Adaptative (2026-07-22)
+
+* **Planification Multi-Échelle (Sauts Temporels)** : `simuler_futur_et_planifier` abandonne la chaîne stricte $t+1 \to t+2 \to t+3$ au profit d'horizons à pas exponentiel ($t+1, t+3, t+7$). Le premier horizon branche sur les 7 actions réelles ; les horizons suivants comblent l'écart de ticks en suivant le réflexe glouton de la politique, puis sont évalués à leur point d'arrivée — complexité toujours linéaire, jamais d'explosion combinatoire. La valeur retenue est la somme actualisée ($\gamma^{\text{horizon}}$) des valeurs évaluées à *chaque* horizon.
+* **`ThermostatCinetique` (Pression Cinétique)** : détecteur générique, agnostique de la carte, qui pénalise l'immobilité stricte et le piétinement (aller-retour entre positions déjà visitées récemment). L'immobilité devient sous-optimale par construction du signal de récompense plutôt que par une règle écrite en dur.
+* **`ModuleAcceptationAdaptative` (Potentiomètre d'Acceptation)** : la patience maximale tolérée par épisode (avant abandon volontaire/troncature) est recalculée chaque jour à partir du taux de succès récent et de la vitesse des succès passés — remplace un plafond de ticks fixe. Un abandon par patience applique une friction dopaminergique douce dédiée, jamais un choc négatif : l'agent accepte lucidement l'échec au lieu de le subir comme un traumatisme.
 
 ### Nouveautés v14.0 — Rêves Adaptatifs & Planification Étendue à 3 Pas (2026-07-22)
 
@@ -109,7 +117,8 @@ L'agent **Naulthène** repose sur deux systèmes interconnectés, orchestrés pa
             v                                               v
 +-----------+-----------+                       +-----------+-----------+
 |   SYSTÈME 1 (Instinct)|                       |   SYSTÈME 2 (Raison)  |
-|  Policy Network (RL)  |                       | Rollout Mental 3 Pas  |
+|  Policy Network (RL)  |                       | Rollout Multi-Échelle |
+|                       |                       |   (Sauts t+1,t+3,t+7) |
 +-----------+-----------+                       +-----------+-----------+
             |                                               |
             +-----------------------+-----------------------+
@@ -137,13 +146,13 @@ L'agent **Naulthène** repose sur deux systèmes interconnectés, orchestrés pa
 
 Un réseau d'Acteur-Critique (PPO/A2C) qui projette l'état latent du JEPA directement vers la distribution de probabilité des 7 actions fondamentales (`Move Forward`, `Turn Left`, `Turn Right`, `Pick Up`, `Drop`, `Toggle`, `Done`).
 
-### 2. Système 2 (Raisonnement / Rollout Mental $N=3$)
+### 2. Système 2 (Raisonnement / Rollout Multi-Échelle Non-Linéaire, depuis v15.0)
 
-À chaque tick, l'agent simule les conséquences futures de ses choix :
+Plutôt qu'une chaîne stricte pas-à-pas $t+1 \to t+2 \to t+3$, l'agent simule les conséquences futures de ses choix par **sauts temporels exponentiels** ($t+1, t+3, t+7$) :
 
-* **Pas 1** : Branching sur l'ensemble des 7 actions réelles.
-* **Pas 2 & 3** : Déroulement automatique en suivant le propre réflexe du réseau (sans ré-instancier $7^3$ branches), maintenant une complexité algorithmique linéaire $O(7 \times N)$.
-* **Évaluation** : La valeur du futur imaginé est une somme actualisée des prédictions de récompenses du JEPA.
+* **Horizon $t+1$** : Branching sur l'ensemble des 7 actions réelles — c'est la décision évaluée maintenant.
+* **Horizons suivants ($t+3$, $t+7$)** : Le rollout comble l'écart de ticks avec l'horizon précédent en suivant le propre réflexe du réseau (argmax de la tête motrice, sans ré-instancier de nouvelles branches à chaque niveau), maintenant une complexité algorithmique linéaire $O(7 \times \sum \text{écarts})$ — jamais l'explosion combinatoire $7^N$ d'un rollout pas-à-pas branché à chaque étage.
+* **Évaluation** : La valeur du futur imaginé est une somme actualisée ($\gamma^{\text{horizon}}$) des prédictions de récompenses du JEPA évaluées à *chaque* horizon — un chemin qui traverse un bon état à $t+3$ compte, même si $t+7$ reste incertain. Cela donne au Système 2 une vision de tendance à moyen terme (utile sur les longs couloirs de MultiRoom/Doctorat) sans calculer chaque micro-état intermédiaire.
 
 ---
 
@@ -202,6 +211,31 @@ Afin de dépasser la logique de règles écrites à la main, l'agent intègre de
 
 ---
 
+## 🏃 Pression Cinétique & Patience Adaptative
+
+Deux mécaniques génériques introduites en v15.0, actives sur tous les niveaux du cursus, qui traduisent une "envie de bouger" et une gestion de l'abandon contrôlé en signaux de RL exploitables.
+
+### 1. `ThermostatCinetique` — Pression Cinétique ("Envie de Bouger")
+
+Coûte de l'énergie synaptique à l'agent qui stagne :
+
+* **Immobilité stricte** : rester sur la même case entre deux ticks coûte $2 \times$ la pénalité de base.
+* **Piétinement** : revenir sur une case déjà visitée dans la fenêtre récente (6 derniers ticks) coûte une pénalité croissant géométriquement avec le nombre d'occurrences ($1.5^{\text{occurrences}}$).
+
+L'immobilité devient ainsi sous-optimale par construction du signal de récompense, sans qu'aucune règle ne code un comportement de mur ou de couloir spécifique à une carte.
+
+### 2. `ModuleAcceptationAdaptative` — Potentiomètre d'Acceptation (Patience Adaptative)
+
+Remplace un plafond de ticks par épisode fixe par un seuil de patience $\tau_{\text{patience}}$ recalculé chaque jour :
+
+$$\tau_{\text{patience}} = \text{patience}_{\min} + \big(0.7 \cdot S_{\text{hist}} + 0.3 \cdot V_{\text{hist}}\big) \times (\text{patience}_{\max} - \text{patience}_{\min})$$
+
+Où $S_{\text{hist}}$ est le taux de succès sur les 20 derniers épisodes et $V_{\text{hist}}$ un facteur dérivé de la vitesse (en ticks) des succès passés — plus l'agent réussissait vite par le passé, plus il tolère d'insister sur l'épisode courant.
+
+Quand le compteur de ticks de l'épisode dépasse ce seuil sans conclusion naturelle de l'environnement, l'agent déclenche une **troncature volontaire (abandon lucide)** : il accepte l'échec courant pour préserver ses ressources cognitives, avec une **friction dopaminergique douce** dédiée (`TAUX_FRICTION_DOUCE_ABANDON`) plutôt qu'un choc négatif traumatique.
+
+---
+
 ## 💻 Stack Technique
 
 * **Langage** : Python 3.12
@@ -230,10 +264,19 @@ Chaque journée d'entraînement émet les télémétries suivantes vers le table
   "Pourcentage_Reve": 0.0221,
   "Nb_Reves": 9,
   "Portes_Franchies_Jour": 1,
-  "Recompense_Moyenne": -0.006
+  "Recompense_Moyenne": -0.006,
+  "Patience_Max_Episode": 187,
+  "Abandons_Patience_Jour": 2,
+  "Penalite_Stagnation": -0.842
 }
 
 ```
+
+**Effets attendus des métriques v15.0 :**
+
+* **`Patience_Max_Episode`** : n'est plus plate à une valeur fixe. Oscille dynamiquement — haute en phase d'apprentissage actif, plus basse sur un environnement non résolu pour éviter le piège des boucles infinies.
+* **`Penalite_Stagnation`** : sa valeur absolue diminue à mesure que l'agent apprend à éviter les comportements de blocage face à un mur ou les allers-retours répétés.
+* **`Erreur_JEPA`** : la planification multi-échelle ($t+1, t+3, t+7$) tend à stabiliser la représentation spatiale globale du World Model plutôt que de sur-optimiser les micro-variations de surface.
 
 ---
 
@@ -268,8 +311,9 @@ DOPAMINE_MAX = 10.0
 FRICTION_SPLEEN = 0.001
 RESSORT_NOCTURNE = 0.20
 
-# Planification (Système 2)
-HORIZON_PLANIFICATION = 3
+# Planification (Système 2, sauts non-linéaires depuis v15.0)
+HORIZONS_PLANIFICATION = (1, 3, 7)
+GAMMA_PLANIFICATION = 0.9
 FORCE_PLANIF_GUIDE = 0.50
 FORCE_PLANIF_LIBRE = 0.85
 
@@ -277,6 +321,15 @@ FORCE_PLANIF_LIBRE = 0.85
 ENTROPIE_GUIDE = 0.02
 ENTROPIE_LIBRE = 0.06
 SEUIL_MAITRISE_PALIER = 0.80
+
+# Pression Cinétique (v15.0)
+PENALITE_STAGNATION_BASE = 0.015
+
+# Potentiomètre d'Acceptation (v15.0)
+PATIENCE_MIN = 40
+PATIENCE_MAX = 350
+FENETRE_HISTORIQUE_PATIENCE = 20
+TAUX_FRICTION_DOUCE_ABANDON = 0.05
 
 ```
 

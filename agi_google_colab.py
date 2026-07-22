@@ -1,4 +1,4 @@
-#Version actuelle 14.
+#Version actuelle 15.
 
 import torch
 import torch.nn as nn
@@ -131,46 +131,54 @@ class AGI_Naulthene(nn.Module):
         return self.generateur_attente(torch.cat([actions_onehot, pensee], dim=-1))
 
     @torch.no_grad()
-    def simuler_futur_et_planifier(self, pensee, memoire_actuelle, horizon=1, gamma_planif=0.9):
-        """Rollout imaginé sur `horizon` pas virtuels (1 à 3, cf. demande utilisateur).
+    def simuler_futur_et_planifier(self, pensee, memoire_actuelle, horizons=(1, 3, 7), gamma_planif=0.9):
+        """Rollout imaginé NON-LINÉAIRE, à sauts temporels exponentiels (ex: t+1, t+3, t+7)
+        plutôt qu'une chaîne pas-à-pas stricte t+1 → t+2 → t+3.
 
-        Le PREMIER pas branche sur les 7 actions réelles (c'est la décision qu'on évalue
-        maintenant). Les pas SUIVANTS suivent le réflexe du réseau (argmax de la tête
-        motrice) plutôt que de re-brancher sur 7 nouvelles actions à chaque niveau :
-        sans cette restriction, le nombre de branches exploserait en 7^horizon au lieu
-        de rester à 7 quel que soit l'horizon. La valeur finale est une somme actualisée
-        (comme un retour à N pas classique en RL) des valeurs imaginées à chaque étape,
-        pas seulement la valeur du dernier pas — un chemin qui traverse un bon état
-        intermédiaire compte, même si l'état final est incertain."""
+        Le PREMIER horizon (toujours le plus petit, ex: 1) branche sur les 7 actions
+        réelles — c'est la décision qu'on évalue maintenant. Chaque horizon SUIVANT ne
+        rebranche jamais sur 7 nouvelles actions : il poursuit le déroulement en suivant
+        le réflexe du réseau (argmax de la tête motrice) pour COMBLER l'écart de ticks
+        avec l'horizon précédent, puis évalue la valeur à ce point d'arrivée. Cela
+        maintient la même complexité linéaire O(7 × somme(écarts)) que l'ancien rollout
+        pas-à-pas — jamais d'explosion combinatoire en 7^N — tout en donnant au Système 2
+        une vision de tendance à moyen terme (utile sur les longs couloirs de MultiRoom /
+        Doctorat) sans calculer chaque micro-état intermédiaire un par un pour la
+        décision. La valeur finale est une somme actualisée par gamma_planif**horizon des
+        valeurs évaluées à CHAQUE horizon (pas seulement le dernier) : un chemin qui
+        traverse un bon état à t+3 compte, même si t+7 reste incertain."""
         A = self.num_actions
         pensee_branche = pensee.expand(A, -1)
         mem_branche = memoire_actuelle.expand(A, -1)
 
         valeur_cumulee = torch.zeros(1, A, device=pensee.device)
-        remise = 1.0
+        horizons_tries = sorted(horizons)
+        pas_precedent = 0
 
-        for pas in range(horizon):
-            if pas == 0:
-                actions_pas = self.actions_eye  # les 7 choix réels, un par branche
-            else:
-                choix = torch.argmax(self.tete_motrice(pensee_branche), dim=-1)
-                actions_pas = self.actions_eye[choix]  # continuation gourmande, 1 par branche
+        for i, horizon in enumerate(horizons_tries):
+            nombre_sauts = horizon - pas_precedent
+            for saut in range(nombre_sauts):
+                if i == 0 and saut == 0:
+                    actions_pas = self.actions_eye  # les 7 choix réels, un par branche
+                else:
+                    choix = torch.argmax(self.tete_motrice(pensee_branche), dim=-1)
+                    actions_pas = self.actions_eye[choix]  # continuation gourmande, 1 par branche
 
-            futur_bus = F.relu(self._predire_bus(pensee_branche, actions_pas))
-            futur_mem = F.relu(self.hippocampe(torch.cat([futur_bus, mem_branche], dim=-1)))
-            futur_pensee = F.relu(self.analyseur(futur_mem))
-            valeur_pas = self.cortex_prefrontal(futur_pensee).view(1, A)
+                futur_bus = F.relu(self._predire_bus(pensee_branche, actions_pas))
+                futur_mem = F.relu(self.hippocampe(torch.cat([futur_bus, mem_branche], dim=-1)))
+                futur_pensee = F.relu(self.analyseur(futur_mem))
+                pensee_branche, mem_branche = futur_pensee, futur_mem
 
-            valeur_cumulee = valeur_cumulee + remise * valeur_pas
-            remise *= gamma_planif
-            pensee_branche, mem_branche = futur_pensee, futur_mem
+            valeur_horizon = self.cortex_prefrontal(pensee_branche).view(1, A)
+            valeur_cumulee = valeur_cumulee + (gamma_planif ** horizon) * valeur_horizon
+            pas_precedent = horizon
 
         if valeur_cumulee.std() > 1e-6:
             valeur_cumulee = (valeur_cumulee - valeur_cumulee.mean()) / (valeur_cumulee.std() + 1e-8)
         return valeur_cumulee
 
     def penser(self, obs_visuelle, memoire_precedente, contexte_episodique,
-              force_planification=0.5, horizon_planification=1, gamma_planif=0.9):
+              force_planification=0.5, horizons_planification=(1, 3, 7), gamma_planif=0.9):
         bus_latent, memoire_actuelle, pensee = self._tronc_cerebral(
             obs_visuelle, memoire_precedente.detach()
         )
@@ -180,7 +188,7 @@ class AGI_Naulthene(nn.Module):
         logits_instinct = self.tete_motrice(pensee_detachee)
         valeurs_simulees = self.simuler_futur_et_planifier(
             pensee_detachee, memoire_actuelle.detach(),
-            horizon=horizon_planification, gamma_planif=gamma_planif
+            horizons=horizons_planification, gamma_planif=gamma_planif
         )
 
         logits_finaux = logits_instinct + (valeurs_simulees * force_planification)
@@ -556,6 +564,103 @@ class DetecteurProgresPersonnel:
             return 0.0, 0.0
 
 
+# --- 3c. THERMOSTAT CINÉTIQUE & PATIENCE ADAPTATIVE (génériques, actifs partout) ---
+class ThermostatCinetique:
+    """
+    Pression cinétique ("envie de bouger") : générique comme DetecteurFranchissementPortes
+    et DetecteurProgresPersonnel, sans connaissance de la carte. Mesure uniquement la
+    trajectoire récente de l'agent (agent_pos) et pénalise l'immobilité stricte et le
+    piétinement (aller-retour entre les mêmes cases) — l'immobilité devient sous-optimale
+    par construction du signal de récompense plutôt que par une règle écrite en dur pour
+    un niveau donné.
+    """
+    def __init__(self, taille_memoire_pos=6, penalite_base=0.01):
+        self.taille_memoire_pos = taille_memoire_pos
+        self.penalite_base = penalite_base
+        self.actif = _MINIGRID_INTERNALS_OK
+        self._avertissement_donne = False
+        self.reinitialiser_episode(None)
+
+    def _avertir(self, exception):
+        if not self._avertissement_donne:
+            print(f"⚠️  Thermostat cinétique désactivé (API minigrid incompatible : {exception})")
+            self._avertissement_donne = True
+        self.actif = False
+
+    def reinitialiser_episode(self, env):
+        self.historique_positions = []
+
+    def evaluer_tick(self, env):
+        """Retourne une pénalité (valeur <= 0) à ajouter à la récompense interne."""
+        if not self.actif:
+            return 0.0
+        try:
+            pos_actuelle = tuple(env.unwrapped.agent_pos)
+            penalite = 0.0
+
+            if self.historique_positions:
+                if pos_actuelle == self.historique_positions[-1]:
+                    penalite += self.penalite_base * 2.0
+                elif pos_actuelle in self.historique_positions:
+                    occurrences = self.historique_positions.count(pos_actuelle)
+                    penalite += self.penalite_base * (1.5 ** occurrences)
+
+            self.historique_positions.append(pos_actuelle)
+            if len(self.historique_positions) > self.taille_memoire_pos:
+                self.historique_positions.pop(0)
+
+            return -penalite
+        except Exception as e:
+            self._avertir(e)
+            return 0.0
+
+
+class ModuleAcceptationAdaptative:
+    """
+    Potentiomètre d'acceptation (patience adaptative) : au lieu d'un plafond de ticks par
+    épisode fixe et écrit en dur, la patience maximale tolérée est recalculée chaque jour
+    à partir du taux de succès récent et de la vitesse (en ticks) des succès passés. Un
+    agent qui a l'habitude de réussir vite garde une patience courte (il coupe court plus
+    tôt un épisode qui dérape) ; un agent encore en phase d'exploration/apprentissage
+    conserve une patience plus longue. Quand le compteur de ticks de l'épisode courant
+    dépasse ce seuil sans que l'environnement n'ait lui-même conclu, l'agent DÉCLENCHE
+    une troncature volontaire (abandon lucide) plutôt que d'épuiser ses ressources
+    cognitives dans un épisode déjà mal engagé.
+    """
+    def __init__(self, patience_min=40, patience_max=350, fenetre_historique=20):
+        self.patience_min = patience_min
+        self.patience_max = patience_max
+        self.fenetre_historique = fenetre_historique
+        self.historique_succes = []
+        self.historique_vitesses = []
+
+    def enregistrer_episode(self, reussi: bool, nombre_ticks: int):
+        self.historique_succes.append(1.0 if reussi else 0.0)
+        if reussi:
+            self.historique_vitesses.append(nombre_ticks)
+
+        if len(self.historique_succes) > self.fenetre_historique:
+            self.historique_succes.pop(0)
+        if len(self.historique_vitesses) > self.fenetre_historique:
+            self.historique_vitesses.pop(0)
+
+    def obtenir_seuil_patience(self) -> int:
+        if not self.historique_succes:
+            return int((self.patience_min + self.patience_max) / 2)
+
+        taux_succes = sum(self.historique_succes) / len(self.historique_succes)
+
+        if self.historique_vitesses:
+            vitesse_moyenne = sum(self.historique_vitesses) / len(self.historique_vitesses)
+            facteur_vitesse = max(0.2, 1.0 - (vitesse_moyenne / self.patience_max))
+        else:
+            facteur_vitesse = 0.5
+
+        potentiometre = 0.7 * taux_succes + 0.3 * facteur_vitesse
+        patience_calculee = self.patience_min + potentiometre * (self.patience_max - self.patience_min)
+        return int(patience_calculee)
+
+
 def etat_mental_dopamine(teneur, dmin, dneutre, dmax):
     pct = 100.0 * (teneur - dmin) / (dmax - dmin)
     if pct < 5:
@@ -581,7 +686,7 @@ def etat_empreinte(empreinte):
 
 
 # --- 4. EXÉCUTION & CURSUS ---
-wandb.init(project="Naulthene-AGI", name="Run_14_Reves_Adaptatifs_Planification_Etendue")
+wandb.init(project="Naulthene-AGI", name="Run_15_Planification_NonLineaire_Patience_Adaptative")
 
 DIM_VISUELLE = 147
 DIM_BUS_MAX = 96
@@ -616,12 +721,27 @@ FORCE_PLANIFICATION_LIBRE = 0.85
 COEFF_ENTROPIE_GUIDE = 0.02
 COEFF_ENTROPIE_LIBRE = 0.06
 
-# --- HORIZON DE PLANIFICATION (nouveau) ---
-# 1 pas = ancien comportement. 3 pas = ce qui est demandé : le Système 2 imagine une
-# petite séquence, pas juste le prochain instant — utile pour les couloirs longs de
-# MultiRoom (Doctorat) où l'objectif n'est jamais visible à un seul pas de distance.
-HORIZON_PLANIFICATION = 3
+# --- HORIZONS DE PLANIFICATION MULTI-ÉCHELLE (v15.0) ---
+# Sauts exponentiels (t+1, t+3, t+7) plutôt qu'une chaîne pas-à-pas t+1→t+2→t+3 : le
+# Système 2 évalue l'impact immédiat ET la tendance à moyen horizon, utile pour les
+# couloirs longs de MultiRoom (Doctorat) où l'objectif n'est jamais visible à un seul
+# pas de distance, sans calculer chaque micro-état intermédiaire un par un.
+HORIZONS_PLANIFICATION = (1, 3, 7)
 GAMMA_PLANIFICATION = 0.9
+
+# --- PRESSION CINÉTIQUE (thermostat de stagnation, v15.0) ---
+PENALITE_STAGNATION_BASE = 0.015
+
+# --- POTENTIOMÈTRE D'ACCEPTATION (patience adaptative, v15.0) ---
+# Remplace le plafond de ticks par épisode implicite (borné seulement par la fin de
+# journée) par un seuil de troncature volontaire recalculé chaque jour à partir de
+# l'historique de succès/vitesse — voir ModuleAcceptationAdaptative.
+PATIENCE_MIN = 40
+PATIENCE_MAX = 350
+FENETRE_HISTORIQUE_PATIENCE = 20
+TAUX_FRICTION_DOUCE_ABANDON = 0.05  # friction dopaminergique appliquée sur abandon lucide,
+                                     # plus douce qu'un choc négatif : l'agent accepte
+                                     # l'échec, il ne le subit pas comme un traumatisme
 
 # --- RÊVE À POURCENTAGE ADAPTATIF (remplace le batch_size=64 fixe) ---
 # Principe : pas de vrai plafond dur imposé de l'extérieur. Le plafond ÉMERGE de la
@@ -663,6 +783,11 @@ detecteur = None            # spécifique DoorKey, créé à la volée
 palier_cible = 1
 detecteur_portes = DetecteurFranchissementPortes()   # générique, actif partout
 detecteur_progres = DetecteurProgresPersonnel()       # générique, inactif sur DoorKey
+thermostat_cinetique = ThermostatCinetique(penalite_base=PENALITE_STAGNATION_BASE)  # générique, actif partout
+module_acceptation = ModuleAcceptationAdaptative(
+    patience_min=PATIENCE_MIN, patience_max=PATIENCE_MAX,
+    fenetre_historique=FENETRE_HISTORIQUE_PATIENCE,
+)
 
 for jour in range(1, jours_totaux + 1):
     doorkey_actif = est_doorkey(env_id)
@@ -678,6 +803,10 @@ for jour in range(1, jours_totaux + 1):
     force_planification_jour = FORCE_PLANIFICATION_LIBRE if mode_libre else FORCE_PLANIFICATION_GUIDE
     coeff_entropie_jour = COEFF_ENTROPIE_LIBRE if mode_libre else COEFF_ENTROPIE_GUIDE
 
+    patience_jour = module_acceptation.obtenir_seuil_patience()
+    ticks_episode_courant = 0
+    abandons_patience_jour = 0
+
     obs, info = env.reset()
     etat_courant = encoder(obs)
     memoire_tampon = torch.zeros(1, agent.dim_bus, device=DEVICE)
@@ -687,6 +816,7 @@ for jour in range(1, jours_totaux + 1):
     detecteur_portes.reinitialiser_episode(env)
     if not doorkey_actif:
         detecteur_progres.reinitialiser_episode(env)
+    thermostat_cinetique.reinitialiser_episode(env)
 
     memoire_moyen_terme = []
     jepa_losses, log_probs_journee, entropies_journee = [], [], []
@@ -699,6 +829,7 @@ for jour in range(1, jours_totaux + 1):
     guidage_but_journee = 0.0
     portes_franchies_jour = 0
     progres_personnel_jour = 0
+    penalite_stagnation_jour = 0.0
     jours_depuis_mutation += 1
     fin_episode = False
 
@@ -706,6 +837,7 @@ for jour in range(1, jours_totaux + 1):
 
     for tick in range(ticks_par_jour):
         memoire_avant = memoire_tampon
+        ticks_episode_courant += 1
 
         if vecteurs_episodiques:
             contexte = torch.stack(vecteurs_episodiques).mean(dim=0)
@@ -715,7 +847,7 @@ for jour in range(1, jours_totaux + 1):
         logits_action, valeur_estimee, pensee_enrichie, memoire_tampon, bus_latent = agent.penser(
             etat_courant, memoire_avant, contexte,
             force_planification=force_planification_jour,
-            horizon_planification=HORIZON_PLANIFICATION,
+            horizons_planification=HORIZONS_PLANIFICATION,
             gamma_planif=GAMMA_PLANIFICATION,
         )
 
@@ -735,6 +867,19 @@ for jour in range(1, jours_totaux + 1):
         etat_suivant = encoder(obs_suivante)
         fin_episode = bool(termine or tronque)
         mur_touche = torch.equal(etat_courant, etat_suivant)
+
+        # --- Potentiomètre d'acceptation : abandon lucide si la patience du jour est
+        # dépassée sans conclusion naturelle de l'environnement (voir Mécanique v15.0) ---
+        abandon_par_patience = False
+        if not fin_episode and ticks_episode_courant >= patience_jour:
+            fin_episode = True
+            tronque = True
+            abandon_par_patience = True
+            abandons_patience_jour += 1
+
+        # --- Pression cinétique (générique, tous niveaux) ---
+        penalite_stagnation = thermostat_cinetique.evaluer_tick(env)
+        penalite_stagnation_jour += penalite_stagnation
 
         # --- Jalons DoorKey (spécifique) ---
         palier_ce_tick, micro_recompense, poids_palier, recompense_continue = 0, 0.0, 0.0, 0.0
@@ -768,7 +913,8 @@ for jour in range(1, jours_totaux + 1):
         dopamine_curiosite = dopamine_normalisee * min(valeur_erreur, PLAFOND_ERREUR_DOPAMINE)
 
         recompense_interne = (float(recompense_env) + dopamine_curiosite + micro_recompense
-                             + micro_recompense_porte + micro_recompense_progres)
+                             + micro_recompense_porte + micro_recompense_progres
+                             + penalite_stagnation)
         if not mode_libre:
             recompense_interne += recompense_continue
         if mur_touche:
@@ -779,6 +925,12 @@ for jour in range(1, jours_totaux + 1):
             micro_boost_ancrage = 1.0 + (BOOST_ANCRAGE_MAX - 1.0) * poids_evenement
             if recompense_env > 0:
                 victoire_aujourdhui = True
+        elif abandon_par_patience:
+            # Abandon lucide : friction douce dédiée, jamais un choc négatif — l'agent
+            # accepte l'échec pour préserver ses ressources cognitives, il ne le subit
+            # pas comme un traumatisme (voir ModuleAcceptationAdaptative).
+            TENEUR_DOPAMINE += (DOPAMINE_MIN - TENEUR_DOPAMINE) * TAUX_FRICTION_DOUCE_ABANDON
+            micro_boost_ancrage = 1.0
         else:
             TENEUR_DOPAMINE += (DOPAMINE_MIN - TENEUR_DOPAMINE) * TAUX_FRICTION
             micro_boost_ancrage = 1.0
@@ -801,16 +953,19 @@ for jour in range(1, jours_totaux + 1):
             episodes_jour += 1
             if doorkey_actif and detecteur.meilleur_palier_episode >= palier_cible:
                 succes_palier_cible_jour += 1
+            module_acceptation.enregistrer_episode(reussi=bool(termine), nombre_ticks=ticks_episode_courant)
 
             obs, info = env.reset()
             etat_courant = encoder(obs)
             memoire_tampon = torch.zeros(1, agent.dim_bus, device=DEVICE)
             vecteurs_episodiques.clear()
+            ticks_episode_courant = 0
             if doorkey_actif:
                 detecteur.reinitialiser_episode(env)
             detecteur_portes.reinitialiser_episode(env)
             if not doorkey_actif:
                 detecteur_progres.reinitialiser_episode(env)
+            thermostat_cinetique.reinitialiser_episode(env)
         else:
             etat_courant = etat_suivant
 
@@ -818,6 +973,7 @@ for jour in range(1, jours_totaux + 1):
         episodes_jour += 1
         if doorkey_actif and detecteur.meilleur_palier_episode >= palier_cible:
             succes_palier_cible_jour += 1
+        module_acceptation.enregistrer_episode(reussi=False, nombre_ticks=ticks_episode_courant)
 
     taux_maitrise = None
     if doorkey_actif and detecteur.actif and episodes_jour > 0:
@@ -937,6 +1093,8 @@ for jour in range(1, jours_totaux + 1):
         print(f"  ├─ Quête Auto     : 🧭 {progres_personnel_jour} nouveaux records de proximité au But")
     print(f"  ├─ Consolidations : 💤 {nb_reves} souvenirs rejoués ({pourcentage_reve*100:.3f}% de la journée, "
           f"perte rêves: {perte_reves:.4f})")
+    print(f"  ├─ Potentiomètre  : ⏳ Patience du jour: {patience_jour} ticks/épisode "
+          f"({abandons_patience_jour} abandon(s) lucide(s) déclenché(s))")
     print(f"  └─ Erreur JEPA moy: {erreur_moyenne:.4f} | Réc. moyenne: {rec_moy:.3f} | "
           f"Thermostat: {etat_thermostat}")
 
@@ -958,6 +1116,9 @@ for jour in range(1, jours_totaux + 1):
         "Episodes_Jour": episodes_jour,
         "Portes_Franchies_Jour": portes_franchies_jour,
         "Progres_Personnel_Jour": progres_personnel_jour,
+        "Patience_Max_Episode": patience_jour,
+        "Abandons_Patience_Jour": abandons_patience_jour,
+        "Penalite_Stagnation": penalite_stagnation_jour,
     }
     if doorkey_actif and detecteur.actif:
         log_wandb["Palier_Cible"] = palier_cible

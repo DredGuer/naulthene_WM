@@ -4,13 +4,35 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](readme
 
 ---
 
+## [15.0] - 2026-07-22
+
+### Planification Non-Linéaire, Pression Cinétique & Patience Adaptative
+
+| Type | Details |
+|------|---------|
+| **Commit** | N/A — en attente du commit de cette version |
+| **Catégorie** | feat |
+| **Impact** | Fonctionnel |
+
+**Système 2 étendu à un rollout multi-échelle à sauts temporels, ajout d'un coût de stagnation générique et d'un seuil de patience adaptatif remplaçant le plafond de ticks fixe.**
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `agi_google_colab.py` | `simuler_futur_et_planifier` : remplacement du rollout pas-à-pas ($t+1 \to t+2 \to t+3$) par un rollout à sauts exponentiels sur des horizons `(1, 3, 7)` — le premier horizon branche sur les 7 actions réelles, les suivants comblent l'écart en suivant le réflexe glouton de la politique, évalués à chaque point d'arrivée et sommés avec actualisation $\gamma^{\text{horizon}}$ |
+| `agi_google_colab.py` | `penser()` : paramètre `horizon_planification` (entier) remplacé par `horizons_planification` (tuple) ; `HORIZONS_PLANIFICATION = (1, 3, 7)` dans la config d'exécution |
+| `agi_google_colab.py` | Ajout de `ThermostatCinetique` : détecteur générique de pression cinétique, pénalise l'immobilité stricte et le piétinement (positions répétées dans une fenêtre glissante) — actif sur tous les niveaux du `PROGRAMME` |
+| `agi_google_colab.py` | Ajout de `ModuleAcceptationAdaptative` : calcule un seuil de patience par épisode (`obtenir_seuil_patience()`) à partir du taux de succès et de la vitesse des succès sur les 20 derniers épisodes ; déclenche une troncature volontaire (`abandon_par_patience`) si l'épisode dépasse ce seuil sans conclusion naturelle, avec une friction dopaminergique douce dédiée (`TAUX_FRICTION_DOUCE_ABANDON`) plutôt qu'un choc négatif |
+| `agi_google_colab.py` | Nouvelles métriques W&B : `Patience_Max_Episode`, `Abandons_Patience_Jour`, `Penalite_Stagnation` |
+
+---
+
 ## [14.0] - 2026-07-22
 
 ### Rêves Adaptatifs & Planification Étendue à 3 Pas
 
 | Type | Details |
 |------|---------|
-| **Commit** | N/A — en attente du commit de cette version |
+| **Commit** | `2247f2b` (commit initial groupé) |
 | **Catégorie** | feat |
 | **Impact** | Fonctionnel |
 
@@ -31,7 +53,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](readme
 
 | Type | Details |
 |------|---------|
-| **Commit** | N/A — en attente du commit de cette version |
+| **Commit** | `2247f2b` (commit initial groupé) |
 | **Catégorie** | feat |
 | **Impact** | Fonctionnel |
 
@@ -50,7 +72,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](readme
 
 | Type | Details |
 |------|---------|
-| **Commit** | N/A — en attente du commit de cette version |
+| **Commit** | `2247f2b` (commit initial groupé) |
 | **Catégorie** | feat |
 | **Impact** | Fonctionnel |
 
@@ -69,7 +91,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](readme
 
 | Type | Details |
 |------|---------|
-| **Commit** | N/A — en attente du commit de cette version |
+| **Commit** | `2247f2b` (commit initial groupé) |
 | **Catégorie** | feat |
 | **Impact** | Fonctionnel |
 
@@ -88,7 +110,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](readme
 
 | Type | Details |
 |------|---------|
-| **Commit** | N/A — en attente du commit de cette version |
+| **Commit** | `2247f2b` (commit initial groupé) |
 | **Catégorie** | fix |
 | **Impact** | Critique |
 
@@ -106,7 +128,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](readme
 
 | Type | Details |
 |------|---------|
-| **Commit** | N/A — en attente du commit de cette version |
+| **Commit** | `2247f2b` (commit initial groupé) |
 | **Catégorie** | feat |
 | **Impact** | Fonctionnel |
 
@@ -124,7 +146,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](readme
 
 | Type | Details |
 |------|---------|
-| **Commit** | N/A — en attente du commit de cette version |
+| **Commit** | `2247f2b` (commit initial groupé) |
 | **Catégorie** | feat |
 | **Impact** | Fonctionnel |
 
@@ -142,7 +164,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](readme
 
 | Type | Details |
 |------|---------|
-| **Commit** | N/A — en attente du commit de cette version |
+| **Commit** | `2247f2b` (commit initial groupé) |
 | **Catégorie** | fix |
 | **Impact** | Critique |
 
@@ -160,7 +182,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](readme
 
 | Type | Details |
 |------|---------|
-| **Commit** | N/A — en attente du commit de cette version |
+| **Commit** | `2247f2b` (commit initial groupé) |
 | **Catégorie** | feat |
 | **Impact** | Fonctionnel |
 
@@ -178,7 +200,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](readme
 
 | Type | Details |
 |------|---------|
-| **Commit** | N/A — en attente du commit de cette version |
+| **Commit** | `2247f2b` (commit initial groupé) |
 | **Catégorie** | feat |
 | **Impact** | Fonctionnel |
 
@@ -197,7 +219,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](readme
 
 | Type | Details |
 |------|---------|
-| **Commit** | N/A — en attente du commit de cette version |
+| **Commit** | `2247f2b` (commit initial groupé) |
 | **Catégorie** | feat |
 | **Impact** | Fonctionnel |
 
