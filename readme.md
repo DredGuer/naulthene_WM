@@ -1,6 +1,6 @@
 Voici le **`README.md`** révisé, complété et restructuré en profondeur.
 
-Il intègre la structure de table des matières globale (avec le contexte applicatif/métier et la vision AGI), enrichie de toute l'architecture neuro-mimétique de l'agent **Naulthène AGI** (réservoir dopaminergique, cursus à 7 paliers par Abnégation, mode libre, planification multi-échelle non-linéaire, consolidation nocturne adaptative, détecteurs génériques, pression cinétique multimodale et patience évolutive).
+Il intègre la structure de table des matières globale (avec le contexte applicatif/métier et la vision AGI), enrichie de toute l'architecture neuro-mimétique de l'agent **Naulthène AGI** (réservoir dopaminergique, cursus à 7 paliers par Abnégation, mode libre à décrochage précoce, sous-quêtes intrinsèques par curiosité JEPA, Sursaut de Volonté, planification multi-échelle non-linéaire, consolidation nocturne adaptative, détecteurs génériques, pression cinétique multimodale et patience évolutive).
 
 ---
 
@@ -16,31 +16,33 @@ Il intègre la structure de table des matières globale (avec le contexte applic
 1. [Vue d'Ensemble du Projet](https://www.google.com/search?q=%23vue-densemble-du-projet)
 2. [Journal des Mises à Jour (Changelog)](https://www.google.com/search?q=%23journal-des-mises-%C3%A0-jour)
 3. [Plan d'Action](https://www.google.com/search?q=%23plan-daction)
-4. [Nouveautés v16.0 — Thermostat Multimodal & Patience par Abnégation](#nouveautés-v160--thermostat-multimodal--patience-par-abnégation-2026-07-22)
-5. [Nouveautés v15.0 — Planification Non-Linéaire, Pression Cinétique & Patience Adaptative](#nouveautés-v150--planification-non-linéaire-pression-cinétique--patience-adaptative-2026-07-22)
-6. [Nouveautés v14.0 — Rêves Adaptatifs & Planification Étendue à 3 Pas](https://www.google.com/search?q=%23nouveaut%C3%A9s-v140---r%C3%AAves-adaptatifs--planification-%C3%A9tendue-%C3%A0-3-pas-2026-07-22)
-7. [Nouveautés v13.0 — Décision Autonome & Mode Libre](https://www.google.com/search?q=%23nouveaut%C3%A9s-v130---d%C3%A9cision-autonome--mode-libre-2026-07-22)
-8. [Nouveautés v12.0 — Cursus à 7 Paliers & Correctif d'Épisodes](https://www.google.com/search?q=%23nouveaut%C3%A9s-v120---cursus-%C3%A0-7-paliers--correctif-d%C3%A9pisodes-2026-07-22)
-9. [Nouveautés v11.0 — Réservoir Dopaminergique V3](https://www.google.com/search?q=%23nouveaut%C3%A9s-v110---r%C3%A9servoir-dopaminergique-v3-2026-07-22)
-10. [Nouveautés v10.0-fix1 — Correctif de Stabilité JEPA & Thermostat](https://www.google.com/search?q=%23nouveaut%C3%A9s-v100-fix1---correctif-de-stabilit%C3%A9-jepa--thermostat)
-11. [Nouveautés v10.0 — Système 2 & Rollout Mental Vectorisé](https://www.google.com/search?q=%23nouveaut%C3%A9s-v100---syst%C3%A8me-2--rollout-mental-vectoris%C3%A9)
-12. [Nouveautés v9.1 — Intégration du Tampon Épisodique (Université)](https://www.google.com/search?q=%23nouveaut%C3%A9s-v91---int%C3%A9gration-du-tampon-%C3%A9pisodique-universit%C3%A9)
-13. [Nouveautés v9.0-fix1 — Correctif de la Neurogenèse Bloc par Bloc](https://www.google.com/search?q=%23nouveaut%C3%A9s-v90-fix1---correctif-de-la-neurogen%C3%A8se-bloc-par-bloc)
-14. [Nouveautés v9.0 — Cursus Académique Progressif (Primaire à Doctorat)](https://www.google.com/search?q=%23nouveaut%C3%A9s-v90---cursus-acad%C3%A9mique-progressif-primaire-%C3%A0-doctorat)
-15. [Nouveautés v8.0 — Alignement Graph-Gradient RL & Rêve Nocturne](https://www.google.com/search?q=%23nouveaut%C3%A9s-v80---alignement-graph-gradient-rl--r%C3%AAve-nocturne)
-16. [Nouveautés v7.0 — Phase 7 Initiale (Architecture Hybride Duale)](https://www.google.com/search?q=%23nouveaut%C3%A9s-v70---phase-7-initiale-architecture-hybride-duale)
-17. [Architecture Cognitico-Biologique Complète](https://www.google.com/search?q=%23architecture-cognitico-biologique-compl%C3%A8te)
-18. [Cursus Académique & Paliers Comportementaux](https://www.google.com/search?q=%23cursus-acad%C3%A9mique--paliers-comportementaux)
-19. [Moteur Émotionnel & Réservoir Dopaminergique](https://www.google.com/search?q=%23moteur-%C3%A9motionnel--r%C3%A9servoir-dopaminergique)
-20. [Algorithme de Rêve Nocturne Adaptatif](https://www.google.com/search?q=%23algorithme-de-r%C3%AAve-nocturne-adaptatif)
-21. [Détecteurs Génériques d'Intention & Quêtes Auto](https://www.google.com/search?q=%23d%C3%A9tecteurs-g%C3%A9n%C3%A9riques-dintention--qu%C3%AAtes-auto)
-22. [Pression Cinétique Multimodale & Patience par Abnégation](#pression-cinétique-multimodale--patience-par-abnégation)
-23. [Stack Technique](https://www.google.com/search?q=%23stack-technique)
-24. [Modèle de Données & Métriques W&B](https://www.google.com/search?q=%23mod%C3%A8le-de-donn%C3%A9es--m%C3%A9triques-wb)
-25. [Démarrage Rapide](https://www.google.com/search?q=%23d%C3%A9marrage-rapide)
-26. [Mise en Production & Monitoring](https://www.google.com/search?q=%23mise-en-production--monitoring)
-27. [Configuration](https://www.google.com/search?q=%23configuration)
-28. [Troubleshooting & Guide de Dépannage](https://www.google.com/search?q=%23troubleshooting--guide-de-d%C3%A9pannage)
+4. [Nouveautés v17.0 — Volonté Émergente & Sous-Objectifs Intrinsèques](#nouveautés-v170--volonté-émergente--sous-objectifs-intrinsèques-2026-07-22)
+5. [Nouveautés v16.0 — Thermostat Multimodal & Patience par Abnégation](#nouveautés-v160--thermostat-multimodal--patience-par-abnégation-2026-07-22)
+6. [Nouveautés v15.0 — Planification Non-Linéaire, Pression Cinétique & Patience Adaptative](#nouveautés-v150--planification-non-linéaire-pression-cinétique--patience-adaptative-2026-07-22)
+7. [Nouveautés v14.0 — Rêves Adaptatifs & Planification Étendue à 3 Pas](https://www.google.com/search?q=%23nouveaut%C3%A9s-v140---r%C3%AAves-adaptatifs--planification-%C3%A9tendue-%C3%A0-3-pas-2026-07-22)
+8. [Nouveautés v13.0 — Décision Autonome & Mode Libre](https://www.google.com/search?q=%23nouveaut%C3%A9s-v130---d%C3%A9cision-autonome--mode-libre-2026-07-22)
+9. [Nouveautés v12.0 — Cursus à 7 Paliers & Correctif d'Épisodes](https://www.google.com/search?q=%23nouveaut%C3%A9s-v120---cursus-%C3%A0-7-paliers--correctif-d%C3%A9pisodes-2026-07-22)
+10. [Nouveautés v11.0 — Réservoir Dopaminergique V3](https://www.google.com/search?q=%23nouveaut%C3%A9s-v110---r%C3%A9servoir-dopaminergique-v3-2026-07-22)
+11. [Nouveautés v10.0-fix1 — Correctif de Stabilité JEPA & Thermostat](https://www.google.com/search?q=%23nouveaut%C3%A9s-v100-fix1---correctif-de-stabilit%C3%A9-jepa--thermostat)
+12. [Nouveautés v10.0 — Système 2 & Rollout Mental Vectorisé](https://www.google.com/search?q=%23nouveaut%C3%A9s-v100---syst%C3%A8me-2--rollout-mental-vectoris%C3%A9)
+13. [Nouveautés v9.1 — Intégration du Tampon Épisodique (Université)](https://www.google.com/search?q=%23nouveaut%C3%A9s-v91---int%C3%A9gration-du-tampon-%C3%A9pisodique-universit%C3%A9)
+14. [Nouveautés v9.0-fix1 — Correctif de la Neurogenèse Bloc par Bloc](https://www.google.com/search?q=%23nouveaut%C3%A9s-v90-fix1---correctif-de-la-neurogen%C3%A8se-bloc-par-bloc)
+15. [Nouveautés v9.0 — Cursus Académique Progressif (Primaire à Doctorat)](https://www.google.com/search?q=%23nouveaut%C3%A9s-v90---cursus-acad%C3%A9mique-progressif-primaire-%C3%A0-doctorat)
+16. [Nouveautés v8.0 — Alignement Graph-Gradient RL & Rêve Nocturne](https://www.google.com/search?q=%23nouveaut%C3%A9s-v80---alignement-graph-gradient-rl--r%C3%AAve-nocturne)
+17. [Nouveautés v7.0 — Phase 7 Initiale (Architecture Hybride Duale)](https://www.google.com/search?q=%23nouveaut%C3%A9s-v70---phase-7-initiale-architecture-hybride-duale)
+18. [Architecture Cognitico-Biologique Complète](https://www.google.com/search?q=%23architecture-cognitico-biologique-compl%C3%A8te)
+19. [Cursus Académique & Paliers Comportementaux](https://www.google.com/search?q=%23cursus-acad%C3%A9mique--paliers-comportementaux)
+20. [Moteur Émotionnel & Réservoir Dopaminergique](https://www.google.com/search?q=%23moteur-%C3%A9motionnel--r%C3%A9servoir-dopaminergique)
+21. [Algorithme de Rêve Nocturne Adaptatif](https://www.google.com/search?q=%23algorithme-de-r%C3%AAve-nocturne-adaptatif)
+22. [Détecteurs Génériques d'Intention & Quêtes Auto](https://www.google.com/search?q=%23d%C3%A9tecteurs-g%C3%A9n%C3%A9riques-dintention--qu%C3%AAtes-auto)
+23. [Pression Cinétique Multimodale & Patience par Abnégation](#pression-cinétique-multimodale--patience-par-abnégation)
+24. [Volonté Émergente : Sous-Objectifs Intrinsèques & Sursaut](#volonté-émergente--sous-objectifs-intrinsèques--sursaut)
+25. [Stack Technique](https://www.google.com/search?q=%23stack-technique)
+26. [Modèle de Données & Métriques W&B](https://www.google.com/search?q=%23mod%C3%A8le-de-donn%C3%A9es--m%C3%A9triques-wb)
+27. [Démarrage Rapide](https://www.google.com/search?q=%23d%C3%A9marrage-rapide)
+28. [Mise en Production & Monitoring](https://www.google.com/search?q=%23mise-en-production--monitoring)
+29. [Configuration](https://www.google.com/search?q=%23configuration)
+30. [Troubleshooting & Guide de Dépannage](https://www.google.com/search?q=%23troubleshooting--guide-de-d%C3%A9pannage)
 
 ---
 
@@ -61,6 +63,13 @@ L'agent évolue à travers un cursus scolaire modélisé sous forme d'environnem
 ## 📜 Journal des Mises à Jour
 
 Pour un historique complet commit par commit, consultez [CHANGELOG.md](https://www.google.com/search?q=CHANGELOG.md).
+
+### Nouveautés v17.0 — Volonté Émergente & Sous-Objectifs Intrinsèques (2026-07-22)
+
+* **Décrochage précoce du Mode Libre** : le seuil qui désactive la béquille de guidage artificiel (`RECOMPENSE_APPROCHE_BUT`) descend du Palier 7 au **Palier 5** (Viser la Porte). L'agent affronte le vide de l'auto-détermination plus tôt, pendant qu'il travaille encore les paliers 5/6/7 sous le régime d'Abnégation.
+* **`DetecteurCuriositeJEPA`** : en Mode Libre, une sous-quête intrinsèque est générée par le Modèle du Monde lui-même — quand l'erreur JEPA du tick dépasse $1.5\times$ la moyenne récente de l'agent (une "zone d'ombre" imprévue), une micro-récompense de curiosité comble le vide laissé par le retrait du guidage externe.
+* **`ModuleSursautVolonte`** (le Muscle de la Volonté) : à 95% de la patience du jour, un sursaut se déclenche en Mode Libre — jamais une solution donnée, mais un boost dopaminergique ponctuel (`BOOST_SECOND_SOUFFLE`) et une extension mathématique de la patience de l'épisode (+50 ticks, plafonnée). Un seul sursaut par épisode.
+* **Apprentissage de la récurrence** : si l'épisode se solde par une vraie victoire ($\text{recompense\_env} > 0$) après avoir consommé un Sursaut, la `patience_min` de base augmente **définitivement** — l'agent apprend par l'expérience que l'effort prolongé mène à la victoire, pas seulement le temps d'une journée.
 
 ### Nouveautés v16.0 — Thermostat Multimodal & Patience par Abnégation (2026-07-22)
 
@@ -176,9 +185,9 @@ Pour éviter le problème du *Sparse Reward* dans les environnements complexes, 
 | **6** | **Déverrouiller** | Exécution de l'action `Toggle` face à la porte |
 | **7** | **Franchir & Sortir** | Traversée du trou de la porte et contact avec l'objectif |
 
-> **Promotion par Abnégation (depuis v16.0)** : la promotion d'un palier au suivant n'est plus décidée par un taux de réussite journalier ($\ge 80\%$), mais par un compteur cumulatif de **4 succès** répartis en 2 sous-seuils — voir [Pression Cinétique Multimodale & Patience par Abnégation](#pression-cinétique-multimodale--patience-par-abnégation). Le Palier 7 (Franchir & Sortir) reste la porte d'entrée du Mode Libre.
+> **Promotion par Abnégation (depuis v16.0)** : la promotion d'un palier au suivant n'est plus décidée par un taux de réussite journalier ($\ge 80\%$), mais par un compteur cumulatif de **4 succès** répartis en 2 sous-seuils — voir [Pression Cinétique Multimodale & Patience par Abnégation](#pression-cinétique-multimodale--patience-par-abnégation).
 >
-> **Mode Libre** : Une fois le Palier 7 maîtrisé (4/4 succès validés), le guidage artificiel se désactive. L'agent passe en `Mode_Libre = 1`. `force_planification` monte à $0.85$ et `coeff_entropie` à $0.06$.
+> **Mode Libre (décrochage précoce depuis v17.0)** : le guidage artificiel se désactive dès que `palier_cible >= 5` (Viser la Porte), au lieu d'attendre la maîtrise complète du Palier 7 — l'agent est confronté à l'auto-détermination plus tôt, pendant qu'il travaille encore les paliers 5/6/7. L'agent passe en `Mode_Libre = 1`. `force_planification` monte à $0.85$ et `coeff_entropie` à $0.06$. Voir [Volonté Émergente](#volonté-émergente--sous-objectifs-intrinsèques--sursaut) pour ce qui remplace le guidage perdu.
 
 ---
 
@@ -263,6 +272,36 @@ Le Sous-Seuil 1 valide l'acquisition de base du palier. Le Sous-Seuil 2 exige 2 
 
 ---
 
+## 🕊️ Volonté Émergente : Sous-Objectifs Intrinsèques & Sursaut
+
+Trois mécaniques introduites en v17.0, actives uniquement en Mode Libre (désormais accessible dès le Palier 5, voir [Cursus Académique & Paliers Comportementaux](#cursus-académique--paliers-comportementaux)), qui traduisent l'objectif de faire émerger une volonté propre à l'agent plutôt que de la lui prescrire.
+
+### 1. `DetecteurCuriositeJEPA` — Sous-Quêtes Intrinsèques
+
+Le Mode Libre retire toute récompense de guidage externe (`RECOMPENSE_APPROCHE_BUT`) — un grand vide que l'agent doit combler lui-même. Ce détecteur générique transforme une **surprise du Modèle du Monde** en sous-objectif :
+
+* Compare l'erreur JEPA du tick courant à la moyenne glissante des 50 derniers ticks.
+* Si l'erreur dépasse $1.5\times$ (`FACTEUR_SEUIL_SURPRISE`) cette moyenne — une "zone d'ombre", un état que le JEPA n'a pas su anticiper — une micro-récompense de curiosité ($\delta = 0.04$) est accordée.
+
+Distinct de `dopamine_curiosite` (scaling continu et global de la teneur en dopamine par l'erreur JEPA, déjà existant) : ce détecteur ne produit un signal que sur un **dépassement relatif**, un vrai déclencheur de sous-quête plutôt qu'un facteur d'échelle permanent.
+
+### 2. `ModuleSursautVolonte` — Le Muscle de la Volonté
+
+Quand l'agent a consommé 95% de sa patience du jour (`SEUIL_DECLENCHEMENT_SURSAUT`) sans que l'épisode ne conclue, un **sursaut** se déclenche — jamais une solution donnée (pas de béquille de triche), mais un renfort de ses propres ressources :
+
+1. Un boost dopaminergique ponctuel lié à l'effort (`BOOST_SECOND_SOUFFLE = 0.5`).
+2. Une extension mathématique de la patience de l'épisode courant (`EXTENSION_PATIENCE_SURSAUT = 50` ticks, plafonnée à `PATIENCE_MAX`).
+
+Un seul sursaut par épisode — ce n'est pas un mécanisme qui se répète en boucle jusqu'à épuisement total de la patience maximale.
+
+> **Omission assumée** : la spécification initiale prévoyait aussi un "chuchotement d'indice visuel" (illuminer temporairement l'objet pertinent dans le champ de vision). Cela demanderait de modifier l'observation renvoyée par MiniGrid à l'agent — hors de portée de l'architecture actuelle sans toucher au moteur de rendu de l'environnement. Le sursaut reste donc purement interne (dopamine + temps), jamais une correction de la perception.
+
+### 3. Apprentissage de la Récurrence
+
+Si l'épisode se solde par une **vraie victoire** ($\text{recompense\_env} > 0$) après avoir consommé un Sursaut de Volonté, `ModuleAcceptationAbnegation.augmenter_patience_de_base_definitivement()` augmente la `patience_min` de base **de façon permanente** (`BOOST_PATIENCE_MIN_PAR_RECURRENCE = 10`, jamais repris). L'agent apprend par la récurrence que l'effort prolongé mène à la victoire — une trace durable, pas seulement une moyenne glissante qui finira par s'estomper.
+
+---
+
 ## 💻 Stack Technique
 
 * **Langage** : Python 3.12
@@ -297,7 +336,10 @@ Chaque journée d'entraînement émet les télémétries suivantes vers le table
   "Penalite_Stagnation": -0.842,
   "Sous_Seuil_Abnegation": 2,
   "Succes_Sous_Seuil_Courant": 1,
-  "Facteur_Complexite": 1.6
+  "Facteur_Complexite": 1.6,
+  "Sursauts_Volonte_Jour": 1,
+  "Patience_Min_Actuelle": 60,
+  "Sous_Objectifs_Curiosite_Jour": 4
 }
 
 ```
@@ -313,6 +355,12 @@ Chaque journée d'entraînement émet les télémétries suivantes vers le table
 * **`Penalite_Stagnation`** : sa magnitude moyenne baisse par rapport à la v15.0 sur les phases de manipulation/interaction (clé en main, porte face à l'agent), sans pour autant tolérer la léthargie en déplacement libre — signe que l'atténuation contextuelle fonctionne comme prévu plutôt que d'être un simple relâchement global.
 * **`Facteur_Complexite`** : oscille entre $1.0$ (Sous-Seuil 1, Amorçage) et $1.6$ (Sous-Seuil 2, Abnégation) au fil de la progression d'un palier — jamais figé à une seule valeur tant que le palier n'est pas promu.
 * **`Sous_Seuil_Abnegation`** / **`Succes_Sous_Seuil_Courant`** : permettent de suivre la progression fine à l'intérieur d'un même palier, avant même la promotion — utile pour distinguer un agent qui stagne au Sous-Seuil 1 d'un agent qui progresse normalement mais plus lentement en Sous-Seuil 2.
+
+**Effets attendus des métriques v17.0 :**
+
+* **`Patience_Min_Actuelle`** : ne fait que croître par paliers discrets (jamais redescendre) — chaque saut de +10 marque une victoire obtenue après un Sursaut de Volonté, une trace permanente de récurrence.
+* **`Sursauts_Volonte_Jour`** : devrait décroître à mesure que l'agent internalise la persévérance (patience de base plus haute = moins de situations à 95% de la patience) — une valeur qui reste élevée durablement signale un palier structurellement trop difficile pour le niveau courant.
+* **`Sous_Objectifs_Curiosite_Jour`** : élevé à l'entrée en Mode Libre (le monde est encore largement une "zone d'ombre"), puis décroît à mesure que le JEPA stabilise ses prédictions sur la zone explorée — une valeur qui ne décroît jamais peut indiquer une instabilité du World Model plutôt qu'une vraie exploration.
 
 ---
 
@@ -353,6 +401,9 @@ GAMMA_PLANIFICATION = 0.9
 FORCE_PLANIF_GUIDE = 0.50
 FORCE_PLANIF_LIBRE = 0.85
 
+# Mode Libre : décrochage précoce (v17.0)
+SEUIL_PALIER_MODE_LIBRE = 5
+
 # Apprentissage & Entropie
 ENTROPIE_GUIDE = 0.02
 ENTROPIE_LIBRE = 0.06
@@ -372,6 +423,17 @@ TAUX_FRICTION_DOUCE_ABANDON = 0.05
 # Cursus à Deux Sous-Seuils (Abnégation, v16.0, DoorKey uniquement)
 SUCCES_PAR_SOUS_SEUIL = 2
 COEFF_ABNEGATION_SOUS_SEUIL_2 = 1.6
+
+# Volonté Émergente : Curiosité JEPA & Sursaut (v17.0, Mode Libre uniquement)
+FENETRE_HISTORIQUE_CURIOSITE = 50
+FACTEUR_SEUIL_SURPRISE = 1.5
+MICRO_RECOMPENSE_CURIOSITE = 0.04
+POIDS_CHOC_CURIOSITE = 0.15
+
+SEUIL_DECLENCHEMENT_SURSAUT = 0.95
+BOOST_SECOND_SOUFFLE = 0.5
+EXTENSION_PATIENCE_SURSAUT = 50
+BOOST_PATIENCE_MIN_PAR_RECURRENCE = 10
 
 ```
 

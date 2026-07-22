@@ -1,4 +1,4 @@
-#Version actuelle 16.
+#Version actuelle 17.
 
 import torch
 import torch.nn as nn
@@ -665,12 +665,24 @@ class ModuleAcceptationAbnegation:
     volontaire (abandon lucide) plutôt que d'épuiser ses ressources cognitives dans un
     épisode déjà mal engagé.
     """
-    def __init__(self, patience_min=50, patience_max=350, fenetre_historique=20):
+    def __init__(self, patience_min=50, patience_max=350, fenetre_historique=20,
+                 boost_patience_min_par_recurrence=10):
         self.patience_min = patience_min
         self.patience_max = patience_max
         self.fenetre_historique = fenetre_historique
+        self.boost_patience_min_par_recurrence = boost_patience_min_par_recurrence
         self.historique_succes = []
         self.historique_vitesses = []
+
+    def augmenter_patience_de_base_definitivement(self):
+        """Phase C (v17.0) — Apprentissage de la récurrence : quand un épisode réussit
+        APRÈS avoir consommé un Sursaut de Volonté (voir ModuleSursautVolonte), l'agent
+        a démontré par l'expérience que l'effort prolongé mène à la victoire. Sa
+        patience_min DE BASE augmente alors définitivement (jamais reprise), plutôt que
+        de ne dépendre que du calcul quotidien recalculé à partir de l'historique
+        glissant — une victoire d'exploit laisse une trace permanente, pas seulement
+        une moyenne qui finira par s'estomper avec le temps."""
+        self.patience_min = min(self.patience_max, self.patience_min + self.boost_patience_min_par_recurrence)
 
     def enregistrer_episode(self, reussi: bool, nombre_ticks: int):
         self.historique_succes.append(1.0 if reussi else 0.0)
@@ -750,6 +762,91 @@ class GestionnaireCursusAbnegation:
         return True, "🎓 [PROMOTION DE PALIER] 4/4 succès validés (Amorçage + Abnégation)"
 
 
+# --- 3d. VOLONTÉ ÉMERGENTE : SOUS-QUÊTES INTRINSÈQUES & SURSAUT (v17.0, actifs en Mode Libre) ---
+class DetecteurCuriositeJEPA:
+    """
+    Sous-objectif intrinsèque généré par le Modèle du Monde lui-même (v17.0) : en Mode
+    Libre, il n'y a plus de récompense externe de guidage (RECOMPENSE_APPROCHE_BUT). Au
+    lieu d'attendre passivement la récompense terminale de l'environnement, l'agent doit
+    trouver sa propre motivation à explorer — ce détecteur transforme une erreur de
+    prédiction JEPA anormalement élevée (une "zone d'ombre", un état que le World Model
+    n'a pas su anticiper) en une micro-récompense de curiosité.
+
+    Distinct de `dopamine_curiosite` (déjà existant, un scaling continu et global de la
+    teneur en dopamine par l'erreur JEPA du tick) : ce détecteur ne s'active que sur un
+    DÉPASSEMENT relatif à la moyenne récente de l'agent (sa propre notion de surprise,
+    pas un seuil absolu), et ne produit une micro-récompense ponctuelle que si l'écart
+    est franchi — un vrai signal de sous-quête, pas un simple facteur d'échelle.
+    """
+    def __init__(self, fenetre_historique=50, facteur_seuil_surprise=1.5,
+                 micro_recompense=0.04, poids_choc=0.15):
+        self.fenetre_historique = fenetre_historique
+        self.facteur_seuil_surprise = facteur_seuil_surprise
+        self.micro_recompense = micro_recompense
+        self.poids_choc = poids_choc
+        self.historique_erreurs = []
+
+    def evaluer_tick(self, erreur_jepa_tick: float):
+        """Retourne (sous_objectif_intrinseque, poids_choc). N'enregistre l'erreur dans
+        l'historique qu'APRÈS comparaison, pour que le seuil reflète la surprise passée,
+        pas le tick courant lui-même."""
+        sous_objectif, poids = 0.0, 0.0
+        if len(self.historique_erreurs) >= 5:
+            moyenne_recente = sum(self.historique_erreurs) / len(self.historique_erreurs)
+            if moyenne_recente > 1e-8 and erreur_jepa_tick > moyenne_recente * self.facteur_seuil_surprise:
+                sous_objectif, poids = self.micro_recompense, self.poids_choc
+
+        self.historique_erreurs.append(erreur_jepa_tick)
+        if len(self.historique_erreurs) > self.fenetre_historique:
+            self.historique_erreurs.pop(0)
+
+        return sous_objectif, poids
+
+
+class ModuleSursautVolonte:
+    """
+    Le Muscle de la Volonté (v17.0) : quand l'agent est sur le point d'abandonner par
+    épuisement de patience (95% du seuil du jour, voir ModuleAcceptationAbnegation), au
+    lieu de le laisser s'effondrer, un SURSAUT est déclenché — jamais une solution
+    donnée (pas de béquille de triche), mais un renfort de ses propres ressources :
+
+    1. Un boost dopaminergique ponctuel lié à l'effort (`BOOST_SECOND_SOUFFLE`).
+    2. Une extension mathématique de la patience de l'épisode courant
+       (`EXTENSION_PATIENCE_SURSAUT` ticks), plafonnée à `patience_max`.
+
+    Volontairement OMIS par rapport à la spécification initiale : le "chuchotement
+    d'indice visuel" (illuminer l'objet pertinent dans le champ de vision) — cela
+    demanderait de modifier l'observation renvoyée par MiniGrid à l'agent, hors de
+    portée de l'architecture actuelle sans toucher au moteur de rendu de l'environnement
+    lui-même. Le sursaut reste donc purement interne (dopamine + temps), jamais une
+    correction de la perception.
+
+    Un seul sursaut par épisode (`disponible`) : ce n'est pas un mécanisme qui se
+    répète en boucle jusqu'à épuisement total, sinon la patience s'étirerait sans limite
+    réelle.
+    """
+    def __init__(self, seuil_declenchement=0.95, boost_second_souffle=0.5,
+                 extension_patience=50):
+        self.seuil_declenchement = seuil_declenchement
+        self.boost_second_souffle = boost_second_souffle
+        self.extension_patience = extension_patience
+        self.disponible = True
+
+    def reinitialiser_episode(self):
+        self.disponible = True
+
+    def evaluer_tick(self, tick_episode: int, patience_courante: int, patience_max: int, fin_episode: bool):
+        """Retourne (declenche: bool, nouvelle_patience: int)."""
+        if fin_episode or not self.disponible:
+            return False, patience_courante
+        if tick_episode < patience_courante * self.seuil_declenchement:
+            return False, patience_courante
+
+        self.disponible = False
+        nouvelle_patience = min(patience_max, patience_courante + self.extension_patience)
+        return True, nouvelle_patience
+
+
 def etat_mental_dopamine(teneur, dmin, dneutre, dmax):
     pct = 100.0 * (teneur - dmin) / (dmax - dmin)
     if pct < 5:
@@ -775,7 +872,7 @@ def etat_empreinte(empreinte):
 
 
 # --- 4. EXÉCUTION & CURSUS ---
-wandb.init(project="Naulthene-AGI", name="Run_16_Thermostat_Multimodal_Abnegation")
+wandb.init(project="Naulthene-AGI", name="Run_17_Volonte_Emergente_Sous_Objectifs_Intrinseques")
 
 DIM_VISUELLE = 147
 DIM_BUS_MAX = 96
@@ -803,7 +900,12 @@ BOOST_ANCRAGE_MAX = 20.0
 SEUIL_APHASIE_NEUROGENESE = 0.05
 MALUS_DOULEUR = -0.01
 
-# --- MODE LIBRE (DoorKey uniquement, inchangé) ---
+# --- MODE LIBRE (DoorKey uniquement) ---
+# Décrochage précoce (v17.0) : la béquille de guidage artificiel (RECOMPENSE_APPROCHE_BUT)
+# se lève dès le Palier 5 (Viser la Porte) au lieu d'attendre le Palier 7 — l'agent est
+# confronté à l'inconnu plus tôt, pendant qu'il travaille encore les paliers 5/6/7,
+# plutôt que d'attendre une maîtrise complète avant tout lâcher-prise.
+SEUIL_PALIER_MODE_LIBRE = 5
 FORCE_PLANIFICATION_GUIDE = 0.5
 FORCE_PLANIFICATION_LIBRE = 0.85
 COEFF_ENTROPIE_GUIDE = 0.02
@@ -844,6 +946,17 @@ TAUX_FRICTION_DOUCE_ABANDON = 0.05  # friction dopaminergique appliquée sur aba
 # de journée — voir GestionnaireCursusAbnegation.
 SUCCES_PAR_SOUS_SEUIL = 2
 COEFF_ABNEGATION_SOUS_SEUIL_2 = 1.6
+
+# --- VOLONTÉ ÉMERGENTE : CURIOSITÉ JEPA & SURSAUT (v17.0, Mode Libre uniquement) ---
+FENETRE_HISTORIQUE_CURIOSITE = 50
+FACTEUR_SEUIL_SURPRISE = 1.5     # erreur JEPA du tick devant dépasser 1.5x la moyenne récente
+MICRO_RECOMPENSE_CURIOSITE = 0.04
+POIDS_CHOC_CURIOSITE = 0.15
+
+SEUIL_DECLENCHEMENT_SURSAUT = 0.95  # % de la patience du jour consommée avant sursaut
+BOOST_SECOND_SOUFFLE = 0.5          # décharge dopaminergique ponctuelle liée à l'effort
+EXTENSION_PATIENCE_SURSAUT = 50     # ticks supplémentaires accordés, plafonnés à PATIENCE_MAX
+BOOST_PATIENCE_MIN_PAR_RECURRENCE = 10  # gain permanent de patience_min après une victoire par sursaut
 
 # --- RÊVE À POURCENTAGE ADAPTATIF (remplace le batch_size=64 fixe) ---
 # Principe : pas de vrai plafond dur imposé de l'extérieur. Le plafond ÉMERGE de la
@@ -894,11 +1007,23 @@ thermostat_cinetique = ThermostatCinetiqueMultimodal(
 module_acceptation = ModuleAcceptationAbnegation(
     patience_min=PATIENCE_MIN, patience_max=PATIENCE_MAX,
     fenetre_historique=FENETRE_HISTORIQUE_PATIENCE,
+    boost_patience_min_par_recurrence=BOOST_PATIENCE_MIN_PAR_RECURRENCE,
 )
 gestionnaire_cursus = GestionnaireCursusAbnegation(
     succes_par_sous_seuil=SUCCES_PAR_SOUS_SEUIL,
     coeff_abnegation_sous_seuil_2=COEFF_ABNEGATION_SOUS_SEUIL_2,
 )  # spécifique DoorKey (cursus à 7 paliers), inerte sur les autres niveaux
+detecteur_curiosite = DetecteurCuriositeJEPA(
+    fenetre_historique=FENETRE_HISTORIQUE_CURIOSITE,
+    facteur_seuil_surprise=FACTEUR_SEUIL_SURPRISE,
+    micro_recompense=MICRO_RECOMPENSE_CURIOSITE,
+    poids_choc=POIDS_CHOC_CURIOSITE,
+)  # générique, actif uniquement en Mode Libre
+sursaut_volonte = ModuleSursautVolonte(
+    seuil_declenchement=SEUIL_DECLENCHEMENT_SURSAUT,
+    boost_second_souffle=BOOST_SECOND_SOUFFLE,
+    extension_patience=EXTENSION_PATIENCE_SURSAUT,
+)  # générique, actif uniquement en Mode Libre
 
 for jour in range(1, jours_totaux + 1):
     doorkey_actif = est_doorkey(env_id)
@@ -911,14 +1036,17 @@ for jour in range(1, jours_totaux + 1):
 
     EMPREINTE_ENFANCE = BUS_REFERENCE / agent.dim_bus
 
-    mode_libre = doorkey_actif and (palier_cible >= 7)
+    mode_libre = doorkey_actif and (palier_cible >= SEUIL_PALIER_MODE_LIBRE)
     force_planification_jour = FORCE_PLANIFICATION_LIBRE if mode_libre else FORCE_PLANIFICATION_GUIDE
     coeff_entropie_jour = COEFF_ENTROPIE_LIBRE if mode_libre else COEFF_ENTROPIE_GUIDE
 
     facteur_complexite_jour = gestionnaire_cursus.obtenir_facteur_complexite() if doorkey_actif else 1.0
     patience_jour = module_acceptation.obtenir_seuil_patience(facteur_complexite_jour)
+    patience_base_jour = patience_jour  # capturée avant tout étirement par Sursaut (v17.0), pour le log
     ticks_episode_courant = 0
     abandons_patience_jour = 0
+    sursauts_jour = 0
+    a_utilise_sursaut_episode = False
 
     obs, info = env.reset()
     etat_courant = encoder(obs)
@@ -930,6 +1058,7 @@ for jour in range(1, jours_totaux + 1):
     if not doorkey_actif:
         detecteur_progres.reinitialiser_episode(env)
     thermostat_cinetique.reinitialiser_episode(env)
+    sursaut_volonte.reinitialiser_episode()
 
     memoire_moyen_terme = []
     jepa_losses, log_probs_journee, entropies_journee = [], [], []
@@ -943,6 +1072,7 @@ for jour in range(1, jours_totaux + 1):
     portes_franchies_jour = 0
     progres_personnel_jour = 0
     penalite_stagnation_jour = 0.0
+    sous_objectifs_curiosite_jour = 0
     jours_depuis_mutation += 1
     fin_episode = False
 
@@ -981,9 +1111,26 @@ for jour in range(1, jours_totaux + 1):
         fin_episode = bool(termine or tronque)
         mur_touche = torch.equal(etat_courant, etat_suivant)
 
+        # --- Muscle de la Volonté : Sursaut avant l'abandon (Mode Libre uniquement, v17.0) ---
+        # Se déclenche à 95% de la patience du jour, AVANT le test d'abandon lui-même,
+        # pour pouvoir réellement repousser l'échéance plutôt que la constater après coup.
+        # Réservé au Mode Libre : en mode guidé, la béquille de guidage artificiel existe
+        # déjà, un Sursaut n'a pas de sens tant que l'agent n'affronte pas encore le vide.
+        if mode_libre:
+            sursaut_declenche, patience_jour = sursaut_volonte.evaluer_tick(
+                ticks_episode_courant, patience_jour, PATIENCE_MAX, fin_episode
+            )
+            if sursaut_declenche:
+                TENEUR_DOPAMINE += BOOST_SECOND_SOUFFLE
+                TENEUR_DOPAMINE = float(np.clip(TENEUR_DOPAMINE, DOPAMINE_MIN, DOPAMINE_MAX))
+                sursauts_jour += 1
+                a_utilise_sursaut_episode = True
+                print(f"   🔥 Sursaut de Volonté ! Patience étirée à {patience_jour} ticks.")
+
         # --- Potentiomètre d'acceptation : abandon lucide si la patience du jour
-        # (étirée par le facteur de complexité du sous-seuil, voir Mécanique v16.0) est
-        # dépassée sans conclusion naturelle de l'environnement ---
+        # (étirée par le facteur de complexité du sous-seuil et par un éventuel Sursaut
+        # de Volonté, voir Mécaniques v16.0/v17.0) est dépassée sans conclusion
+        # naturelle de l'environnement ---
         abandon_par_patience = False
         if not fin_episode and ticks_episode_courant >= patience_jour:
             fin_episode = True
@@ -1020,15 +1167,25 @@ for jour in range(1, jours_totaux + 1):
         valeur_erreur = float(perte_tick.item())
         erreur_journee += valeur_erreur
 
+        # --- Sous-quête intrinsèque par curiosité JEPA (générique, Mode Libre uniquement, v17.0) ---
+        # Le grand vide du Mode Libre (plus de guidage artificiel) est comblé par une
+        # motivation que l'agent génère lui-même à partir des surprises de son propre
+        # Modèle du Monde, plutôt que d'attendre passivement la récompense terminale.
+        sous_objectif_intrinseque, poids_curiosite = 0.0, 0.0
+        if mode_libre:
+            sous_objectif_intrinseque, poids_curiosite = detecteur_curiosite.evaluer_tick(valeur_erreur)
+            if sous_objectif_intrinseque > 0:
+                sous_objectifs_curiosite_jour += 1
+
         poids_evenement = 1.0 if recompense_env > 0 else 0.0
-        poids_evenement = max(poids_evenement, poids_palier, poids_porte, poids_progres)
+        poids_evenement = max(poids_evenement, poids_palier, poids_porte, poids_progres, poids_curiosite)
 
         dopamine_normalisee = (TENEUR_DOPAMINE - DOPAMINE_MIN) / (DOPAMINE_MAX - DOPAMINE_MIN)
         dopamine_curiosite = dopamine_normalisee * min(valeur_erreur, PLAFOND_ERREUR_DOPAMINE)
 
         recompense_interne = (float(recompense_env) + dopamine_curiosite + micro_recompense
                              + micro_recompense_porte + micro_recompense_progres
-                             + penalite_stagnation)
+                             + penalite_stagnation + sous_objectif_intrinseque)
         if not mode_libre:
             recompense_interne += recompense_continue
         if mur_touche:
@@ -1077,6 +1234,14 @@ for jour in range(1, jours_totaux + 1):
                     palier_cible += 1
                     print(f"   🎓 Palier {palier_cible} visé : {DetecteurJalonsDoorKey.NOMS[palier_cible - 1]}")
 
+            # --- Apprentissage de la récurrence (Phase C, v17.0) : une victoire réelle
+            # obtenue APRÈS un Sursaut de Volonté grave définitivement dans la patience
+            # de base que l'effort prolongé mène à la victoire ---
+            if recompense_env > 0 and a_utilise_sursaut_episode:
+                module_acceptation.augmenter_patience_de_base_definitivement()
+                print("   💪 [RÉCURRENCE] Victoire après Sursaut de Volonté — patience de base augmentée durablement.")
+            a_utilise_sursaut_episode = False
+
             obs, info = env.reset()
             etat_courant = encoder(obs)
             memoire_tampon = torch.zeros(1, agent.dim_bus, device=DEVICE)
@@ -1088,6 +1253,7 @@ for jour in range(1, jours_totaux + 1):
             if not doorkey_actif:
                 detecteur_progres.reinitialiser_episode(env)
             thermostat_cinetique.reinitialiser_episode(env)
+            sursaut_volonte.reinitialiser_episode()
         else:
             etat_courant = etat_suivant
 
@@ -1222,8 +1388,11 @@ for jour in range(1, jours_totaux + 1):
         print(f"  ├─ Quête Auto     : 🧭 {progres_personnel_jour} nouveaux records de proximité au But")
     print(f"  ├─ Consolidations : 💤 {nb_reves} souvenirs rejoués ({pourcentage_reve*100:.3f}% de la journée, "
           f"perte rêves: {perte_reves:.4f})")
-    print(f"  ├─ Potentiomètre  : ⏳ Patience du jour: {patience_jour} ticks/épisode "
-          f"({abandons_patience_jour} abandon(s) lucide(s) déclenché(s))")
+    print(f"  ├─ Potentiomètre  : ⏳ Patience de base du jour: {patience_base_jour} ticks/épisode "
+          f"({abandons_patience_jour} abandon(s) lucide(s), {sursauts_jour} Sursaut(s) de Volonté, "
+          f"patience_min actuelle: {module_acceptation.patience_min})")
+    if mode_libre and sous_objectifs_curiosite_jour > 0:
+        print(f"  ├─ Curiosité JEPA : ✨ {sous_objectifs_curiosite_jour} sous-quête(s) intrinsèque(s) générée(s)")
     print(f"  └─ Erreur JEPA moy: {erreur_moyenne:.4f} | Réc. moyenne: {rec_moy:.3f} | "
           f"Thermostat: {etat_thermostat}")
 
@@ -1245,10 +1414,14 @@ for jour in range(1, jours_totaux + 1):
         "Episodes_Jour": episodes_jour,
         "Portes_Franchies_Jour": portes_franchies_jour,
         "Progres_Personnel_Jour": progres_personnel_jour,
-        "Patience_Max_Episode": patience_jour,
+        "Patience_Max_Episode": patience_base_jour,
         "Abandons_Patience_Jour": abandons_patience_jour,
         "Penalite_Stagnation": penalite_stagnation_jour,
+        "Sursauts_Volonte_Jour": sursauts_jour,
+        "Patience_Min_Actuelle": module_acceptation.patience_min,
     }
+    if mode_libre:
+        log_wandb["Sous_Objectifs_Curiosite_Jour"] = sous_objectifs_curiosite_jour
     if doorkey_actif and detecteur.actif:
         log_wandb["Palier_Cible"] = palier_cible
         log_wandb["Guidage_But"] = guidage_but_journee
