@@ -16,36 +16,38 @@ Il intègre la structure de table des matières globale (avec le contexte applic
 1. [Vue d'Ensemble du Projet](https://www.google.com/search?q=%23vue-densemble-du-projet)
 2. [Journal des Mises à Jour (Changelog)](https://www.google.com/search?q=%23journal-des-mises-%C3%A0-jour)
 3. [Plan d'Action](https://www.google.com/search?q=%23plan-daction)
-4. [Nouveautés v19.0 (expérimental) — Métabolisme 20/80 & Forage 80/20](#nouveautés-v190-expérimental--métabolisme-2080--forage-8020-2026-07-22)
-5. [Nouveautés v18.0 (expérimental) — Architecture Homéostatique Biologique](#nouveautés-v180-expérimental--architecture-homéostatique-biologique-2026-07-22)
-6. [Nouveautés v17.0 — Volonté Émergente & Sous-Objectifs Intrinsèques](#nouveautés-v170--volonté-émergente--sous-objectifs-intrinsèques-2026-07-22)
-7. [Nouveautés v16.0 — Thermostat Multimodal & Patience par Abnégation](#nouveautés-v160--thermostat-multimodal--patience-par-abnégation-2026-07-22)
-8. [Nouveautés v15.0 — Planification Non-Linéaire, Pression Cinétique & Patience Adaptative](#nouveautés-v150--planification-non-linéaire-pression-cinétique--patience-adaptative-2026-07-22)
-9. [Nouveautés v14.0 — Rêves Adaptatifs & Planification Étendue à 3 Pas](https://www.google.com/search?q=%23nouveaut%C3%A9s-v140---r%C3%AAves-adaptatifs--planification-%C3%A9tendue-%C3%A0-3-pas-2026-07-22)
-10. [Nouveautés v13.0 — Décision Autonome & Mode Libre](https://www.google.com/search?q=%23nouveaut%C3%A9s-v130---d%C3%A9cision-autonome--mode-libre-2026-07-22)
-11. [Nouveautés v12.0 — Cursus à 7 Paliers & Correctif d'Épisodes](https://www.google.com/search?q=%23nouveaut%C3%A9s-v120---cursus-%C3%A0-7-paliers--correctif-d%C3%A9pisodes-2026-07-22)
-12. [Nouveautés v11.0 — Réservoir Dopaminergique V3](https://www.google.com/search?q=%23nouveaut%C3%A9s-v110---r%C3%A9servoir-dopaminergique-v3-2026-07-22)
-13. [Nouveautés v10.0-fix1 — Correctif de Stabilité JEPA & Thermostat](https://www.google.com/search?q=%23nouveaut%C3%A9s-v100-fix1---correctif-de-stabilit%C3%A9-jepa--thermostat)
-14. [Nouveautés v10.0 — Système 2 & Rollout Mental Vectorisé](https://www.google.com/search?q=%23nouveaut%C3%A9s-v100---syst%C3%A8me-2--rollout-mental-vectoris%C3%A9)
-15. [Nouveautés v9.1 — Intégration du Tampon Épisodique (Université)](https://www.google.com/search?q=%23nouveaut%C3%A9s-v91---int%C3%A9gration-du-tampon-%C3%A9pisodique-universit%C3%A9)
-16. [Nouveautés v9.0-fix1 — Correctif de la Neurogenèse Bloc par Bloc](https://www.google.com/search?q=%23nouveaut%C3%A9s-v90-fix1---correctif-de-la-neurogen%C3%A8se-bloc-par-bloc)
-17. [Nouveautés v9.0 — Cursus Académique Progressif (Primaire à Doctorat)](https://www.google.com/search?q=%23nouveaut%C3%A9s-v90---cursus-acad%C3%A9mique-progressif-primaire-%C3%A0-doctorat)
-18. [Nouveautés v8.0 — Alignement Graph-Gradient RL & Rêve Nocturne](https://www.google.com/search?q=%23nouveaut%C3%A9s-v80---alignement-graph-gradient-rl--r%C3%AAve-nocturne)
-19. [Nouveautés v7.0 — Phase 7 Initiale (Architecture Hybride Duale)](https://www.google.com/search?q=%23nouveaut%C3%A9s-v70---phase-7-initiale-architecture-hybride-duale)
-20. [Architecture Cognitico-Biologique Complète](https://www.google.com/search?q=%23architecture-cognitico-biologique-compl%C3%A8te)
-21. [Cursus Académique & Paliers Comportementaux](https://www.google.com/search?q=%23cursus-acad%C3%A9mique--paliers-comportementaux)
-22. [Moteur Émotionnel & Réservoir Dopaminergique](https://www.google.com/search?q=%23moteur-%C3%A9motionnel--r%C3%A9servoir-dopaminergique)
-23. [Algorithme de Rêve Nocturne Adaptatif](https://www.google.com/search?q=%23algorithme-de-r%C3%AAve-nocturne-adaptatif)
-24. [Détecteurs Génériques d'Intention & Quêtes Auto](https://www.google.com/search?q=%23d%C3%A9tecteurs-g%C3%A9n%C3%A9riques-dintention--qu%C3%AAtes-auto)
-25. [Pression Cinétique Multimodale & Patience par Abnégation](#pression-cinétique-multimodale--patience-par-abnégation)
-26. [Volonté Émergente : Sous-Objectifs Intrinsèques & Sursaut](#volonté-émergente--sous-objectifs-intrinsèques--sursaut)
-27. [Architecture Homéostatique Biologique (expérimental)](#architecture-homéostatique-biologique-expérimental)
-28. [Stack Technique](https://www.google.com/search?q=%23stack-technique)
-29. [Modèle de Données & Métriques W&B](https://www.google.com/search?q=%23mod%C3%A8le-de-donn%C3%A9es--m%C3%A9triques-wb)
-30. [Démarrage Rapide](https://www.google.com/search?q=%23d%C3%A9marrage-rapide)
-31. [Mise en Production & Monitoring](https://www.google.com/search?q=%23mise-en-production--monitoring)
-32. [Configuration](https://www.google.com/search?q=%23configuration)
-33. [Troubleshooting & Guide de Dépannage](https://www.google.com/search?q=%23troubleshooting--guide-de-d%C3%A9pannage)
+4. [Nouveautés v20.0 (expérimental) — Mémoire Épisodique Spatiale & LTP Hebbien](#nouveautés-v200-expérimental--mémoire-épisodique-spatiale--ltp-hebbien-2026-07-23)
+5. [Nouveautés v19.0 (expérimental) — Métabolisme 20/80 & Forage 80/20](#nouveautés-v190-expérimental--métabolisme-2080--forage-8020-2026-07-22)
+6. [Nouveautés v18.0 (expérimental) — Architecture Homéostatique Biologique](#nouveautés-v180-expérimental--architecture-homéostatique-biologique-2026-07-22)
+7. [Nouveautés v17.0 — Volonté Émergente & Sous-Objectifs Intrinsèques](#nouveautés-v170--volonté-émergente--sous-objectifs-intrinsèques-2026-07-22)
+8. [Nouveautés v16.0 — Thermostat Multimodal & Patience par Abnégation](#nouveautés-v160--thermostat-multimodal--patience-par-abnégation-2026-07-22)
+9. [Nouveautés v15.0 — Planification Non-Linéaire, Pression Cinétique & Patience Adaptative](#nouveautés-v150--planification-non-linéaire-pression-cinétique--patience-adaptative-2026-07-22)
+10. [Nouveautés v14.0 — Rêves Adaptatifs & Planification Étendue à 3 Pas](https://www.google.com/search?q=%23nouveaut%C3%A9s-v140---r%C3%AAves-adaptatifs--planification-%C3%A9tendue-%C3%A0-3-pas-2026-07-22)
+11. [Nouveautés v13.0 — Décision Autonome & Mode Libre](https://www.google.com/search?q=%23nouveaut%C3%A9s-v130---d%C3%A9cision-autonome--mode-libre-2026-07-22)
+12. [Nouveautés v12.0 — Cursus à 7 Paliers & Correctif d'Épisodes](https://www.google.com/search?q=%23nouveaut%C3%A9s-v120---cursus-%C3%A0-7-paliers--correctif-d%C3%A9pisodes-2026-07-22)
+13. [Nouveautés v11.0 — Réservoir Dopaminergique V3](https://www.google.com/search?q=%23nouveaut%C3%A9s-v110---r%C3%A9servoir-dopaminergique-v3-2026-07-22)
+14. [Nouveautés v10.0-fix1 — Correctif de Stabilité JEPA & Thermostat](https://www.google.com/search?q=%23nouveaut%C3%A9s-v100-fix1---correctif-de-stabilit%C3%A9-jepa--thermostat)
+15. [Nouveautés v10.0 — Système 2 & Rollout Mental Vectorisé](https://www.google.com/search?q=%23nouveaut%C3%A9s-v100---syst%C3%A8me-2--rollout-mental-vectoris%C3%A9)
+16. [Nouveautés v9.1 — Intégration du Tampon Épisodique (Université)](https://www.google.com/search?q=%23nouveaut%C3%A9s-v91---int%C3%A9gration-du-tampon-%C3%A9pisodique-universit%C3%A9)
+17. [Nouveautés v9.0-fix1 — Correctif de la Neurogenèse Bloc par Bloc](https://www.google.com/search?q=%23nouveaut%C3%A9s-v90-fix1---correctif-de-la-neurogen%C3%A8se-bloc-par-bloc)
+18. [Nouveautés v9.0 — Cursus Académique Progressif (Primaire à Doctorat)](https://www.google.com/search?q=%23nouveaut%C3%A9s-v90---cursus-acad%C3%A9mique-progressif-primaire-%C3%A0-doctorat)
+19. [Nouveautés v8.0 — Alignement Graph-Gradient RL & Rêve Nocturne](https://www.google.com/search?q=%23nouveaut%C3%A9s-v80---alignement-graph-gradient-rl--r%C3%AAve-nocturne)
+20. [Nouveautés v7.0 — Phase 7 Initiale (Architecture Hybride Duale)](https://www.google.com/search?q=%23nouveaut%C3%A9s-v70---phase-7-initiale-architecture-hybride-duale)
+21. [Architecture Cognitico-Biologique Complète](https://www.google.com/search?q=%23architecture-cognitico-biologique-compl%C3%A8te)
+22. [Cursus Académique & Paliers Comportementaux](https://www.google.com/search?q=%23cursus-acad%C3%A9mique--paliers-comportementaux)
+23. [Moteur Émotionnel & Réservoir Dopaminergique](https://www.google.com/search?q=%23moteur-%C3%A9motionnel--r%C3%A9servoir-dopaminergique)
+24. [Algorithme de Rêve Nocturne Adaptatif](https://www.google.com/search?q=%23algorithme-de-r%C3%AAve-nocturne-adaptatif)
+25. [Détecteurs Génériques d'Intention & Quêtes Auto](https://www.google.com/search?q=%23d%C3%A9tecteurs-g%C3%A9n%C3%A9riques-dintention--qu%C3%AAtes-auto)
+26. [Pression Cinétique Multimodale & Patience par Abnégation](#pression-cinétique-multimodale--patience-par-abnégation)
+27. [Volonté Émergente : Sous-Objectifs Intrinsèques & Sursaut](#volonté-émergente--sous-objectifs-intrinsèques--sursaut)
+28. [Architecture Homéostatique Biologique (expérimental)](#architecture-homéostatique-biologique-expérimental)
+29. [Mémoire Épisodique Spatiale & LTP Hebbien (expérimental)](#mémoire-épisodique-spatiale--ltp-hebbien-expérimental)
+30. [Stack Technique](https://www.google.com/search?q=%23stack-technique)
+31. [Modèle de Données & Métriques W&B](https://www.google.com/search?q=%23mod%C3%A8le-de-donn%C3%A9es--m%C3%A9triques-wb)
+32. [Démarrage Rapide](https://www.google.com/search?q=%23d%C3%A9marrage-rapide)
+33. [Mise en Production & Monitoring](https://www.google.com/search?q=%23mise-en-production--monitoring)
+34. [Configuration](https://www.google.com/search?q=%23configuration)
+35. [Troubleshooting & Guide de Dépannage](https://www.google.com/search?q=%23troubleshooting--guide-de-d%C3%A9pannage)
 
 ---
 
@@ -66,6 +68,13 @@ L'agent évolue à travers un cursus scolaire modélisé sous forme d'environnem
 ## 📜 Journal des Mises à Jour
 
 Pour un historique complet commit par commit, consultez [CHANGELOG.md](https://www.google.com/search?q=CHANGELOG.md).
+
+### Nouveautés v20.0 (expérimental) — Mémoire Épisodique Spatiale & LTP Hebbien (2026-07-23)
+
+> ⚠️ **Statut expérimental** : comme les v18.0/v19.0, cette version n'existe que dans `agi_local_test.py`, pas encore portée sur `agi_google_colab.py`.
+
+* **`MemoireEpisodiqueSpatiale`** : nouvelle mémoire épisodique au sens propre (où/quand/quoi), distincte de `vecteurs_episodiques` existant (une moyenne glissante d'états latents, plus proche d'une mémoire de travail). Enregistre position + type + tick des ressources biologiques trouvées (v18.0/v19.0) ; persiste à travers les épisodes d'une même journée, ne se vide qu'au changement de niveau du `PROGRAMME`. Un rappel (distance normalisée + fraîcheur) est injecté dans le vecteur bio existant via `integrateur_bio` (`DIM_VECTEUR_BIO` passe de 6 à 8) plutôt que de créer un agent/encodeur parallèle.
+* **LTP Hebbien** : `NaultheneLinearSynaptique` gagne une `trace_activation` (trace d'éligibilité accumulée à chaque tick) et une méthode `fortification_dopaminergique()` — sur chaque événement marquant (`poids_evenement > 0` : manger, franchir une porte, valider un palier...), les synapses récemment actives sont gravées instantanément dans `base_weight`, une vraie Potentiation à Long Terme pilotée par l'événement plutôt que par la seule moyenne journalière du pseudo-code initial.
 
 ### Nouveautés v19.0 (expérimental) — Métabolisme 20/80 & Forage 80/20 (2026-07-22)
 
@@ -367,7 +376,33 @@ Dès qu'une jauge passe sous `SEUIL_CRITIQUE_BIO = 0.35`, une quête intrinsèqu
 
 ### 5. `integrateur_bio` — Intégration Réseau
 
-Plutôt que de créer un agent/encodeur parallèle (comme le suggérait le pseudo-code initial avec `V18BiologicalAgent`), le vecteur bio (3 jauges + 3 quête = `DIM_VECTEUR_BIO = 6`) est fusionné à la pensée du réseau via une nouvelle couche `NaultheneLinearSynaptique` (`integrateur_bio`, `dim_bus + 6 → dim_bus`), appliquée une seule fois avant la tête motrice et le rollout mental — jamais réintégrée à chaque pas du rollout imaginé (sur un horizon de 7 ticks, les jauges bougent trop peu pour changer la décision). Cette couche suit les mêmes règles de neurogenèse que les autres (`declencher_neurogenese`) : seul son segment "pensée" grandit avec `dim_bus`, le segment "vecteur bio" reste toujours à 6 dims.
+Plutôt que de créer un agent/encodeur parallèle (comme le suggérait le pseudo-code initial avec `V18BiologicalAgent`), le vecteur bio (3 jauges + 3 quête + 2 rappel spatial depuis v20.0 = `DIM_VECTEUR_BIO = 8`) est fusionné à la pensée du réseau via une nouvelle couche `NaultheneLinearSynaptique` (`integrateur_bio`, `dim_bus + 8 → dim_bus`), appliquée une seule fois avant la tête motrice et le rollout mental — jamais réintégrée à chaque pas du rollout imaginé (sur un horizon de 7 ticks, les jauges bougent trop peu pour changer la décision). Cette couche suit les mêmes règles de neurogenèse que les autres (`declencher_neurogenese`) : seul son segment "pensée" grandit avec `dim_bus`, le segment "vecteur bio" reste toujours à `DIM_VECTEUR_BIO` dims.
+
+---
+
+## 🧩 Mémoire Épisodique Spatiale & LTP Hebbien (expérimental)
+
+> ⚠️ **Uniquement dans `agi_local_test.py`** (voir [Nouveautés v20.0](#nouveautés-v200-expérimental--mémoire-épisodique-spatiale--ltp-hebbien-2026-07-23)), pas encore portée sur `agi_google_colab.py`.
+
+### 1. `MemoireEpisodiqueSpatiale` — Se Souvenir du Nid
+
+Distincte de `vecteurs_episodiques` (une moyenne glissante d'états latents, plus proche d'une mémoire de travail court terme), cette nouvelle mémoire enregistre le triplet **où / quand / quoi** de chaque ressource biologique trouvée (v18.0/v19.0) : position, type (`FOOD`/`WATER`), tick absolu. Contrairement aux autres détecteurs spatiaux (thermostat cinétique, franchissement de portes) qui se réinitialisent à chaque épisode, ces souvenirs **persistent à travers les épisodes d'une même journée** — un vrai souvenir épisodique survit à un simple reset MiniGrid — et ne sont vidés qu'au **changement de niveau** du `PROGRAMME` (`reinitialiser_niveau`), les coordonnées d'un niveau précédent n'ayant alors plus aucun sens.
+
+Quand une quête de survie est active (voir Génération Autonome de Quêtes ci-dessus), `recuperer_contexte()` cherche le souvenir le plus pertinent pour le type de besoin courant, combinant proximité spatiale et fraîcheur temporelle :
+
+$$\text{distance\_normalisee} = \frac{1}{1 + \text{distance de Manhattan}} \qquad \text{fraicheur} = \max\left(0,\ 1 - \frac{\text{age}}{\text{FENETRE\_FRAICHEUR\_SOUVENIR}}\right)$$
+
+Ce couple $(\text{distance\_normalisee}, \text{fraicheur})$ est directement injecté dans le vecteur bio existant (voir `integrateur_bio` ci-dessus), sans stocker d'encodage visuel appris par souvenir (contrairement au pseudo-code initial qui gardait un tenseur par événement) — une mémoire épisodique légère, consommée par le réseau déjà en place plutôt qu'un second canal de features concurrent de `porte_visuelle`.
+
+### 2. LTP Hebbien — Myélinisation Pilotée par l'Événement
+
+`NaultheneLinearSynaptique` gagne une **trace d'éligibilité** (`trace_activation`), accumulée à chaque tick d'entraînement :
+
+$$\text{trace\_activation} \leftarrow 0.9 \times \text{trace\_activation} + 0.1 \times |\text{annexe\_weight}|$$
+
+Quand un événement marquant survient (`poids_evenement > 0` dans la boucle principale — manger, franchir une porte, valider un palier DoorKey...), `agent.fortifier_synapses(poids_evenement)` appelle `fortification_dopaminergique()` sur **toutes** les couches plastiques : les synapses marquées par la trace sont gravées instantanément dans `base_weight`, proportionnellement à leur activité récente ET à l'intensité du pic, puis la trace est remise à zéro. C'est une vraie **Potentiation à Long Terme (LTP)** pilotée par l'événement précis, contrairement au pseudo-code initial qui ne déclenchait la fortification qu'une seule fois par jour sur la moyenne des récompenses — une moyenne aurait dilué un bon repas isolé au milieu d'une journée par ailleurs difficile.
+
+La trace ne se remet à zéro qu'à la fortification ou au sommeil (`cycle_sommeil`), jamais entre deux ticks — elle suit le même cycle de vie que `annexe_weight`. `agrandir()` (neurogenèse) étend `trace_activation` de la même façon que `myeline_M`, pour rester cohérente après un ajout de dimensions.
 
 ---
 
@@ -417,7 +452,8 @@ Chaque journée d'entraînement émet les télémétries suivantes vers le table
   "Bio_Food_Consommes_Jour": 3,
   "Bio_Water_Consommes_Jour": 1,
   "Bio_Quete_Active": "Aucune",
-  "Bio_Effort_Metabolique_Moyen": 0.47
+  "Bio_Effort_Metabolique_Moyen": 0.47,
+  "Memoire_Episodique_Taille": 12
 }
 
 ```
@@ -446,6 +482,11 @@ Chaque journée d'entraînement émet les télémétries suivantes vers le table
 * **`Bio_R_Bio_Jour`** : positif sur une journée où l'agent a mangé/bu plus qu'il ne s'est dégradé ; négatif sinon — sert de proxy direct pour juger si l'agent a "survécu" biologiquement ce jour-là, indépendamment de sa progression sur le cursus DoorKey.
 * **`Bio_Effort_Metabolique_Moyen`** (v19.0) : varie selon le mix d'actions du jour — un agent qui manipule beaucoup d'objets (pickup/toggle) affiche un effort plus élevé qu'un agent qui se contente d'avancer ; en Mode Libre, la composante cognitive (20%) tire mécaniquement la moyenne vers le haut par rapport au Mode Guidé.
 * **`Bio_Food_Consommes_Jour`** (v19.0) : avec le forage 80/20, cette métrique ne devrait plus rester bloquée à un petit nombre fixe par épisode comme en v18.0 (ressources non renouvelées) — elle peut désormais croître librement sur une journée entière si l'agent reste proche du Nid.
+
+**Effets attendus des métriques v20.0 (expérimental) :**
+
+* **`Memoire_Episodique_Taille`** : ne fait que croître au sein d'une même journée/niveau (jamais redescendre, sauf changement de niveau du `PROGRAMME` qui la vide) — plafonnée à `CAPACITE_MEMOIRE_EPISODIQUE`. Une valeur qui stagne à 0 signale que l'agent ne trouve jamais de ressource, indépendamment du rappel spatial.
+* Effet indirect attendu sur **`Bio_R_Bio_Jour`** : une fois la mémoire épisodique suffisamment peuplée (quelques souvenirs formés), le rappel spatial devrait aider l'agent à retrouver plus vite une ressource après une consommation, et donc faire remonter `Bio_R_Bio_Jour` plus vite qu'en v19.0 pure (sans mémoire) — à vérifier sur un run long, cette version n'ayant pour l'instant été validée que sur un smoketest de quelques jours.
 
 ---
 
@@ -530,6 +571,22 @@ SEUIL_DECLENCHEMENT_SURSAUT = 0.95
 BOOST_SECOND_SOUFFLE = 0.5
 EXTENSION_PATIENCE_SURSAUT = 50
 BOOST_PATIENCE_MIN_PAR_RECURRENCE = 10
+
+# Moteur Homéostatique Biologique (v18.0, expérimental, agi_local_test.py uniquement)
+TAUX_SATIETE = 0.008
+TAUX_HYDRATATION = 0.005
+TAUX_STIMULATION = 0.012
+SEUIL_CRITIQUE_BIO = 0.35
+NB_SOURCES_FOOD = 2
+NB_SOURCES_WATER = 2
+POIDS_CHOC_RESSOURCE_BIO = 0.25
+
+# Forage 80/20 (v19.0, expérimental)
+# (probabilité codée en dur dans DetecteurRessourcesBiologiques.PROBABILITE_RESPAWN_AU_NID = 0.80)
+
+# Mémoire Épisodique Spatiale (v20.0, expérimental)
+CAPACITE_MEMOIRE_EPISODIQUE = 200
+FENETRE_FRAICHEUR_SOUVENIR = 2000
 
 ```
 

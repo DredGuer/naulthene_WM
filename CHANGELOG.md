@@ -4,6 +4,29 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](readme
 
 ---
 
+## [20.0-experimental] - 2026-07-23
+
+### Mémoire Épisodique Spatiale & LTP Hebbien (expérimental, non porté sur le script de référence)
+
+| Type | Details |
+|------|---------|
+| **Commit** | N/A — vit uniquement dans `agi_local_test.py`, non tracké par git |
+| **Catégorie** | feat (expérimental) |
+| **Impact** | Fonctionnel (local uniquement) |
+
+**Ajoute une mémoire épisodique spatiale (où/quand/quoi) persistante dans la journée, consommée par le vecteur bio existant, et une Potentiation à Long Terme (LTP) hebbienne pilotée par les pics de dopamine par tick.**
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `agi_local_test.py` | Ajout de `MemoireEpisodiqueSpatiale` : enregistre position/type/tick des ressources trouvées, persiste à travers les épisodes d'une même journée, vidée uniquement au changement de niveau (`reinitialiser_niveau`) |
+| `agi_local_test.py` | `BiologicalHomeostasisEngine.obtenir_vecteur_bio()` accepte un `rappel_spatial` (distance normalisée + fraîcheur) ; `DIM_VECTEUR_BIO` passe de 6 à 8 dims |
+| `agi_local_test.py` | Boucle principale : récupération de contexte avant construction du vecteur bio (si une quête de survie est active), enregistrement d'événement à la consommation d'une ressource, compteur `tick_absolu` global |
+| `agi_local_test.py` | `NaultheneLinearSynaptique` : ajout de `trace_activation` (trace d'éligibilité, accumulation exponentielle à chaque tick) et de `fortification_dopaminergique()` (LTP : grave les synapses actives dans `base_weight` proportionnellement au pic de dopamine) ; `agrandir()` étend `trace_activation` comme `myeline_M` ; `cycle_sommeil()` la remet à zéro |
+| `agi_local_test.py` | `AGI_Naulthene.fortifier_synapses()` : nouvelle méthode appelant `fortification_dopaminergique()` sur toutes les couches plastiques, appelée depuis la boucle principale sur `poids_evenement` (par tick, pas une seule fois par jour sur la moyenne des récompenses comme le pseudo-code initial — évite de diluer un événement isolé) |
+| `agi_local_test.py` | Nouvelle métrique W&B : `Memoire_Episodique_Taille` |
+
+---
+
 ## [19.0-experimental] - 2026-07-22
 
 ### Métabolisme 20/80 & Forage 80/20 (expérimental, non porté sur le script de référence)
