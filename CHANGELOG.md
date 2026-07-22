@@ -4,6 +4,27 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](readme
 
 ---
 
+## [19.0-experimental] - 2026-07-22
+
+### Métabolisme 20/80 & Forage 80/20 (expérimental, non porté sur le script de référence)
+
+| Type | Details |
+|------|---------|
+| **Commit** | N/A — vit uniquement dans `agi_local_test.py`, non tracké par git |
+| **Catégorie** | feat (expérimental) |
+| **Impact** | Fonctionnel (local uniquement) |
+
+**Remplace le coût énergétique fixe de la v18.0 par un calcul dynamique 20% Cerveau / 80% Corps, et introduit un cycle de forage (respawn) 80% Nid / 20% Dispersion pour la Nourriture.**
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `agi_local_test.py` | `BiologicalHomeostasisEngine.calculer_effort_metabolique()` : nouvelle méthode fusionnant coût corporel (80%, dépend du type d'action MiniGrid réelle — tourner/avancer/manipuler) et coût cognitif (20%, dérivé de `force_planification` et de la somme des `HORIZONS_PLANIFICATION`) ; remplace la constante fixe `COUT_ACTION_METABOLIQUE` (supprimée) |
+| `agi_local_test.py` | `DetecteurRessourcesBiologiques` : ajout d'un `nid_position` (dérivé de la carte courante à l'initialisation de l'épisode, jamais une coordonnée fixe codée en dur) et de `_faire_repousser_food()` — la Nourriture consommée réapparaît immédiatement (80% près du nid ±1 case, 20% dispersée aléatoirement) ; l'Eau ne respawn pas |
+| `agi_local_test.py` | Boucle principale : câblage de `calculer_effort_metabolique()` avant `step_metabolisme()`, nouveau compteur `effort_metabolique_jour` |
+| `agi_local_test.py` | Nouvelle métrique W&B : `Bio_Effort_Metabolique_Moyen` |
+
+---
+
 ## [18.0-experimental] - 2026-07-22
 
 ### Architecture Homéostatique Biologique (expérimental, non porté sur le script de référence)

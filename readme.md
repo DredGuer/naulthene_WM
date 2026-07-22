@@ -16,35 +16,36 @@ Il intègre la structure de table des matières globale (avec le contexte applic
 1. [Vue d'Ensemble du Projet](https://www.google.com/search?q=%23vue-densemble-du-projet)
 2. [Journal des Mises à Jour (Changelog)](https://www.google.com/search?q=%23journal-des-mises-%C3%A0-jour)
 3. [Plan d'Action](https://www.google.com/search?q=%23plan-daction)
-4. [Nouveautés v18.0 (expérimental) — Architecture Homéostatique Biologique](#nouveautés-v180-expérimental--architecture-homéostatique-biologique-2026-07-22)
-5. [Nouveautés v17.0 — Volonté Émergente & Sous-Objectifs Intrinsèques](#nouveautés-v170--volonté-émergente--sous-objectifs-intrinsèques-2026-07-22)
-6. [Nouveautés v16.0 — Thermostat Multimodal & Patience par Abnégation](#nouveautés-v160--thermostat-multimodal--patience-par-abnégation-2026-07-22)
-7. [Nouveautés v15.0 — Planification Non-Linéaire, Pression Cinétique & Patience Adaptative](#nouveautés-v150--planification-non-linéaire-pression-cinétique--patience-adaptative-2026-07-22)
-8. [Nouveautés v14.0 — Rêves Adaptatifs & Planification Étendue à 3 Pas](https://www.google.com/search?q=%23nouveaut%C3%A9s-v140---r%C3%AAves-adaptatifs--planification-%C3%A9tendue-%C3%A0-3-pas-2026-07-22)
-9. [Nouveautés v13.0 — Décision Autonome & Mode Libre](https://www.google.com/search?q=%23nouveaut%C3%A9s-v130---d%C3%A9cision-autonome--mode-libre-2026-07-22)
-10. [Nouveautés v12.0 — Cursus à 7 Paliers & Correctif d'Épisodes](https://www.google.com/search?q=%23nouveaut%C3%A9s-v120---cursus-%C3%A0-7-paliers--correctif-d%C3%A9pisodes-2026-07-22)
-11. [Nouveautés v11.0 — Réservoir Dopaminergique V3](https://www.google.com/search?q=%23nouveaut%C3%A9s-v110---r%C3%A9servoir-dopaminergique-v3-2026-07-22)
-12. [Nouveautés v10.0-fix1 — Correctif de Stabilité JEPA & Thermostat](https://www.google.com/search?q=%23nouveaut%C3%A9s-v100-fix1---correctif-de-stabilit%C3%A9-jepa--thermostat)
-13. [Nouveautés v10.0 — Système 2 & Rollout Mental Vectorisé](https://www.google.com/search?q=%23nouveaut%C3%A9s-v100---syst%C3%A8me-2--rollout-mental-vectoris%C3%A9)
-14. [Nouveautés v9.1 — Intégration du Tampon Épisodique (Université)](https://www.google.com/search?q=%23nouveaut%C3%A9s-v91---int%C3%A9gration-du-tampon-%C3%A9pisodique-universit%C3%A9)
-15. [Nouveautés v9.0-fix1 — Correctif de la Neurogenèse Bloc par Bloc](https://www.google.com/search?q=%23nouveaut%C3%A9s-v90-fix1---correctif-de-la-neurogen%C3%A8se-bloc-par-bloc)
-16. [Nouveautés v9.0 — Cursus Académique Progressif (Primaire à Doctorat)](https://www.google.com/search?q=%23nouveaut%C3%A9s-v90---cursus-acad%C3%A9mique-progressif-primaire-%C3%A0-doctorat)
-17. [Nouveautés v8.0 — Alignement Graph-Gradient RL & Rêve Nocturne](https://www.google.com/search?q=%23nouveaut%C3%A9s-v80---alignement-graph-gradient-rl--r%C3%AAve-nocturne)
-18. [Nouveautés v7.0 — Phase 7 Initiale (Architecture Hybride Duale)](https://www.google.com/search?q=%23nouveaut%C3%A9s-v70---phase-7-initiale-architecture-hybride-duale)
-19. [Architecture Cognitico-Biologique Complète](https://www.google.com/search?q=%23architecture-cognitico-biologique-compl%C3%A8te)
-20. [Cursus Académique & Paliers Comportementaux](https://www.google.com/search?q=%23cursus-acad%C3%A9mique--paliers-comportementaux)
-21. [Moteur Émotionnel & Réservoir Dopaminergique](https://www.google.com/search?q=%23moteur-%C3%A9motionnel--r%C3%A9servoir-dopaminergique)
-22. [Algorithme de Rêve Nocturne Adaptatif](https://www.google.com/search?q=%23algorithme-de-r%C3%AAve-nocturne-adaptatif)
-23. [Détecteurs Génériques d'Intention & Quêtes Auto](https://www.google.com/search?q=%23d%C3%A9tecteurs-g%C3%A9n%C3%A9riques-dintention--qu%C3%AAtes-auto)
-24. [Pression Cinétique Multimodale & Patience par Abnégation](#pression-cinétique-multimodale--patience-par-abnégation)
-25. [Volonté Émergente : Sous-Objectifs Intrinsèques & Sursaut](#volonté-émergente--sous-objectifs-intrinsèques--sursaut)
-26. [Architecture Homéostatique Biologique (expérimental)](#architecture-homéostatique-biologique-expérimental)
-27. [Stack Technique](https://www.google.com/search?q=%23stack-technique)
-28. [Modèle de Données & Métriques W&B](https://www.google.com/search?q=%23mod%C3%A8le-de-donn%C3%A9es--m%C3%A9triques-wb)
-29. [Démarrage Rapide](https://www.google.com/search?q=%23d%C3%A9marrage-rapide)
-30. [Mise en Production & Monitoring](https://www.google.com/search?q=%23mise-en-production--monitoring)
-31. [Configuration](https://www.google.com/search?q=%23configuration)
-30. [Troubleshooting & Guide de Dépannage](https://www.google.com/search?q=%23troubleshooting--guide-de-d%C3%A9pannage)
+4. [Nouveautés v19.0 (expérimental) — Métabolisme 20/80 & Forage 80/20](#nouveautés-v190-expérimental--métabolisme-2080--forage-8020-2026-07-22)
+5. [Nouveautés v18.0 (expérimental) — Architecture Homéostatique Biologique](#nouveautés-v180-expérimental--architecture-homéostatique-biologique-2026-07-22)
+6. [Nouveautés v17.0 — Volonté Émergente & Sous-Objectifs Intrinsèques](#nouveautés-v170--volonté-émergente--sous-objectifs-intrinsèques-2026-07-22)
+7. [Nouveautés v16.0 — Thermostat Multimodal & Patience par Abnégation](#nouveautés-v160--thermostat-multimodal--patience-par-abnégation-2026-07-22)
+8. [Nouveautés v15.0 — Planification Non-Linéaire, Pression Cinétique & Patience Adaptative](#nouveautés-v150--planification-non-linéaire-pression-cinétique--patience-adaptative-2026-07-22)
+9. [Nouveautés v14.0 — Rêves Adaptatifs & Planification Étendue à 3 Pas](https://www.google.com/search?q=%23nouveaut%C3%A9s-v140---r%C3%AAves-adaptatifs--planification-%C3%A9tendue-%C3%A0-3-pas-2026-07-22)
+10. [Nouveautés v13.0 — Décision Autonome & Mode Libre](https://www.google.com/search?q=%23nouveaut%C3%A9s-v130---d%C3%A9cision-autonome--mode-libre-2026-07-22)
+11. [Nouveautés v12.0 — Cursus à 7 Paliers & Correctif d'Épisodes](https://www.google.com/search?q=%23nouveaut%C3%A9s-v120---cursus-%C3%A0-7-paliers--correctif-d%C3%A9pisodes-2026-07-22)
+12. [Nouveautés v11.0 — Réservoir Dopaminergique V3](https://www.google.com/search?q=%23nouveaut%C3%A9s-v110---r%C3%A9servoir-dopaminergique-v3-2026-07-22)
+13. [Nouveautés v10.0-fix1 — Correctif de Stabilité JEPA & Thermostat](https://www.google.com/search?q=%23nouveaut%C3%A9s-v100-fix1---correctif-de-stabilit%C3%A9-jepa--thermostat)
+14. [Nouveautés v10.0 — Système 2 & Rollout Mental Vectorisé](https://www.google.com/search?q=%23nouveaut%C3%A9s-v100---syst%C3%A8me-2--rollout-mental-vectoris%C3%A9)
+15. [Nouveautés v9.1 — Intégration du Tampon Épisodique (Université)](https://www.google.com/search?q=%23nouveaut%C3%A9s-v91---int%C3%A9gration-du-tampon-%C3%A9pisodique-universit%C3%A9)
+16. [Nouveautés v9.0-fix1 — Correctif de la Neurogenèse Bloc par Bloc](https://www.google.com/search?q=%23nouveaut%C3%A9s-v90-fix1---correctif-de-la-neurogen%C3%A8se-bloc-par-bloc)
+17. [Nouveautés v9.0 — Cursus Académique Progressif (Primaire à Doctorat)](https://www.google.com/search?q=%23nouveaut%C3%A9s-v90---cursus-acad%C3%A9mique-progressif-primaire-%C3%A0-doctorat)
+18. [Nouveautés v8.0 — Alignement Graph-Gradient RL & Rêve Nocturne](https://www.google.com/search?q=%23nouveaut%C3%A9s-v80---alignement-graph-gradient-rl--r%C3%AAve-nocturne)
+19. [Nouveautés v7.0 — Phase 7 Initiale (Architecture Hybride Duale)](https://www.google.com/search?q=%23nouveaut%C3%A9s-v70---phase-7-initiale-architecture-hybride-duale)
+20. [Architecture Cognitico-Biologique Complète](https://www.google.com/search?q=%23architecture-cognitico-biologique-compl%C3%A8te)
+21. [Cursus Académique & Paliers Comportementaux](https://www.google.com/search?q=%23cursus-acad%C3%A9mique--paliers-comportementaux)
+22. [Moteur Émotionnel & Réservoir Dopaminergique](https://www.google.com/search?q=%23moteur-%C3%A9motionnel--r%C3%A9servoir-dopaminergique)
+23. [Algorithme de Rêve Nocturne Adaptatif](https://www.google.com/search?q=%23algorithme-de-r%C3%AAve-nocturne-adaptatif)
+24. [Détecteurs Génériques d'Intention & Quêtes Auto](https://www.google.com/search?q=%23d%C3%A9tecteurs-g%C3%A9n%C3%A9riques-dintention--qu%C3%AAtes-auto)
+25. [Pression Cinétique Multimodale & Patience par Abnégation](#pression-cinétique-multimodale--patience-par-abnégation)
+26. [Volonté Émergente : Sous-Objectifs Intrinsèques & Sursaut](#volonté-émergente--sous-objectifs-intrinsèques--sursaut)
+27. [Architecture Homéostatique Biologique (expérimental)](#architecture-homéostatique-biologique-expérimental)
+28. [Stack Technique](https://www.google.com/search?q=%23stack-technique)
+29. [Modèle de Données & Métriques W&B](https://www.google.com/search?q=%23mod%C3%A8le-de-donn%C3%A9es--m%C3%A9triques-wb)
+30. [Démarrage Rapide](https://www.google.com/search?q=%23d%C3%A9marrage-rapide)
+31. [Mise en Production & Monitoring](https://www.google.com/search?q=%23mise-en-production--monitoring)
+32. [Configuration](https://www.google.com/search?q=%23configuration)
+33. [Troubleshooting & Guide de Dépannage](https://www.google.com/search?q=%23troubleshooting--guide-de-d%C3%A9pannage)
 
 ---
 
@@ -65,6 +66,13 @@ L'agent évolue à travers un cursus scolaire modélisé sous forme d'environnem
 ## 📜 Journal des Mises à Jour
 
 Pour un historique complet commit par commit, consultez [CHANGELOG.md](https://www.google.com/search?q=CHANGELOG.md).
+
+### Nouveautés v19.0 (expérimental) — Métabolisme 20/80 & Forage 80/20 (2026-07-22)
+
+> ⚠️ **Statut expérimental** : comme la v18.0, cette version n'existe que dans `agi_local_test.py`, pas encore portée sur `agi_google_colab.py`.
+
+* **Moteur Métabolique 20/80** : le coût énergétique fixe de la v18.0 (`COUT_ACTION_METABOLIQUE`, constante unique) est remplacé par un calcul dynamique fusionnant un Effort Corporel (80% du poids, dépend du TYPE d'action MiniGrid réellement exécutée — tourner coûte peu, manipuler/pickup coûte cher) et un Effort Cognitif (20% du poids, dérivé de `force_planification` et de la profondeur du rollout `HORIZONS_PLANIFICATION` — le Système 2 pèse plus lourd en Mode Libre qu'en Mode Guidé).
+* **Forage 80/20** : la Nourriture (uniquement) réapparaît désormais immédiatement après consommation, selon une distribution 80% à proximité d'un "Nid" (dérivé de la carte courante, jamais une coordonnée fixe codée en dur) / 20% dispersée aléatoirement sur la grille — l'Eau reste une ressource par épisode, sans respawn.
 
 ### Nouveautés v18.0 (expérimental) — Architecture Homéostatique Biologique (2026-07-22)
 
@@ -315,7 +323,7 @@ Si l'épisode se solde par une **vraie victoire** ($\text{recompense\_env} > 0$)
 
 ## 🧬 Architecture Homéostatique Biologique (expérimental)
 
-> ⚠️ **Uniquement dans `agi_local_test.py`** (voir [Nouveautés v18.0](#nouveautés-v180-expérimental--architecture-homéostatique-biologique-2026-07-22)), pas encore portée sur `agi_google_colab.py`.
+> ⚠️ **Uniquement dans `agi_local_test.py`** (voir [Nouveautés v19.0](#nouveautés-v190-expérimental--métabolisme-2080--forage-8020-2026-07-22) et [v18.0](#nouveautés-v180-expérimental--architecture-homéostatique-biologique-2026-07-22)), pas encore portée sur `agi_google_colab.py`.
 
 Trois jauges vitales complètent le réservoir dopaminergique existant, sans le remplacer, en s'inspirant de la Théorie de la Réduction du Drive (Hull, 1943) : la motivation naît de la réduction d'un manque physiologique, pas seulement d'un signal de récompense externe.
 
@@ -323,7 +331,7 @@ Trois jauges vitales complètent le réservoir dopaminergique existant, sans le 
 
 | Jauge | Rôle | Taux de dégradation par tick |
 | --- | --- | --- |
-| **Satiété** | Nourriture / énergie motrice | $-0.008 \times (1 + \text{coût action})$ |
+| **Satiété** | Nourriture / énergie motrice | $-0.008 \times (1 + \text{effort métabolique})$ |
 | **Hydratation** | Fluide informationnel | $-0.005$ (constant) |
 | **Stimulation** | Découverte / complexité | $-0.012$ + bonus de nouveauté (case inédite + erreur JEPA) |
 
@@ -335,15 +343,29 @@ $$r_{\text{bio}} = D(t-1) - D(t)$$
 
 `r_bio` est positif quand l'agent comble un manque (ex: mange), négatif s'il continue de se dégrader. Contrairement au pseudo-code initial qui introduisait un second réservoir de dopamine indépendant, `r_bio` est injecté dans `TENEUR_DOPAMINE` (déjà existant) via le même mécanisme `poids_evenement`/`TAUX_CHOC_BASE` que les autres détecteurs — une seule notion de motivation, jamais deux qui se chevauchent.
 
-### 2. `DetecteurRessourcesBiologiques` — Ressources Procédurales
+### 2. Moteur Métabolique 20% Cerveau / 80% Corps (v19.0)
 
-MiniGrid n'a pas d'objets Nourriture/Eau natifs. Ce détecteur réutilise `Ball` avec une couleur dédiée par ressource (rouge = Nourriture, bleu = Eau, `NB_SOURCES_FOOD`/`NB_SOURCES_WATER` par épisode), placées sur des cases vides aléatoires à chaque `reinitialiser_episode` — cohérent avec les autres détecteurs génériques (aucune carte codée en dur). La ressource est retirée de la grille (`grid.set(x, y, None)`) dès qu'elle est consommée, pour n'être ramassée qu'une seule fois.
+L'effort métabolique qui alimente la dégradation de la satiété n'est plus une constante fixe (v18.0) mais une fusion pondérée :
 
-### 3. Génération Autonome de Quêtes de Survie
+$$\text{effort} = 0.80 \times \text{cout\_corps}(\text{action}) + 0.20 \times \text{cout\_cerveau}(\text{force\_planification})$$
+
+* **Coût Corporel (80%)** : dépend du TYPE d'action MiniGrid réellement exécutée — tourner (`left`/`right`) coûte $0.2$, avancer $0.5$, manipuler (`pickup`/`drop`) $0.8$ (le plus cher), `toggle` $0.6$, `done` $0.1$ (quasi inaction). Recalé sur les vrais indices `Actions.*` du projet, pas sur un mapping numérique arbitraire.
+* **Coût Cérébral (20%)** : $\min(1.0,\ \text{force\_planification} \times \sum(\text{HORIZONS\_PLANIFICATION}) / 10)$ — en Mode Libre (`force_planification=0.85`), le Système 2 pèse structurellement plus lourd qu'en Mode Guidé (`0.5`), reflétant la vraie profondeur fixe du rollout mental (horizons 1+3+7=11), sans inventer une notion de "profondeur MCTS variable" absente de l'architecture réelle.
+
+### 3. `DetecteurRessourcesBiologiques` — Ressources Procédurales & Forage 80/20
+
+MiniGrid n'a pas d'objets Nourriture/Eau natifs. Ce détecteur réutilise `Ball` avec une couleur dédiée par ressource (rouge = Nourriture, bleu = Eau, `NB_SOURCES_FOOD`/`NB_SOURCES_WATER` par épisode), placées sur des cases vides aléatoires à chaque `reinitialiser_episode` — cohérent avec les autres détecteurs génériques (aucune carte codée en dur). La ressource est retirée de la grille (`grid.set(x, y, None)`) dès qu'elle est consommée.
+
+**Forage 80/20 (v19.0)** : contrairement à la v18.0 où une ressource consommée disparaissait définitivement, la Nourriture (uniquement — l'Eau ne respawn pas) réapparaît immédiatement après consommation :
+
+* **80%** : sur une case libre à proximité (±1 case) d'un "Nid" — la première case vide trouvée à l'initialisation de l'épisode, jamais une coordonnée fixe codée en dur, pour rester agnostique de la carte et fonctionner identiquement sur les 5 niveaux du `PROGRAMME`.
+* **20%** : dispersée totalement aléatoirement sur la grille.
+
+### 4. Génération Autonome de Quêtes de Survie
 
 Dès qu'une jauge passe sous `SEUIL_CRITIQUE_BIO = 0.35`, une quête intrinsèque est générée avec un ordre de priorité fixe : `SURVIVAL_FOOD` > `SURVIVAL_WATER` > `EXPLORATION_STIM` — mourir de faim/soif est un risque plus urgent que s'ennuyer. Le vecteur cible de la quête active (one-hot, 3 dims) est transmis au réseau via `integrateur_bio`.
 
-### 4. `integrateur_bio` — Intégration Réseau
+### 5. `integrateur_bio` — Intégration Réseau
 
 Plutôt que de créer un agent/encodeur parallèle (comme le suggérait le pseudo-code initial avec `V18BiologicalAgent`), le vecteur bio (3 jauges + 3 quête = `DIM_VECTEUR_BIO = 6`) est fusionné à la pensée du réseau via une nouvelle couche `NaultheneLinearSynaptique` (`integrateur_bio`, `dim_bus + 6 → dim_bus`), appliquée une seule fois avant la tête motrice et le rollout mental — jamais réintégrée à chaque pas du rollout imaginé (sur un horizon de 7 ticks, les jauges bougent trop peu pour changer la décision). Cette couche suit les mêmes règles de neurogenèse que les autres (`declencher_neurogenese`) : seul son segment "pensée" grandit avec `dim_bus`, le segment "vecteur bio" reste toujours à 6 dims.
 
@@ -386,7 +408,16 @@ Chaque journée d'entraînement émet les télémétries suivantes vers le table
   "Facteur_Complexite": 1.6,
   "Sursauts_Volonte_Jour": 1,
   "Patience_Min_Actuelle": 60,
-  "Sous_Objectifs_Curiosite_Jour": 4
+  "Sous_Objectifs_Curiosite_Jour": 4,
+  "Bio_Satiete": 0.62,
+  "Bio_Hydratation": 0.48,
+  "Bio_Stimulation": 0.81,
+  "Bio_Deficit": 0.42,
+  "Bio_R_Bio_Jour": 1.238,
+  "Bio_Food_Consommes_Jour": 3,
+  "Bio_Water_Consommes_Jour": 1,
+  "Bio_Quete_Active": "Aucune",
+  "Bio_Effort_Metabolique_Moyen": 0.47
 }
 
 ```
@@ -408,6 +439,13 @@ Chaque journée d'entraînement émet les télémétries suivantes vers le table
 * **`Patience_Min_Actuelle`** : ne fait que croître par paliers discrets (jamais redescendre) — chaque saut de +10 marque une victoire obtenue après un Sursaut de Volonté, une trace permanente de récurrence.
 * **`Sursauts_Volonte_Jour`** : devrait décroître à mesure que l'agent internalise la persévérance (patience de base plus haute = moins de situations à 95% de la patience) — une valeur qui reste élevée durablement signale un palier structurellement trop difficile pour le niveau courant.
 * **`Sous_Objectifs_Curiosite_Jour`** : élevé à l'entrée en Mode Libre (le monde est encore largement une "zone d'ombre"), puis décroît à mesure que le JEPA stabilise ses prédictions sur la zone explorée — une valeur qui ne décroît jamais peut indiquer une instabilité du World Model plutôt qu'une vraie exploration.
+
+**Effets attendus des métriques v18.0/v19.0 (expérimental) :**
+
+* **`Bio_Deficit`** : devrait osciller sans diverger vers l'infini — un agent qui trouve régulièrement de la Nourriture/Eau maintient un déficit borné ; une dérive continue vers le haut signale que les taux de dégradation (`TAUX_SATIETE`/`TAUX_HYDRATATION`) sont mal calibrés pour la durée d'un épisode.
+* **`Bio_R_Bio_Jour`** : positif sur une journée où l'agent a mangé/bu plus qu'il ne s'est dégradé ; négatif sinon — sert de proxy direct pour juger si l'agent a "survécu" biologiquement ce jour-là, indépendamment de sa progression sur le cursus DoorKey.
+* **`Bio_Effort_Metabolique_Moyen`** (v19.0) : varie selon le mix d'actions du jour — un agent qui manipule beaucoup d'objets (pickup/toggle) affiche un effort plus élevé qu'un agent qui se contente d'avancer ; en Mode Libre, la composante cognitive (20%) tire mécaniquement la moyenne vers le haut par rapport au Mode Guidé.
+* **`Bio_Food_Consommes_Jour`** (v19.0) : avec le forage 80/20, cette métrique ne devrait plus rester bloquée à un petit nombre fixe par épisode comme en v18.0 (ressources non renouvelées) — elle peut désormais croître librement sur une journée entière si l'agent reste proche du Nid.
 
 ---
 
