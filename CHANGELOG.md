@@ -4,6 +4,29 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](readme
 
 ---
 
+## [18.0-experimental] - 2026-07-22
+
+### Architecture Homéostatique Biologique (expérimental, non porté sur le script de référence)
+
+| Type | Details |
+|------|---------|
+| **Commit** | N/A — vit uniquement dans `agi_local_test.py`, non tracké par git |
+| **Catégorie** | feat (expérimental) |
+| **Impact** | Fonctionnel (local uniquement) |
+
+**Trois jauges vitales (satiété, hydratation, stimulation) régies par la Théorie de la Réduction du Drive (Hull), avec génération procédurale de ressources et quêtes de survie autonomes. Existe uniquement dans `agi_local_test.py` en attendant validation sur un run local suffisamment long avant portage sur `agi_google_colab.py`.**
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `agi_local_test.py` | Ajout de `BiologicalHomeostasisEngine` : jauges satiété/hydratation/stimulation dégradées à chaque tick, déficit homéostatique $D(t)$, récompense `r_bio` = réduction du déficit, injectée dans `TENEUR_DOPAMINE` existant (pas de second réservoir de dopamine parallèle, contrairement au pseudo-code initial) |
+| `agi_local_test.py` | Ajout de `DetecteurRessourcesBiologiques` : génération procédurale de sources Nourriture/Eau via `Ball` colorées (rouge/bleu) placées sur des cases vides aléatoires par épisode, consommées et retirées de la grille au contact |
+| `agi_local_test.py` | Génération autonome de quêtes de survie (`SURVIVAL_FOOD` > `SURVIVAL_WATER` > `EXPLORATION_STIM`) dès qu'une jauge passe sous 0.35 |
+| `agi_local_test.py` | Ajout de la couche `integrateur_bio` (`NaultheneLinearSynaptique`, `dim_bus + 6 → dim_bus`) dans `AGI_Naulthene` : fusionne la pensée avec le vecteur bio (jauges + quête) avant la tête motrice et le rollout mental — intégré à l'architecture existante plutôt que de dupliquer un agent/encodeur parallèle (`V18BiologicalAgent` du pseudo-code initial) |
+| `agi_local_test.py` | `declencher_neurogenese`/`cycle_sommeil_global` mis à jour pour couvrir `integrateur_bio` ; le vecteur bio (6 dims) ne grandit jamais avec la neurogenèse |
+| `agi_local_test.py` | Nouvelles métriques W&B : `Bio_Satiete`, `Bio_Hydratation`, `Bio_Stimulation`, `Bio_Deficit`, `Bio_R_Bio_Jour`, `Bio_Food_Consommes_Jour`, `Bio_Water_Consommes_Jour`, `Bio_Quete_Active` |
+
+---
+
 ## [17.0] - 2026-07-22
 
 ### Volonté Émergente & Sous-Objectifs Intrinsèques
