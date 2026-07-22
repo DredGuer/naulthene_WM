@@ -1,4 +1,4 @@
-#Version actuelle 15.
+#Version actuelle 16.
 
 import torch
 import torch.nn as nn
@@ -564,70 +564,108 @@ class DetecteurProgresPersonnel:
             return 0.0, 0.0
 
 
-# --- 3c. THERMOSTAT CINÉTIQUE & PATIENCE ADAPTATIVE (génériques, actifs partout) ---
-class ThermostatCinetique:
+# --- 3c. THERMOSTAT CINÉTIQUE MULTIMODAL & PATIENCE PAR ABNÉGATION (génériques, actifs partout) ---
+class ThermostatCinetiqueMultimodal:
     """
-    Pression cinétique ("envie de bouger") : générique comme DetecteurFranchissementPortes
-    et DetecteurProgresPersonnel, sans connaissance de la carte. Mesure uniquement la
-    trajectoire récente de l'agent (agent_pos) et pénalise l'immobilité stricte et le
-    piétinement (aller-retour entre les mêmes cases) — l'immobilité devient sous-optimale
-    par construction du signal de récompense plutôt que par une règle écrite en dur pour
-    un niveau donné.
+    Pression cinétique ("envie de bouger"), version multimodale (v16.0) : générique
+    comme DetecteurFranchissementPortes et DetecteurProgresPersonnel, sans connaissance
+    de la carte. Mesure la trajectoire récente de l'agent (agent_pos) pour calculer une
+    pénalité BRUTE de stagnation (immobilité stricte, piétinement), puis MODULE cette
+    pénalité par le contexte multimodal du tick plutôt que de l'appliquer à plein
+    partout :
+
+    - Manipuler un objet transporté (`carrying`) ou interagir face à un objet d'intérêt
+      (`Key`/`Door`/`Goal`, via `pickup`/`toggle`) justifie légitimement des arrêts et
+      changements de direction — la pénalité y est fortement atténuée, presque effacée
+      pendant une interaction en cours.
+    - Rester immobile en déplacement libre (rien en main, rien en face) reste
+      considéré comme de la léthargie — la pénalité s'y applique à pleine intensité.
+
+    Cela évite de punir des comportements légitimes (s'arrêter pour ouvrir une porte)
+    de la même façon qu'une vraie léthargie (tourner en rond sans but).
     """
-    def __init__(self, taille_memoire_pos=6, penalite_base=0.01):
+    def __init__(self, taille_memoire_pos=6, penalite_base=0.015,
+                 facteur_manipulation=0.30, facteur_interaction=0.05, facteur_libre=1.00):
         self.taille_memoire_pos = taille_memoire_pos
         self.penalite_base = penalite_base
+        self.facteur_manipulation = facteur_manipulation
+        self.facteur_interaction = facteur_interaction
+        self.facteur_libre = facteur_libre
         self.actif = _MINIGRID_INTERNALS_OK
         self._avertissement_donne = False
         self.reinitialiser_episode(None)
 
     def _avertir(self, exception):
         if not self._avertissement_donne:
-            print(f"⚠️  Thermostat cinétique désactivé (API minigrid incompatible : {exception})")
+            print(f"⚠️  Thermostat cinétique multimodal désactivé (API minigrid incompatible : {exception})")
             self._avertissement_donne = True
         self.actif = False
 
     def reinitialiser_episode(self, env):
         self.historique_positions = []
 
-    def evaluer_tick(self, env):
+    def evaluer_tick(self, env, action_item):
         """Retourne une pénalité (valeur <= 0) à ajouter à la récompense interne."""
         if not self.actif:
             return 0.0
         try:
             pos_actuelle = tuple(env.unwrapped.agent_pos)
-            penalite = 0.0
+            penalite_brute = 0.0
 
             if self.historique_positions:
                 if pos_actuelle == self.historique_positions[-1]:
-                    penalite += self.penalite_base * 2.0
+                    penalite_brute += self.penalite_base * 2.0
                 elif pos_actuelle in self.historique_positions:
                     occurrences = self.historique_positions.count(pos_actuelle)
-                    penalite += self.penalite_base * (1.5 ** occurrences)
+                    penalite_brute += self.penalite_base * (1.5 ** occurrences)
 
             self.historique_positions.append(pos_actuelle)
             if len(self.historique_positions) > self.taille_memoire_pos:
                 self.historique_positions.pop(0)
 
-            return -penalite
+            if penalite_brute == 0.0:
+                return 0.0
+
+            carrying_obj = env.unwrapped.carrying
+            objet_en_face = env.unwrapped.grid.get(*env.unwrapped.front_pos)
+
+            en_train_d_interagir = action_item in (Actions.pickup, Actions.toggle)
+            face_a_objet_cle = isinstance(objet_en_face, (Key, Door, Goal))
+
+            if en_train_d_interagir or face_a_objet_cle:
+                facteur = self.facteur_interaction
+            elif carrying_obj is not None:
+                facteur = self.facteur_manipulation
+            else:
+                facteur = self.facteur_libre
+
+            return -(penalite_brute * facteur)
         except Exception as e:
             self._avertir(e)
             return 0.0
 
 
-class ModuleAcceptationAdaptative:
+class ModuleAcceptationAbnegation:
     """
-    Potentiomètre d'acceptation (patience adaptative) : au lieu d'un plafond de ticks par
-    épisode fixe et écrit en dur, la patience maximale tolérée est recalculée chaque jour
-    à partir du taux de succès récent et de la vitesse (en ticks) des succès passés. Un
-    agent qui a l'habitude de réussir vite garde une patience courte (il coupe court plus
-    tôt un épisode qui dérape) ; un agent encore en phase d'exploration/apprentissage
-    conserve une patience plus longue. Quand le compteur de ticks de l'épisode courant
-    dépasse ce seuil sans que l'environnement n'ait lui-même conclu, l'agent DÉCLENCHE
-    une troncature volontaire (abandon lucide) plutôt que d'épuiser ses ressources
-    cognitives dans un épisode déjà mal engagé.
+    Potentiomètre d'acceptation (patience par Abnégation, v16.0) : au lieu d'un plafond
+    de ticks par épisode fixe et écrit en dur, la patience maximale tolérée est
+    recalculée chaque jour à partir du taux de succès récent et de la vitesse (en
+    ticks) des succès passés. Un agent qui a l'habitude de réussir vite garde une
+    patience courte (il coupe court plus tôt un épisode qui dérape) ; un agent encore
+    en phase d'exploration/apprentissage conserve une patience plus longue.
+
+    Nouveauté v16.0 : `obtenir_seuil_patience` accepte un `facteur_complexite_sous_seuil`
+    (voir GestionnaireCursusAbnegation) qui ÉTIRE cette patience de base lors du
+    Sous-Seuil 2 (Consolidation/Abnégation) d'un palier — l'agent apprend ainsi que
+    l'effort prolongé n'est pas un échec mais une condition naturelle des sous-étapes
+    plus complexes, plutôt que de subir un abandon prématuré à seuil constant.
+
+    Quand le compteur de ticks de l'épisode courant dépasse ce seuil (base ou étiré)
+    sans que l'environnement n'ait lui-même conclu, l'agent DÉCLENCHE une troncature
+    volontaire (abandon lucide) plutôt que d'épuiser ses ressources cognitives dans un
+    épisode déjà mal engagé.
     """
-    def __init__(self, patience_min=40, patience_max=350, fenetre_historique=20):
+    def __init__(self, patience_min=50, patience_max=350, fenetre_historique=20):
         self.patience_min = patience_min
         self.patience_max = patience_max
         self.fenetre_historique = fenetre_historique
@@ -644,21 +682,72 @@ class ModuleAcceptationAdaptative:
         if len(self.historique_vitesses) > self.fenetre_historique:
             self.historique_vitesses.pop(0)
 
-    def obtenir_seuil_patience(self) -> int:
+    def obtenir_seuil_patience(self, facteur_complexite_sous_seuil: float = 1.0) -> int:
         if not self.historique_succes:
-            return int((self.patience_min + self.patience_max) / 2)
-
-        taux_succes = sum(self.historique_succes) / len(self.historique_succes)
-
-        if self.historique_vitesses:
-            vitesse_moyenne = sum(self.historique_vitesses) / len(self.historique_vitesses)
-            facteur_vitesse = max(0.2, 1.0 - (vitesse_moyenne / self.patience_max))
+            base_patience = (self.patience_min + self.patience_max) / 2
         else:
-            facteur_vitesse = 0.5
+            taux_succes = sum(self.historique_succes) / len(self.historique_succes)
 
-        potentiometre = 0.7 * taux_succes + 0.3 * facteur_vitesse
-        patience_calculee = self.patience_min + potentiometre * (self.patience_max - self.patience_min)
-        return int(patience_calculee)
+            if self.historique_vitesses:
+                vitesse_moyenne = sum(self.historique_vitesses) / len(self.historique_vitesses)
+                facteur_vitesse = max(0.2, 1.0 - (vitesse_moyenne / self.patience_max))
+            else:
+                facteur_vitesse = 0.5
+
+            potentiometre = 0.7 * taux_succes + 0.3 * facteur_vitesse
+            base_patience = self.patience_min + potentiometre * (self.patience_max - self.patience_min)
+
+        patience_effective = base_patience * facteur_complexite_sous_seuil
+        return int(min(self.patience_max, patience_effective))
+
+
+class GestionnaireCursusAbnegation:
+    """
+    Gestionnaire de cursus à deux sous-seuils (v16.0), spécifique au cursus à 7 paliers
+    DoorKey (voir DetecteurJalonsDoorKey). Remplace la validation de palier par taux de
+    réussite journalier (SEUIL_MAITRISE_PALIER) par un compteur cumulatif de succès du
+    palier cible, indépendant des frontières de journée :
+
+    - Sous-Seuil 1 (Amorçage) : les 2 premiers succès du palier valident l'acquisition
+      de base, sans exigence temporelle particulière (facteur de complexité = 1.0).
+    - Sous-Seuil 2 (Consolidation/Abnégation) : les 2 succès suivants, sous une patience
+      étirée (`COEFF_ABNEGATION_SOUS_SEUIL_2`) — l'agent doit démontrer qu'il peut
+      persévérer plus longtemps sur le même palier avant d'être promu au suivant.
+
+    4 succès au total (2+2) sont donc requis pour promouvoir un palier, contre 1 seul
+    jour à ≥80% de réussite auparavant : la promotion devient plus lente mais plus
+    robuste, moins sensible à une bonne journée isolée.
+    """
+    def __init__(self, succes_par_sous_seuil=2, coeff_abnegation_sous_seuil_2=1.6):
+        self.succes_par_sous_seuil = succes_par_sous_seuil
+        self.coeff_abnegation_sous_seuil_2 = coeff_abnegation_sous_seuil_2
+        self.sous_seuil_actuel = 1  # 1 (Amorçage) ou 2 (Consolidation/Abnégation)
+        self.succes_sous_seuil_courant = 0
+
+    def reinitialiser_palier(self):
+        """À appeler quand palier_cible change (nouveau palier = nouvel amorçage)."""
+        self.sous_seuil_actuel = 1
+        self.succes_sous_seuil_courant = 0
+
+    def obtenir_facteur_complexite(self) -> float:
+        return 1.0 if self.sous_seuil_actuel == 1 else self.coeff_abnegation_sous_seuil_2
+
+    def enregistrer_resultat_episode(self, reussi_palier: bool):
+        """Retourne (promotion_palier_validee, message_log ou None)."""
+        if not reussi_palier:
+            return False, None
+
+        self.succes_sous_seuil_courant += 1
+        if self.succes_sous_seuil_courant < self.succes_par_sous_seuil:
+            return False, None
+
+        if self.sous_seuil_actuel == 1:
+            self.sous_seuil_actuel = 2
+            self.succes_sous_seuil_courant = 0
+            return False, "🎯 [PROGRESSION INTERMÉDIAIRE] Passage au Sous-Seuil 2 (Abnégation)"
+
+        self.succes_sous_seuil_courant = 0
+        return True, "🎓 [PROMOTION DE PALIER] 4/4 succès validés (Amorçage + Abnégation)"
 
 
 def etat_mental_dopamine(teneur, dmin, dneutre, dmax):
@@ -686,7 +775,7 @@ def etat_empreinte(empreinte):
 
 
 # --- 4. EXÉCUTION & CURSUS ---
-wandb.init(project="Naulthene-AGI", name="Run_15_Planification_NonLineaire_Patience_Adaptative")
+wandb.init(project="Naulthene-AGI", name="Run_16_Thermostat_Multimodal_Abnegation")
 
 DIM_VISUELLE = 147
 DIM_BUS_MAX = 96
@@ -713,7 +802,6 @@ PLAFOND_ERREUR_DOPAMINE = 2.0
 BOOST_ANCRAGE_MAX = 20.0
 SEUIL_APHASIE_NEUROGENESE = 0.05
 MALUS_DOULEUR = -0.01
-SEUIL_MAITRISE_PALIER = 0.80
 
 # --- MODE LIBRE (DoorKey uniquement, inchangé) ---
 FORCE_PLANIFICATION_GUIDE = 0.5
@@ -729,19 +817,33 @@ COEFF_ENTROPIE_LIBRE = 0.06
 HORIZONS_PLANIFICATION = (1, 3, 7)
 GAMMA_PLANIFICATION = 0.9
 
-# --- PRESSION CINÉTIQUE (thermostat de stagnation, v15.0) ---
+# --- PRESSION CINÉTIQUE MULTIMODALE (thermostat de stagnation, v16.0) ---
+# La pénalité brute reste identique à la v15.0, mais elle est désormais ATTÉNUÉE selon
+# le contexte multimodal du tick (voir ThermostatCinetiqueMultimodal) plutôt
+# qu'appliquée uniformément partout.
 PENALITE_STAGNATION_BASE = 0.015
+FACTEUR_ATTENUATION_MANIPULATION = 0.30  # objet en main (carrying) : arrêts légitimes
+FACTEUR_ATTENUATION_INTERACTION = 0.05   # face à un objet clé + action de ciblage
+FACTEUR_ATTENUATION_LIBRE = 1.00         # déplacement libre : pénalité pleine
 
-# --- POTENTIOMÈTRE D'ACCEPTATION (patience adaptative, v15.0) ---
+# --- POTENTIOMÈTRE D'ACCEPTATION PAR ABNÉGATION (patience évolutive, v16.0) ---
 # Remplace le plafond de ticks par épisode implicite (borné seulement par la fin de
 # journée) par un seuil de troncature volontaire recalculé chaque jour à partir de
-# l'historique de succès/vitesse — voir ModuleAcceptationAdaptative.
-PATIENCE_MIN = 40
+# l'historique de succès/vitesse, puis ÉTIRÉ par le facteur de complexité du sous-seuil
+# courant — voir ModuleAcceptationAbnegation et GestionnaireCursusAbnegation.
+PATIENCE_MIN = 50
 PATIENCE_MAX = 350
 FENETRE_HISTORIQUE_PATIENCE = 20
 TAUX_FRICTION_DOUCE_ABANDON = 0.05  # friction dopaminergique appliquée sur abandon lucide,
                                      # plus douce qu'un choc négatif : l'agent accepte
                                      # l'échec, il ne le subit pas comme un traumatisme
+
+# --- CURSUS À DEUX SOUS-SEUILS (Abnégation, v16.0, DoorKey uniquement) ---
+# Remplace la validation de palier par taux de réussite journalier (SEUIL_MAITRISE_PALIER)
+# par un compteur cumulatif de 4 succès (2 sous-seuils x 2), indépendant des frontières
+# de journée — voir GestionnaireCursusAbnegation.
+SUCCES_PAR_SOUS_SEUIL = 2
+COEFF_ABNEGATION_SOUS_SEUIL_2 = 1.6
 
 # --- RÊVE À POURCENTAGE ADAPTATIF (remplace le batch_size=64 fixe) ---
 # Principe : pas de vrai plafond dur imposé de l'extérieur. Le plafond ÉMERGE de la
@@ -783,17 +885,27 @@ detecteur = None            # spécifique DoorKey, créé à la volée
 palier_cible = 1
 detecteur_portes = DetecteurFranchissementPortes()   # générique, actif partout
 detecteur_progres = DetecteurProgresPersonnel()       # générique, inactif sur DoorKey
-thermostat_cinetique = ThermostatCinetique(penalite_base=PENALITE_STAGNATION_BASE)  # générique, actif partout
-module_acceptation = ModuleAcceptationAdaptative(
+thermostat_cinetique = ThermostatCinetiqueMultimodal(
+    penalite_base=PENALITE_STAGNATION_BASE,
+    facteur_manipulation=FACTEUR_ATTENUATION_MANIPULATION,
+    facteur_interaction=FACTEUR_ATTENUATION_INTERACTION,
+    facteur_libre=FACTEUR_ATTENUATION_LIBRE,
+)  # générique, actif partout
+module_acceptation = ModuleAcceptationAbnegation(
     patience_min=PATIENCE_MIN, patience_max=PATIENCE_MAX,
     fenetre_historique=FENETRE_HISTORIQUE_PATIENCE,
 )
+gestionnaire_cursus = GestionnaireCursusAbnegation(
+    succes_par_sous_seuil=SUCCES_PAR_SOUS_SEUIL,
+    coeff_abnegation_sous_seuil_2=COEFF_ABNEGATION_SOUS_SEUIL_2,
+)  # spécifique DoorKey (cursus à 7 paliers), inerte sur les autres niveaux
 
 for jour in range(1, jours_totaux + 1):
     doorkey_actif = est_doorkey(env_id)
     if doorkey_actif and detecteur is None:
         detecteur = DetecteurJalonsDoorKey()
         palier_cible = 1
+        gestionnaire_cursus.reinitialiser_palier()
         print(f"   📘 Détecteur de jalons DoorKey activé (Palier visé : {palier_cible} - "
               f"{DetecteurJalonsDoorKey.NOMS[0]})")
 
@@ -803,7 +915,8 @@ for jour in range(1, jours_totaux + 1):
     force_planification_jour = FORCE_PLANIFICATION_LIBRE if mode_libre else FORCE_PLANIFICATION_GUIDE
     coeff_entropie_jour = COEFF_ENTROPIE_LIBRE if mode_libre else COEFF_ENTROPIE_GUIDE
 
-    patience_jour = module_acceptation.obtenir_seuil_patience()
+    facteur_complexite_jour = gestionnaire_cursus.obtenir_facteur_complexite() if doorkey_actif else 1.0
+    patience_jour = module_acceptation.obtenir_seuil_patience(facteur_complexite_jour)
     ticks_episode_courant = 0
     abandons_patience_jour = 0
 
@@ -868,8 +981,9 @@ for jour in range(1, jours_totaux + 1):
         fin_episode = bool(termine or tronque)
         mur_touche = torch.equal(etat_courant, etat_suivant)
 
-        # --- Potentiomètre d'acceptation : abandon lucide si la patience du jour est
-        # dépassée sans conclusion naturelle de l'environnement (voir Mécanique v15.0) ---
+        # --- Potentiomètre d'acceptation : abandon lucide si la patience du jour
+        # (étirée par le facteur de complexité du sous-seuil, voir Mécanique v16.0) est
+        # dépassée sans conclusion naturelle de l'environnement ---
         abandon_par_patience = False
         if not fin_episode and ticks_episode_courant >= patience_jour:
             fin_episode = True
@@ -877,8 +991,8 @@ for jour in range(1, jours_totaux + 1):
             abandon_par_patience = True
             abandons_patience_jour += 1
 
-        # --- Pression cinétique (générique, tous niveaux) ---
-        penalite_stagnation = thermostat_cinetique.evaluer_tick(env)
+        # --- Pression cinétique multimodale (générique, tous niveaux, v16.0) ---
+        penalite_stagnation = thermostat_cinetique.evaluer_tick(env, action_item)
         penalite_stagnation_jour += penalite_stagnation
 
         # --- Jalons DoorKey (spécifique) ---
@@ -928,7 +1042,7 @@ for jour in range(1, jours_totaux + 1):
         elif abandon_par_patience:
             # Abandon lucide : friction douce dédiée, jamais un choc négatif — l'agent
             # accepte l'échec pour préserver ses ressources cognitives, il ne le subit
-            # pas comme un traumatisme (voir ModuleAcceptationAdaptative).
+            # pas comme un traumatisme (voir ModuleAcceptationAbnegation).
             TENEUR_DOPAMINE += (DOPAMINE_MIN - TENEUR_DOPAMINE) * TAUX_FRICTION_DOUCE_ABANDON
             micro_boost_ancrage = 1.0
         else:
@@ -951,9 +1065,17 @@ for jour in range(1, jours_totaux + 1):
 
         if fin_episode:
             episodes_jour += 1
-            if doorkey_actif and detecteur.meilleur_palier_episode >= palier_cible:
+            reussi_palier_episode = doorkey_actif and detecteur.meilleur_palier_episode >= palier_cible
+            if reussi_palier_episode:
                 succes_palier_cible_jour += 1
             module_acceptation.enregistrer_episode(reussi=bool(termine), nombre_ticks=ticks_episode_courant)
+            if doorkey_actif and palier_cible < 7:
+                promu, msg_progression = gestionnaire_cursus.enregistrer_resultat_episode(reussi_palier_episode)
+                if msg_progression:
+                    print(f"   {msg_progression}")
+                if promu:
+                    palier_cible += 1
+                    print(f"   🎓 Palier {palier_cible} visé : {DetecteurJalonsDoorKey.NOMS[palier_cible - 1]}")
 
             obs, info = env.reset()
             etat_courant = encoder(obs)
@@ -971,17 +1093,21 @@ for jour in range(1, jours_totaux + 1):
 
     if not fin_episode:
         episodes_jour += 1
-        if doorkey_actif and detecteur.meilleur_palier_episode >= palier_cible:
+        reussi_palier_episode = doorkey_actif and detecteur.meilleur_palier_episode >= palier_cible
+        if reussi_palier_episode:
             succes_palier_cible_jour += 1
         module_acceptation.enregistrer_episode(reussi=False, nombre_ticks=ticks_episode_courant)
+        if doorkey_actif and palier_cible < 7:
+            promu, msg_progression = gestionnaire_cursus.enregistrer_resultat_episode(reussi_palier_episode)
+            if msg_progression:
+                print(f"   {msg_progression}")
+            if promu:
+                palier_cible += 1
+                print(f"   🎓 Palier {palier_cible} visé : {DetecteurJalonsDoorKey.NOMS[palier_cible - 1]}")
 
     taux_maitrise = None
     if doorkey_actif and detecteur.actif and episodes_jour > 0:
         taux_maitrise = succes_palier_cible_jour / episodes_jour
-        if taux_maitrise >= SEUIL_MAITRISE_PALIER and palier_cible < 7:
-            palier_cible += 1
-            print(f"   🎯 [PROGRESSION DE PALIER] Palier {palier_cible} visé : "
-                  f"{DetecteurJalonsDoorKey.NOMS[palier_cible - 1]}")
 
     if victoire_aujourdhui:
         victoires_consecutives += 1
@@ -1081,9 +1207,12 @@ for jour in range(1, jours_totaux + 1):
     if doorkey_actif and detecteur.actif:
         nom_palier = DetecteurJalonsDoorKey.NOMS[palier_cible - 1]
         maitrise_txt = f"{taux_maitrise * 100:.0f}%" if taux_maitrise is not None else "N/A"
+        sous_seuil_txt = "Amorçage" if gestionnaire_cursus.sous_seuil_actuel == 1 else "Abnégation"
         print(f"  ├─ Progrès Jalon  : 🎯 Palier {palier_cible} ({nom_palier}) — "
-              f"{succes_palier_cible_jour}/{episodes_jour} épisodes réussis "
-              f"(maîtrise: {maitrise_txt}, seuil promotion: {SEUIL_MAITRISE_PALIER*100:.0f}%)")
+              f"{succes_palier_cible_jour}/{episodes_jour} épisodes réussis (taux: {maitrise_txt})")
+        print(f"  ├─ Abnégation     : 📿 Sous-Seuil {gestionnaire_cursus.sous_seuil_actuel} ({sous_seuil_txt}) — "
+              f"{gestionnaire_cursus.succes_sous_seuil_courant}/{SUCCES_PAR_SOUS_SEUIL} succès "
+              f"(complexité: x{facteur_complexite_jour:.1f})")
         mode_txt = "🕊️ Libre (aucune récompense de guidage)" if mode_libre else "🧭 Guidé (béquille active)"
         print(f"  ├─ Mode Décision  : {mode_txt} — Planification: {force_planification_jour:.2f}, "
               f"Entropie: {coeff_entropie_jour:.2f}")
@@ -1126,6 +1255,9 @@ for jour in range(1, jours_totaux + 1):
         log_wandb["Mode_Libre"] = int(mode_libre)
         log_wandb["Force_Planification"] = force_planification_jour
         log_wandb["Coeff_Entropie"] = coeff_entropie_jour
+        log_wandb["Sous_Seuil_Abnegation"] = gestionnaire_cursus.sous_seuil_actuel
+        log_wandb["Succes_Sous_Seuil_Courant"] = gestionnaire_cursus.succes_sous_seuil_courant
+        log_wandb["Facteur_Complexite"] = facteur_complexite_jour
         if taux_maitrise is not None:
             log_wandb["Taux_Maitrise_Palier"] = taux_maitrise
     wandb.log(log_wandb)

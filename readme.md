@@ -1,6 +1,6 @@
 Voici le **`README.md`** révisé, complété et restructuré en profondeur.
 
-Il intègre la structure de table des matières globale (avec le contexte applicatif/métier et la vision AGI), enrichie de toute l'architecture neuro-mimétique de l'agent **Naulthène AGI** (réservoir dopaminergique, cursus à 7 paliers, mode libre, planification multi-échelle non-linéaire, consolidation nocturne adaptative, détecteurs génériques, pression cinétique et patience adaptative).
+Il intègre la structure de table des matières globale (avec le contexte applicatif/métier et la vision AGI), enrichie de toute l'architecture neuro-mimétique de l'agent **Naulthène AGI** (réservoir dopaminergique, cursus à 7 paliers par Abnégation, mode libre, planification multi-échelle non-linéaire, consolidation nocturne adaptative, détecteurs génériques, pression cinétique multimodale et patience évolutive).
 
 ---
 
@@ -16,30 +16,31 @@ Il intègre la structure de table des matières globale (avec le contexte applic
 1. [Vue d'Ensemble du Projet](https://www.google.com/search?q=%23vue-densemble-du-projet)
 2. [Journal des Mises à Jour (Changelog)](https://www.google.com/search?q=%23journal-des-mises-%C3%A0-jour)
 3. [Plan d'Action](https://www.google.com/search?q=%23plan-daction)
-4. [Nouveautés v15.0 — Planification Non-Linéaire, Pression Cinétique & Patience Adaptative](#nouveautés-v150--planification-non-linéaire-pression-cinétique--patience-adaptative-2026-07-22)
-5. [Nouveautés v14.0 — Rêves Adaptatifs & Planification Étendue à 3 Pas](https://www.google.com/search?q=%23nouveaut%C3%A9s-v140---r%C3%AAves-adaptatifs--planification-%C3%A9tendue-%C3%A0-3-pas-2026-07-22)
-6. [Nouveautés v13.0 — Décision Autonome & Mode Libre](https://www.google.com/search?q=%23nouveaut%C3%A9s-v130---d%C3%A9cision-autonome--mode-libre-2026-07-22)
-7. [Nouveautés v12.0 — Cursus à 7 Paliers & Correctif d'Épisodes](https://www.google.com/search?q=%23nouveaut%C3%A9s-v120---cursus-%C3%A0-7-paliers--correctif-d%C3%A9pisodes-2026-07-22)
-8. [Nouveautés v11.0 — Réservoir Dopaminergique V3](https://www.google.com/search?q=%23nouveaut%C3%A9s-v110---r%C3%A9servoir-dopaminergique-v3-2026-07-22)
-9. [Nouveautés v10.0-fix1 — Correctif de Stabilité JEPA & Thermostat](https://www.google.com/search?q=%23nouveaut%C3%A9s-v100-fix1---correctif-de-stabilit%C3%A9-jepa--thermostat)
-10. [Nouveautés v10.0 — Système 2 & Rollout Mental Vectorisé](https://www.google.com/search?q=%23nouveaut%C3%A9s-v100---syst%C3%A8me-2--rollout-mental-vectoris%C3%A9)
-11. [Nouveautés v9.1 — Intégration du Tampon Épisodique (Université)](https://www.google.com/search?q=%23nouveaut%C3%A9s-v91---int%C3%A9gration-du-tampon-%C3%A9pisodique-universit%C3%A9)
-12. [Nouveautés v9.0-fix1 — Correctif de la Neurogenèse Bloc par Bloc](https://www.google.com/search?q=%23nouveaut%C3%A9s-v90-fix1---correctif-de-la-neurogen%C3%A8se-bloc-par-bloc)
-13. [Nouveautés v9.0 — Cursus Académique Progressif (Primaire à Doctorat)](https://www.google.com/search?q=%23nouveaut%C3%A9s-v90---cursus-acad%C3%A9mique-progressif-primaire-%C3%A0-doctorat)
-14. [Nouveautés v8.0 — Alignement Graph-Gradient RL & Rêve Nocturne](https://www.google.com/search?q=%23nouveaut%C3%A9s-v80---alignement-graph-gradient-rl--r%C3%AAve-nocturne)
-15. [Nouveautés v7.0 — Phase 7 Initiale (Architecture Hybride Duale)](https://www.google.com/search?q=%23nouveaut%C3%A9s-v70---phase-7-initiale-architecture-hybride-duale)
-16. [Architecture Cognitico-Biologique Complète](https://www.google.com/search?q=%23architecture-cognitico-biologique-compl%C3%A8te)
-17. [Cursus Académique & Paliers Comportementaux](https://www.google.com/search?q=%23cursus-acad%C3%A9mique--paliers-comportementaux)
-18. [Moteur Émotionnel & Réservoir Dopaminergique](https://www.google.com/search?q=%23moteur-%C3%A9motionnel--r%C3%A9servoir-dopaminergique)
-19. [Algorithme de Rêve Nocturne Adaptatif](https://www.google.com/search?q=%23algorithme-de-r%C3%AAve-nocturne-adaptatif)
-20. [Détecteurs Génériques d'Intention & Quêtes Auto](https://www.google.com/search?q=%23d%C3%A9tecteurs-g%C3%A9n%C3%A9riques-dintention--qu%C3%AAtes-auto)
-21. [Pression Cinétique & Patience Adaptative](#pression-cinétique--patience-adaptative)
-22. [Stack Technique](https://www.google.com/search?q=%23stack-technique)
-23. [Modèle de Données & Métriques W&B](https://www.google.com/search?q=%23mod%C3%A8le-de-donn%C3%A9es--m%C3%A9triques-wb)
-24. [Démarrage Rapide](https://www.google.com/search?q=%23d%C3%A9marrage-rapide)
-25. [Mise en Production & Monitoring](https://www.google.com/search?q=%23mise-en-production--monitoring)
-26. [Configuration](https://www.google.com/search?q=%23configuration)
-27. [Troubleshooting & Guide de Dépannage](https://www.google.com/search?q=%23troubleshooting--guide-de-d%C3%A9pannage)
+4. [Nouveautés v16.0 — Thermostat Multimodal & Patience par Abnégation](#nouveautés-v160--thermostat-multimodal--patience-par-abnégation-2026-07-22)
+5. [Nouveautés v15.0 — Planification Non-Linéaire, Pression Cinétique & Patience Adaptative](#nouveautés-v150--planification-non-linéaire-pression-cinétique--patience-adaptative-2026-07-22)
+6. [Nouveautés v14.0 — Rêves Adaptatifs & Planification Étendue à 3 Pas](https://www.google.com/search?q=%23nouveaut%C3%A9s-v140---r%C3%AAves-adaptatifs--planification-%C3%A9tendue-%C3%A0-3-pas-2026-07-22)
+7. [Nouveautés v13.0 — Décision Autonome & Mode Libre](https://www.google.com/search?q=%23nouveaut%C3%A9s-v130---d%C3%A9cision-autonome--mode-libre-2026-07-22)
+8. [Nouveautés v12.0 — Cursus à 7 Paliers & Correctif d'Épisodes](https://www.google.com/search?q=%23nouveaut%C3%A9s-v120---cursus-%C3%A0-7-paliers--correctif-d%C3%A9pisodes-2026-07-22)
+9. [Nouveautés v11.0 — Réservoir Dopaminergique V3](https://www.google.com/search?q=%23nouveaut%C3%A9s-v110---r%C3%A9servoir-dopaminergique-v3-2026-07-22)
+10. [Nouveautés v10.0-fix1 — Correctif de Stabilité JEPA & Thermostat](https://www.google.com/search?q=%23nouveaut%C3%A9s-v100-fix1---correctif-de-stabilit%C3%A9-jepa--thermostat)
+11. [Nouveautés v10.0 — Système 2 & Rollout Mental Vectorisé](https://www.google.com/search?q=%23nouveaut%C3%A9s-v100---syst%C3%A8me-2--rollout-mental-vectoris%C3%A9)
+12. [Nouveautés v9.1 — Intégration du Tampon Épisodique (Université)](https://www.google.com/search?q=%23nouveaut%C3%A9s-v91---int%C3%A9gration-du-tampon-%C3%A9pisodique-universit%C3%A9)
+13. [Nouveautés v9.0-fix1 — Correctif de la Neurogenèse Bloc par Bloc](https://www.google.com/search?q=%23nouveaut%C3%A9s-v90-fix1---correctif-de-la-neurogen%C3%A8se-bloc-par-bloc)
+14. [Nouveautés v9.0 — Cursus Académique Progressif (Primaire à Doctorat)](https://www.google.com/search?q=%23nouveaut%C3%A9s-v90---cursus-acad%C3%A9mique-progressif-primaire-%C3%A0-doctorat)
+15. [Nouveautés v8.0 — Alignement Graph-Gradient RL & Rêve Nocturne](https://www.google.com/search?q=%23nouveaut%C3%A9s-v80---alignement-graph-gradient-rl--r%C3%AAve-nocturne)
+16. [Nouveautés v7.0 — Phase 7 Initiale (Architecture Hybride Duale)](https://www.google.com/search?q=%23nouveaut%C3%A9s-v70---phase-7-initiale-architecture-hybride-duale)
+17. [Architecture Cognitico-Biologique Complète](https://www.google.com/search?q=%23architecture-cognitico-biologique-compl%C3%A8te)
+18. [Cursus Académique & Paliers Comportementaux](https://www.google.com/search?q=%23cursus-acad%C3%A9mique--paliers-comportementaux)
+19. [Moteur Émotionnel & Réservoir Dopaminergique](https://www.google.com/search?q=%23moteur-%C3%A9motionnel--r%C3%A9servoir-dopaminergique)
+20. [Algorithme de Rêve Nocturne Adaptatif](https://www.google.com/search?q=%23algorithme-de-r%C3%AAve-nocturne-adaptatif)
+21. [Détecteurs Génériques d'Intention & Quêtes Auto](https://www.google.com/search?q=%23d%C3%A9tecteurs-g%C3%A9n%C3%A9riques-dintention--qu%C3%AAtes-auto)
+22. [Pression Cinétique Multimodale & Patience par Abnégation](#pression-cinétique-multimodale--patience-par-abnégation)
+23. [Stack Technique](https://www.google.com/search?q=%23stack-technique)
+24. [Modèle de Données & Métriques W&B](https://www.google.com/search?q=%23mod%C3%A8le-de-donn%C3%A9es--m%C3%A9triques-wb)
+25. [Démarrage Rapide](https://www.google.com/search?q=%23d%C3%A9marrage-rapide)
+26. [Mise en Production & Monitoring](https://www.google.com/search?q=%23mise-en-production--monitoring)
+27. [Configuration](https://www.google.com/search?q=%23configuration)
+28. [Troubleshooting & Guide de Dépannage](https://www.google.com/search?q=%23troubleshooting--guide-de-d%C3%A9pannage)
 
 ---
 
@@ -60,6 +61,11 @@ L'agent évolue à travers un cursus scolaire modélisé sous forme d'environnem
 ## 📜 Journal des Mises à Jour
 
 Pour un historique complet commit par commit, consultez [CHANGELOG.md](https://www.google.com/search?q=CHANGELOG.md).
+
+### Nouveautés v16.0 — Thermostat Multimodal & Patience par Abnégation (2026-07-22)
+
+* **`ThermostatCinetiqueMultimodal`** : la pénalité de stagnation de la v15.0 est désormais *modulée* par le contexte multimodal du tick plutôt qu'appliquée uniformément. Déplacement libre (rien en main, rien en face) → pénalité pleine ($\times 1.00$). Objet transporté (`carrying`) → fortement atténuée ($\times 0.30$, arrêts légitimes). Face à un objet clé (`Key`/`Door`/`Goal`) avec une action de ciblage (`pickup`/`toggle`) → quasi effacée ($\times 0.05$, le temps de traiter l'interaction).
+* **`ModuleAcceptationAbnegation` & `GestionnaireCursusAbnegation`** : la promotion de palier DoorKey abandonne le taux de réussite journalier ($\ge 80\%$) au profit d'un compteur cumulatif de **4 succès** répartis en 2 sous-seuils. Sous-Seuil 1 (Amorçage, 2 succès, patience de base) puis Sous-Seuil 2 (Consolidation/Abnégation, 2 succès supplémentaires, patience étirée $\times 1.6$) — l'agent apprend que l'effort prolongé est une condition naturelle des sous-étapes complexes, pas un échec.
 
 ### Nouveautés v15.0 — Planification Non-Linéaire, Pression Cinétique & Patience Adaptative (2026-07-22)
 
@@ -170,7 +176,9 @@ Pour éviter le problème du *Sparse Reward* dans les environnements complexes, 
 | **6** | **Déverrouiller** | Exécution de l'action `Toggle` face à la porte |
 | **7** | **Franchir & Sortir** | Traversée du trou de la porte et contact avec l'objectif |
 
-> **Mode Libre (Seuil de promotion $\ge 80\%$)** : Une fois le Palier 7 maîtrisé, le guidage artificiel se désactive. L'agent passe en `Mode_Libre = 1`. `force_planification` monte à $0.85$ et `coeff_entropie` à $0.06$.
+> **Promotion par Abnégation (depuis v16.0)** : la promotion d'un palier au suivant n'est plus décidée par un taux de réussite journalier ($\ge 80\%$), mais par un compteur cumulatif de **4 succès** répartis en 2 sous-seuils — voir [Pression Cinétique Multimodale & Patience par Abnégation](#pression-cinétique-multimodale--patience-par-abnégation). Le Palier 7 (Franchir & Sortir) reste la porte d'entrée du Mode Libre.
+>
+> **Mode Libre** : Une fois le Palier 7 maîtrisé (4/4 succès validés), le guidage artificiel se désactive. L'agent passe en `Mode_Libre = 1`. `force_planification` monte à $0.85$ et `coeff_entropie` à $0.06$.
 
 ---
 
@@ -211,28 +219,47 @@ Afin de dépasser la logique de règles écrites à la main, l'agent intègre de
 
 ---
 
-## 🏃 Pression Cinétique & Patience Adaptative
+## 🏃 Pression Cinétique Multimodale & Patience par Abnégation
 
-Deux mécaniques génériques introduites en v15.0, actives sur tous les niveaux du cursus, qui traduisent une "envie de bouger" et une gestion de l'abandon contrôlé en signaux de RL exploitables.
+Trois mécaniques génériques (les deux premières introduites en v15.0, affinées en v16.0 ; la troisième nouvelle en v16.0), actives sur tous les niveaux du cursus (la troisième spécifique à DoorKey), qui traduisent une "envie de bouger" contextualisée et une gestion de l'abandon contrôlé qui apprend la persévérance par étapes.
 
-### 1. `ThermostatCinetique` — Pression Cinétique ("Envie de Bouger")
+### 1. `ThermostatCinetiqueMultimodal` — Pression Cinétique Contextualisée (v16.0)
 
-Coûte de l'énergie synaptique à l'agent qui stagne :
+Calcule d'abord une pénalité **brute** de stagnation, identique à la v15.0 :
 
 * **Immobilité stricte** : rester sur la même case entre deux ticks coûte $2 \times$ la pénalité de base.
 * **Piétinement** : revenir sur une case déjà visitée dans la fenêtre récente (6 derniers ticks) coûte une pénalité croissant géométriquement avec le nombre d'occurrences ($1.5^{\text{occurrences}}$).
 
-L'immobilité devient ainsi sous-optimale par construction du signal de récompense, sans qu'aucune règle ne code un comportement de mur ou de couloir spécifique à une carte.
+Puis **module** cette pénalité brute par le contexte multimodal du tick (`facteur_attenuation_multimodal` $\in [0, 1]$) plutôt que de l'appliquer à plein partout :
 
-### 2. `ModuleAcceptationAdaptative` — Potentiomètre d'Acceptation (Patience Adaptative)
+| Contexte | Condition | Facteur | Effet |
+| --- | --- | --- | --- |
+| **Déplacement Libre** | Rien en main, rien en face | $\times 1.00$ | Pénalité pleine — stagner ici est de la léthargie |
+| **Manipulation** | `carrying` non nul (objet transporté) | $\times 0.30$ | Fortement atténuée — transporter justifie des arrêts |
+| **Interaction Vis-à-Vis** | Face à `Key`/`Door`/`Goal` + action `pickup`/`toggle` | $\times 0.05$ | Quasi effacée — laisse le temps de traiter l'interaction |
+
+L'immobilité reste sous-optimale par construction du signal de récompense, mais ne pénalise plus les comportements légitimes (s'arrêter pour ouvrir une porte) de la même façon qu'une vraie léthargie.
+
+### 2. `ModuleAcceptationAbnegation` — Potentiomètre d'Acceptation (Patience Évolutive)
 
 Remplace un plafond de ticks par épisode fixe par un seuil de patience $\tau_{\text{patience}}$ recalculé chaque jour :
 
-$$\tau_{\text{patience}} = \text{patience}_{\min} + \big(0.7 \cdot S_{\text{hist}} + 0.3 \cdot V_{\text{hist}}\big) \times (\text{patience}_{\max} - \text{patience}_{\min})$$
+$$\tau_{\text{patience}} = \Big(\text{patience}_{\min} + \big(0.7 \cdot S_{\text{hist}} + 0.3 \cdot V_{\text{hist}}\big) \times (\text{patience}_{\max} - \text{patience}_{\min})\Big) \times \text{facteur\_complexite}$$
 
-Où $S_{\text{hist}}$ est le taux de succès sur les 20 derniers épisodes et $V_{\text{hist}}$ un facteur dérivé de la vitesse (en ticks) des succès passés — plus l'agent réussissait vite par le passé, plus il tolère d'insister sur l'épisode courant.
+Où $S_{\text{hist}}$ est le taux de succès sur les 20 derniers épisodes, $V_{\text{hist}}$ un facteur dérivé de la vitesse (en ticks) des succès passés, et `facteur_complexite` (nouveau en v16.0) provient du `GestionnaireCursusAbnegation` ci-dessous — il étire la patience de base lors des sous-étapes plus exigeantes.
 
 Quand le compteur de ticks de l'épisode dépasse ce seuil sans conclusion naturelle de l'environnement, l'agent déclenche une **troncature volontaire (abandon lucide)** : il accepte l'échec courant pour préserver ses ressources cognitives, avec une **friction dopaminergique douce** dédiée (`TAUX_FRICTION_DOUCE_ABANDON`) plutôt qu'un choc négatif traumatique.
+
+### 3. `GestionnaireCursusAbnegation` — Promotion de Palier en 2 Sous-Seuils (v16.0, DoorKey uniquement)
+
+Remplace la promotion de palier par taux de réussite journalier ($\ge 80\%$) par un compteur cumulatif de **4 succès**, indépendant des frontières de journée :
+
+| Sous-Seuil | Nom | Succès requis | Facteur de complexité (patience) |
+| --- | --- | --- | --- |
+| **1** | Amorçage | 2 | $\times 1.0$ (base) |
+| **2** | Consolidation / Abnégation | 2 | $\times 1.6$ (`COEFF_ABNEGATION_SOUS_SEUIL_2`) |
+
+Le Sous-Seuil 1 valide l'acquisition de base du palier. Le Sous-Seuil 2 exige 2 succès supplémentaires sous une patience étirée : l'agent doit démontrer qu'il peut persévérer plus longtemps sur ce même palier avant d'être promu au suivant. Le palier n'est promu qu'après les 4 succès (2+2) — l'agent apprend que l'effort prolongé est une condition naturelle des sous-étapes complexes, pas un échec à corriger prématurément.
 
 ---
 
@@ -267,7 +294,10 @@ Chaque journée d'entraînement émet les télémétries suivantes vers le table
   "Recompense_Moyenne": -0.006,
   "Patience_Max_Episode": 187,
   "Abandons_Patience_Jour": 2,
-  "Penalite_Stagnation": -0.842
+  "Penalite_Stagnation": -0.842,
+  "Sous_Seuil_Abnegation": 2,
+  "Succes_Sous_Seuil_Courant": 1,
+  "Facteur_Complexite": 1.6
 }
 
 ```
@@ -277,6 +307,12 @@ Chaque journée d'entraînement émet les télémétries suivantes vers le table
 * **`Patience_Max_Episode`** : n'est plus plate à une valeur fixe. Oscille dynamiquement — haute en phase d'apprentissage actif, plus basse sur un environnement non résolu pour éviter le piège des boucles infinies.
 * **`Penalite_Stagnation`** : sa valeur absolue diminue à mesure que l'agent apprend à éviter les comportements de blocage face à un mur ou les allers-retours répétés.
 * **`Erreur_JEPA`** : la planification multi-échelle ($t+1, t+3, t+7$) tend à stabiliser la représentation spatiale globale du World Model plutôt que de sur-optimiser les micro-variations de surface.
+
+**Effets attendus des métriques v16.0 :**
+
+* **`Penalite_Stagnation`** : sa magnitude moyenne baisse par rapport à la v15.0 sur les phases de manipulation/interaction (clé en main, porte face à l'agent), sans pour autant tolérer la léthargie en déplacement libre — signe que l'atténuation contextuelle fonctionne comme prévu plutôt que d'être un simple relâchement global.
+* **`Facteur_Complexite`** : oscille entre $1.0$ (Sous-Seuil 1, Amorçage) et $1.6$ (Sous-Seuil 2, Abnégation) au fil de la progression d'un palier — jamais figé à une seule valeur tant que le palier n'est pas promu.
+* **`Sous_Seuil_Abnegation`** / **`Succes_Sous_Seuil_Courant`** : permettent de suivre la progression fine à l'intérieur d'un même palier, avant même la promotion — utile pour distinguer un agent qui stagne au Sous-Seuil 1 d'un agent qui progresse normalement mais plus lentement en Sous-Seuil 2.
 
 ---
 
@@ -320,18 +356,26 @@ FORCE_PLANIF_LIBRE = 0.85
 # Apprentissage & Entropie
 ENTROPIE_GUIDE = 0.02
 ENTROPIE_LIBRE = 0.06
-SEUIL_MAITRISE_PALIER = 0.80
 
-# Pression Cinétique (v15.0)
+# Pression Cinétique Multimodale (v16.0)
 PENALITE_STAGNATION_BASE = 0.015
+FACTEUR_ATTENUATION_MANIPULATION = 0.30
+FACTEUR_ATTENUATION_INTERACTION = 0.05
+FACTEUR_ATTENUATION_LIBRE = 1.00
 
-# Potentiomètre d'Acceptation (v15.0)
-PATIENCE_MIN = 40
+# Potentiomètre d'Acceptation par Abnégation (v16.0)
+PATIENCE_MIN = 50
 PATIENCE_MAX = 350
 FENETRE_HISTORIQUE_PATIENCE = 20
 TAUX_FRICTION_DOUCE_ABANDON = 0.05
 
+# Cursus à Deux Sous-Seuils (Abnégation, v16.0, DoorKey uniquement)
+SUCCES_PAR_SOUS_SEUIL = 2
+COEFF_ABNEGATION_SOUS_SEUIL_2 = 1.6
+
 ```
+
+> **Note (v16.0)** : `SEUIL_MAITRISE_PALIER` (taux de réussite journalier à 80%) n'existe plus — la promotion de palier DoorKey repose désormais exclusivement sur le compteur cumulatif à 4 succès de `GestionnaireCursusAbnegation`, voir [Pression Cinétique Multimodale & Patience par Abnégation](#pression-cinétique-multimodale--patience-par-abnégation).
 
 ---
 
