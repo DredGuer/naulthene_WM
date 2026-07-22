@@ -41,6 +41,16 @@ Structure interne de `agi_google_colab.py` (sections numérotées par des commen
 
 Voir le [README](readme.md) pour la description narrative complète (formules d'homéostasie, tableau des 7 paliers, architecture cognitico-biologique en diagramme ASCII).
 
+## Variante Locale de Test (Mac) — `agi_local_test.py`
+
+En plus du script de référence `agi_google_colab.py`, le projet dispose d'une copie de travail **non trackée par git** (`agi_local_test.py`, listée dans `.gitignore`) utilisée pour tester rapidement de nouvelles mécaniques sur Mac (Apple Silicon, device `mps`) avant de les porter — ou non — sur le script de référence.
+
+- **Deux différences permanentes avec `agi_google_colab.py`** : détection du device `cuda`/`mps`/`cpu` (au lieu de `cuda`/`cpu` seul) et un `jours_totaux` ajustable localement pour des runs de test plus courts que les 400 jours de Colab
+- **C'est le terrain d'essai des mécaniques expérimentales** (actuellement v18.0 Architecture Homéostatique Biologique, v19.0 Métabolisme 20/80 & Forage 80/20, et toute mécanique suivante tant qu'elle n'a pas été validée sur un run long) — ces versions vivent **uniquement** dans ce fichier tant qu'elles ne sont pas explicitement portées sur `agi_google_colab.py`
+- Le fichier n'étant pas versionné, toute modification doit être documentée dans `readme.md`/`CHANGELOG.md` avec la mention explicite **"expérimental"** et l'avertissement qu'elle ne vit que dans `agi_local_test.py` — ne jamais laisser croire qu'une mécanique expérimentale est déjà dans le script de référence
+- Avant de porter une mécanique validée vers `agi_google_colab.py`, vérifier qu'elle est cohérente avec toute l'évolution parallèle qu'a pu subir le script de référence entre-temps (les deux fichiers peuvent diverger sur plusieurs versions)
+- Setup local : voir [Démarrage Rapide](readme.md#démarrage-rapide) dans le README (venv Python 3.12, `pip install torch gymnasium minigrid wandb numpy`, `wandb login`, puis `WANDB_MODE=offline python agi_local_test.py` ou en direct sans la variable une fois connecté)
+
 ## Before Modifying Code
 
 - **Toute nouvelle section doit rester dans le style commenté existant** (`# --- N. NOM DE LA SECTION ---`) — c'est la seule table des matières du fichier tant qu'il reste monolithique
@@ -119,4 +129,4 @@ Utiliser le hash court réel du commit (`git rev-parse --short HEAD`) une fois l
 | `fix` mineur / `refactor` / `docs` | même version + suffixe | 14.0-fix1, 14.0-docs |
 | `chore` / `style` | pas d'incrément | - |
 
-Le projet est actuellement en version **14** (voir `readme.md`, table des matières et journal des mises à jour). Poursuivre sur cette échelle entière (14 → 15 pour la prochaine mécanique majeure) sauf décision contraire de l'utilisateur.
+Le script de référence `agi_google_colab.py` est actuellement en version **17** (voir `readme.md`, table des matières et journal des mises à jour). `agi_local_test.py` porte en plus des mécaniques expérimentales non encore portées (actuellement v18.0/v19.0, voir [Variante Locale de Test](#variante-locale-de-test-mac--agi_local_testpy)) — toute nouvelle mécanique testée localement suit la même échelle de version que le script de référence, marquée `-experimental` tant qu'elle n'y est pas portée. Poursuivre sur cette échelle entière (+1.0 pour la prochaine mécanique majeure) sauf décision contraire de l'utilisateur.
