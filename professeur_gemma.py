@@ -38,6 +38,19 @@ TIMEOUT_EMBEDDING = 15.0    # le modèle d'embedding est nettement plus rapide
 # cursus MiniGrid — réutilise GestionnaireCursusAbnegation (agi_local_test.py) côté
 # appelant pour la logique de promotion par succès cumulés ; ce module ne fait que
 # fournir le CONTENU de chaque palier.
+#
+# Paliers 12-14 (v25.0, Paradigme Bébé, expérimental) : extension du curriculum
+# d'origine (11 paliers, v22.0) pour couvrir le mot "porte" et une première
+# combinatoire Action+Objet minimale (roadmap "0→4 ans"). Chaque nouveau mot est géré
+# automatiquement par lecons_vocales.CacheReferencesVocales (référence `say`, clé =
+# mot) — sa voyelle dominante ("porte"→"o", "encore"→"o") doit rester une clé connue de
+# hemisphere_audio.VOYELLES_CIBLES, réutilisée par _mot_cible_du_palier comme cible F1/F2
+# de repli tant qu'aucune cible de syllabe/mot dédiée n'existe. Si tu ajoutes un mot
+# dont AUCUNE voyelle du mot n'est dans VOYELLES_CIBLES, il faut d'abord y ajouter cette
+# voyelle (voir hemisphere_audio.py). IMPORTANT : toute modification de cette liste doit
+# être répercutée dans agi_local_test.py::NB_PALIERS_VOCAUX (utilisé par
+# seuil_jour_vocal_reussi pour interpoler le seuil de promotion) — sinon l'interpolation
+# du seuil École de Rattrapage devient incohérente avec la longueur réelle du curriculum.
 CURRICULUM_VOCAL = [
     {"palier": 1, "nom": "Vocaliser", "cible": None},       # n'importe quel son voisé
     {"palier": 2, "nom": "Voyelle 'a'", "cible": "a"},
@@ -50,6 +63,9 @@ CURRICULUM_VOCAL = [
     {"palier": 9, "nom": "Syllabe 'pa'", "cible": "pa"},
     {"palier": 10, "nom": "Mot 'papa'", "cible": "papa"},
     {"palier": 11, "nom": "Mot 'maman'", "cible": "maman"},
+    {"palier": 12, "nom": "Mot 'porte'", "cible": "porte"},
+    {"palier": 13, "nom": "Combinatoire 'ouvre porte'", "cible": "ouvre porte"},
+    {"palier": 14, "nom": "Combinatoire 'prends clé'", "cible": "prends clé"},
 ]
 
 

@@ -16,6 +16,7 @@ Il intègre la structure de table des matières globale (avec le contexte applic
 1. [Vue d'Ensemble du Projet](https://www.google.com/search?q=%23vue-densemble-du-projet)
 2. [Journal des Mises à Jour (Changelog)](https://www.google.com/search?q=%23journal-des-mises-%C3%A0-jour)
 3. [Plan d'Action](https://www.google.com/search?q=%23plan-daction)
+3y. [Nouveautés v25.0 (expérimental) — Le Cerveau Bébé Développemental (0→4 ans)](#nouveautés-v250-expérimental--le-cerveau-bébé-développemental-04-ans-2026-07-24)
 3z. [Correctifs v24.0-fix1 à fix5 (expérimental) — École de Rattrapage Vocal & silence de l'Arène](#correctifs-v240-fix1-à-fix5-expérimental--école-de-rattrapage-vocal--silence-de-larène-2026-07-2324)
 4. [Nouveautés v24.0 (expérimental) — L'Arène & Démo Live](#nouveautés-v240-expérimental--larène--démo-live-2026-07-23)
 4z. [Nouveautés v23.0 (expérimental) — Le Cursus Développemental par Ères](#nouveautés-v230-expérimental--le-cursus-développemental-par-ères-2026-07-23)
@@ -75,6 +76,29 @@ L'agent évolue à travers un cursus scolaire modélisé sous forme d'environnem
 ## 📜 Journal des Mises à Jour
 
 Pour un historique complet commit par commit, consultez [CHANGELOG.md](https://www.google.com/search?q=CHANGELOG.md).
+
+### Nouveautés v25.0 (expérimental) — Le Cerveau Bébé Développemental (0→4 ans) (2026-07-24)
+
+> ⚠️ **Statut expérimental** : nouveau paradigme, vit dans `agi_local_test.py` (mécaniques ajoutées) + `professeur_gemma.py` (curriculum vocal étendu) + `cursus_bebe.py` (nouveau, orchestrateur), pas encore porté sur `agi_google_colab.py`. Distinct du Cursus Développemental par Ères (v23.0) : les deux paradigmes coexistent, chacun avec son propre `.brain` (`naulthene_bb.brain` vs `naulthene_cursus.brain`).
+
+Vision bio-inspirée (Piaget / Dehaene) plutôt que RL classique : au lieu de mesurer le cursus en réussites de tâche, le bébé traverse **4 ans (1440 jours subjectifs × 3600 ticks/jour)** découpés en 5 phases d'âge, avec un principe directeur — **l'absence de notation pendant les 8 premiers mois est la véritable clé**. Donner une récompense trop tôt perturbe la construction des représentations visuelles et auditives ; pendant cette période, l'agent apprend de façon purement auto-supervisée (JEPA + Homéostasie + Curiosité), son seul moteur étant de prédire le monde et de satisfaire ses besoins biologiques.
+
+**Tableau de Progression Développementale** :
+
+| Phase (âge) | Jours | % Dodo | Monde visuel/moteur | Audio/vocal | Validation |
+|-------------|-------|--------|---------------------|-------------|------------|
+| Éveil des Sens (0-3 mois) | 1-90 | 70% | vision floue, réflexes | babil brut (palier 1) | 100% intrinsèque |
+| Exploration Motrice (3-6 mois) | 91-180 | 60% | coordination œil-main | voyelles a/e/i/o/u (paliers 2-6) | 100% intrinsèque |
+| Locomotion & Concepts (6-12 mois) | 181-360 | 50% | déplacements, objets | syllabes ba/ma/pa (paliers 7-9) | **feedback social dès jour 240** |
+| Association Forte (12-24 mois) | 361-720 | 40% | navigation ciblée | mots papa/maman/porte (paliers 10-12) | +dopamine / −cortisol |
+| Jeune Enfant (24-48 mois) | 721-1440 | 35% | planification complexe | combinatoire Action+Objet (paliers 13-14) | autonomie guidée |
+
+* **Masquage de la récompense externe (jours 1-239)** : `recompense_env` est gelée à 0.0 dans `traiter_tick` (`masquer_recompense_externe=True`) — neutralise à la fois sa contribution à `recompense_interne` (Système 1/2) ET à `poids_evenement` (donc plus de choc dopaminergique "victoire", plus de `victoire_aujourdhui`, plus de promotion de niveau MiniGrid tant que le masquage est actif). JEPA, curiosité, homéostasie (r_bio) et vocal restent intacts — seul le signal RL externe est verrouillé.
+* **Sommeil variable par phase** : le "% Dodo" du tableau ci-dessus devient le **plafond** du pourcentage de rêve nocturne (remplace `PLAGE_REVE_MAX` dans la formule de `pourcentage_reve`, voir `plafond_reve_bebe()`) — le pourcentage réellement rejoué reste émergent (plasticité × richesse de la journée), jamais une taille de batch fixe, seul son maximum suit l'âge du bébé.
+* **Module "Parent" (jour 240+)** : feedback social vocal déterministe, sans appel Gemma par tick — un score de formants ≥ `SEUIL_PARENT_OUI` (0.45) déclenche un "Oui !" (renforce le choc dopaminergique déjà existant sur le score vocal), un score < `SEUIL_PARENT_NON` (0.15) déclenche un "Non !" (nouveau canal "cortisol", pousse activement la dopamine vers `DOPAMINE_MIN`, toujours reclippée dans `[DOPAMINE_MIN, DOPAMINE_MAX]`). Un second "Oui !" se déclenche quand une ressource bio est atteinte pendant une quête de survie active.
+* **Curriculum vocal étendu** : `professeur_gemma.CURRICULUM_VOCAL` passe de 11 à 14 paliers (ajout du mot "porte" et d'une combinatoire minimale "ouvre porte"/"prends clé"), couvrant toute la roadmap babil→voyelles→syllabes→mots→combinatoire.
+
+Toutes les nouvelles mécaniques sont **additives et neutres par défaut** (`masquer_recompense_externe=False`, `parent_actif=False`, `plafond_reve=None`) — aucune régression sur le Cursus par Ères (`cursus_developpemental.py`, inchangé), le mode standalone classique, l'Arène ou le daemon.
 
 ### Correctifs v24.0-fix1 à fix5 (expérimental) — École de Rattrapage Vocal & silence de l'Arène (2026-07-23/24)
 
