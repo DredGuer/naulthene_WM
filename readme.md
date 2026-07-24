@@ -16,38 +16,45 @@ Il intègre la structure de table des matières globale (avec le contexte applic
 1. [Vue d'Ensemble du Projet](https://www.google.com/search?q=%23vue-densemble-du-projet)
 2. [Journal des Mises à Jour (Changelog)](https://www.google.com/search?q=%23journal-des-mises-%C3%A0-jour)
 3. [Plan d'Action](https://www.google.com/search?q=%23plan-daction)
-4. [Nouveautés v20.0 (expérimental) — Mémoire Épisodique Spatiale & LTP Hebbien](#nouveautés-v200-expérimental--mémoire-épisodique-spatiale--ltp-hebbien-2026-07-23)
-5. [Nouveautés v19.0 (expérimental) — Métabolisme 20/80 & Forage 80/20](#nouveautés-v190-expérimental--métabolisme-2080--forage-8020-2026-07-22)
-6. [Nouveautés v18.0 (expérimental) — Architecture Homéostatique Biologique](#nouveautés-v180-expérimental--architecture-homéostatique-biologique-2026-07-22)
-7. [Nouveautés v17.0 — Volonté Émergente & Sous-Objectifs Intrinsèques](#nouveautés-v170--volonté-émergente--sous-objectifs-intrinsèques-2026-07-22)
-8. [Nouveautés v16.0 — Thermostat Multimodal & Patience par Abnégation](#nouveautés-v160--thermostat-multimodal--patience-par-abnégation-2026-07-22)
-9. [Nouveautés v15.0 — Planification Non-Linéaire, Pression Cinétique & Patience Adaptative](#nouveautés-v150--planification-non-linéaire-pression-cinétique--patience-adaptative-2026-07-22)
-10. [Nouveautés v14.0 — Rêves Adaptatifs & Planification Étendue à 3 Pas](https://www.google.com/search?q=%23nouveaut%C3%A9s-v140---r%C3%AAves-adaptatifs--planification-%C3%A9tendue-%C3%A0-3-pas-2026-07-22)
-11. [Nouveautés v13.0 — Décision Autonome & Mode Libre](https://www.google.com/search?q=%23nouveaut%C3%A9s-v130---d%C3%A9cision-autonome--mode-libre-2026-07-22)
-12. [Nouveautés v12.0 — Cursus à 7 Paliers & Correctif d'Épisodes](https://www.google.com/search?q=%23nouveaut%C3%A9s-v120---cursus-%C3%A0-7-paliers--correctif-d%C3%A9pisodes-2026-07-22)
-13. [Nouveautés v11.0 — Réservoir Dopaminergique V3](https://www.google.com/search?q=%23nouveaut%C3%A9s-v110---r%C3%A9servoir-dopaminergique-v3-2026-07-22)
-14. [Nouveautés v10.0-fix1 — Correctif de Stabilité JEPA & Thermostat](https://www.google.com/search?q=%23nouveaut%C3%A9s-v100-fix1---correctif-de-stabilit%C3%A9-jepa--thermostat)
-15. [Nouveautés v10.0 — Système 2 & Rollout Mental Vectorisé](https://www.google.com/search?q=%23nouveaut%C3%A9s-v100---syst%C3%A8me-2--rollout-mental-vectoris%C3%A9)
-16. [Nouveautés v9.1 — Intégration du Tampon Épisodique (Université)](https://www.google.com/search?q=%23nouveaut%C3%A9s-v91---int%C3%A9gration-du-tampon-%C3%A9pisodique-universit%C3%A9)
-17. [Nouveautés v9.0-fix1 — Correctif de la Neurogenèse Bloc par Bloc](https://www.google.com/search?q=%23nouveaut%C3%A9s-v90-fix1---correctif-de-la-neurogen%C3%A8se-bloc-par-bloc)
-18. [Nouveautés v9.0 — Cursus Académique Progressif (Primaire à Doctorat)](https://www.google.com/search?q=%23nouveaut%C3%A9s-v90---cursus-acad%C3%A9mique-progressif-primaire-%C3%A0-doctorat)
-19. [Nouveautés v8.0 — Alignement Graph-Gradient RL & Rêve Nocturne](https://www.google.com/search?q=%23nouveaut%C3%A9s-v80---alignement-graph-gradient-rl--r%C3%AAve-nocturne)
-20. [Nouveautés v7.0 — Phase 7 Initiale (Architecture Hybride Duale)](https://www.google.com/search?q=%23nouveaut%C3%A9s-v70---phase-7-initiale-architecture-hybride-duale)
-21. [Architecture Cognitico-Biologique Complète](https://www.google.com/search?q=%23architecture-cognitico-biologique-compl%C3%A8te)
-22. [Cursus Académique & Paliers Comportementaux](https://www.google.com/search?q=%23cursus-acad%C3%A9mique--paliers-comportementaux)
-23. [Moteur Émotionnel & Réservoir Dopaminergique](https://www.google.com/search?q=%23moteur-%C3%A9motionnel--r%C3%A9servoir-dopaminergique)
-24. [Algorithme de Rêve Nocturne Adaptatif](https://www.google.com/search?q=%23algorithme-de-r%C3%AAve-nocturne-adaptatif)
-25. [Détecteurs Génériques d'Intention & Quêtes Auto](https://www.google.com/search?q=%23d%C3%A9tecteurs-g%C3%A9n%C3%A9riques-dintention--qu%C3%AAtes-auto)
-26. [Pression Cinétique Multimodale & Patience par Abnégation](#pression-cinétique-multimodale--patience-par-abnégation)
-27. [Volonté Émergente : Sous-Objectifs Intrinsèques & Sursaut](#volonté-émergente--sous-objectifs-intrinsèques--sursaut)
-28. [Architecture Homéostatique Biologique (expérimental)](#architecture-homéostatique-biologique-expérimental)
-29. [Mémoire Épisodique Spatiale & LTP Hebbien (expérimental)](#mémoire-épisodique-spatiale--ltp-hebbien-expérimental)
-30. [Stack Technique](https://www.google.com/search?q=%23stack-technique)
-31. [Modèle de Données & Métriques W&B](https://www.google.com/search?q=%23mod%C3%A8le-de-donn%C3%A9es--m%C3%A9triques-wb)
-32. [Démarrage Rapide](https://www.google.com/search?q=%23d%C3%A9marrage-rapide)
-33. [Mise en Production & Monitoring](https://www.google.com/search?q=%23mise-en-production--monitoring)
-34. [Configuration](https://www.google.com/search?q=%23configuration)
-35. [Troubleshooting & Guide de Dépannage](https://www.google.com/search?q=%23troubleshooting--guide-de-d%C3%A9pannage)
+3z. [Correctifs v24.0-fix1 à fix5 (expérimental) — École de Rattrapage Vocal & silence de l'Arène](#correctifs-v240-fix1-à-fix5-expérimental--école-de-rattrapage-vocal--silence-de-larène-2026-07-2324)
+4. [Nouveautés v24.0 (expérimental) — L'Arène & Démo Live](#nouveautés-v240-expérimental--larène--démo-live-2026-07-23)
+4z. [Nouveautés v23.0 (expérimental) — Le Cursus Développemental par Ères](#nouveautés-v230-expérimental--le-cursus-développemental-par-ères-2026-07-23)
+4a. [Nouveautés v22.1 (expérimental) — Correction de l'Hémisphère Audio](#nouveautés-v221-expérimental--correction-de-lhémisphère-audio-2026-07-23)
+4b. [Nouveautés v22.0 (expérimental) — L'Hémisphère Auditif & Vocal](#nouveautés-v220-expérimental--lhémisphère-auditif--vocal-2026-07-23)
+5. [Nouveautés v21.0 (expérimental) — Le Cerveau Persistant en Cuve](#nouveautés-v210-expérimental--le-cerveau-persistant-en-cuve-2026-07-23)
+5. [Nouveautés v20.0 (expérimental) — Mémoire Épisodique Spatiale & LTP Hebbien](#nouveautés-v200-expérimental--mémoire-épisodique-spatiale--ltp-hebbien-2026-07-23)
+6. [Nouveautés v19.0 (expérimental) — Métabolisme 20/80 & Forage 80/20](#nouveautés-v190-expérimental--métabolisme-2080--forage-8020-2026-07-22)
+7. [Nouveautés v18.0 (expérimental) — Architecture Homéostatique Biologique](#nouveautés-v180-expérimental--architecture-homéostatique-biologique-2026-07-22)
+8. [Nouveautés v17.0 — Volonté Émergente & Sous-Objectifs Intrinsèques](#nouveautés-v170--volonté-émergente--sous-objectifs-intrinsèques-2026-07-22)
+9. [Nouveautés v16.0 — Thermostat Multimodal & Patience par Abnégation](#nouveautés-v160--thermostat-multimodal--patience-par-abnégation-2026-07-22)
+10. [Nouveautés v15.0 — Planification Non-Linéaire, Pression Cinétique & Patience Adaptative](#nouveautés-v150--planification-non-linéaire-pression-cinétique--patience-adaptative-2026-07-22)
+11. [Nouveautés v14.0 — Rêves Adaptatifs & Planification Étendue à 3 Pas](https://www.google.com/search?q=%23nouveaut%C3%A9s-v140---r%C3%AAves-adaptatifs--planification-%C3%A9tendue-%C3%A0-3-pas-2026-07-22)
+12. [Nouveautés v13.0 — Décision Autonome & Mode Libre](https://www.google.com/search?q=%23nouveaut%C3%A9s-v130---d%C3%A9cision-autonome--mode-libre-2026-07-22)
+13. [Nouveautés v12.0 — Cursus à 7 Paliers & Correctif d'Épisodes](https://www.google.com/search?q=%23nouveaut%C3%A9s-v120---cursus-%C3%A0-7-paliers--correctif-d%C3%A9pisodes-2026-07-22)
+14. [Nouveautés v11.0 — Réservoir Dopaminergique V3](https://www.google.com/search?q=%23nouveaut%C3%A9s-v110---r%C3%A9servoir-dopaminergique-v3-2026-07-22)
+15. [Nouveautés v10.0-fix1 — Correctif de Stabilité JEPA & Thermostat](https://www.google.com/search?q=%23nouveaut%C3%A9s-v100-fix1---correctif-de-stabilit%C3%A9-jepa--thermostat)
+16. [Nouveautés v10.0 — Système 2 & Rollout Mental Vectorisé](https://www.google.com/search?q=%23nouveaut%C3%A9s-v100---syst%C3%A8me-2--rollout-mental-vectoris%C3%A9)
+17. [Nouveautés v9.1 — Intégration du Tampon Épisodique (Université)](https://www.google.com/search?q=%23nouveaut%C3%A9s-v91---int%C3%A9gration-du-tampon-%C3%A9pisodique-universit%C3%A9)
+18. [Nouveautés v9.0-fix1 — Correctif de la Neurogenèse Bloc par Bloc](https://www.google.com/search?q=%23nouveaut%C3%A9s-v90-fix1---correctif-de-la-neurogen%C3%A8se-bloc-par-bloc)
+19. [Nouveautés v9.0 — Cursus Académique Progressif (Primaire à Doctorat)](https://www.google.com/search?q=%23nouveaut%C3%A9s-v90---cursus-acad%C3%A9mique-progressif-primaire-%C3%A0-doctorat)
+20. [Nouveautés v8.0 — Alignement Graph-Gradient RL & Rêve Nocturne](https://www.google.com/search?q=%23nouveaut%C3%A9s-v80---alignement-graph-gradient-rl--r%C3%AAve-nocturne)
+21. [Nouveautés v7.0 — Phase 7 Initiale (Architecture Hybride Duale)](https://www.google.com/search?q=%23nouveaut%C3%A9s-v70---phase-7-initiale-architecture-hybride-duale)
+22. [Architecture Cognitico-Biologique Complète](https://www.google.com/search?q=%23architecture-cognitico-biologique-compl%C3%A8te)
+23. [Cursus Académique & Paliers Comportementaux](https://www.google.com/search?q=%23cursus-acad%C3%A9mique--paliers-comportementaux)
+24. [Moteur Émotionnel & Réservoir Dopaminergique](https://www.google.com/search?q=%23moteur-%C3%A9motionnel--r%C3%A9servoir-dopaminergique)
+25. [Algorithme de Rêve Nocturne Adaptatif](https://www.google.com/search?q=%23algorithme-de-r%C3%AAve-nocturne-adaptatif)
+26. [Détecteurs Génériques d'Intention & Quêtes Auto](https://www.google.com/search?q=%23d%C3%A9tecteurs-g%C3%A9n%C3%A9riques-dintention--qu%C3%AAtes-auto)
+27. [Pression Cinétique Multimodale & Patience par Abnégation](#pression-cinétique-multimodale--patience-par-abnégation)
+28. [Volonté Émergente : Sous-Objectifs Intrinsèques & Sursaut](#volonté-émergente--sous-objectifs-intrinsèques--sursaut)
+29. [Architecture Homéostatique Biologique (expérimental)](#architecture-homéostatique-biologique-expérimental)
+30. [Mémoire Épisodique Spatiale & LTP Hebbien (expérimental)](#mémoire-épisodique-spatiale--ltp-hebbien-expérimental)
+31. [Le Cerveau Persistant en Cuve — Architecture Client-Serveur (expérimental)](#le-cerveau-persistant-en-cuve--architecture-client-serveur-expérimental)
+32. [Stack Technique](https://www.google.com/search?q=%23stack-technique)
+33. [Modèle de Données & Métriques W&B](https://www.google.com/search?q=%23mod%C3%A8le-de-donn%C3%A9es--m%C3%A9triques-wb)
+34. [Démarrage Rapide](https://www.google.com/search?q=%23d%C3%A9marrage-rapide)
+35. [Mise en Production & Monitoring](https://www.google.com/search?q=%23mise-en-production--monitoring)
+36. [Configuration](https://www.google.com/search?q=%23configuration)
+37. [Troubleshooting & Guide de Dépannage](https://www.google.com/search?q=%23troubleshooting--guide-de-d%C3%A9pannage)
 
 ---
 
@@ -68,6 +75,71 @@ L'agent évolue à travers un cursus scolaire modélisé sous forme d'environnem
 ## 📜 Journal des Mises à Jour
 
 Pour un historique complet commit par commit, consultez [CHANGELOG.md](https://www.google.com/search?q=CHANGELOG.md).
+
+### Correctifs v24.0-fix1 à fix5 (expérimental) — École de Rattrapage Vocal & silence de l'Arène (2026-07-23/24)
+
+> ⚠️ **Statut expérimental** : cinq correctifs successifs sur `agi_local_test.py`, `cursus_developpemental.py`, `persistance.py`, `lancer_arene.py`, tous découverts sur des runs réels (1000 jours puis relances). Détail complet dans [CHANGELOG.md](CHANGELOG.md).
+
+Après le premier run complet de 1000 jours du Cursus Développemental, inspection du `.brain` obtenu : **aucune promotion vocale en 1000 jours**, `porte_auditive` à norme exactement zéro — l'oreille n'avait strictement rien appris. Quatre bugs en cascade, chacun découvert en corrigeant le précédent :
+
+* **fix1 — École de Rattrapage Vocal** : le seuil fixe de promotion (0.5) était trop haut pour un cerveau neuf, et l'érosion nocturne rasait le peu de gradient accumulé avant qu'il ait pu s'amorcer — un cercle vicieux. Remplacé par un seuil **progressif** (`seuil_jour_vocal_reussi`, 0.15 au palier 1 → 0.45 au palier 11) et une **érosion atténuée à 10%** sur les couches audio tant que le palier vocal reste bas. Validé : 3 promotions obtenues en 60 jours de test, contre 0 en 1000 jours avant le fix.
+* **fix2 — Garde-fou** : ajout de `JOURS_MAX_SANS_PREMIERE_LETTRE = 100` — si le palier vocal n'a validé aucune voyelle après 100 jours, le cursus s'arrête proprement (sauvegarde incluse) plutôt que de tourner à vide jusqu'au bout.
+* **fix3 — Correction du compteur du garde-fou** : le garde-fou comparait `etat.jour` (cumulatif depuis la naissance du cerveau) au lieu des jours écoulés dans la session courante — un vieux cerveau (970 jours vécus avant le fix1) se voyait couper la parole dès le premier jour de sa nouvelle tentative. Corrigé avec un compteur local à `lancer_cursus`, remis à zéro à chaque lancement.
+* **fix4 — `integrateur_bio` exclu à tort** : le filtre de rétrocompatibilité introduit en v22.1 (pour gérer le passage `DIM_VECTEUR_BIO` 8→16) excluait `integrateur_bio` du chargement de façon **inconditionnelle**, sans jamais vérifier si le checkpoint avait déjà la bonne forme — tout `.brain` sauvegardé depuis la v22.1 perdait cette couche (réinitialisée aléatoirement) à *chaque* rechargement. Corrigé : l'exclusion ne se déclenche plus que si la forme réelle diffère de la forme attendue.
+* **fix5 — L'Arène n'injectait aucune cible vocale** : `lancer_arene.py` appelait `traiter_tick` sans jamais passer de mot à répéter — `score_vocal` restait donc toujours `None` ("silence" systématique dans le panneau), quel que soit le niveau réel de l'agent. Corrigé : l'Arène injecte désormais la référence audio du palier vocal courant à chaque tick, via le même `CacheReferencesVocales` que le Cursus.
+
+### Nouveautés v24.0 (expérimental) — L'Arène & Démo Live (2026-07-23)
+
+> ⚠️ **Statut expérimental** : Phase 2 du plan à 3 phases (Cursus → Arène → boucle méta-évolutive), vit dans `agi_local_test.py`/`persistance.py`/`cursus_developpemental.py` (étendus) + `arene_visuelle.py`, `lancer_arene.py` (nouveaux), pas encore portée sur `agi_google_colab.py`.
+
+Le Cursus Développemental (v23.0) faisait tourner l'agent seul pendant 1000 jours, mais sans jamais rien montrer ni sauvegarder — un cerveau qui a vécu 1000 jours disparaissait intégralement à la fin du script. La v24.0 corrige d'abord ce préalable, puis ajoute une **fenêtre graphique temps réel** :
+
+* **Persistance du Cursus** : `cursus_developpemental.py` charge et sauvegarde désormais un cerveau via `PersistanceAnatomique` (fichier dédié `naulthene_cursus.brain`, jamais mélangé avec `naulthene_v21.brain` de la Cuve), à chaque nuit — un run interrompu (Ctrl+C, panne) reprend exactement où il en était, avec sa progression vocale (`palier_vocal`) désormais elle aussi sauvegardée.
+* **L'Arène** (`lancer_arene.py`) : une seule fenêtre pygame composant l'image MiniGrid rendue en direct (`render_mode="rgb_array"`) et un panneau de télémétrie (dopamine, jauges biologiques, curriculum MiniGrid/DoorKey, ère et palier vocal courants). Le babil de l'agent est joué en temps réel dans les haut-parleurs.
+* **Garantie de non-altération** : l'Arène observe sans jamais entraîner (`agent.eval()`, aucun appel à `executer_nuit`/`apprendre_journee`) — validé par comparaison directe des poids (`torch.equal`) avant/après un run d'observation, strictement identiques. Tu peux lancer l'Arène autant de fois que tu veux sans risque pour le `.brain`.
+
+### Nouveautés v23.0 (expérimental) — Le Cursus Développemental par Ères (2026-07-23)
+
+> ⚠️ **Statut expérimental** : nouvelle mécanique cognitive, vit dans `agi_local_test.py` (mode `vocal_isole` + constantes d'ères) + `lecons_vocales.py`, `cursus_developpemental.py` (nouveaux), pas encore portée sur `agi_google_colab.py`.
+
+Jusqu'ici, l'apprentissage vocal ne se déclenchait que par une leçon manuelle ponctuelle (`client_professeur.py --palier N`, un humain choisit le palier). La v23.0 en fait un **programme de développement autonome de 1000 jours subjectifs**, organisé en 3 ères de difficulté croissante — exactement comme un enfant qui passe de la crèche à l'école primaire :
+
+* **Ère Alternance (jours 1-399)** : chaque journée se scinde en un **matin** (MiniGrid pur, 200 ticks) et un **après-midi** (parole isolée, l'agent « au calme, écran noir » — vision à zéro, l'environnement MiniGrid explicitement en pause, aucun `env.step` appelé).
+* **Ère Synesthésie (jours 400-599)** : le matin devient multimodal — MiniGrid **et** audio simultanés, le cerveau unifié gère les deux à la fois. L'après-midi étend le vocabulaire aux syllabes/mots.
+* **Ère Intégration (jours 600-999)** : toute la journée est multimodale — l'agent verbalise une voyelle liée à l'action MiniGrid qu'il vient de jouer (mapping action→voyelle, une v1 volontairement minimale).
+
+Le curriculum MiniGrid (`PROGRAMME`, Primaire→Doctorat) et le curriculum vocal (11 paliers, voyelles→syllabes→mots) progressent **en parallèle**, chacun par son propre mécanisme de promotion — les ères orchestrent *quand* chaque apprentissage est actif dans la journée, elles ne remplacent ni l'un ni l'autre. La promotion vocale réutilise le mécanisme 2+2 succès de `GestionnaireCursusAbnegation` (déjà utilisé pour les 7 paliers DoorKey), sur une instance totalement séparée, pilotée par le score de formants moyen du jour. Les références audio des voyelles sont générées une seule fois au démarrage (`say` → MFCC) et mises en cache, plutôt que ré-invoquées à chaque tick sur un run de centaines de milliers de ticks vocaux.
+
+### Nouveautés v22.1 (expérimental) — Correction de l'Hémisphère Audio (2026-07-23)
+
+> ⚠️ **Statut expérimental** : correctif de conception sur la v22.0, mêmes fichiers locaux, pas encore porté sur `agi_google_colab.py`.
+
+Trois défauts détectés à la revue de la v22.0 (dont un critique) et corrigés :
+
+* **La bouche apprend enfin (défaut 1, CRITIQUE)** : en v22.0, `tete_vocale` produisait des formants dont la sortie était détachée avant tout calcul — un score de récompense alimentait la dopamine, mais **aucun gradient dirigé** n'apprenait jamais à viser la cible. C'était un membre fantôme : la bouche bougeait au hasard. Une perte MSE supervisée (sur F1/F2, les dimensions réellement contraintes par la leçon) donne désormais un vrai signal d'apprentissage. **Validé expérimentalement** : le score de formants progresse de 0.0045 à 0.1111 sur 5 jours de leçon (×24 ticks).
+* **L'oreille écoute vraiment (défaut 2)** : l'embedding sémantique du mot, qui était concaténé au son brut dans l'entrée de `porte_auditive`, aurait pu faire ignorer le son réel par le réseau (le concept parfait est plus facile à exploiter que l'acoustique bruitée). Il devient une **quête vocale** dans `vecteur_bio` (la cible à atteindre), jamais un cadeau en entrée — l'agent doit traduire ce qu'il perçoit vers la cible.
+* **Le JEPA visuel est protégé (défaut 3)** : une tête prédictive `generateur_attente_audio`, séparée de la tête visuelle, avec un poids `coeff_jepa_audio` monté progressivement (quasi nul au premier tick audio) — la physique MiniGrid acquise sur 481 jours n'est jamais perturbée par un signal audio bruyant en début de leçon.
+* **Rétrocompatibilité** : un bug de mismatch de forme sur `integrateur_bio` (conséquence du changement `DIM_VECTEUR_BIO` 8→16) a été détecté et corrigé pendant les tests — cette couche renaît désormais à neuf lors d'une greffe (décision assumée : elle n'avait quasiment rien appris sur le vrai cerveau de production).
+
+### Nouveautés v22.0 (expérimental) — L'Hémisphère Auditif & Vocal (2026-07-23)
+
+> ⚠️ **Statut expérimental** : comme les v18.0–v21.0, cette version n'existe que dans l'écosystème local (`agi_local_test.py` étendu + `hemisphere_audio.py`, `professeur_gemma.py`, `client_professeur.py` nouveaux, `persistance.py`/`daemon_cerveau.py` étendus), pas encore portée sur `agi_google_colab.py`.
+
+* **Un véritable hémisphère audio, greffé dans le cerveau** : `porte_auditive` (l'OREILLE, miroir de `porte_visuelle`, double entrée MFCC⊕embedding sémantique) et `tete_vocale` (la BOUCHE, miroir de `tete_motrice`, 8 paramètres de synthèse par formants) — pas un module de traitement audio bricolé à côté. Les deux couches respectent les 4 points de synchro obligatoires (`__init__`, `fortifier_synapses`, `cycle_sommeil_global`, `declencher_neurogenese`).
+* **Cerveau 100% multimodal unifié** (décision structurante de l'utilisateur) : vision et audio se fondent dans le *même* bus latent par simple somme, à chaque tick — pas de "mode audio" isolé du reste. L'agent voit et entend, bouge et vocalise simultanément.
+* **Cortex auditif prédictif dès le départ** : le JEPA (modèle du monde) ne prédit plus seulement l'image suivante, mais aussi le son — `perte_jepa` fusionne la cible visuelle et la cible auditive, avec un vrai gradient qui remonte jusqu'à `porte_auditive`.
+* **Récompense de formants, déterministe et instantanée** : Gemma (`gemma4:e4b` via Ollama) met ~8 à 30 secondes par réponse (mesuré) — totalement incompatible avec une récompense par tick RL. La récompense de babillage vient donc d'une distance de formants (numpy pur, immédiate) ; Gemma n'intervient qu'en professeur périodique, pour choisir la leçon (curriculum vocal à 11 paliers) et juger qualitativement en fin de leçon.
+* **Babil entendu en temps réel** : chaque son produit par `tete_vocale` est synthétisé (synthèse par formants, cascade de résonateurs) et joué immédiatement dans les haut-parleurs — l'utilisateur entend l'agent babiller en direct pendant une leçon (`client_professeur.py`).
+* **Greffe rétrocompatible** : les vieux `.brain` (sans couches audio) se chargent avec `strict=False` — l'agent garde tous ses acquis visuels/MiniGrid, les hémisphères audio naissent à neuf et s'apprennent par babillage. Un bug d'incompatibilité de l'optimiseur Adam après greffe a été détecté et corrigé pendant les tests.
+
+### Nouveautés v21.0 (expérimental) — Le Cerveau Persistant en Cuve (2026-07-23)
+
+> ⚠️ **Statut expérimental** : comme les v18.0/v19.0/v20.0, cette version n'existe que dans l'écosystème local (`agi_local_test.py` refactoré + trois nouveaux fichiers `persistance.py`, `daemon_cerveau.py`, `client_corps.py`), pas encore portée sur `agi_google_colab.py`.
+
+* **Refactor en helpers partagés** : la boucle principale (~500 lignes jusque-là au niveau module) est extraite en un conteneur d'état `EtatCognitif` et quatre fonctions réutilisables (`initialiser_etat_cognitif`, `demarrer_journee`, `traiter_tick`, `executer_nuit`), consommées à l'identique par le mode standalone et par le daemon — refactor pur, sans changement de comportement (validé par comparaison de logs sur run déterministe).
+* **`PersistanceAnatomique`** (`persistance.py`) : cristallise/ressuscite l'état complet du cerveau dans un fichier `.brain` — dimension du bus, poids et traces synaptiques, état de l'optimiseur, chimie viscérale, mémoire épisodique spatiale, curriculum et thermostat de neurogenèse. L'agent traverse un redémarrage de process avec son `tick_absolu`, sa dopamine, ses souvenirs et sa dimension de bus intacts, y compris après une neurogenèse.
+* **`CuveDeMaintien`** (`daemon_cerveau.py`) : daemon socket TCP qui héberge le cerveau en continu. Trois états métaboliques : Éveil (connexion active), Sommeil (nuit complète ou micro-sieste), Cryostase (`socket.accept()` bloquant, CPU ~0% hors connexion). Modèle de temps **hybride** : une nuit complète se déclenche soit in-session dès qu'une journée subjective de ticks est accumulée, soit à la déconnexion si assez de vécu s'est accumulé depuis la dernière nuit ; sinon une micro-sieste (simple sauvegarde, sans érosion ni rêve) protège le cerveau d'une consolidation relancée à vide sur des sessions courtes.
+* **`client_corps.py`** : pilote de session jetable. Limite assumée de cette itération : l'environnement MiniGrid tourne côté serveur (les détecteurs biologiques/spatiaux ont besoin des internes MiniGrid, intransmissibles par un simple flux pixels+action) — le découplage total du Corps est une évolution future.
 
 ### Nouveautés v20.0 (expérimental) — Mémoire Épisodique Spatiale & LTP Hebbien (2026-07-23)
 
@@ -406,6 +478,90 @@ La trace ne se remet à zéro qu'à la fortification ou au sommeil (`cycle_somme
 
 ---
 
+## 🫙 Le Cerveau Persistant en Cuve — Architecture Client-Serveur (expérimental)
+
+> ⚠️ **Uniquement dans l'écosystème local** (voir [Nouveautés v21.0](#nouveautés-v210-expérimental--le-cerveau-persistant-en-cuve-2026-07-23)) : `agi_local_test.py` refactoré + trois nouveaux fichiers `persistance.py`, `daemon_cerveau.py`, `client_corps.py`, pas encore portée sur `agi_google_colab.py`.
+
+Jusqu'à la v20.0, Naulthène était un script mortel : le cerveau naissait à la première ligne du fichier et mourait à la dernière. La v21.0 sépare définitivement la **Conscience** (le réseau de neurones et son état biologique) du **Corps** (l'environnement MiniGrid, aujourd'hui — un robot physique, demain), via une architecture **Client-Serveur en sockets TCP/IP**.
+
+### 1. Dualité Client-Serveur
+
+* **Le Serveur (la Cuve, `CuveDeMaintien` dans `daemon_cerveau.py`)** : un daemon Python qui tourne indéfiniment en arrière-plan. Il stocke les matrices de poids, l'épaisseur de la myéline, les souvenirs spatiaux, la dopamine et les jauges biologiques.
+* **Le Client (le Corps, `client_corps.py`)** : jetable, sans aucune intelligence propre. Il pilote la connexion (ouverture, rythme des ticks, fermeture) selon le protocole JSON défini pour le design.
+
+### 2. Trois États Métaboliques
+
+1. **L'Éveil** (connexion active, `_vivre_connexion`) : chaque paquet réseau reçu déclenche un tick complet (`traiter_tick`, le même helper que le mode standalone) — la faim augmente, les synapses s'activent, la LTP hebbienne opère.
+2. **Le Sommeil** (`_processus_nocturne`) : à la perte du signal, le rituel d'extinction s'exécute — consolidation (apprentissage + rêve adaptatif + ressort dopaminergique + thermostat de neurogenèse + `cycle_sommeil_global`) puis cristallisation sur le disque.
+3. **La Cryostase** (`server.accept()`) : entre deux connexions, le process bloque sur l'appel réseau — CPU à ~0%, le temps est littéralement suspendu pour l'agent jusqu'au prochain corps qui se branche.
+
+### 3. Modèle de Temps Hybride (v21.0)
+
+Plutôt que de choisir entre "1 connexion = 1 nuit" (risque de sessions longues sans jamais consolider) et "seuil de ticks fixe" (risque d'ignorer la déconnexion elle-même), le modèle retenu **combine les deux régimes selon l'activité** :
+
+* **Pendant une session active longue**, une nuit **complète** se déclenche dès qu'une journée subjective (`ticks_par_jour`) s'est accumulée depuis la dernière consolidation — l'agent peut traverser plusieurs journées au sein d'une seule connexion.
+* **À la déconnexion**, `_processus_nocturne` compare le nombre de ticks vécus depuis la dernière nuit à un seuil (`FRACTION_SEUIL_NUIT_A_LA_DECONNEXION`, la moitié d'une journée subjective par défaut) :
+  * **Au-dessus du seuil** → une vraie nuit n'a pas encore eu lieu pour ce vécu : on la liquide avant de sauvegarder.
+  * **En dessous** → **micro-sieste** : simple cristallisation de l'état courant, sans relancer un cycle d'érosion/rêve sur une poignée de ticks. C'est la protection explicite contre l'« Alzheimer numérique » : un agent qu'on connecte/déconnecte en boucle sur de courtes sessions ne voit pas ses synapses s'éroder à chaque fois.
+* **Hors connexion (cryostase)**, `traiter_tick` n'est jamais appelé : aucune jauge biologique ne bouge, aucune synapse ne s'érode — le métabolisme s'arrête net, protection contre la famine hors connexion.
+
+### 4. `PersistanceAnatomique` — La Cristallisation
+
+Le fichier `.brain` (`torch.save`/`torch.load`, écriture atomique via fichier temporaire + `os.replace`) porte plus d'état qu'un pseudo-code minimal ne le suggérerait, parce que le vrai cerveau Naulthène en a accumulé au fil des versions :
+
+* **Structure** : la dimension du bus (`dim_bus`), pour reconstruire l'agent à la bonne taille AVANT `load_state_dict` — indispensable car la neurogenèse la fait grandir au fil des jours.
+* **Réseau** : `state_dict()` complet (`base_weight`, `annexe_weight`, `myeline_M`, `trace_activation` de chaque couche) et l'état de l'optimiseur Adam (recréé par `declencher_neurogenese`, donc sauvé après la nuit).
+* **Chimie viscérale** : teneur en dopamine, jauges biologiques (satiété/hydratation/stimulation), quête active.
+* **Mémoire** : les souvenirs de `MemoireEpisodiqueSpatiale`.
+* **Curriculum & thermostat** : niveau, palier visé, victoires consécutives, sous-seuil d'Abnégation, patience minimale acquise par récurrence, seuils du thermostat de neurogenèse, `tick_absolu`.
+
+### 5. Limite Assumée de Cette Itération
+
+Le VRAI code de `traiter_tick`/`step_metabolisme`/`DetecteurRessourcesBiologiques` lit les internes MiniGrid (`env.unwrapped.agent_pos`, `.grid`, positions des `Ball` Nourriture/Eau) pour la biologie et la mémoire spatiale — un client purement "pixels + action" ne peut pas transmettre ça par un flux JSON simple sans étendre significativement le protocole. **Dans cette itération, l'environnement MiniGrid tourne donc côté serveur** (dans la Cuve) : le Corps reste jetable et sans intelligence (il pilote la connexion, choisit le niveau), mais le moteur physique lui-même vit dans le process du daemon. Le découplage total (environnement chez le client, protocole étendu pour transmettre grille/positions) est documenté comme une évolution future, pas laissé implicite comme si le design initial était déjà entièrement réalisé.
+
+> **Mise à jour v22.0** : la limite décrite ci-dessus concernait le canal visuel/MiniGrid. Le canal **audio**, lui, transite désormais réellement par le protocole client-serveur (`client_professeur.py` → `perception['audio']`/`perception['formants_cibles']` → `daemon_cerveau.py` → `traiter_tick`) — c'est la première fois qu'un client injecte un vrai signal de perception dans le cerveau plutôt qu'un simple heartbeat. Voir la section suivante.
+
+---
+
+## 🗣️ L'Hémisphère Auditif & Vocal (expérimental, v22.0)
+
+> ⚠️ **Uniquement dans l'écosystème local** (voir [Nouveautés v22.0](#nouveautés-v220-expérimental--lhémisphère-auditif--vocal-2026-07-23)) : `agi_local_test.py` étendu + `hemisphere_audio.py`, `professeur_gemma.py`, `client_professeur.py` nouveaux, `persistance.py`/`daemon_cerveau.py` étendus — pas encore porté sur `agi_google_colab.py`.
+
+Naulthène ne percevait jusqu'ici que la vision. La v22.0 lui greffe un second sens et une seconde sortie motrice, symétriques à l'existant : une **oreille** (`porte_auditive`) et une **bouche** (`tete_vocale`) — de vrais hémisphères du cerveau, pas un module de traitement du signal branché à côté du réseau.
+
+### 1. Un cerveau multimodal unifié, pas un mode audio séparé
+
+Décision structurante : vision et audio se fondent dans le **même bus latent**, par simple somme dans `_tronc_cerebral` — `bus_latent = relu(porte_visuelle(vision)) + relu(porte_auditive(audio))`. Quand aucun son n'est fourni (silence, `obs_auditive=None`), le comportement est rigoureusement identique à avant v22.0 (non-régression validée sur run déterministe, logs byte-identiques). L'agent ne bascule jamais dans un "mode écoute" : à chaque tick, il peut voir, entendre, bouger et vocaliser en même temps — c'est un seul flux de conscience, multimodal par construction.
+
+### 2. L'oreille : le son brut, sans raccourci
+
+`porte_auditive` reçoit `DIM_AUDIO_ENTREE` (130 dims) = uniquement le **son brut** : coefficients cepstraux (MFCC), la représentation physique classique de la parole. **Correctif v22.1** : la v22.0 concaténait aussi l'embedding sémantique du mot prononcé directement à cette entrée — un réseau paresseux recevant le concept parfait ("pomme") en même temps que le son bruité de la voix apprend à ignorer le son, il n'écoute jamais vraiment. Le concept-cible (`DIM_EMBED_SEMANTIQUE=32`, réservé pour un usage futur) n'entre donc plus dans l'oreille : il devient une **quête vocale** de 8 dims dans `vecteur_bio` (voir §5) — l'agent doit traduire ce qu'il perçoit vers la cible, il ne peut plus tricher.
+
+### 3. La bouche : synthèse par formants
+
+`tete_vocale` ne génère pas une onde audio brute (espace bien trop vaste pour un RL par tick) mais **8 paramètres physiques** (`DIM_VOCALE=8` : f0, F1, F2, F3, largeurs de bande, durée, amplitude), démappés vers leurs unités réelles puis passés à un synthétiseur par formants (`hemisphere_audio.SynthetiseurFormants`, une cascade de résonateurs biquad appliquée à une source glottique). C'est ce petit espace de sortie qui rend le babillage *apprenable* : l'agent apprend à « placer sa bouche », pas à halluciner un signal audio complet. Le son produit est **synthétisé et joué immédiatement** dans les haut-parleurs pendant une leçon (`client_professeur.py`) — le babil s'entend en temps réel, dès qu'il est produit.
+
+### 4. Le cortex auditif prédictif (JEPA audio à têtes séparées)
+
+Le modèle du monde (JEPA) ne prédisait jusqu'ici que l'image suivante. La cible auditive s'ajoute désormais via une **tête prédictive dédiée** (`generateur_attente_audio`, séparée de `generateur_attente`). **Correctif v22.1** : la v22.0 mélangeait vision et audio dans une seule cible sans pondération — un signal audio bruyant dès le tick 0 risquait de perturber le JEPA visuel, dangereux pour les 481 jours de physique MiniGrid déjà appris. Le poids de la perte audio (`coeff_jepa_audio`) monte désormais **progressivement** de 0 à `COEFF_JEPA_AUDIO_MAX` sur `RAMPE_JEPA_AUDIO` ticks audio reçus (quasi nul au premier tick, mesuré à 0.00015) — l'audio ne perturbe jamais la vision au démarrage d'une leçon.
+
+### 5. La bouche apprend : perte vocale supervisée et quête dans le vecteur bio
+
+**Correctif v22.1 (CRITIQUE)** : en v22.0, `tete_vocale` produisait ses formants mais leur sortie était détachée avant tout calcul — la récompense de formants alimentait bien la dopamine, mais **aucun gradient dirigé** n'apprenait jamais à la bouche à viser la cible. C'était un membre fantôme : elle bougeait au hasard, corrigée seulement par LTP hebbien et rêve. Une perte MSE supervisée (sur F1/F2, les dimensions réellement contraintes par la leçon en cours) est désormais calculée sur le tenseur `parametres_vocaux` non détaché et sommée à `perte_totale` dans `apprendre_journee` — c'est elle qui donne le vrai signal d'apprentissage. La cible elle-même (les formants visés) est injectée comme **quête vocale** dans `vecteur_bio` (`DIM_VECTEUR_BIO` passé de 8 à 16, voir §2), exactement comme les quêtes SURVIVAL_FOOD/WATER. **Validé expérimentalement** : le score de formants progresse de 0.0045 à 0.1111 sur 5 jours de leçon (×24 ticks, seed fixe) — la preuve directe que la correction fonctionne.
+
+### 6. Le Professeur Gemma : curriculum et jugement, jamais la récompense par tick
+
+Contrainte mesurée sur ce projet : `gemma4:e4b` (via Ollama) met **~8 à 30 secondes** pour répondre à un prompt court — totalement incompatible avec une boucle RL qui tourne à des dizaines de ticks par seconde. La récompense de babillage vient donc d'une **distance de formants** déterministe et instantanée (`hemisphere_audio.recompense_formants`, une récompense *continue* — se rapprocher de la cible compte déjà, pas de mur 0/1) — c'est elle qui pilote le score affiché en direct, tandis que la perte MSE du §5 pilote l'apprentissage proprement dit. Gemma (`professeur_gemma.py`) n'intervient qu'en professeur, à basse fréquence :
+
+* **Choisir la leçon** : un curriculum vocal à 11 paliers (`CURRICULUM_VOCAL`), symétrique au cursus MiniGrid — vocaliser → voyelles → syllabes → mots courts.
+* **Juger qualitativement** : en fin de leçon (pas par tick), reçoit le mot cible et une transcription Whisper du son produit, renvoie un score et un commentaire pédagogique en français. Repli automatique sur le score de formants seul si Ollama est indisponible — Gemma est un professeur, jamais un composant critique du pipeline de récompense.
+
+### 7. Greffe rétrocompatible sur un cerveau déjà vécu
+
+Un `.brain` antérieur à la v22.0 n'a pas `porte_auditive`/`tete_vocale`/`generateur_attente_audio` dans son `state_dict`. `PersistanceAnatomique.charger_ou_naitre` charge désormais avec `load_state_dict(strict=False)` : l'agent hérite de tous ses acquis (vision, MiniGrid, curriculum, mémoire) et les nouvelles couches naissent à leur initialisation aléatoire — l'agent se réveille avec ses souvenirs intacts mais « sourd/muet de naissance qui vient d'être opéré », devant apprendre à entendre/parler par babillage. Deux pièges détectés pendant les tests : l'ancien optimiseur Adam (moins de groupes de paramètres qu'après une greffe) fait planter `optimizer.load_state_dict` — un optimiseur frais est recréé automatiquement dans ce cas ; et le changement `DIM_VECTEUR_BIO` 8→16 (v22.1) change la *forme* de `integrateur_bio` (pas seulement des clés manquantes), confirmé provoquer une `RuntimeError` de mismatch — cette couche est donc explicitement exclue du chargement et renaît à neuf (décision assumée : elle avait une `base_weight` quasi vide, moins de 3% de poids non-nuls, sur le vrai cerveau de production après 481 jours).
+
+---
+
 ## 💻 Stack Technique
 
 * **Langage** : Python 3.12
@@ -518,6 +674,48 @@ pip install torch gymnasium minigrid wandb numpy
 wandb login   # une seule fois
 WANDB_MODE=offline python agi_local_test.py   # ou WANDB_MODE=online une fois connecté
 ```
+
+### 4. Le Cerveau Persistant en Cuve (Mac, expérimental, v21.0)
+
+Voir [Le Cerveau Persistant en Cuve](#le-cerveau-persistant-en-cuve--architecture-client-serveur-expérimental) pour l'architecture complète. Contrairement à `agi_local_test.py`, les trois fichiers `persistance.py`, `daemon_cerveau.py` et `client_corps.py` sont trackés par git (ce sont de vraies briques d'architecture, pas une copie de test) — seuls les fichiers `.brain` générés à l'exécution sont ignorés.
+
+```bash
+# Terminal 1 — démarre la Cuve (daemon persistant, reste actif entre les sessions)
+source venv/bin/activate
+python daemon_cerveau.py --port 9999 --brain naulthene_v21.brain
+
+# Terminal 2 — connecte un Corps jetable pour une session de test
+source venv/bin/activate
+python client_corps.py --port 9999 --ticks 2000
+```
+
+La Cuve reste allumée après la déconnexion du Corps (retour en cryostase, CPU ~0%) : on peut relancer `client_corps.py` autant de fois que voulu, ou éteindre/rallumer la Cuve elle-même — le cerveau reprend son existence exactement où il l'avait laissée (`naulthene_v21.brain`).
+
+### 5. L'Hémisphère Auditif & Vocal (Mac, expérimental, v22.0)
+
+Voir [L'Hémisphère Auditif & Vocal](#lhémisphère-auditif--vocal-expérimental-v220) pour l'architecture complète. Pile audio à installer une fois (en plus des dépendances de base) — `say` (TTS) et Ollama (`gemma4:e4b` + `all-minilm-l6-v2`) doivent déjà être disponibles sur la machine :
+
+```bash
+source venv/bin/activate
+pip install sounddevice librosa openai-whisper requests
+```
+
+Se branche sur la **même Cuve** que MiniGrid (`daemon_cerveau.py`, un seul cerveau, deux sens) — un `.brain` déjà entamé en MiniGrid se greffe automatiquement les hémisphères audio à sa première résurrection en v22.0 (voir [Greffe rétrocompatible](#6-greffe-rétrocompatible-sur-un-cerveau-déjà-vécu)) :
+
+```bash
+# Terminal 1 — la Cuve (identique au lancement v21.0, aucun changement)
+source venv/bin/activate
+python daemon_cerveau.py --port 9999 --brain naulthene_v21.brain
+
+# Terminal 2 — une leçon de parole (palier 2 = voyelle 'a', 100 ticks, référence via `say`)
+source venv/bin/activate
+python client_professeur.py --port 9999 --palier 2 --ticks 100
+
+# Variante avec ta propre voix comme référence (2 secondes de micro par leçon)
+python client_professeur.py --port 9999 --palier 2 --ticks 100 --micro
+```
+
+Le babil de l'agent est **joué en temps réel** dans les haut-parleurs à chaque tick vocalisé, avec un score de proximité de formants affiché en direct ; un jugement qualitatif de Gemma s'affiche en fin de leçon (~10-30 secondes d'attente). `--palier` correspond aux 11 paliers de `professeur_gemma.CURRICULUM_VOCAL` (1 = Vocaliser, 2-6 = voyelles, 7-9 = syllabes, 10-11 = mots courts).
 
 ---
 

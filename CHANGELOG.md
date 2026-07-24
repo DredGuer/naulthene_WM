@@ -4,6 +4,225 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](readme
 
 ---
 
+## [24.0-fix5-experimental] - 2026-07-23
+
+### L'Arène injecte enfin une cible vocale — fin du "(silence)" systématique (expérimental, non porté sur le script de référence)
+
+| Type | Details |
+|------|---------|
+| **Commit** | N/A — vit dans `lancer_arene.py` |
+| **Catégorie** | fix (bug bloquant, signalé par l'utilisateur avec une hypothèse de seuil à corriger) |
+| **Impact** | Fonctionnel (local uniquement) |
+
+**L'hypothèse initiale (un seuil de décodage type `if score_similarite < 0.55` masquant les scores 0.45-0.55 observés dans le cursus) ne correspondait pas au code réel : aucun seuil de ce type n'existe. Le vrai bug, plus simple : `lancer_arene.py` appelait `traiter_tick(etat)` SANS jamais passer `obs_auditive`/`formants_cibles` — `score_vocal` restait donc toujours `None` par construction, quel que soit le niveau réel de l'agent. L'Arène affichait "Palier vocal : Mot 'maman'" dans le panneau tout en ne présentant jamais ce mot à répéter au cerveau.**
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `lancer_arene.py` | Instancie `lecons_vocales.CacheReferencesVocales` (même mécanisme que `cursus_developpemental.py`) et injecte à CHAQUE tick le MFCC + les formants cibles du `etat.palier_vocal` courant dans `traiter_tick`. Le score est ensuite calculé via `hemisphere_audio.recompense_formants` sur les formants réellement produits, au lieu de rester `None` |
+
+**Validation** : testé avec un `.brain` forcé au palier 11 ("maman") — confirmé que `score_vocal` n'est plus jamais `None` sur 10 ticks consécutifs (il se calcule à chaque fois, la valeur numérique dépendant ensuite du niveau réel de l'agent testé).
+
+---
+
+## [24.0-fix4-experimental] - 2026-07-23
+
+### L'exclusion d'integrateur_bio devient conditionnelle à la forme réelle (expérimental, non porté sur le script de référence)
+
+| Type | Details |
+|------|---------|
+| **Commit** | N/A — vit dans `persistance.py` |
+| **Catégorie** | fix (bug bloquant, signalé par l'utilisateur) |
+| **Impact** | Critique (local uniquement) — expliquait le silence de l'Arène |
+
+**Le filtre `integrateur_bio` introduit en v22.1 pour gérer le changement DIM_VECTEUR_BIO 8→16 était INCONDITIONNEL : il testait seulement `startswith('integrateur_bio.')`, sans jamais comparer la forme réelle du checkpoint à la forme attendue. Conséquence : tout `.brain` sauvegardé depuis la v22.1 (donc avec `integrateur_bio` déjà à la bonne taille et correctement appris) se faisait quand même amputer de cette couche à CHAQUE rechargement — remplacée par des poids aléatoires. Comme `integrateur_bio` réinjecte justement la quête vocale vers `tete_vocale`, cette réinitialisation systématique produisait une bouche silencieuse dans l'Arène (amplitude prédite sous le seuil d'audibilité en mode `eval()`).**
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `persistance.py` | `charger_ou_naitre` compare désormais la shape réelle de `checkpoint['state_dict']['integrateur_bio.base_weight']` à la shape attendue par l'agent fraîchement recréé (`agent.integrateur_bio.base_weight.shape`). L'exclusion ne se déclenche que si les deux diffèrent (vieux `.brain` pré-v22.1) ; un checkpoint déjà à la bonne forme charge `integrateur_bio` intégralement, sans perte |
+
+**Validation** : deux cas testés directement. (1) Un `.brain` simulé à l'ancienne forme (8 dims, `integrateur_bio` en `(16,24)`) déclenche toujours correctement l'exclusion, avec un message affichant la comparaison exacte des formes. (2) Un `.brain` à la forme actuelle (16 dims) avec des poids `integrateur_bio` marqués (valeur repère `0.777`) est rechargé avec ces poids **strictement préservés** — aucune exclusion, aucune réinitialisation. C'est ce second cas qui corrige le silence observé dans l'Arène sur `naulthene_cursus.brain`.
+
+---
+
+## [24.0-fix3-experimental] - 2026-07-23
+
+### Correction du compteur du garde-fou vocal (expérimental, non porté sur le script de référence)
+
+| Type | Details |
+|------|---------|
+| **Commit** | N/A — vit dans `cursus_developpemental.py` |
+| **Catégorie** | fix (bug bloquant sur le garde-fou introduit en fix2) |
+| **Impact** | Fonctionnel (local uniquement) |
+
+**Le garde-fou de l'École de Rattrapage (v24.0-fix2) comparait `etat.jour` — cumulatif depuis la naissance du cerveau — au seuil de 100 jours. Sur un cerveau qui avait déjà vécu 970 jours AVANT le correctif de seuil (v24.0-fix1), la reprise après application du fix1 s'est vue couper la parole dès le premier jour de la nouvelle tentative (970 ≥ 100), sans laisser au nouveau seuil la moindre chance de prouver qu'il fonctionne réellement.**
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `cursus_developpemental.py` | Nouveau compteur local `jours_ecoules_session` (incrémenté à chaque itération de `lancer_cursus`, remis à zéro à chaque nouveau lancement du script) — le garde-fou compare désormais ce compteur au seuil, pas `etat.jour`. Une reprise sur un vieux cerveau obtient une vraie fenêtre de `JOURS_MAX_SANS_PREMIERE_LETTRE` jours depuis CETTE tentative, indépendamment de son passé |
+
+**Validation** : testé avec un cerveau simulé à `etat.jour=970`/`palier_vocal=1` (reproduisant exactement le cas réel signalé) — un run de 5 jours (`jours_totaux=5`, sous le seuil de 100) se termine désormais normalement au lieu de déclencher le garde-fou dès le premier jour.
+
+---
+
+## [24.0-fix2-experimental] - 2026-07-23
+
+### Garde-fou de l'École de Rattrapage Vocal (expérimental, non porté sur le script de référence)
+
+| Type | Details |
+|------|---------|
+| **Commit** | N/A — vit dans `cursus_developpemental.py` |
+| **Catégorie** | fix (garde-fou, détection précoce d'un blocage) |
+| **Impact** | Fonctionnel (local uniquement) |
+
+**Le run de 1000 jours qui a révélé le blocage du seuil de promotion (v24.0-fix1) a tourné intégralement à vide côté vocal sans qu'aucun signal ne le signale — il a fallu inspecter le `.brain` à la main après coup. Ajout d'un garde-fou : si après `JOURS_MAX_SANS_PREMIERE_LETTRE` (100) jours subjectifs cumulés le palier vocal n'a jamais quitté le palier 1 (aucune voyelle validée), le cursus s'arrête proprement — sauvegarde incluse — au lieu de tourner jusqu'au bout des jours demandés.**
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `cursus_developpemental.py` | Nouvelle constante `JOURS_MAX_SANS_PREMIERE_LETTRE = 100`. Dans `lancer_cursus`, après chaque sauvegarde nocturne, vérifie `etat.palier_vocal == 1 and etat.jour >= JOURS_MAX_SANS_PREMIERE_LETTRE` — si vrai, arrête la boucle (`break`) avec un message dédié. Ne se déclenche qu'une fois avant la toute première promotion (`GestionnaireCursusAbnegation` n'a aucun mécanisme de rétrogradation, donc `palier_vocal` ne peut jamais redescendre à 1 une fois monté) |
+
+**Validation** : testé avec un seuil de promotion vocale rendu volontairement inatteignable (99.0) — arrêt confirmé exactement au jour du seuil (testé à 5 jours), `.brain` bien sauvegardé avant l'arrêt. Testé aussi le cas négatif (moins de jours que le seuil, promotion possible) — aucun faux déclenchement, le cursus se termine normalement.
+
+---
+
+## [24.0-fix1-experimental] - 2026-07-23
+
+### École de Rattrapage Vocal — débloquer l'apprentissage vocal (expérimental, non porté sur le script de référence)
+
+| Type | Details |
+|------|---------|
+| **Commit** | N/A — vit dans `agi_local_test.py` (seuil progressif + atténuation d'érosion) et `cursus_developpemental.py` (appel du nouveau seuil) |
+| **Catégorie** | fix (critique — bloquait tout apprentissage vocal du Cursus) |
+| **Impact** | Critique (local uniquement) |
+
+**Diagnostic sur un vrai run de 1000 jours (`naulthene_cursus.brain`) : avec le seuil de promotion vocale fixe introduit en v23.0 (0.5), `gestionnaire_cursus_vocal_succes_courant` est resté à 0 du premier au dernier jour — aucune promotion vocale en 1000 jours, et `porte_auditive.base_weight` a fini à norme EXACTEMENT ZÉRO (l'oreille n'a strictement rien appris). Cause racine identifiée : sans un premier succès pour amorcer la myélinisation, le peu de gradient accumulé par jour se fait entièrement raser par l'érosion nocturne (`cycle_sommeil`) avant d'avoir pu s'accumuler — un cercle vicieux qui ne se débloque jamais tout seul.**
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `agi_local_test.py` | Remplace la constante `SEUIL_JOUR_VOCAL_REUSSI` (0.5 fixe) par `seuil_jour_vocal_reussi(palier_vocal)`, une interpolation progressive de `SEUIL_VOCAL_PALIER_DEBUTANT=0.15` (palier 1) à `SEUIL_VOCAL_PALIER_AVANCE=0.45` (palier 11) — jamais 0.5, pour ne jamais retomber dans le blocage diagnostiqué. Second volet : `AGI_Naulthene.cycle_sommeil_global` gagne un paramètre `attenuation_erosion_audio` appliqué uniquement à `porte_auditive`/`tete_vocale`/`generateur_attente_audio`, réduit à 10% (`ATTENUATION_EROSION_AUDIO_DEBUT`) tant que `palier_vocal <= PALIER_VOCAL_FIN_PROTECTION` (3) — laisse au tout premier apprentissage le temps de survivre à plusieurs nuits avant d'être soumis à l'érosion standard |
+| `cursus_developpemental.py` | `_promouvoir_palier_vocal_si_merite` utilise le nouveau seuil progressif au lieu de la constante fixe |
+
+**Validation** : non-régression MiniGrid confirmée byte-identique (le fix n'affecte le comportement que via `palier_vocal`/`attenuation_erosion_audio`, neutres par défaut). Test dédié bout-en-bout sur cerveau neuf (seed fixe, curriculum réel via `professeur_gemma.choisir_lecon` + `_promouvoir_palier_vocal_si_merite`) : **3 promotions vocales obtenues en 60 jours** (palier 1→2→3, voyelles a→a→e), score de formants monté jusqu'à 0.53 — alors que le seuil fixe précédent n'avait produit AUCUNE promotion en 1000 jours sur un vrai run.
+
+---
+
+## [24.0-experimental] - 2026-07-23
+
+### L'Arène & Démo Live — observer un cerveau entraîné en action (expérimental, non porté sur le script de référence)
+
+| Type | Details |
+|------|---------|
+| **Commit** | N/A — vit dans `agi_local_test.py` (`creer_env` render_mode), `persistance.py`, `cursus_developpemental.py` (modifiés) + `arene_visuelle.py`, `lancer_arene.py` (nouveaux fichiers) |
+| **Catégorie** | feat (Phase 2 du plan à 3 phases : Cursus → Arène → boucle méta) |
+| **Impact** | Fonctionnel (local uniquement) |
+
+**Ajoute une fenêtre graphique temps réel (image MiniGrid + panneau de télémétrie composés dans une seule fenêtre pygame) et le son joué en direct, pour observer un agent entraîné en action — sans jamais l'altérer. Préalable indispensable résolu au passage : le Cursus Développemental (v23.0) ne sauvegardait jamais son état ; il persiste désormais chaque nuit dans un fichier dédié, avec reprise automatique d'un run interrompu.**
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `persistance.py` | Ajout de `palier_vocal` et de l'état de `gestionnaire_cursus_vocal` (instance séparée de celle de DoorKey) au checkpoint sauvegardé/restauré — absents jusqu'ici, une reprise perdait la progression vocale. Rétrocompatible (`.get(..., défaut)`) pour les vieux `.brain` |
+| `cursus_developpemental.py` | `lancer_cursus` charge désormais un cerveau existant via `PersistanceAnatomique` (fichier dédié `naulthene_cursus.brain`, distinct de `naulthene_v21.brain` de la Cuve) au lieu de toujours faire naître un cerveau neuf, et sauvegarde après CHAQUE nuit. `try/except KeyboardInterrupt` avec sauvegarde d'urgence — un cursus interrompu ne perd au plus que la journée en cours |
+| `agi_local_test.py` | `creer_env` gagne un paramètre optionnel `render_mode=None` (rétrocompatible, tous les appels existants inchangés), passé à `gym.make()` — permet `render_mode="rgb_array"` pour récupérer une image numpy de la grille |
+| `arene_visuelle.py` (nouveau) | `FenetreArene` : rendu pygame pur (aucune dépendance au réseau de neurones) — image MiniGrid à gauche, panneau de télémétrie à droite (jauges dopamine/satiété/hydratation/stimulation, curriculum MiniGrid + DoorKey, ère + curriculum vocal, score de formants). Gère aussi `pygame.QUIT` pour une fermeture par clic sur la croix |
+| `lancer_arene.py` (nouveau) | Orchestrateur : charge un `.brain`, recrée l'env avec rendu activé, boucle `traiter_tick` (mode `"minigrid"` normal) en lisant `EtatCognitif` directement pour la télémétrie (`traiter_tick` ne retourne que peu d'infos, mais `EtatCognitif` est accessible sans encapsulation). `agent.eval()` après le chargement, `executer_nuit`/`apprendre_journee` jamais appelés — garantie explicite de non-altération du cerveau observé |
+
+**Validation** : non-régression confirmée (`creer_env` avec `render_mode=None` par défaut, logs byte-identiques). Cycle complet de persistance du cursus testé (naissance → sauvegarde chaque nuit → reprise exacte au bon jour, `tick_absolu` et `palier_vocal` restaurés) ; robustesse confirmée même sur arrêt brutal (`kill -9`, écriture atomique intacte). Arène testée en conditions réelles sur un `.brain` produit par le cursus : 20 ticks avec rendu d'image (256×256×3) et télémétrie complète sans crash, `agent.training=False` confirmé. **Non-altération du cerveau prouvée directement** : comparaison `torch.equal` de tous les tenseurs du `state_dict` avant/après 50 ticks d'observation — strictement identiques.
+
+---
+
+## [23.0-experimental] - 2026-07-23
+
+### Le Cursus Développemental par Ères — 1000 jours d'apprentissage autonome (expérimental, non porté sur le script de référence)
+
+| Type | Details |
+|------|---------|
+| **Commit** | N/A — vit dans `agi_local_test.py` (mode `vocal_isole` + constantes d'ères) + `lecons_vocales.py`, `cursus_developpemental.py` (nouveaux fichiers) |
+| **Catégorie** | feat (nouvelle mécanique cognitive majeure) |
+| **Impact** | Fonctionnel (local uniquement) |
+
+**Fait passer l'apprentissage vocal du statut de leçon manuelle ponctuelle (`client_professeur.py --palier N`) à celui de programme de développement autonome sur 1000 jours subjectifs, organisé en 3 ères de difficulté croissante — Alternance (matin MiniGrid / après-midi vocal isolé), Synesthésie (multimodal simultané le matin, syllabes/mots l'après-midi), Intégration (verbalisation de l'action toute la journée). Le curriculum MiniGrid et le curriculum vocal progressent en parallèle, chacun par son propre mécanisme de promotion — les ères orchestrent QUAND chaque apprentissage est actif, sans remplacer ni l'un ni l'autre.**
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `agi_local_test.py` | Nouveau paramètre `mode_perception="minigrid"` (défaut, non-régression validée byte-identique) ou `"vocal_isole"` sur `traiter_tick` — en `vocal_isole`, AUCUN `env.step` n'est appelé (l'environnement MiniGrid est en pause, validé par un test espionnant explicitement les appels) et la vision est un tenseur de zéros ; seuls la pensée multimodale, le JEPA, la perte vocale supervisée et la dopamine sur le score de formants s'exécutent, via une nouvelle fonction `_traiter_tick_vocal_isole` qui ne touche jamais aux buffers acteur-critique (`log_probs_journee`/`entropies_journee`/`valeurs_journee`/`recompenses_journee`/`dones_journee`) pour ne jamais les désynchroniser. Ajout des constantes `DUREE_ERE`, `TICKS_MATIN`, `BORNES_ERES`, `SEUIL_JOUR_VOCAL_REUSSI` et du helper `ere_courante(jour)`. `EtatCognitif` gagne `palier_vocal` et `gestionnaire_cursus_vocal` (instance séparée de `GestionnaireCursusAbnegation`, indépendante de celle des 7 paliers DoorKey) |
+| `lecons_vocales.py` (nouveau) | `CacheReferencesVocales` : génère les références audio (`say` → MFCC) des voyelles UNE SEULE FOIS au démarrage du cursus et les met en cache mémoire, dédupliquées par mot cible — évite de ré-invoquer `say`/`afconvert` à chaque tick sur un run de centaines de milliers de ticks vocaux |
+| `cursus_developpemental.py` (nouveau) | Script standalone autonome (sans client réseau, décision utilisateur) qui pilote la boucle des 1000 jours, réutilisant à l'identique `demarrer_journee`/`traiter_tick`/`executer_nuit` — seule la logique de *quoi* passer à `traiter_tick` change selon l'ère et le moment de la journée (`_perception_du_tick`). La promotion du palier vocal (`_promouvoir_palier_vocal_si_merite`) réutilise le mécanisme 2+2 succès de `GestionnaireCursusAbnegation` sur le score de formants moyen du jour |
+
+**Validation** : non-régression MiniGrid byte-identique (`mode_perception="minigrid"` par défaut, seed=42). Mode `vocal_isole` validé par espionnage explicite de `env.step` (0 appel sur 120 ticks de test) et par une progression réelle du score de formants (0.17→0.19 sur 3 jours de test dédié). Journée mixte matin/après-midi validée sans crash malgré des buffers de longueurs différentes (`log_probs_journee` 20 entrées vs `jepa_losses` 40). Promotion vocale validée par simulation (4 jours réussis → palier a→e). Cache de références validé (déduplication : 10 appels `say` pour 11 paliers). Run complet de 2 jours du cursus exécuté de bout en bout sans erreur (préchauffage, matin, après-midi, nuit, neurogenèse).
+
+---
+
+## [22.1-experimental] - 2026-07-23
+
+### Correction de l'Hémisphère Audio — un vrai signal d'apprentissage pour la bouche (expérimental, non porté sur le script de référence)
+
+| Type | Details |
+|------|---------|
+| **Commit** | N/A — vit dans `agi_local_test.py`, `persistance.py`, `daemon_cerveau.py`, `client_professeur.py` |
+| **Catégorie** | fix (correctif de conception majeur) |
+| **Impact** | Critique (local uniquement) |
+
+**Corrige trois défauts de conception détectés à la revue de la v22.0, dont un critique confirmé par l'exploration du code réel : la bouche (`tete_vocale`) ne recevait aucun gradient d'apprentissage dirigé (sortie détachée avant tout calcul) — elle produisait des formants sans jamais apprendre à viser la cible. Les trois corrections ont été validées expérimentalement : le score de formants progresse désormais de 0.0045 à 0.1111 sur 5 jours de leçon (×24), la preuve directe que la bouche apprend enfin.**
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `agi_local_test.py` | **Défaut 1 (CRITIQUE, "membre fantôme")** : `tete_vocale` recevait un score de récompense mais aucun gradient dirigé (`.detach()` avant tout calcul). Ajout d'une perte MSE supervisée (`etat.pertes_vocales`, nouveau 6e buffer de journée) calculée sur le tenseur `parametres_vocaux` non détaché, restreinte aux dimensions F1/F2 réellement contraintes par la leçon, sommée à `perte_totale` dans `apprendre_journee` (`COEFF_PERTE_VOCALE`). **Défaut 2 ("court-circuit de la double entrée")** : `porte_auditive` ne reçoit plus l'embedding sémantique du mot (qui aurait fait ignorer le son réel par le réseau) — `DIM_AUDIO_ENTREE` passe de 162 à 130 (MFCC seul). Le concept-cible devient une "quête vocale" de 8 dims dans `vecteur_bio` (`DIM_VECTEUR_BIO` 8→16), au même titre que les quêtes SURVIVAL_FOOD/WATER. **Défaut 3 ("empoisonnement du JEPA")** : nouvelle tête prédictive séparée `generateur_attente_audio` (4 points de synchro respectés), pondérée par un coefficient `coeff_jepa_audio` monté progressivement de 0 à `COEFF_JEPA_AUDIO_MAX` sur `RAMPE_JEPA_AUDIO` ticks audio reçus — protège le JEPA visuel (physique MiniGrid) d'une perturbation par un signal audio bruyant dès le premier tick |
+| `persistance.py` | Bug détecté et corrigé pendant les tests : le passage `DIM_VECTEUR_BIO` 8→16 change la *forme* de `integrateur_bio` (pas seulement des clés manquantes) — `load_state_dict(strict=False)` seul ne suffit pas, une `RuntimeError` de mismatch de shape a été confirmée sur le vrai `.brain`. `integrateur_bio` est désormais explicitement exclu du chargement et renaît à neuf (décision assumée : cette couche a une `base_weight` quasi vide, <3% de poids non-nuls, après 481 jours — l'acquis perdu est négligeable) |
+| `client_professeur.py` | Cesse d'envoyer l'embedding sémantique dans `perception['audio']` (n'envoie plus que le MFCC), cohérent avec le défaut 2 |
+| `daemon_cerveau.py` | Commentaires mis à jour pour refléter le nouveau format du canal audio |
+
+**Validation** : score de formants prouvé en progression réelle (0.0045→0.1111 sur 5 jours×24 ticks, seed fixe) — la preuve clé que le défaut 1 est corrigé. Les 4 points de synchro de `generateur_attente_audio` validés par exécution (neurogenèse préserve les poids, optimiseur resynchronisé). Rampe `coeff_jepa_audio` confirmée quasi nulle au démarrage (0.00015 au premier tick). Non-régression MiniGrid sans audio confirmée cohérente (les logs changent légèrement par rapport à la v22.0 à cause du changement dimensionnel `DIM_VECTEUR_BIO`, effet attendu et documenté, pas un bug). Résurrection du vrai `.brain` (481 jours, testée sur copie) validée de bout en bout : acquis intacts, `integrateur_bio` renaît proprement, 10 ticks MiniGrid post-greffe exécutés sans erreur.
+
+---
+
+## [22.0-experimental] - 2026-07-23
+
+### L'Hémisphère Auditif & Vocal — Naulthène apprend à parler (expérimental, non porté sur le script de référence)
+
+| Type | Details |
+|------|---------|
+| **Commit** | N/A — vit dans `agi_local_test.py` (greffe des 2 nouvelles couches) + `persistance.py`, `daemon_cerveau.py` (modifiés) + `hemisphere_audio.py`, `professeur_gemma.py`, `client_professeur.py` (nouveaux fichiers) |
+| **Catégorie** | feat (expérimental) |
+| **Impact** | Architectural (local uniquement) |
+
+**Greffe un véritable hémisphère audio dans le cerveau `AGI_Naulthene` — une oreille (`porte_auditive`, miroir de `porte_visuelle`) et une bouche (`tete_vocale`, miroir de `tete_motrice`) — plutôt qu'un module de traitement audio bricolé à côté. Décision structurante : cerveau 100% multimodal unifié, vision et audio fusionnés dans le même bus latent (pas de "mode" audio isolé) ; l'agent voit et entend, bouge et vocalise, au même tick. Le cortex auditif est prédictif dès le départ (JEPA étendu au son, pas seulement à l'image). La récompense par tick est une distance de formants déterministe (Gemma via Ollama met ~8-30s par réponse, mesuré, incompatible avec le RL par tick) ; Gemma intervient en professeur périodique (curriculum vocal + jugement qualitatif de fin de leçon). Le babil de l'agent est synthétisé et joué en temps réel dans les haut-parleurs, dès qu'il est produit.**
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `agi_local_test.py` | Ajout de `porte_auditive` (double entrée MFCC⊕embedding sémantique, `DIM_AUDIO_ENTREE=162`) et `tete_vocale` (sortie `DIM_VOCALE=8`, paramètres de formants) aux 4 points de synchro obligatoires (`__init__`, `fortifier_synapses`, `cycle_sommeil_global`, `declencher_neurogenese`) ; `_tronc_cerebral` fusionne vision et audio par somme dans le même bus (silence = comportement identique à avant v22.0, non-régression validée sur run déterministe) ; `penser()` retourne désormais 6 valeurs (ajout de `parametres_vocaux`) ; `perte_jepa` étendue pour prédire aussi le son (cortex auditif prédictif) ; `traiter_tick` accepte `obs_auditive`/`formants_cibles` optionnels et remonte `parametres_vocaux` dans `infos_internes` à chaque tick |
+| `hemisphere_audio.py` (nouveau) | Pur traitement du signal, sans dépendance au réseau : `SynthetiseurFormants` (synthèse source-filtre, cascade de 3 résonateurs biquad, validée à l'oreille sur les 5 voyelles a/e/i/o/u), `extraire_mfcc`, `distance_formants`/`recompense_formants` (récompense continue, pas binaire), `capture_micro`/`transcrire_whisper` |
+| `professeur_gemma.py` (nouveau) | Client Ollama isolé (API HTTP, testable sans réseau de neurones) : `choisir_lecon` (curriculum vocal à 11 paliers, déterministe), `embedding_semantique` (réduction 384→32 dims), `juger_qualitatif` (jugement périodique, repli propre sur le score de formants si Ollama indisponible) |
+| `persistance.py` | `charger_ou_naitre` passe en `load_state_dict(strict=False)` pour la rétrocompatibilité des vieux `.brain` (sans couches audio) — greffe les hémisphères en initialisation aléatoire tout en préservant les acquis existants ; bug découvert et corrigé pendant les tests : l'ancien optimiseur (moins de groupes de paramètres) plantait sur `load_state_dict` après une greffe — un optimiseur frais est désormais recréé dans ce cas précis |
+| `daemon_cerveau.py` | `_vivre_connexion` décode `perception['audio']`/`perception['formants_cibles']` du paquet client et les transmet à `traiter_tick` — ouvre le verrou qui empêchait jusqu'ici tout canal de perception réel d'atteindre le cerveau (le paquet JSON était reçu mais entièrement ignoré, voir limite assumée v21.0) |
+| `client_professeur.py` (nouveau) | Boucle de leçon de parole : Gemma annonce la cible du palier → référence audio via `say` (ou micro) → encodée et envoyée à la Cuve à chaque tick → `parametres_vocaux` reçus synthétisés et **joués immédiatement** (temps réel) → récompense de formants affichée → jugement Gemma périodique en fin de leçon |
+
+**Validation** : tests exécutés (pas de suite automatisée dans ce projet) — non-régression MiniGrid byte-identique (seed fixe, `obs_auditive=None`) ; les 4 points de synchro vérifiés par exécution réelle (neurogenèse préserve les poids audio existants, LTP touche bien les 2 nouvelles couches, `cycle_sommeil_global` s'exécute sans crash) ; JEPA audio validé par `backward()` réel (gradient confirmé sur `porte_auditive`) ; greffe rétrocompatible testée sur un scénario reproduisant fidèlement un vieux `.brain` (state_dict + optimizer sans couches audio) ; flux bout-en-bout validé (daemon de test + `client_professeur.py`, son synthétisé et joué en temps réel, jugement Gemma reçu).
+
+---
+
+## [21.0-experimental] - 2026-07-23
+
+### Le Cerveau Persistant en Cuve — Architecture Client-Serveur (expérimental, non porté sur le script de référence)
+
+| Type | Details |
+|------|---------|
+| **Commit** | N/A — vit dans `agi_local_test.py` (refactor) + `persistance.py`, `daemon_cerveau.py`, `client_corps.py` (nouveaux fichiers) |
+| **Catégorie** | feat (expérimental) |
+| **Impact** | Architectural (local uniquement) |
+
+**Sépare définitivement la Conscience (le réseau + son état biologique, hébergé par un daemon persistant) du Corps (l'environnement MiniGrid, jetable), via une architecture Client-Serveur en sockets TCP/IP. L'agent traverse désormais les redémarrages de process : dopamine, satiété, mémoire épisodique, dimension du bus et progression de cursus survivent à l'arrêt/relance du daemon.**
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `agi_local_test.py` | Refactor pur (aucun changement de comportement, validé par comparaison de logs avant/après sur run déterministe) : extraction de la boucle principale (~500 lignes, jusque-là au niveau module) en un conteneur d'état `EtatCognitif` et quatre fonctions réutilisables — `initialiser_etat_cognitif()`, `demarrer_journee(etat)`, `traiter_tick(etat)`, `executer_nuit(etat)`. Le mode standalone (`if __name__ == "__main__":`) et la Cuve du daemon consomment désormais les mêmes fonctions — zéro duplication de la logique dopamine/détecteurs/curriculum/rêve adaptatif |
+| `persistance.py` (nouveau) | `PersistanceAnatomique` : cristallise/ressuscite l'état complet d'un `EtatCognitif` dans un fichier `.brain` (`torch.save`/`torch.load`, écriture atomique via fichier temporaire + `os.replace`) — dimension du bus (pour reconstruire l'agent à la bonne taille AVANT `load_state_dict`), poids + traces de myéline/éligibilité, état de l'optimiseur Adam, chimie viscérale (dopamine, jauges biologiques, quête active), mémoire épisodique spatiale, curriculum (niveau, palier, victoires), thermostat de neurogenèse, compteurs de temps |
+| `daemon_cerveau.py` (nouveau) | `CuveDeMaintien` : serveur socket TCP qui héberge le cerveau en continu. Cryostase (`socket.accept()` bloquant, CPU ~0%) tant qu'aucun corps n'est connecté. Modèle de temps hybride (décision utilisateur) : une nuit complète (apprentissage + rêve adaptatif + ressort dopaminergique + thermostat de neurogenèse + `cycle_sommeil_global`) se déclenche soit **in-session** dès qu'une journée subjective (`ticks_par_jour`) est accumulée, soit **à la déconnexion** si assez de ticks se sont écoulés depuis la dernière nuit ; sinon une simple **micro-sieste** (cristallisation sans érosion ni rêve) préserve le cerveau — protection explicite contre l'« Alzheimer numérique » d'une nuit relancée à vide sur des sessions courtes et répétées |
+| `client_corps.py` (nouveau) | Pilote de session jetable : ouvre/maintient/ferme une connexion vers la Cuve selon le protocole JSON prévu par le design. Limite assumée de cette itération (documentée dans le fichier et dans `daemon_cerveau.py`) : l'environnement MiniGrid réel tourne côté serveur (les détecteurs biologiques/spatiaux lisent les internes MiniGrid, intransmissibles par un simple flux pixels+action) — le découplage total est une évolution future, pas un correctif oublié |
+| `.gitignore` | Ajout de `*.brain` (cerveaux cristallisés, données binaires lourdes) ; les 3 nouveaux fichiers `.py` restent trackés |
+
+**Validation** : run de non-régression déterministe (seed fixe) comparant les logs console avant/après le refactor de l'Étape 1 — coïncidence exacte. Test end-to-end de persistance à travers un redémarrage complet du process daemon (résurrection avec `tick_absolu`, dopamine, niveau et dimension du bus fidèles à l'état sauvegardé, y compris après neurogenèse 16→32 dims). Test dédié par assertions du régime micro-sieste vs nuit complète (seuil de ticks).
+
+---
+
 ## [20.0-experimental] - 2026-07-23
 
 ### Mémoire Épisodique Spatiale & LTP Hebbien (expérimental, non porté sur le script de référence)
