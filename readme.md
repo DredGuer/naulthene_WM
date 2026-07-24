@@ -9,6 +9,8 @@ Il intègre la structure de table des matières globale (avec le contexte applic
 > **Agent Cognitif Autonome Hybride (RL + JEPA + Mémoire Épisodique + Bio-Homéostasie)**
 > *Un modèle d'apprentissage universel guidé par le développement cognitif, la plasticité neuro-mimétique et le libre arbitre.*
 
+**Auteur** : Adrien Nault ([@DredGuer](https://github.com/DredGuer)) — Licence [Apache 2.0](LICENSE). Si vous réutilisez, redistribuez ou vous inspirez de ce projet (code, architecture, mécaniques), merci de **citer Adrien Nault comme auteur original de Naulthène AGI** (voir [NOTICE](NOTICE)).
+
 ---
 
 ## 📋 Table des Matières
