@@ -1,6 +1,6 @@
 # Naulthène AGI — Comprendre l'algorithme en profondeur
 
-Ce document explique **comment** et **pourquoi** le cerveau `AGI_Naulthene` fonctionne, avec les vraies formules mathématiques et les vrais noms de variables du code (référence : `agi_google_colab.py` v17 ; les mécaniques expérimentales additionnelles de `agi_local_test.py` sont signalées explicitement). Il complète le [readme.md](readme.md) narratif par un niveau de détail algorithmique et mathématique complet.
+Ce document explique **comment** et **pourquoi** le cerveau `AGI_Naulthene` fonctionne, avec les vraies formules mathématiques et les vrais noms de variables du code (référence : `agi_google_colab.py` v17 ; les mécaniques expérimentales additionnelles de `agi_local_test.py` sont signalées explicitement). Il complète le [readme.md](../readme.md) narratif par un niveau de détail algorithmique et mathématique complet.
 
 ---
 
@@ -478,7 +478,7 @@ Dès `palier_cible >= 5` (Viser la Porte), le **Mode Libre** s'active : le guida
 | v23-v24 (expérimental) | Cursus Développemental par Ères, Arène de visualisation | Faire cohabiter apprentissage MiniGrid et vocal sur 1000 jours |
 | v25 (expérimental) | Le Cerveau Bébé (0→4 ans), masquage de récompense externe, Module Parent | Pousser le principe développemental à l'extrême : 8 mois 100% auto-supervisés |
 
-Voir [CHANGELOG.md](CHANGELOG.md) pour le détail commit par commit et [readme.md](readme.md) pour la description narrative complète de chaque version.
+Voir [CHANGELOG.md](CHANGELOG.md) pour le détail commit par commit et [readme.md](../readme.md) pour la description narrative complète de chaque version.
 
 ---
 
@@ -507,4 +507,4 @@ Voir [CHANGELOG.md](CHANGELOG.md) pour le détail commit par commit et [readme.m
 
 ---
 
-*Document généré à partir d'une lecture directe du code source (`agi_google_colab.py` v17, `agi_local_test.py`) — voir [readme.md](readme.md) pour la documentation narrative complète et [CLAUDE.md](CLAUDE.md) pour les règles de maintenance du projet.*
+*Document généré à partir d'une lecture directe du code source (`agi_google_colab.py` v17, `agi_local_test.py`) — voir [readme.md](../readme.md) pour la documentation narrative complète et [CLAUDE.md](../CLAUDE.md) pour les règles de maintenance du projet.*

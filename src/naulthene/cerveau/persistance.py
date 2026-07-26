@@ -27,7 +27,7 @@ Une seule fonction d'entrée côté appelant : `charger_ou_naitre()`, qui retour
 import os
 import torch
 
-from agi_local_test import (
+from naulthene.cerveau.noyau import (
     AGI_Naulthene, EtatCognitif, DIM_VISUELLE, BUS_REFERENCE_INITIAL,
     PROGRAMME, DEVICE, creer_env, DetecteurJalonsDoorKey, GestionnaireCursusAbnegation,
 )
@@ -39,7 +39,7 @@ class PersistanceAnatomique:
     d'écoute de la Cuve n'a pas besoin d'être encodé dedans, c'est un détail du
     daemon, pas de l'anatomie de l'agent."""
 
-    def __init__(self, fichier="naulthene_v21.brain"):
+    def __init__(self, fichier="brains/naulthene_v21.brain"):
         self.fichier = fichier
 
     def sauvegarder(self, etat):

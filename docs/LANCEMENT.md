@@ -1,11 +1,15 @@
 # Guide de Lancement — Naulthène AGI (Cuve Persistante + Hémisphère Audio + Cursus par Ères)
 
 Ce guide couvre le lancement local (Mac) de l'écosystème V21/V22/V23 : le cerveau persistant
-(`daemon_cerveau.py`) et ses deux clients (`client_corps.py` pour MiniGrid,
-`client_professeur.py` pour les leçons de parole ponctuelles), ainsi que le Cursus
-Développemental par Ères (`cursus_developpemental.py`, un programme autonome de 1000 jours,
-voir §6). Voir `readme.md` pour l'architecture complète, `CHANGELOG.md` pour l'historique
-des versions.
+(`daemon_cerveau.py`, dans `src/naulthene/cuve/`) et ses deux clients (`client_corps.py` pour
+MiniGrid, `client_professeur.py` pour les leçons de parole ponctuelles), ainsi que le Cursus
+Développemental par Ères (`cursus_developpemental.py`, dans `src/naulthene/salles_de_classe/`,
+un programme autonome de 1000 jours, voir §6). Voir `readme.md` pour l'architecture complète,
+`CHANGELOG.md` pour l'historique des versions.
+
+Depuis le passage en package Python (voir `CLAUDE.md`, section « Architecture »), tous les
+scripts se lancent depuis la racine du dépôt avec `PYTHONPATH=src` et l'option `-m` (module),
+jamais en appelant directement le fichier `.py`.
 
 ---
 
@@ -42,7 +46,7 @@ curl -s http://localhost:11434/api/tags > /dev/null && echo "✅ Ollama actif" |
 ```bash
 cd "/Users/dredguer/Documents/1. Dossier personnel important/1. Adrien/21. AGI"
 source venv/bin/activate
-python daemon_cerveau.py --port 9999 --brain naulthene_v21.brain
+PYTHONPATH=src python -m naulthene.cuve.daemon_cerveau --port 9999 --brain brains/naulthene_v21.brain
 ```
 
 - Ressuscite ton cerveau existant (tick_absolu, dopamine, curriculum, souvenirs intacts).
@@ -53,7 +57,7 @@ python daemon_cerveau.py --port 9999 --brain naulthene_v21.brain
 - `Ctrl+C` pour arrêter proprement (sauvegarde d'urgence automatique).
 
 Options utiles :
-- `--brain <fichier>` : utiliser un autre fichier `.brain` (par défaut `naulthene_v21.brain`).
+- `--brain <fichier>` : utiliser un autre fichier `.brain` (par défaut `brains/naulthene_v21.brain`).
 - `--wandb` : active le logging Weights & Biases (désactivé par défaut).
 
 ⚠️ **Un seul client à la fois** — le protocole ne gère pas les connexions concurrentes.
@@ -67,7 +71,7 @@ Options utiles :
 ```bash
 cd "/Users/dredguer/Documents/1. Dossier personnel important/1. Adrien/21. AGI"
 source venv/bin/activate
-python client_corps.py --port 9999 --continu
+PYTHONPATH=src python -m naulthene.cuve.client_corps --port 9999 --continu
 ```
 
 - `--continu` : tourne indéfiniment jusqu'à `Ctrl+C` (recommandé pour un vrai entraînement).
@@ -88,7 +92,7 @@ et se sauvegarde automatiquement côté Cuve.
 ```bash
 cd "/Users/dredguer/Documents/1. Dossier personnel important/1. Adrien/21. AGI"
 source venv/bin/activate
-python client_professeur.py --port 9999 --palier 2 --ticks 100
+PYTHONPATH=src python -m naulthene.cuve.client_professeur --port 9999 --palier 2 --ticks 100
 ```
 
 - `--palier N` : le palier du curriculum vocal (voir tableau ci-dessous).
@@ -115,7 +119,7 @@ connexion, pas de crash — voir correctif ci-dessous).
 Sur une leçon de quelques dizaines de ticks, le score de formants peut rester
 **parfaitement figé** d'un tick à l'autre (ex. `0.079` en boucle). Ce n'est pas un bug :
 une nuit complète (`apprendre_journee`, qui fait progresser la bouche) ne se déclenche
-qu'après **400 ticks** accumulés (`ticks_par_jour`, voir `agi_local_test.py`). En dessous
+qu'après **400 ticks** accumulés (`ticks_par_jour`, voir `src/naulthene/cerveau/noyau.py`). En dessous
 de ce seuil, aucun apprentissage n'a encore eu lieu — le réseau produit un vecteur vocal
 stable car l'entrée (la référence audio de la leçon) est elle-même constante sur toute la
 durée. **Pour voir une vraie progression du score, lance une leçon d'au moins 400-500
@@ -130,15 +134,15 @@ Le cerveau est unique et persistant — tu peux alterner librement :
 
 ```bash
 # Session MiniGrid
-python client_corps.py --port 9999 --continu
+PYTHONPATH=src python -m naulthene.cuve.client_corps --port 9999 --continu
 # Ctrl+C quand tu veux
 
 # Puis une leçon de parole sur le MÊME cerveau
-python client_professeur.py --port 9999 --palier 2 --ticks 500
+PYTHONPATH=src python -m naulthene.cuve.client_professeur --port 9999 --palier 2 --ticks 500
 # Ctrl+C ou fin naturelle
 
 # Retour à MiniGrid...
-python client_corps.py --port 9999 --continu
+PYTHONPATH=src python -m naulthene.cuve.client_corps --port 9999 --continu
 ```
 
 La Cuve (Terminal 1) reste allumée entre chaque session — aucun besoin de la relancer.
@@ -148,7 +152,7 @@ La Cuve (Terminal 1) reste allumée entre chaque session — aucun besoin de la 
 ## 5. Arrêt complet (Cuve/daemon, sections 1-4)
 
 Dans le Terminal 1 (la Cuve) : `Ctrl+C`. Un message confirme la sauvegarde d'urgence. Le
-fichier `naulthene_v21.brain` contient l'état exact du cerveau à cet instant — tu peux
+fichier `brains/naulthene_v21.brain` contient l'état exact du cerveau à cet instant — tu peux
 relancer `daemon_cerveau.py` plus tard, il reprendra exactement où il en était.
 
 ---
@@ -161,22 +165,22 @@ alterne automatiquement MiniGrid le matin et apprentissage vocal l'après-midi, 
 difficulté croissante (voir `readme.md`, section "Le Cursus Développemental par Ères").
 
 ⚠️ **Cerveau séparé** : `cursus_developpemental.py` charge/sauvegarde un fichier dédié
-`naulthene_cursus.brain` — distinct de `naulthene_v21.brain` utilisé par la Cuve. C'est un
-cerveau différent de celui de la Cuve ; ne lance pas le daemon (Terminal 1) en même temps, ce
-n'est pas nécessaire pour ce mode.
+`brains/naulthene_cursus.brain` — distinct de `brains/naulthene_v21.brain` utilisé par la Cuve.
+C'est un cerveau différent de celui de la Cuve ; ne lance pas le daemon (Terminal 1) en même
+temps, ce n'est pas nécessaire pour ce mode.
 
 ✅ **Persistance automatique (v24.0)** : le cursus sauvegarde après CHAQUE nuit (donc chaque
-jour subjectif) dans `naulthene_cursus.brain`. Relancer la même commande **reprend** le cursus
-là où il en était (pas de retour à zéro) — `--jours N` ajoute N jours SUPPLÉMENTAIRES à partir
-de l'état repris, ce n'est pas une valeur absolue. Premier lancement : naissance d'un cerveau
-neuf (bus=16), aucun fichier trouvé.
+jour subjectif) dans `brains/naulthene_cursus.brain`. Relancer la même commande **reprend** le
+cursus là où il en était (pas de retour à zéro) — `--jours N` ajoute N jours SUPPLÉMENTAIRES à
+partir de l'état repris, ce n'est pas une valeur absolue. Premier lancement : naissance d'un
+cerveau neuf (bus=16), aucun fichier trouvé.
 
 **Un seul terminal**, pas de Cuve à lancer :
 
 ```bash
 cd "/Users/dredguer/Documents/1. Dossier personnel important/1. Adrien/21. AGI"
 source venv/bin/activate
-WANDB_MODE=offline python cursus_developpemental.py --jours 1000
+WANDB_MODE=offline PYTHONPATH=src python -m naulthene.salles_de_classe.cursus_developpemental --jours 1000
 ```
 
 - `--jours N` : nombre de jours subjectifs du cursus (défaut 1000 = `DUREE_ERE`).
@@ -190,7 +194,7 @@ qui prendront plusieurs heures) :
 ```bash
 cd "/Users/dredguer/Documents/1. Dossier personnel important/1. Adrien/21. AGI"
 source venv/bin/activate
-WANDB_MODE=offline python cursus_developpemental.py --jours 5
+WANDB_MODE=offline PYTHONPATH=src python -m naulthene.salles_de_classe.cursus_developpemental --jours 5
 ```
 
 Au démarrage, le script préchauffe les références vocales (5-10 appels `say`, une seule fois)
@@ -212,8 +216,8 @@ télémétrie (dopamine, jauges biologiques, curriculum MiniGrid/DoorKey, ère e
 une seule fenêtre, avec le babil de l'agent joué en temps réel dans les haut-parleurs.
 
 ⚠️ **Prérequis** : il faut un `.brain` à observer — lance d'abord le Cursus (section 6) pendant
-au moins une nuit pour produire `naulthene_cursus.brain`, ou utilise directement le cerveau de
-la Cuve avec `--brain naulthene_v21.brain`.
+au moins une nuit pour produire `brains/naulthene_cursus.brain`, ou utilise directement le
+cerveau de la Cuve avec `--brain brains/naulthene_v21.brain`.
 
 ✅ **Garantie de non-altération, validée par test** : l'Arène observe uniquement — `agent.eval()`
 et aucun apprentissage ne se produit jamais pendant la démo (confirmé par comparaison directe des
@@ -225,11 +229,12 @@ fois que tu veux, elle ne modifiera jamais le `.brain` qu'elle observe.
 ```bash
 cd "/Users/dredguer/Documents/1. Dossier personnel important/1. Adrien/21. AGI"
 source venv/bin/activate
-python lancer_arene.py
+PYTHONPATH=src python -m naulthene.instruments.lancer_arene
 ```
 
-- `--brain <fichier>` : quel cerveau observer (défaut `naulthene_cursus.brain`, celui du Cursus).
-  Exemple pour voir plutôt le cerveau de la Cuve : `python lancer_arene.py --brain naulthene_v21.brain`.
+- `--brain <fichier>` : quel cerveau observer (défaut `brains/naulthene_cursus.brain`, celui du
+  Cursus). Exemple pour voir plutôt le cerveau de la Cuve :
+  `PYTHONPATH=src python -m naulthene.instruments.lancer_arene --brain brains/naulthene_v21.brain`.
 
 Pour fermer : `Ctrl+C` dans le terminal, ou clic sur la croix de la fenêtre — les deux sont gérés
 proprement (fermeture de la fenêtre pygame + de l'environnement MiniGrid, sans traceback).
@@ -245,6 +250,6 @@ proprement (fermeture de la fenêtre pygame + de l'environnement MiniGrid, sans 
 | Jugement Gemma très lent (~30s) | Normal — `gemma4:e4b` est un modèle à raisonnement, mesuré à 8-30s/réponse |
 | Rien ne se passe après `--micro` | Vérifie l'autorisation micro macOS (Réglages Système → Confidentialité → Micro → Terminal) |
 | Message "Hémisphères nouvellement greffés" à chaque lancement | Anormal après le premier run réussi — vérifie que la Cuve sauvegarde bien avant l'arrêt (pas de `kill -9`) |
-| Le cursus (§6) ne partage pas mes acquis MiniGrid de la Cuve | Normal et voulu — `naulthene_cursus.brain` (Cursus) et `naulthene_v21.brain` (Cuve) sont deux cerveaux séparés, jamais mélangés (voir §6). Le cursus reprend bien SES PROPRES acquis d'un lancement à l'autre |
-| `FileNotFoundError` au lancement de l'Arène (§7) | Aucun `naulthene_cursus.brain` trouvé — lance d'abord le Cursus (§6) au moins une nuit, ou pointe `--brain` vers `naulthene_v21.brain` |
+| Le cursus (§6) ne partage pas mes acquis MiniGrid de la Cuve | Normal et voulu — `brains/naulthene_cursus.brain` (Cursus) et `brains/naulthene_v21.brain` (Cuve) sont deux cerveaux séparés, jamais mélangés (voir §6). Le cursus reprend bien SES PROPRES acquis d'un lancement à l'autre |
+| `FileNotFoundError` au lancement de l'Arène (§7) | Aucun `brains/naulthene_cursus.brain` trouvé — lance d'abord le Cursus (§6) au moins une nuit, ou pointe `--brain` vers `brains/naulthene_v21.brain` |
 | La fenêtre de l'Arène reste noire/vide | Vérifie que `pygame-ce` est bien installé (`pip list \| grep pygame`) ; regarde la console pour une éventuelle erreur de rendu |

@@ -1,6 +1,32 @@
 # Changelog — Naulthène AGI
 
-Historique des évolutions du projet, commit par commit. Voir [readme.md](readme.md) pour la documentation narrative complète et [CLAUDE.md](CLAUDE.md) pour les règles de maintenance de ce fichier.
+Historique des évolutions du projet, commit par commit. Voir [readme.md](../readme.md) pour la documentation narrative complète et [CLAUDE.md](../CLAUDE.md) pour les règles de maintenance de ce fichier.
+
+---
+
+## [25.0-docs] - 2026-07-26
+
+### Réorganisation en package Python + renforcement de l'attribution (NOTICE)
+
+| Type | Details |
+|------|---------|
+| **Commit** | N/A — en attente du commit de cette version |
+| **Catégorie** | refactor + docs |
+| **Impact** | Fonctionnel (imports, arborescence) + Documentation/Légal |
+
+**Le projet passe d'un ensemble de scripts plats à la racine à un vrai package Python `src/naulthene/`, organisé en sous-modules thématiques suivant le vocabulaire du projet : `cerveau/` (noyau.py ex-`agi_local_test.py`, colab.py ex-`agi_google_colab.py`, persistance.py), `salles_de_classe/` (cursus_bebe.py, cursus_developpemental.py), `cuve/` (daemon_cerveau.py, client_corps.py, client_professeur.py), `audio/` (hemisphere_audio.py, lecons_vocales.py, professeur_gemma.py), `instruments/` (arene_visuelle.py, lancer_arene.py, irm_cerveau.py). Tous les imports inter-modules sont passés en chemins de package absolus (`from naulthene.cerveau.noyau import ...`). Les cerveaux cristallisés (`*.brain`) sont rangés dans `brains/`, la documentation complémentaire dans `docs/` — `readme.md` reste à la racine (aux côtés de `LICENSE`/`NOTICE`/`CLAUDE.md`) pour rester immédiatement visible. En parallèle, le fichier `NOTICE` est renforcé : au-delà de la simple demande d'attribution, il précise explicitement (en s'appuyant sur la Section 4(d) de la licence Apache 2.0) qu'Adrien Nault doit être crédité comme auteur original du concept et de l'architecture Naulthène AGI dans toute redistribution, usage public, publication ou œuvre dérivée — pas seulement dans le code source.**
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/**/*.py` (tous) | Déplacement en package (`git mv`), réécriture de tous les imports locaux en chemins de package absolus, chemins `.brain` par défaut pointant vers `brains/` |
+| `.gitignore` | Chemins mis à jour vers `brains/*.brain` et `src/naulthene/cerveau/noyau.py` |
+| `readme.md` | Reste à la racine du dépôt ; formulation d'attribution durcie en tête de document |
+| `docs/CHANGELOG.md`, `docs/explications_readme.md`, `docs/LANCEMENT.md`, `docs/AMELIORATION_V1.md` | Liens relatifs corrigés vers la nouvelle arborescence (`../readme.md`, `../CLAUDE.md`, `../LICENSE`, `../NOTICE`) |
+| `CLAUDE.md` | Section Architecture réécrite pour décrire le package ; commandes de lancement mises à jour (`PYTHONPATH=src python -m naulthene....`) |
+| `NOTICE` | Attribution renforcée : exigence explicite de citer Adrien Nault comme auteur du concept/architecture original, dans tout usage public (pas seulement redistribution de code), avec référence à la Section 4(d) de la licence |
+| `LICENSE` | Texte légal Apache 2.0 inchangé (Sections 1-9) ; ajout d'un renvoi explicite vers `NOTICE` en fin de fichier |
+
+**Validation** : les 12 modules du package s'importent sans erreur (`python -c "import naulthene...."` pour chaque sous-module) ; run réel d'1 jour de `cursus_bebe` exécuté de bout en bout, confirmant la résolution correcte de `brains/naulthene_bb.brain` en lecture et en écriture (reprise du jour 1440 → 1441 sans perte de progression) ; `git status` confirme la préservation de l'historique (renommages `R`/`RM`, pas de suppression/ajout).
 
 ---
 
@@ -584,4 +610,4 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](readme
 
 ---
 
-*Note : les entrées v7.0 à v14.0 ont été reconstituées à partir du journal narratif de [readme.md](readme.md) lors de la mise en place initiale de ce changelog (2026-07-22) — les hash de commit réels n'étaient pas disponibles rétroactivement (dépôt git non initialisé jusqu'à cette date). Toute nouvelle entrée à partir de maintenant doit renseigner un hash réel.*
+*Note : les entrées v7.0 à v14.0 ont été reconstituées à partir du journal narratif de [readme.md](../readme.md) lors de la mise en place initiale de ce changelog (2026-07-22) — les hash de commit réels n'étaient pas disponibles rétroactivement (dépôt git non initialisé jusqu'à cette date). Toute nouvelle entrée à partir de maintenant doit renseigner un hash réel.*

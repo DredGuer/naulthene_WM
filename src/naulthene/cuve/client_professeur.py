@@ -38,11 +38,11 @@ from pathlib import Path
 
 import numpy as np
 
-from hemisphere_audio import (
+from naulthene.audio.hemisphere_audio import (
     SynthetiseurFormants, extraire_mfcc, jouer_son_temps_reel,
     capture_micro, transcrire_whisper, VOYELLES_CIBLES, SAMPLE_RATE,
 )
-import professeur_gemma as pg
+import naulthene.audio.professeur_gemma as pg
 
 LECONS_AVANT_JUGEMENT_GEMMA = 1  # périodicité du jugement qualitatif (voir professeur_gemma.py :
                                   # Gemma prend ~8-30s, jamais appelé par tick)
@@ -155,7 +155,7 @@ def lancer_lecon_parole(host="127.0.0.1", port=9999, palier=1, duree_ticks=100,
                 jouer_son_temps_reel(onde_produite, sample_rate=SAMPLE_RATE, bloquant=True)
 
                 formants_produits = synth.parametres_depuis_vecteur(vecteur_vocal)
-                from hemisphere_audio import recompense_formants
+                from naulthene.audio.hemisphere_audio import recompense_formants
                 score = recompense_formants(formants_cibles, formants_produits)
                 scores.append(score)
                 barre = "█" * int(score * 20)

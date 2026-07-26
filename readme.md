@@ -9,7 +9,7 @@ Il intègre la structure de table des matières globale (avec le contexte applic
 > **Agent Cognitif Autonome Hybride (RL + JEPA + Mémoire Épisodique + Bio-Homéostasie)**
 > *Un modèle d'apprentissage universel guidé par le développement cognitif, la plasticité neuro-mimétique et le libre arbitre.*
 
-**Auteur** : Adrien Nault ([@DredGuer](https://github.com/DredGuer)) — Licence [Apache 2.0](LICENSE). Si vous réutilisez, redistribuez ou vous inspirez de ce projet (code, architecture, mécaniques), merci de **citer Adrien Nault comme auteur original de Naulthène AGI** (voir [NOTICE](NOTICE)).
+**Auteur** : Adrien Nault ([@DredGuer](https://github.com/DredGuer)) — Licence [Apache 2.0](LICENSE). Toute réutilisation, redistribution, publication ou œuvre dérivée reprenant le concept ou l'architecture de ce projet (code, mécaniques, idée originale) **doit citer Adrien Nault comme auteur original de Naulthène AGI** — voir [NOTICE](NOTICE) pour l'exigence d'attribution complète.
 
 ---
 
@@ -104,7 +104,7 @@ Toutes les nouvelles mécaniques sont **additives et neutres par défaut** (`mas
 
 ### Correctifs v24.0-fix1 à fix5 (expérimental) — École de Rattrapage Vocal & silence de l'Arène (2026-07-23/24)
 
-> ⚠️ **Statut expérimental** : cinq correctifs successifs sur `agi_local_test.py`, `cursus_developpemental.py`, `persistance.py`, `lancer_arene.py`, tous découverts sur des runs réels (1000 jours puis relances). Détail complet dans [CHANGELOG.md](CHANGELOG.md).
+> ⚠️ **Statut expérimental** : cinq correctifs successifs sur `agi_local_test.py`, `cursus_developpemental.py`, `persistance.py`, `lancer_arene.py`, tous découverts sur des runs réels (1000 jours puis relances). Détail complet dans [CHANGELOG.md](docs/CHANGELOG.md).
 
 Après le premier run complet de 1000 jours du Cursus Développemental, inspection du `.brain` obtenu : **aucune promotion vocale en 1000 jours**, `porte_auditive` à norme exactement zéro — l'oreille n'avait strictement rien appris. Quatre bugs en cascade, chacun découvert en corrigeant le précédent :
 
@@ -692,30 +692,30 @@ python train_naulthene.py --run-name "Run_15_Doctorat_Focus" --wandb-project "Na
 
 ### 3. Variante Locale de Test (Mac, expérimental)
 
-`agi_local_test.py` (non versionné dans git, scratch personnel) reprend `agi_google_colab.py` avec deux différences : détection du device `mps`/`cuda`/`cpu` (Apple Silicon) et depuis la v18.0 (expérimentale, voir [Architecture Homéostatique Biologique](#architecture-homéostatique-biologique-expérimental)) l'Architecture Homéostatique Biologique, pas encore portée sur le script de référence.
+`src/naulthene/cerveau/noyau.py` (ex-`agi_local_test.py`, non versionné dans git, scratch personnel) reprend `src/naulthene/cerveau/colab.py` avec deux différences : détection du device `mps`/`cuda`/`cpu` (Apple Silicon) et depuis la v18.0 (expérimentale, voir [Architecture Homéostatique Biologique](#architecture-homéostatique-biologique-expérimental)) l'Architecture Homéostatique Biologique, pas encore portée sur le script de référence.
 
 ```bash
 python3.12 -m venv venv && source venv/bin/activate
 pip install torch gymnasium minigrid wandb numpy
 wandb login   # une seule fois
-WANDB_MODE=offline python agi_local_test.py   # ou WANDB_MODE=online une fois connecté
+WANDB_MODE=offline PYTHONPATH=src python -m naulthene.cerveau.noyau   # ou WANDB_MODE=online une fois connecté
 ```
 
 ### 4. Le Cerveau Persistant en Cuve (Mac, expérimental, v21.0)
 
-Voir [Le Cerveau Persistant en Cuve](#le-cerveau-persistant-en-cuve--architecture-client-serveur-expérimental) pour l'architecture complète. Contrairement à `agi_local_test.py`, les trois fichiers `persistance.py`, `daemon_cerveau.py` et `client_corps.py` sont trackés par git (ce sont de vraies briques d'architecture, pas une copie de test) — seuls les fichiers `.brain` générés à l'exécution sont ignorés.
+Voir [Le Cerveau Persistant en Cuve](#le-cerveau-persistant-en-cuve--architecture-client-serveur-expérimental) pour l'architecture complète. Contrairement à `noyau.py`, les trois fichiers `persistance.py`, `daemon_cerveau.py` et `client_corps.py` sont trackés par git (ce sont de vraies briques d'architecture, pas une copie de test) — seuls les fichiers `.brain` générés à l'exécution (dans `brains/`) sont ignorés.
 
 ```bash
 # Terminal 1 — démarre la Cuve (daemon persistant, reste actif entre les sessions)
 source venv/bin/activate
-python daemon_cerveau.py --port 9999 --brain naulthene_v21.brain
+PYTHONPATH=src python -m naulthene.cuve.daemon_cerveau --port 9999 --brain brains/naulthene_v21.brain
 
 # Terminal 2 — connecte un Corps jetable pour une session de test
 source venv/bin/activate
-python client_corps.py --port 9999 --ticks 2000
+PYTHONPATH=src python -m naulthene.cuve.client_corps --port 9999 --ticks 2000
 ```
 
-La Cuve reste allumée après la déconnexion du Corps (retour en cryostase, CPU ~0%) : on peut relancer `client_corps.py` autant de fois que voulu, ou éteindre/rallumer la Cuve elle-même — le cerveau reprend son existence exactement où il l'avait laissée (`naulthene_v21.brain`).
+La Cuve reste allumée après la déconnexion du Corps (retour en cryostase, CPU ~0%) : on peut relancer `client_corps.py` autant de fois que voulu, ou éteindre/rallumer la Cuve elle-même — le cerveau reprend son existence exactement où il l'avait laissée (`brains/naulthene_v21.brain`).
 
 ### 5. L'Hémisphère Auditif & Vocal (Mac, expérimental, v22.0)
 
@@ -731,14 +731,14 @@ Se branche sur la **même Cuve** que MiniGrid (`daemon_cerveau.py`, un seul cerv
 ```bash
 # Terminal 1 — la Cuve (identique au lancement v21.0, aucun changement)
 source venv/bin/activate
-python daemon_cerveau.py --port 9999 --brain naulthene_v21.brain
+PYTHONPATH=src python -m naulthene.cuve.daemon_cerveau --port 9999 --brain brains/naulthene_v21.brain
 
 # Terminal 2 — une leçon de parole (palier 2 = voyelle 'a', 100 ticks, référence via `say`)
 source venv/bin/activate
-python client_professeur.py --port 9999 --palier 2 --ticks 100
+PYTHONPATH=src python -m naulthene.cuve.client_professeur --port 9999 --palier 2 --ticks 100
 
 # Variante avec ta propre voix comme référence (2 secondes de micro par leçon)
-python client_professeur.py --port 9999 --palier 2 --ticks 100 --micro
+PYTHONPATH=src python -m naulthene.cuve.client_professeur --port 9999 --palier 2 --ticks 100 --micro
 ```
 
 Le babil de l'agent est **joué en temps réel** dans les haut-parleurs à chaque tick vocalisé, avec un score de proximité de formants affiché en direct ; un jugement qualitatif de Gemma s'affiche en fin de leçon (~10-30 secondes d'attente). `--palier` correspond aux 11 paliers de `professeur_gemma.CURRICULUM_VOCAL` (1 = Vocaliser, 2-6 = voyelles, 7-9 = syllabes, 10-11 = mots courts).

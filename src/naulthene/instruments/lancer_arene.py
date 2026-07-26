@@ -39,14 +39,14 @@ import argparse
 
 import torch
 
-from agi_local_test import (
+from naulthene.cerveau.noyau import (
     demarrer_journee, traiter_tick, ere_courante, creer_env, DIM_VISUELLE, ticks_par_jour, DEVICE,
 )
-from persistance import PersistanceAnatomique
-from arene_visuelle import FenetreArene
-from hemisphere_audio import SynthetiseurFormants, jouer_son_temps_reel, recompense_formants, SAMPLE_RATE
-from lecons_vocales import CacheReferencesVocales
-import professeur_gemma as pg
+from naulthene.cerveau.persistance import PersistanceAnatomique
+from naulthene.instruments.arene_visuelle import FenetreArene
+from naulthene.audio.hemisphere_audio import SynthetiseurFormants, jouer_son_temps_reel, recompense_formants, SAMPLE_RATE
+from naulthene.audio.lecons_vocales import CacheReferencesVocales
+import naulthene.audio.professeur_gemma as pg
 
 
 def _construire_telemetrie(etat, score_vocal) -> dict:
@@ -72,7 +72,7 @@ def _construire_telemetrie(etat, score_vocal) -> dict:
     }
 
 
-def lancer_arene(fichier_brain: str = "naulthene_cursus.brain"):
+def lancer_arene(fichier_brain: str = "brains/naulthene_cursus.brain"):
     persistance = PersistanceAnatomique(fichier=fichier_brain)
     etat = persistance.charger_ou_naitre()
 
@@ -153,8 +153,8 @@ def lancer_arene(fichier_brain: str = "naulthene_cursus.brain"):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="L'Arène & Démo Live — Naulthène AGI (v24.0)")
-    parser.add_argument("--brain", type=str, default="naulthene_cursus.brain",
-                         help="Fichier .brain à observer (défaut : naulthene_cursus.brain, produit par cursus_developpemental.py)")
+    parser.add_argument("--brain", type=str, default="brains/naulthene_cursus.brain",
+                         help="Fichier .brain à observer (défaut : brains/naulthene_cursus.brain, produit par cursus_developpemental.py)")
     args = parser.parse_args()
 
     lancer_arene(fichier_brain=args.brain)

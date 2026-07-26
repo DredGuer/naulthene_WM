@@ -47,16 +47,16 @@ import argparse
 import torch
 import wandb
 
-from agi_local_test import (
+from naulthene.cerveau.noyau import (
     demarrer_journee, traiter_tick, executer_nuit,
     ere_courante, DEVICE, DIM_MFCC, ticks_par_jour, TICKS_MATIN, DUREE_ERE,
     seuil_jour_vocal_reussi,
 )
-from lecons_vocales import CacheReferencesVocales
-from persistance import PersistanceAnatomique
-import professeur_gemma as pg
+from naulthene.audio.lecons_vocales import CacheReferencesVocales
+from naulthene.cerveau.persistance import PersistanceAnatomique
+import naulthene.audio.professeur_gemma as pg
 
-FICHIER_BRAIN_CURSUS = "naulthene_cursus.brain"  # dédié, distinct de naulthene_v21.brain
+FICHIER_BRAIN_CURSUS = "brains/naulthene_cursus.brain"  # dédié, distinct de naulthene_v21.brain
                                                     # (Cuve/daemon) — les deux écosystèmes
                                                     # (cursus autonome vs client-serveur)
                                                     # ne partagent jamais le même cerveau
@@ -125,7 +125,7 @@ def _perception_du_tick(etat, cache: CacheReferencesVocales, ere: str, moment: s
         # Toute la journée multimodale, cible vocale dérivée de la DERNIÈRE action
         # jouée (verbalisation de l'action, v1 minimale — voir VOYELLE_PAR_ACTION).
         voyelle = VOYELLE_PAR_ACTION.get(derniere_action, "a")
-        from hemisphere_audio import VOYELLES_CIBLES
+        from naulthene.audio.hemisphere_audio import VOYELLES_CIBLES
         mfcc, _ = cache.obtenir_pour_palier(2)  # palier 2 = "a", juste pour un MFCC de référence stable
         # La cible vocale suit l'action, indépendamment du palier vocal atteint —
         # cohérent avec "verbaliser ce qu'il fait", pas "réciter le curriculum".

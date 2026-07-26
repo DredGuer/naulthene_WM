@@ -23,8 +23,8 @@ from pathlib import Path
 
 import numpy as np
 
-from hemisphere_audio import extraire_mfcc, VOYELLES_CIBLES, SAMPLE_RATE
-import professeur_gemma as pg
+from naulthene.audio.hemisphere_audio import extraire_mfcc, VOYELLES_CIBLES, SAMPLE_RATE
+import naulthene.audio.professeur_gemma as pg
 
 
 def _reference_via_say(mot: str) -> np.ndarray:

@@ -52,17 +52,17 @@ import argparse
 import torch
 import wandb
 
-from agi_local_test import (
+from naulthene.cerveau.noyau import (
     demarrer_journee, traiter_tick, executer_nuit,
     DEVICE, TICKS_PAR_JOUR_BEBE, TICKS_MATIN_BEBE,
     JOURS_TOTAUX_BEBE, JOUR_FIN_MASQUAGE_EXTERNE, BORNES_PHASES_BEBE,
     phase_bebe, plafond_reve_bebe, seuil_jour_vocal_reussi,
 )
-from lecons_vocales import CacheReferencesVocales
-from persistance import PersistanceAnatomique
-import professeur_gemma as pg
+from naulthene.audio.lecons_vocales import CacheReferencesVocales
+from naulthene.cerveau.persistance import PersistanceAnatomique
+import naulthene.audio.professeur_gemma as pg
 
-FICHIER_BRAIN_BEBE = "naulthene_bb.brain"  # dédié, distinct de naulthene_cursus.brain
+FICHIER_BRAIN_BEBE = "brains/naulthene_bb.brain"  # dédié, distinct de naulthene_cursus.brain
                                              # (Cursus par Ères) et naulthene_v21.brain
                                              # (Cuve/daemon) — les trois écosystèmes ne
                                              # partagent jamais le même cerveau
@@ -120,7 +120,7 @@ def _perception_du_tick_bebe(etat, cache: CacheReferencesVocales, phase: int, mo
 
     else:  # phase 3 ou 4 — toute la journée multimodale, cible = dernière action jouée
         voyelle = VOYELLE_PAR_ACTION.get(derniere_action, "a")
-        from hemisphere_audio import VOYELLES_CIBLES
+        from naulthene.audio.hemisphere_audio import VOYELLES_CIBLES
         mfcc, _ = cache.obtenir_pour_palier(2)  # palier 2 = "a", juste un MFCC de référence stable
         formants = VOYELLES_CIBLES[voyelle]
         obs_auditive = torch.tensor([mfcc], dtype=torch.float32, device=DEVICE)

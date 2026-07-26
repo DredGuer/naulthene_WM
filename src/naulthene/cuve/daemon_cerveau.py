@@ -53,10 +53,10 @@ import socket
 import numpy as np
 import torch
 
-from agi_local_test import (
+from naulthene.cerveau.noyau import (
     traiter_tick, executer_nuit, demarrer_journee, ticks_par_jour, DEVICE,
 )
-from persistance import PersistanceAnatomique
+from naulthene.cerveau.persistance import PersistanceAnatomique
 
 # Fraction de `ticks_par_jour` en dessous de laquelle, À LA DÉCONNEXION, on ne
 # déclenche qu'une micro-sieste (simple save) plutôt qu'une nuit complète — évite
@@ -70,7 +70,7 @@ class CuveDeMaintien:
     à la fois (le protocole ne prévoit pas de connexions concurrentes — un corps à la
     fois habite l'agent, comme un seul flux de conscience à la fois)."""
 
-    def __init__(self, port=9999, fichier_cerveau="naulthene_v21.brain", activer_wandb=False):
+    def __init__(self, port=9999, fichier_cerveau="brains/naulthene_v21.brain", activer_wandb=False):
         self.port = port
         self.persistance = PersistanceAnatomique(fichier=fichier_cerveau)
         self.seuil_nuit_a_la_deconnexion = max(1, int(ticks_par_jour * FRACTION_SEUIL_NUIT_A_LA_DECONNEXION))
@@ -225,7 +225,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Cuve de Maintien — daemon persistant Naulthène AGI (v21.0)")
     parser.add_argument("--port", type=int, default=9999)
-    parser.add_argument("--brain", type=str, default="naulthene_v21.brain")
+    parser.add_argument("--brain", type=str, default="brains/naulthene_v21.brain")
     parser.add_argument("--wandb", action="store_true", help="Active le logging W&B (désactivé par défaut)")
     args = parser.parse_args()
 

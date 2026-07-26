@@ -1,8 +1,8 @@
 Naulthène AGI (naulthene_WM)
 Copyright 2026 Adrien Nault
 
-This product includes software developed by Adrien Nault
-(https://github.com/DredGuer).
+This product includes software originally designed, conceived, and developed
+by Adrien Nault (https://github.com/DredGuer).
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -10,6 +10,40 @@ You may obtain a copy of the License at
 
     http://www.apache.org/licenses/LICENSE-2.0
 
-If you use, redistribute, or build upon this project (in source or
-derivative form), please retain attribution to Adrien Nault as the
-original author of Naulthène AGI.
+ATTRIBUTION REQUIREMENT (per License Section 4(d))
+
+This NOTICE file is part of the Naulthène AGI distribution. As provided by
+Section 4(d) of the Apache License, Version 2.0, any Derivative Work that
+You distribute (in Source or Object form, modified or unmodified, in whole
+or in part) MUST include a readable copy of this attribution notice, in at
+least one of the places listed in Section 4(d) of the License.
+
+Adrien Nault is the original author of the Naulthène AGI concept, cognitive
+architecture, and reference implementation — including, without limitation,
+the hybrid System 1 / System 2 design, the JEPA-based world model, the
+homeostatic dopaminergic reservoir, the base/annexe synaptic plasticity
+mechanism, and the adaptive nightly consolidation ("dream") cycle described
+in readme.md and explications_readme.md.
+
+Accordingly, any public use, publication, redistribution, fork, or
+derivative work — whether or not the source code is modified, and whether
+distributed as software, published as research, or described in an
+article, paper, presentation, or other public communication — must credit:
+
+    Adrien Nault — original author of the Naulthène AGI concept and
+    architecture (https://github.com/DredGuer)
+
+This attribution must be reasonably prominent and reasonably proximate to
+the description or use of the Naulthène AGI concept or architecture (e.g.
+in the credits/authors section of a publication, in the README or
+about-page of a derivative project, or in comparable citation practice for
+the medium used) — not merely buried in a LICENSE file. Removing, obscuring,
+or failing to carry forward this attribution when the concept or
+architecture is used, described, or built upon is a violation of this
+NOTICE and of Section 4 of the License.
+
+The contents of this NOTICE file are for informational purposes only and
+do not modify the License, per Section 4(d). You may add your own
+attribution notices within Derivative Works that you distribute, alongside
+or as an addendum to this NOTICE, provided that such additional attribution
+notices cannot be construed as modifying the License.

@@ -4,11 +4,13 @@ wandb/
 venv/
 
 # Cerveaux cristallisés (V21.0, Cuve de Maintien) — données binaires lourdes,
-# spécifiques à une machine locale ; daemon_cerveau.py/persistance.py/client_corps.py
-# restent trackés, seuls les fichiers .brain générés à l'exécution sont ignorés.
-*.brain
+# spécifiques à une machine locale ; rangés dans brains/, seul le dossier
+# daemon_cerveau.py/persistance.py/client_corps.py (src/naulthene/cuve, cerveau)
+# reste tracké, les fichiers .brain générés à l'exécution sont ignorés.
+brains/*.brain
 
 # Copie de travail locale (Mac, terrain d'essai des mécaniques expérimentales avant
-# portage éventuel sur agi_google_colab.py — voir CLAUDE.md, section "Variante Locale
-# de Test"). Jamais trackée par git, contrairement aux autres modules du client-serveur.
-agi_local_test.py
+# portage éventuel sur src/naulthene/cerveau/colab.py — voir CLAUDE.md, section
+# "Variante Locale de Test"). Jamais trackée par git, contrairement aux autres
+# modules du client-serveur.
+src/naulthene/cerveau/noyau.py
