@@ -4,6 +4,29 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [26.0-experimental] - 2026-07-27
+
+### Cristallisation Souple — protection ciblée des synapses matures contre l'érosion nocturne (falaise sigmoïde)
+
+| Type | Details |
+|------|---------|
+| **Commit** | N/A — `src/naulthene/cerveau/noyau.py` est gitignored (terrain d'essai expérimental), aucun commit ne le modifie |
+| **Catégorie** | feat (mécanique expérimentale) |
+| **Impact** | Fonctionnel (plasticité structurelle) — `agi_local_test.py`/`noyau.py` uniquement |
+
+**Implémente le chantier §A.5 du plan v26.0 « Le Parent remplace le Programme » ([docs/AMELIORATION_V1.md](AMELIORATION_V1.md)) : les synapses `NaultheneLinearSynaptique` sollicitées fortement et régulièrement sur plusieurs nuits deviennent quasi indestructibles à l'érosion nocturne, sans jamais geler leur apprentissage diurne. Une seconde trace `myeline_cumul` accumule la myélinisation consolidée nuit après nuit (même patron de relaxation exponentielle que partout dans le projet, `ALPHA_CRISTAL = 0.95`) ; au-delà de `SEUIL_CRISTAL = 0.80`, la synapse devient `cristallisee` — un cliquet à sens unique, jamais réversible. Correctif appliqué en cours d'implémentation : le plancher d'érosion initialement prévu comme une constante rigide (`MYELINE_MIN_CRISTAL = 0.50`, tout-ou-rien) a été remplacé par une falaise continue — une sigmoïde de `myeline_cumul` centrée sur le seuil (`K_RAIDEUR_CRISTAL = 10.0`) — plus fidèle au principe du projet de régulation dynamique sans règle en dur : une synapse cristallisée voit son érosion tendre vers zéro à mesure qu'elle s'éloigne du seuil, tandis qu'une synapse jamais cristallisée s'érode normalement et finit élaguée en temps fini (zéro synapse fantôme).**
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `NaultheneLinearSynaptique.__init__` : 2 nouveaux buffers (`myeline_cumul`, `cristallisee`). `cycle_sommeil()` : nouvelle Étape 3.5 (accumulation inter-nuits + cliquet de cristallisation) et érosion (Étape 3) plancher-protégée par une falaise sigmoïde plutôt qu'un plancher rigide. `agrandir()` : les 2 nouveaux buffers suivent le même triptyque resize/copie-par-segment que `myeline_M`/`trace_activation` (nouvelles dimensions nées à `0`/`False`). 3 nouvelles constantes module (`ALPHA_CRISTAL`, `SEUIL_CRISTAL`, `K_RAIDEUR_CRISTAL`). `forward()` et `fortification_dopaminergique()` inchangées — garantit par construction la règle dissymétrique (le gradient diurne sur `annexe_weight` reste identique, cristallisée ou non). |
+| `docs/AMELIORATION_V1.md` | §A.5 mis à jour pour refléter la falaise sigmoïde implémentée (remplace le plancher rigide de la proposition initiale) ; glossaire §G : `MYELINE_MIN_CRISTAL` remplacé par `K_RAIDEUR_CRISTAL = 10.0` |
+| `docs/explications_readme.md` | Nouvelle section §8.5 « Cristallisation Souple » (formules exactes, extrait de code, règle dissymétrique) ; table §12 et glossaire §13 mis à jour (v26.0, `ALPHA_CRISTAL`/`SEUIL_CRISTAL`/`K_RAIDEUR_CRISTAL`) |
+| `readme.md` | Nouvelle entrée « Nouveautés v26.0 (expérimental, §A.5 seul) » en tête du Journal des Mises à Jour + entrée table des matières `3x` |
+
+**Validation** : script de vérification manuel isolé (pas de suite de tests automatisée dans ce projet) — cristallisation asymétrique confirmée (la synapse sollicitée bascule `cristallisee=True` vers la nuit 40 sur 80 simulées, l'inactive reste `False`), falaise sigmoïde confirmée (une synapse cristallisée résiste nettement mieux à l'érosion qu'une synapse juste sous le seuil, 0.987 vs 0.950 de rétention sur un cycle), zéro synapse fantôme confirmé (une synapse jamais cristallisée est élaguée en 89 nuits, temps fini), règle dissymétrique confirmée (`backward()` produit un gradient non nul sur `annexe_weight` même aux positions cristallisées), `agrandir()` confirmé préservant l'historique sans hallucination de cristallisation sur les nouvelles dimensions.
+
+---
+
 ## [25.0-docs] - 2026-07-26
 
 ### Réorganisation en package Python + renforcement de l'attribution (NOTICE)

@@ -17,7 +17,7 @@ Ce document explique **comment** et **pourquoi** le cerveau `AGI_Naulthene` fonc
 9. [Le réservoir dopaminergique](#9-le-réservoir-dopaminergique)
 10. [Le rêve nocturne adaptatif](#10-le-rêve-nocturne-adaptatif)
 11. [Le cursus académique et la patience adaptative](#11-le-cursus-académique-et-la-patience-adaptative)
-12. [Évolutions du projet (v7 → v25)](#12-évolutions-du-projet-v7--v25)
+12. [Évolutions du projet (v7 → v26)](#12-évolutions-du-projet-v7--v26)
 13. [Glossaire des constantes](#13-glossaire-des-constantes)
 
 ---
@@ -364,6 +364,72 @@ mutation_possible = (jours_depuis_mutation >= 5
 
 combiné à `erreur_moyenne > seuil_actuel` (l'erreur JEPA moyenne de la journée dépasse le seuil de tolérance courant) — **c'est littéralement l'erreur du modèle du monde qui décide de faire grandir le cerveau.**
 
+### 8.5 Cristallisation Souple (expérimental, `agi_local_test.py` uniquement, v26.0)
+
+Le plancher de plasticité global protège tout le cerveau d'un coup, à l'aveugle. La
+Cristallisation Souple ajoute une protection **ciblée** : les synapses sollicitées fortement et
+régulièrement sur plusieurs nuits deviennent quasi indestructibles à l'érosion, sans jamais geler
+leur apprentissage diurne (règle dissymétrique sommeil ≠ gradient).
+
+**Accumulation inter-nuits.** Une seconde trace, `myeline_cumul`, distincte de la myéline
+instantanée `myeline_M` (§8.1, maximum courant intra-journée), s'accumule sur plusieurs *nuits*
+avec le même patron de relaxation exponentielle que partout ailleurs dans le projet (§1) :
+
+$$
+M_{\text{cumul}}(t) = \alpha \cdot M_{\text{cumul}}(t-1) + (1-\alpha) \cdot M(t), \qquad \alpha = \text{ALPHA\_CRISTAL} = 0.95
+$$
+
+écrit dans le code comme `myeline_cumul += (myeline_M - myeline_cumul) * (1 - ALPHA_CRISTAL)`,
+calculé à l'intérieur de `cycle_sommeil()` juste après l'érosion (Étape 3) et juste avant
+l'élagage (Étape 4) — sur la myéline de cette nuit, avant que les positions mortes ne soient
+remises à zéro.
+
+**Le cliquet de cristallisation.** Dès que $M_{\text{cumul}} \ge \text{SEUIL\_CRISTAL} = 0.80$, la
+synapse reçoit un flag booléen `cristallisee = True` (buffer de la taille de `base_weight`,
+granularité par poids individuel). C'est un **cliquet à sens unique** (`|=`, jamais réinitialisé) :
+une fois la synapse suffisamment consolidée, sa protection contre l'oubli passif ne se perd
+jamais — seul le poids lui-même, via le gradient diurne, peut encore être affiné.
+
+**La falaise sigmoïde (correctif post-implémentation).** Plutôt qu'un plancher d'érosion rigide
+appliqué en tout-ou-rien, la protection d'une synapse cristallisée est une transition continue :
+
+$$
+p_{\text{protection}} = \sigma\big(k \cdot (M_{\text{cumul}} - \text{SEUIL\_CRISTAL})\big),
+\qquad k = \text{K\_RAIDEUR\_CRISTAL} = 10.0
+$$
+
+$$
+M_{\text{norm,effectif}} = \max\big(M_{\text{norm}},\ \mathbb{1}[\text{cristallisee}] \cdot p_{\text{protection}}\big)
+$$
+
+```python
+myeline_norm = torch.clamp(self.myeline_M / q_ref, 0.0, 1.0)
+p_protection = torch.sigmoid(K_RAIDEUR_CRISTAL * (self.myeline_cumul - SEUIL_CRISTAL))
+plancher_cristal = self.cristallisee.float() * p_protection
+myeline_norm_effectif = torch.max(myeline_norm, plancher_cristal)
+self.base_weight *= (1.0 - (lambda_erosion * (1.0 - myeline_norm_effectif)))
+```
+
+Une synapse très éprouvée ($M_{\text{cumul}} \gg 0.80$) voit $p_{\text{protection}} \to 1.0$ :
+érosion nocturne quasi nulle, ancrage indestructible d'un fondamental (se déplacer, reconnaître
+une porte). Une synapse **jamais** cristallisée ne bénéficie d'aucun plancher : elle s'érode au
+taux plein `lambda_erosion` et tombe sous le masque de mort (`< 1e-4`, Étape 4) en temps fini —
+**zéro synapse fantôme** qui traînerait indéfiniment avec une érosion ralentie sans raison. La
+falaise remplace un plancher constant (`MYELINE_MIN_CRISTAL = 0.50`, première version du plan)
+par une régulation continue, plus fidèle au principe du projet : aucune règle en dur, tout émerge
+d'une formule paramétrée.
+
+**Règle dissymétrique.** `forward()` et `fortification_dopaminergique()` ne lisent ni n'écrivent
+jamais `myeline_cumul`/`cristallisee` — la cristallisation ne fige que l'érosion nocturne
+(`cycle_sommeil`), jamais le gradient diurne sur `annexe_weight`. Un hard freeze romprait la
+capacité de l'agent à réviser un fondamental si le monde change (nouvelle couleur de porte,
+nouvel angle) ; ici, la synapse cristallisée continue d'apprendre normalement, elle est juste
+protégée de mourir de silence pendant qu'elle ne sert pas.
+
+`agrandir()` traite `myeline_cumul`/`cristallisee` exactement comme `myeline_M`/`trace_activation`
+(§8.4) : colonnes existantes copiées par segment, nouvelles dimensions nées à `0`/`False` — aucune
+synapse neuve ne naît pré-cristallisée.
+
 ---
 
 ## 9. Le réservoir dopaminergique
@@ -465,7 +531,7 @@ Dès `palier_cible >= 5` (Viser la Porte), le **Mode Libre** s'active : le guida
 
 ---
 
-## 12. Évolutions du projet (v7 → v25)
+## 12. Évolutions du projet (v7 → v26)
 
 | Version | Ce qui a changé | Pourquoi |
 |---|---|---|
@@ -477,6 +543,7 @@ Dès `palier_cible >= 5` (Viser la Porte), le **Mode Libre** s'active : le guida
 | v21-v22 (expérimental) | Cerveau persistant en Cuve (client-serveur), hémisphère auditif/vocal | Séparer Conscience et Corps ; ajouter la modalité son |
 | v23-v24 (expérimental) | Cursus Développemental par Ères, Arène de visualisation | Faire cohabiter apprentissage MiniGrid et vocal sur 1000 jours |
 | v25 (expérimental) | Le Cerveau Bébé (0→4 ans), masquage de récompense externe, Module Parent | Pousser le principe développemental à l'extrême : 8 mois 100% auto-supervisés |
+| v26.0 (expérimental, §A.5 seul) | Cristallisation Souple — protection ciblée des synapses matures contre l'érosion nocturne (falaise sigmoïde) | Protéger les fondamentaux acquis sans jamais geler l'apprentissage diurne |
 
 Voir [CHANGELOG.md](CHANGELOG.md) pour le détail commit par commit et [readme.md](../readme.md) pour la description narrative complète de chaque version.
 
@@ -504,6 +571,9 @@ Voir [CHANGELOG.md](CHANGELOG.md) pour le détail commit par commit et [readme.m
 | `SEUIL_PALIER_MODE_LIBRE` | 5 | Palier DoorKey déclenchant le Mode Libre |
 | `JOURS_ENTRE_MUTATIONS` | 5 | Cooldown minimal entre deux neurogenèses |
 | `SEUIL_APHASIE_NEUROGENESE` | 0.05 | Plasticité minimale pour autoriser une mutation |
+| `ALPHA_CRISTAL` (v26.0, expérimental) | 0.95 | Vitesse d'accumulation de la myéline cumulée inter-nuits (`myeline_cumul`) |
+| `SEUIL_CRISTAL` (v26.0, expérimental) | 0.80 | Seuil de `myeline_cumul` déclenchant le cliquet `cristallisee = True` |
+| `K_RAIDEUR_CRISTAL` (v26.0, expérimental) | 10.0 | Raideur de la falaise sigmoïde de protection d'une synapse cristallisée |
 
 ---
 

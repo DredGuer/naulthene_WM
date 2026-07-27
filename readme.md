@@ -18,6 +18,7 @@ Il intègre la structure de table des matières globale (avec le contexte applic
 1. [Vue d'Ensemble du Projet](https://www.google.com/search?q=%23vue-densemble-du-projet)
 2. [Journal des Mises à Jour (Changelog)](https://www.google.com/search?q=%23journal-des-mises-%C3%A0-jour)
 3. [Plan d'Action](https://www.google.com/search?q=%23plan-daction)
+3x. [Nouveautés v26.0 (expérimental, §A.5 seul) — Cristallisation Souple](#nouveautés-v260-expérimental-a5-seul--cristallisation-souple-2026-07-27)
 3y. [Nouveautés v25.0 (expérimental) — Le Cerveau Bébé Développemental (0→4 ans)](#nouveautés-v250-expérimental--le-cerveau-bébé-développemental-04-ans-2026-07-24)
 3z. [Correctifs v24.0-fix1 à fix5 (expérimental) — École de Rattrapage Vocal & silence de l'Arène](#correctifs-v240-fix1-à-fix5-expérimental--école-de-rattrapage-vocal--silence-de-larène-2026-07-2324)
 4. [Nouveautés v24.0 (expérimental) — L'Arène & Démo Live](#nouveautés-v240-expérimental--larène--démo-live-2026-07-23)
@@ -78,6 +79,17 @@ L'agent évolue à travers un cursus scolaire modélisé sous forme d'environnem
 ## 📜 Journal des Mises à Jour
 
 Pour un historique complet commit par commit, consultez [CHANGELOG.md](https://www.google.com/search?q=CHANGELOG.md).
+
+### Nouveautés v26.0 (expérimental, §A.5 seul) — Cristallisation Souple (2026-07-27)
+
+> ⚠️ **Statut expérimental** : vit uniquement dans `agi_local_test.py` (`NaultheneLinearSynaptique`), pas encore porté sur `agi_google_colab.py`. Premier chantier implémenté du plan v26.0 « Le Parent remplace le Programme » ([docs/AMELIORATION_V1.md](docs/AMELIORATION_V1.md)) — les autres chantiers (§A.1-A.4 durcissement JEPA, §B Parent Universel, §C rappel hippocampique, §D voix humaine) restent à l'état de proposition.
+
+Protège de l'érosion nocturne les synapses matures — sollicitées fortement et régulièrement sur plusieurs nuits — sans jamais geler leur apprentissage diurne. Une seconde trace `myeline_cumul` accumule la myélinisation nuit après nuit (même patron de relaxation exponentielle que partout dans le projet, `ALPHA_CRISTAL = 0.95`) ; au-delà de `SEUIL_CRISTAL = 0.80`, la synapse devient `cristallisee` (cliquet à sens unique, jamais réversible).
+
+* **Correctif « Falaise » sigmoïde** : plutôt qu'un plancher d'érosion rigide en tout-ou-rien, la protection d'une synapse cristallisée est une transition continue — `p_protection = sigmoid(K_RAIDEUR_CRISTAL * (myeline_cumul - SEUIL_CRISTAL))`, `K_RAIDEUR_CRISTAL = 10.0` — plus fidèle au principe du projet (régulation dynamique continue, jamais de règle en dur). Une synapse très éprouvée voit son érosion nocturne tendre vers zéro (ancrage indestructible des fondamentaux) ; une synapse jamais cristallisée s'érode normalement et finit élaguée en temps fini (zéro synapse fantôme).
+* **Règle dissymétrique sommeil ≠ gradient** : la protection n'agit que sur l'érosion nocturne (`cycle_sommeil`). Le gradient diurne (`annexe_weight`, rétropropagation) reste **totalement inchangé**, cristallisée ou non — une synapse cristallisée continue d'apprendre et de se réviser si le monde change (nouvelle couleur de porte, nouvel angle), elle est juste protégée de mourir de silence pendant qu'elle ne sert pas.
+
+Voir [docs/explications_readme.md §8.5](docs/explications_readme.md#85-cristallisation-souple-expérimental-agi_local_testpy-uniquement-v260) pour le détail algorithmique complet.
 
 ### Nouveautés v25.0 (expérimental) — Le Cerveau Bébé Développemental (0→4 ans) (2026-07-24)
 
