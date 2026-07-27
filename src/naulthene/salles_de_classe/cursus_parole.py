@@ -41,6 +41,16 @@ est en pause (voir noyau._traiter_tick_vocal_isole) et la case resterait figée 
 l'après-midi. C'est la raison du découpage matin(synesthésie)/après-midi(curriculum) des
 phases 1-2, symétrique à l'inverse du Cursus par Ères (matin=MiniGrid, après-midi=vocal).
 
+v27.4 (correctif utilisateur, "l'agent a l'air de progresser trop vite") : la cible
+synesthésique utilise désormais LecteurCaseFrontale.lire_stable plutôt que lire/
+lire_syntagme bruts — sans lissage, le mot cible changeait à CHAQUE tick où l'agent
+tournait la tête ou avançait, ne laissant jamais le temps à l'agent de vraiment associer
+un mot à l'objet qu'il regarde. lire_stable n'accepte une nouvelle cible qu'après
+noyau.SEUIL_STABILITE_SYNESTHESIE (20) ticks CONSÉCUTIFS passés devant le même objet ;
+tant qu'aucune cible n'a jamais été stabilisée (début de journée/épisode), aucune
+correction n'est appliquée ce tick-là (formants_cibles=None) plutôt que de risquer une
+fausse association.
+
 Usage :
     WANDB_MODE=offline python cursus_parole.py           # run complet (900 jours)
     python cursus_parole.py --jours 30                    # run court de test
@@ -82,19 +92,31 @@ _NOMS_PHASES = (
 
 def _cible_synesthesique(etat, cache: CacheReferencesVocales, lecteur: LecteurCaseFrontale,
                           syntagme: bool):
-    """(mot, mfcc, formants) déduits de la case DEVANT l'agent — c'est ici que la
-    synesthésie devient réelle : l'oreille reçoit le son du mot que l'agent est en
-    train de VOIR, et la quête vocale porte la cible F1/F2 mesurée sur la vraie voix de
-    l'utilisateur prononçant ce mot précis (si la banque en contient une référence).
+    """(mot, mfcc, formants, notable) déduits de la case DEVANT l'agent, LISSÉS par
+    LecteurCaseFrontale.lire_stable (v27.4) — c'est ici que la synesthésie devient
+    réelle : l'oreille reçoit le son du mot que l'agent est en train de VOIR, et la
+    quête vocale porte la cible F1/F2 mesurée sur la vraie voix de l'utilisateur
+    prononçant ce mot précis (si la banque en contient une référence).
 
-    Si le mot lu n'est dans AUCUN palier du curriculum vocal, on retombe sur le palier
-    vocal courant — on ne demande jamais à l'agent de nommer quelque chose dont on n'a
-    aucune référence audio à lui faire entendre."""
-    mot, _type_objet, _couleur = lecteur.lire_syntagme(etat.env) if syntagme else lecteur.lire(etat.env)
+    `notable` (nouveau, v27.4) : False tant qu'AUCUNE cible n'a encore été stabilisée
+    (début d'épisode, ou l'agent vient de changer ce qu'il regarde) — l'appelant doit
+    alors traiter ce tick comme "pas de correction", même si le tirage de guidage
+    l'aurait normalement autorisée, pour ne jamais associer un mot à un objet que
+    l'agent n'a pas encore regardé assez longtemps. `mfcc`/`formants` restent ceux du
+    palier vocal COURANT dans ce cas (l'oreille continue d'entendre un son de fond,
+    simplement non corrigé), pour ne jamais laisser obs_auditive à None en synesthésie.
+
+    Si le mot stabilisé n'est dans AUCUN palier du curriculum vocal, on retombe sur le
+    palier vocal courant — on ne demande jamais à l'agent de nommer quelque chose dont
+    on n'a aucune référence audio à lui faire entendre."""
+    mot, _type_objet, _couleur, _stable_ce_tick = lecteur.lire_stable(etat.env, syntagme=syntagme)
+    if mot is None:
+        mfcc, formants = cache.obtenir_pour_palier(etat.palier_vocal)
+        return None, mfcc, formants, False
     palier_du_mot = next((l["palier"] for l in pg.CURRICULUM_VOCAL if l["cible"] == mot), None)
     palier = palier_du_mot if palier_du_mot is not None else etat.palier_vocal
     mfcc, formants = cache.obtenir_pour_palier(palier)
-    return mot, mfcc, formants
+    return mot, mfcc, formants, True
 
 
 def _perception_du_tick_parole(etat, cache: CacheReferencesVocales, lecteur: LecteurCaseFrontale,
@@ -124,11 +146,11 @@ def _perception_du_tick_parole(etat, cache: CacheReferencesVocales, lecteur: Lec
 
     elif phase == 1:
         if moment == "matin":
-            mot, mfcc, formants = _cible_synesthesique(etat, cache, lecteur, syntagme=False)
+            mot, mfcc, formants, notable = _cible_synesthesique(etat, cache, lecteur, syntagme=False)
             obs_auditive = torch.tensor([mfcc], dtype=torch.float32, device=DEVICE)
-            formants_cibles = formants if guide else None
+            formants_cibles = formants if (guide and notable) else None
             palier_mot = next((l["palier"] for l in pg.CURRICULUM_VOCAL if l["cible"] == mot), etat.palier_vocal)
-            mfcc_references = cache.obtenir_mfcc_prises(palier_mot) if guide else None
+            mfcc_references = cache.obtenir_mfcc_prises(palier_mot) if (guide and notable) else None
             return "minigrid", obs_auditive, formants_cibles, mfcc_references
         else:
             mfcc, formants = cache.obtenir_pour_palier(etat.palier_vocal)
@@ -138,11 +160,11 @@ def _perception_du_tick_parole(etat, cache: CacheReferencesVocales, lecteur: Lec
             return "vocal_isole", obs_auditive, formants_cibles, mfcc_references
 
     else:  # phase 2 — synesthésie toute la journée, syntagmes couleur+objet
-        mot, mfcc, formants = _cible_synesthesique(etat, cache, lecteur, syntagme=True)
+        mot, mfcc, formants, notable = _cible_synesthesique(etat, cache, lecteur, syntagme=True)
         obs_auditive = torch.tensor([mfcc], dtype=torch.float32, device=DEVICE)
-        formants_cibles = formants if guide else None
+        formants_cibles = formants if (guide and notable) else None
         palier_mot = next((l["palier"] for l in pg.CURRICULUM_VOCAL if l["cible"] == mot), etat.palier_vocal)
-        mfcc_references = cache.obtenir_mfcc_prises(palier_mot) if guide else None
+        mfcc_references = cache.obtenir_mfcc_prises(palier_mot) if (guide and notable) else None
         return "minigrid", obs_auditive, formants_cibles, mfcc_references
 
 

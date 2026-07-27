@@ -4,6 +4,27 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [27.4-experimental] - 2026-07-27
+
+### Cible synesthésique stabilisée — la cible vocale n'est publiée qu'après une exposition continue
+
+| Type | Details |
+|------|---------|
+| **Commit** | N/A — en attente du commit de cette version |
+| **Catégorie** | fix (défaut de conception, mécanique expérimentale) |
+| **Impact** | Fonctionnel (mécanisme d'apprentissage vocal, phases 1-2 du Cursus de la Parole) |
+
+**Diagnostic de l'utilisateur, confirmé par lecture du code : en phases 1-2 (synesthésie active), `LecteurCaseFrontale.lire`/`lire_syntagme` sont relues à CHAQUE tick, donc la cible vocale changeait aussi vite que le regard de l'agent — jusqu'à 10×/seconde dans l'Arène, sans aucune notion de "temps nécessaire pour apprendre un mot". Un agent qui tournait sur lui-même voyait sa cible passer de "mur" à "vide" à "porte" en 2-3 ticks, sans jamais laisser à `porte_auditive`/`tete_vocale` le temps d'associer le son au bon objet. Nouvelle méthode `LecteurCaseFrontale.lire_stable` : la cible publiée ne change que si l'agent a regardé LE MÊME mot pendant au moins `SEUIL_STABILITE_SYNESTHESIE=20` ticks CONSÉCUTIFS (un aller-retour du regard remet le compteur à zéro, sans tolérance) ; tant qu'aucune cible n'a jamais été stabilisée, aucune correction n'est appliquée (`formants_cibles=None`) plutôt que de risquer une fausse association. `cursus_parole._cible_synesthesique` retourne désormais un booléen `notable` en plus de `(mot, mfcc, formants)`, consommé par `_perception_du_tick_parole` pour désactiver la correction/le score spectral tant que la cible n'est pas stabilisée.**
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | Nouvelle constante `SEUIL_STABILITE_SYNESTHESIE=20`. `LecteurCaseFrontale.__init__` gagne un état de stabilisation (`_mot_brut_courant`, `_ticks_stables`, `_cible_stabilisee`). Nouvelle méthode `lire_stable(env, seuil_stabilite, syntagme) -> (mot, type_objet, couleur, stable_ce_tick)`. |
+| `src/naulthene/salles_de_classe/cursus_parole.py` | `_cible_synesthesique` utilise `lire_stable` au lieu de `lire`/`lire_syntagme` bruts, retourne `(mot, mfcc, formants, notable)`. `_perception_du_tick_parole` (phase 1 matin, phase 2) : `formants_cibles`/`mfcc_references` conditionnés par `guide AND notable` au lieu de `guide` seul. |
+
+**Validation** : test sur `MiniGrid-DoorKey-6x6-v0` réel — agent qui tourne en boucle (action "left" en continu) ne stabilise jamais aucune cible sur 60 ticks (comportement voulu : jamais de fausse association) ; agent immobile (action "done" en boucle) stabilise sa cible exactement au tick `SEUIL_STABILITE_SYNESTHESIE` puis la conserve. Run réel de 3 jours sur `naulthene_parole.brain` traversant la transition phase 0→phase 1 (jour 300, `lire_stable` exercée en conditions réelles) : aucune erreur, promotion de palier vocal validée normalement.
+
+---
+
 ## [27.3-experimental] - 2026-07-27
 
 ### Rythme de lecture vocale ralenti dans l'Arène — corrige l'effet "métronome" (TUT TUT TUT)
