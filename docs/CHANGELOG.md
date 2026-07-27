@@ -4,6 +4,30 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [27.5-experimental] - 2026-07-27
+
+### Dopamine vocale proportionnelle à la méconnaissance — corrige la "boucle infinie de promotion vocale"
+
+| Type | Details |
+|------|---------|
+| **Commit** | N/A — en attente du commit de cette version |
+| **Catégorie** | fix (défaut de conception, mécanique expérimentale) |
+| **Impact** | Critique (réservoir dopaminergique) |
+
+**Diagnostic détaillé de l'utilisateur, confirmé par lecture du code : une fois le dernier palier du curriculum vocal (19) atteint, `promouvoir_palier_vocal_si_merite` continuait d'enregistrer des succès et d'afficher `🎓 [PROMOTION VOCALE]` tous les ~2 jours (bug de log — la garde existante empêchait bien le dépassement du palier 19, mais pas l'affichage du message ni l'accumulation de "succès fantômes" dans le gestionnaire). Plus important : `poids_vocal` (le score de prononciation du tick) alimentait la dopamine (`POIDS_DOPAMINE_VOCAL * poids_vocal`), le LTP hebbien et la micro-récompense RL SANS AUCUNE décroissance liée à la maîtrise déjà acquise — un agent qui maîtrise parfaitement le curriculum vocal depuis longtemps recevait le même choc dopaminergique qu'un débutant qui vient de réussir sa première voyelle. Sur un cerveau resté bloqué sur MiniGrid (Collège, palier DoorKey 7), ce shoot quotidien maintenait `teneur_dopamine`/`plasticite_base` artificiellement hauts, sans la tension motivationnelle nécessaire pour progresser sur le reste du cursus — exactement le mécanisme décrit par l'utilisateur ("moins il sait, plus l'effet est fort ; plus il sait, moins les effets sont forts").**
+
+**Correctif en deux volets.** (1) Nouvelle fonction `facteur_nouveaute_vocale(etat)` : décroissance LINÉAIRE de 1.0 (palier 1) à `FACTEUR_NOUVEAUTE_VOCALE_MIN=0.1` (palier 19, jamais 0 — cohérent avec `TAUX_FRICTION`, rien dans ce moteur ne tombe à un plancher dur exactement nul), appliquée à `poids_vocal` **uniquement** pour la dopamine/le LTP/la micro-récompense — **jamais** pour la perte MSE supervisée (l'agent doit continuer à s'entraîner à plein régime, sinon il désapprendrait) ni pour `score_vocal_jour`/la logique de promotion (sinon le mécanisme de promotion s'auto-invaliderait). Le Module Parent ("Oui !"/"Non !") continue de juger le score BRUT, pas le score pondéré, pour ne jamais fausser sa décision. (2) `promouvoir_palier_vocal_si_merite` court-circuite dès `etat.palier_vocal >= len(CURRICULUM_VOCAL)`, avec un unique message `🏆 [MAÎTRISE VOCALE]` affiché une seule fois à la transition finale plutôt qu'un `🎓 [PROMOTION VOCALE]` répété indéfiniment.
+
+**Question complémentaire de l'utilisateur, clarifiée** : le système n'écoute PAS "pendant X secondes le temps du mot" en fonction de ce que l'agent regarde — `obs_auditive` est un vecteur MFCC statique (un instantané figé, pas un flux temporel), envoyé identique à chaque tick tant que la cible ne change pas. Le mécanisme de stabilité de la case frontale (v27.4, `SEUIL_STABILITE_SYNESTHESIE`) contrôle QUAND la cible peut changer, pas combien de temps l'oreille "écoute" — ce sont deux mécanismes distincts, et aucun des deux ne modélise une vraie durée d'écoute.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | Nouvelle constante `FACTEUR_NOUVEAUTE_VOCALE_MIN=0.1`. Nouvelle fonction `facteur_nouveaute_vocale(etat) -> float`. `_traiter_tick_vocal_isole` : `poids_vocal_dopamine = poids_vocal * facteur_nouveaute_vocale(etat)` utilisé dans `poids_evenement`, `poids_vocal` brut conservé pour `_appliquer_feedback_parent_vocal`. `traiter_tick` : même principe, plus `micro_recompense_vocale` également pondérée avant d'entrer dans `recompense_interne`. `promouvoir_palier_vocal_si_merite` : court-circuit au dernier palier + message `🏆 [MAÎTRISE VOCALE]` unique. |
+
+**Validation** : `facteur_nouveaute_vocale` testée sur plusieurs paliers (1→1.0, 5→0.8, 10→0.55, 15→0.3, 19→0.1, clamp au-delà de 19) ; comparaison directe de la contribution dopaminergique pour un même score de prononciation (0.9) : 0.630 au palier 1 vs 0.063 au palier 19 (facteur 10 de réduction) ; court-circuit du message de fausse promotion vérifié (aucun affichage à `palier_vocal=19` avec un score parfait sur 100 ticks) ; transition réelle 18→19 vérifiée (4 appels simulant les 4 succès requis, message de maîtrise affiché une seule fois, silence confirmé sur 5 appels suivants) ; run réel de 2 jours sur un cerveau neuf `naulthene_parole.brain` (phase 1, synesthésie active) sans erreur ni message de fausse promotion.
+
+---
+
 ## [27.4-experimental] - 2026-07-27
 
 ### Cible synesthésique stabilisée — la cible vocale n'est publiée qu'après une exposition continue
