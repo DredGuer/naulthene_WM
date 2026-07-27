@@ -389,7 +389,7 @@ def estimer_formants_lpc(onde: np.ndarray, sample_rate: int = SAMPLE_RATE) -> di
         return None
     seuil_energie = float(np.percentile(energies, PERCENTILE_ENERGIE_TRAME_LPC))
 
-    candidats_f1, candidats_f2 = [], []
+    candidats_f1, candidats_f2, candidats_f3 = [], [], []
     for trame, energie in zip(trames, energies):
         if energie < seuil_energie:
             continue
@@ -412,6 +412,8 @@ def estimer_formants_lpc(onde: np.ndarray, sample_rate: int = SAMPLE_RATE) -> di
         if len(candidats) >= 2:
             candidats_f1.append(candidats[0])
             candidats_f2.append(candidats[1])
+        if len(candidats) >= 3:
+            candidats_f3.append(candidats[2])
 
     if not candidats_f1:
         return None
@@ -420,7 +422,123 @@ def estimer_formants_lpc(onde: np.ndarray, sample_rate: int = SAMPLE_RATE) -> di
     f2 = float(np.clip(np.median(candidats_f2), *BORNES_F2))
     if f1 >= f2:
         return None
-    return {"F1": f1, "F2": f2}
+
+    # v27.6 (décision utilisateur, "le cerveau doit intégrer le son peu importe la
+    # forme, rien en dur, dynamique") : F3 vient EXACTEMENT du même mécanisme que
+    # F1/F2 (racines LPC déjà calculées ci-dessus) — le 3e candidat trié, quand il
+    # existe. Contrairement à F1/F2, l'absence de F3 exploitable n'invalide pas
+    # l'estimation entière (F3 est physiquement "moins critique pour l'identité
+    # vocalique", voir BORNES_F3) : repli sur None, géré par l'appelant.
+    f3 = None
+    if candidats_f3:
+        f3 = float(np.clip(np.median(candidats_f3), *BORNES_F3))
+
+    return {"F1": f1, "F2": f2, "F3": f3}
+
+
+def estimer_pitch_f0(onde: np.ndarray, sample_rate: int = SAMPLE_RATE) -> float | None:
+    """Estime f0 (fréquence fondamentale, la hauteur de voix perçue) RÉELLE d'un
+    enregistrement par autocorrélation — technique standard de pitch-tracking,
+    entièrement dérivée du signal, aucune valeur écrite en dur (décision utilisateur
+    v27.6). Contrairement à l'analyse LPC (qui modélise le conduit vocal / les
+    formants), f0 est la périodicité du signal glottique lui-même : on cherche le
+    premier pic significatif de l'autocorrélation dans la plage physique BORNES_F0.
+
+    Algorithme, par trame (mêmes fenêtres que estimer_formants_lpc, réutilise le même
+    découpage temporel pour rester cohérent) :
+      1. autocorrélation normalisée de la trame ;
+      2. on ne cherche un pic que dans la plage de lags correspondant à BORNES_F0
+         (une fréquence hors de la plage vocale humaine n'est pas un f0 plausible) ;
+      3. pic retenu = maximum d'autocorrélation dans cette plage, converti en Hz ;
+      4. médiane inter-trames (même robustesse qu'estimer_formants_lpc).
+
+    Retourne None si aucune trame exploitable — cas normal (silence, bruit sans
+    structure périodique claire), géré par repli chez l'appelant."""
+    onde64 = np.asarray(onde, dtype=np.float64).flatten()
+    if onde64.size < int(FENETRE_ANALYSE_LPC * sample_rate):
+        return None
+
+    taille_trame = int(FENETRE_ANALYSE_LPC * sample_rate)
+    pas_trame = int(PAS_ANALYSE_LPC * sample_rate)
+    fenetre = np.hamming(taille_trame)
+
+    lag_min = int(sample_rate / BORNES_F0[1])  # f0 haute -> lag court
+    lag_max = int(sample_rate / BORNES_F0[0])  # f0 basse -> lag long
+
+    energies, trames = [], []
+    for debut in range(0, max(1, len(onde64) - taille_trame + 1), pas_trame):
+        trame = onde64[debut:debut + taille_trame]
+        if trame.size < taille_trame:
+            continue
+        trames.append(trame * fenetre)
+        energies.append(float(np.sum(trame ** 2)))
+    if not trames:
+        return None
+    seuil_energie = float(np.percentile(energies, PERCENTILE_ENERGIE_TRAME_LPC))
+
+    candidats_f0 = []
+    for trame, energie in zip(trames, energies):
+        if energie < seuil_energie or lag_max >= len(trame):
+            continue
+        autocorr = np.correlate(trame, trame, mode="full")[len(trame) - 1:]
+        if autocorr[0] <= 0:
+            continue
+        autocorr = autocorr / autocorr[0]
+        segment = autocorr[lag_min:lag_max + 1]
+        if segment.size == 0 or float(np.max(segment)) < 0.3:  # pic trop faible = pas de vraie périodicité
+            continue
+        lag_pic = lag_min + int(np.argmax(segment))
+        if lag_pic > 0:
+            candidats_f0.append(sample_rate / lag_pic)
+
+    if not candidats_f0:
+        return None
+    return float(np.clip(np.median(candidats_f0), *BORNES_F0))
+
+
+def estimer_duree_amplitude(onde: np.ndarray, sample_rate: int = SAMPLE_RATE) -> tuple:
+    """Durée et amplitude RÉELLES d'un enregistrement — mesures directes du signal,
+    aucune estimation nécessaire (contrairement aux formants/f0, ce sont des propriétés
+    physiques immédiates de l'onde). Durée = longueur réelle de l'enregistrement (déjà
+    recadré du silence par instruments/enregistreur_voix.py, voir son docstring) ;
+    amplitude = crête absolue normalisée. Les deux sont clampées aux bornes physiques du
+    synthétiseur (BORNES_DUREE/BORNES_AMPLITUDE) — même garde-fou que les formants : une
+    cible hors bornes serait inatteignable par tete_vocale."""
+    onde64 = np.asarray(onde, dtype=np.float64).flatten()
+    duree = float(np.clip(onde64.size / sample_rate, *BORNES_DUREE))
+    amplitude = float(np.clip(np.max(np.abs(onde64)) if onde64.size else 0.0, *BORNES_AMPLITUDE))
+    return duree, amplitude
+
+
+def estimer_parametres_vocaux_complets(onde: np.ndarray, sample_rate: int = SAMPLE_RATE) -> dict:
+    """v27.6 (décision utilisateur) : les 8 paramètres physiques de tete_vocale (voir
+    SynthetiseurFormants.parametres_depuis_vecteur pour l'ordre canonique), TOUS extraits
+    dynamiquement d'un enregistrement réel — aucune valeur écrite en dur. Combine
+    estimer_formants_lpc (F1/F2/F3), estimer_pitch_f0 (f0), estimer_duree_amplitude
+    (durée/amplitude). F1_bw/F2_bw n'ont pas d'équivalent physique mesurable simplement
+    par LPC (la largeur de bande RÉELLE d'un formant humain varie trop selon la méthode
+    d'estimation pour servir de cible fiable) — repli sur le CENTRE de BORNES_BW, qui
+    reste une plage de synthèse, pas une valeur de voix théorique.
+
+    Toute dimension non estimable (silence, signal trop court, pas de périodicité
+    claire) retombe sur le CENTRE de sa borne physique respective plutôt que d'échouer
+    entièrement — un repli neutre (0.5 en espace [0,1]) est préférable à l'absence totale
+    de cible sur cette dimension, cohérent avec le traitement des dimensions non
+    contraintes de `_construire_cible_vocale` (noyau.py)."""
+    formants = estimer_formants_lpc(onde, sample_rate)
+    f0 = estimer_pitch_f0(onde, sample_rate)
+    duree, amplitude = estimer_duree_amplitude(onde, sample_rate)
+
+    return {
+        "f0": f0 if f0 is not None else float(np.mean(BORNES_F0)),
+        "F1": formants["F1"] if formants else float(np.mean(BORNES_F1)),
+        "F2": formants["F2"] if formants else float(np.mean(BORNES_F2)),
+        "F3": (formants.get("F3") if formants else None) or float(np.mean(BORNES_F3)),
+        "F1_bw": float(np.mean(BORNES_BW)),
+        "F2_bw": float(np.mean(BORNES_BW)),
+        "duree": duree,
+        "amplitude": amplitude,
+    }
 
 
 def estimer_formants_agrege(prises: list, sample_rate: int = SAMPLE_RATE) -> dict | None:
@@ -438,6 +556,35 @@ def estimer_formants_agrege(prises: list, sample_rate: int = SAMPLE_RATE) -> dic
     return {
         "F1": float(np.median([e["F1"] for e in estimations])),
         "F2": float(np.median([e["F2"] for e in estimations])),
+    }
+
+
+def estimer_parametres_vocaux_agreges(prises: list, sample_rate: int = SAMPLE_RATE) -> dict:
+    """v27.6 : équivalent multi-prises d'estimer_parametres_vocaux_complets — médiane
+    de chaque dimension estimée sur TOUTES les prises exploitables (même logique de
+    robustesse qu'estimer_formants_agrege). Ne retourne jamais None : une prise absente
+    sur une dimension particulière (ex. f0 non détecté sur une prise bruitée) est
+    simplement exclue de la médiane de CETTE dimension, pas de toutes — si AUCUNE prise
+    n'est exploitable pour une dimension donnée, repli sur le centre de sa borne
+    physique (même principe que estimer_parametres_vocaux_complets)."""
+    if not prises:
+        return estimer_parametres_vocaux_complets(np.zeros(1, dtype=np.float32), sample_rate)
+
+    par_dimension = {"f0": [], "F1": [], "F2": [], "F3": [], "duree": [], "amplitude": []}
+    for onde in prises:
+        params = estimer_parametres_vocaux_complets(onde, sample_rate)
+        for cle in par_dimension:
+            par_dimension[cle].append(params[cle])
+
+    return {
+        "f0": float(np.median(par_dimension["f0"])),
+        "F1": float(np.median(par_dimension["F1"])),
+        "F2": float(np.median(par_dimension["F2"])),
+        "F3": float(np.median(par_dimension["F3"])),
+        "F1_bw": float(np.mean(BORNES_BW)),
+        "F2_bw": float(np.mean(BORNES_BW)),
+        "duree": float(np.median(par_dimension["duree"])),
+        "amplitude": float(np.median(par_dimension["amplitude"])),
     }
 
 

@@ -27,13 +27,13 @@ testable en isolation (comme `hemisphere_audio.py` et `professeur_gemma.py`).
 
 import subprocess
 import tempfile
-import unicodedata
 from pathlib import Path
 
 import numpy as np
 
 from naulthene.audio.hemisphere_audio import (
-    extraire_mfcc, VOYELLES_CIBLES, SAMPLE_RATE, estimer_formants_agrege,
+    extraire_mfcc, SAMPLE_RATE,
+    estimer_parametres_vocaux_agreges, estimer_parametres_vocaux_complets,
 )
 import naulthene.audio.professeur_gemma as pg
 
@@ -63,35 +63,17 @@ def _reference_via_say(mot: str) -> np.ndarray:
         Path(chemin_aiff.replace(".aiff", ".wav")).unlink(missing_ok=True)
 
 
-def _voyelle_dominante(mot: str) -> str:
-    """Première voyelle connue de VOYELLES_CIBLES dans `mot`, accents dépliés (NFD).
+def _mot_cible_du_palier(palier: int) -> str:
+    """Retourne le mot_cible d'un palier du curriculum vocal — palier 1 (Vocaliser)
+    retombe sur "a" faute de cible précise.
 
-    v27.0 (correctif) : sans le dépliage NFD, "clé" ne contient AUCUNE voyelle de
-    VOYELLES_CIBLES ("é" ≠ "e") et retombait silencieusement sur le défaut "a" — la
-    cible F1/F2 du palier "clé" aurait été celle de "a". Même risque latent sur tout
-    mot accentué du curriculum (le palier 14 "prends clé" s'en sortait par chance,
-    via la voyelle de "prends")."""
-    plie = unicodedata.normalize("NFD", mot.lower())
-    plie = "".join(c for c in plie if not unicodedata.combining(c))
-    return next((c for c in plie if c in VOYELLES_CIBLES), "a")
-
-
-def _mot_cible_du_palier(palier: int) -> tuple:
-    """Retourne (mot_cible, formants_cibles) pour un palier du curriculum vocal —
-    même logique que `client_professeur.lancer_lecon_parole` (lignes 88-100) : palier 1
-    (Vocaliser) retombe sur "a" faute de cible précise ; les syllabes/mots (paliers 7+)
-    retombent sur leur voyelle dominante (voir `_voyelle_dominante`), `VOYELLES_CIBLES`
-    ne connaissant que les 5 voyelles simples. Ces formants théoriques ne servent que de
-    repli — `CacheReferencesVocales` les remplace par les formants RÉELS (LPC) de la
-    banque vocale quand elle existe pour ce mot (v27.0)."""
+    v27.6 : ne retourne plus de formants théoriques (VOYELLES_CIBLES) — la cible
+    acoustique complète (8 paramètres) est désormais TOUJOURS dérivée dynamiquement
+    d'un enregistrement réel par `_generer_si_absent` (banque personnelle si elle
+    existe, sinon la référence `say` du mot lui-même), jamais d'une table écrite en
+    dur (décision utilisateur v27.6 : "rien ne doit être écrit en dur")."""
     lecon = pg.choisir_lecon(palier)
-    mot_cible = lecon["cible"] or "a"
-
-    formants_cibles = VOYELLES_CIBLES.get(mot_cible)
-    if formants_cibles is None:
-        formants_cibles = VOYELLES_CIBLES[_voyelle_dominante(mot_cible)]
-
-    return mot_cible, formants_cibles
+    return lecon["cible"] or "a"
 
 
 def _slug_mot(mot: str) -> str:
@@ -160,7 +142,7 @@ class CacheReferencesVocales:
         self._nb_prises_banque = 0     # nombre total de prises .wav effectivement chargées
         self.source_par_mot = {}       # mot -> "banque (N prise(s))" | "say (repli)"
 
-    def _generer_si_absent(self, mot: str, formants_cibles: dict):
+    def _generer_si_absent(self, mot: str):
         if mot in self._cache_mfcc_prises:
             return
         prises = _references_depuis_banque(mot)
@@ -173,12 +155,16 @@ class CacheReferencesVocales:
             # depuis que celle-ci tire une prise au hasard, voir plus bas) — domaine cepstral,
             # quasi-linéaire, moyenner les ondes désalignées en phase les annulerait.
             self._cache_mfcc[mot] = np.mean(mfcc_prises, axis=0).tolist()
-            # Cible F1/F2 = formants RÉELS estimés par LPC (médiane sur les prises) —
-            # décision utilisateur v27.0 : l'agent doit être noté ET entraîné sur ce
-            # qu'il entend réellement. Repli sur la table théorique si aucune prise
-            # n'est acoustiquement exploitable (silence, clip...) — dégrade vers le
-            # comportement pré-v27.0 plutôt que de casser le cursus.
-            self._cache_formants[mot] = estimer_formants_agrege(prises, SAMPLE_RATE) or formants_cibles
+            # v27.6 (décision utilisateur, "peu importe la forme du son, rien en dur,
+            # dynamique") : cible = les 8 paramètres physiques RÉELS (f0/F1/F2/F3/
+            # durée/amplitude estimés du signal, F1_bw/F2_bw au centre de leur borne
+            # faute d'équivalent mesurable simplement), agrégés par médiane sur TOUTES
+            # les prises. Avant v27.6, seuls F1/F2 étaient extraits — tete_vocale
+            # n'avait jamais de cible dynamique sur les 6 autres dimensions, qui
+            # restaient figées à leur valeur de naissance quel que soit le nombre de
+            # jours d'entraînement (diagnostiqué par l'utilisateur sur un cerveau de
+            # 300 jours : f0/F3/durée/amplitude inchangés au dixième près).
+            self._cache_formants[mot] = estimer_parametres_vocaux_agreges(prises, SAMPLE_RATE)
         else:
             onde_reference = _reference_via_say(mot)
             self._nb_appels_say += 1
@@ -186,7 +172,13 @@ class CacheReferencesVocales:
             mfcc = extraire_mfcc(onde_reference, sample_rate=SAMPLE_RATE)
             self._cache_mfcc_prises[mot] = [mfcc]
             self._cache_mfcc[mot] = mfcc.tolist()
-            self._cache_formants[mot] = formants_cibles
+            # v27.6 : même sans banque personnelle, la cible reste DYNAMIQUE — estimée
+            # sur la référence `say` elle-même (déjà générée ci-dessus) plutôt que la
+            # table théorique VOYELLES_CIBLES à 2 dimensions. `say` est déterministe
+            # pour un mot donné, donc ce repli reste stable d'un run à l'autre, mais il
+            # n'est plus une constante écrite en dur dans le code : il vient de la
+            # même analyse acoustique que la banque personnelle.
+            self._cache_formants[mot] = estimer_parametres_vocaux_complets(onde_reference, SAMPLE_RATE)
 
     def obtenir_pour_palier(self, palier: int) -> tuple:
         """Retourne (mfcc: list, formants_cibles: dict) pour le palier donné, générant
@@ -202,8 +194,8 @@ class CacheReferencesVocales:
         moyenné et figé, sur lequel l'agent apprendrait à reconnaître un son artificiel
         qui n'existe pas en dehors du cache. Avec une seule prise (repli `say`), le
         tirage se réduit trivialement à cette unique prise — comportement inchangé."""
-        mot_cible, formants_cibles = _mot_cible_du_palier(palier)
-        self._generer_si_absent(mot_cible, formants_cibles)
+        mot_cible = _mot_cible_du_palier(palier)
+        self._generer_si_absent(mot_cible)
         prises = self._cache_mfcc_prises[mot_cible]
         mfcc = prises[np.random.randint(len(prises))]
         return mfcc.tolist(), self._cache_formants[mot_cible]
@@ -216,8 +208,8 @@ class CacheReferencesVocales:
         (porte_auditive). Le score spectral doit rester comparé à TOUTES les prises
         (max sur l'ensemble, voir recompense_vocale_mixte), pas seulement à celle tirée
         ce tick-là pour l'audition."""
-        mot_cible, formants_cibles = _mot_cible_du_palier(palier)
-        self._generer_si_absent(mot_cible, formants_cibles)
+        mot_cible = _mot_cible_du_palier(palier)
+        self._generer_si_absent(mot_cible)
         return self._cache_mfcc_prises[mot_cible]
 
     def resume_banque(self) -> str:

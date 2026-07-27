@@ -4,6 +4,30 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [27.6-experimental] - 2026-07-27
+
+### Gradient vocal étendu aux 8 paramètres — la voix intègre f0/F3/durée/amplitude, dynamiquement, jamais en dur
+
+| Type | Details |
+|------|---------|
+| **Commit** | N/A — en attente du commit de cette version |
+| **Catégorie** | feat (correctif de conception majeur, mécanique expérimentale) |
+| **Impact** | Critique (apprentissage vocal) |
+
+**Décision utilisateur : "le cerveau doit intégrer le son peu importe la forme, en même temps que la vue, et être capable de le restituer — rien ne doit être écrit en dur, tout doit être dynamique." Diagnostic sur un cerveau réel de 300 jours (`naulthene_parole.brain`, palier vocal 19/19) : 6 des 8 paramètres physiques de `tete_vocale` (f0, F3, F1_bw, F2_bw, durée, amplitude) étaient restés figés à leur valeur de naissance au dixième près, quel que soit le nombre de jours d'entraînement — seuls F1/F2 (la "voyelle") recevaient jamais de gradient MSE dirigé (`indices_contraints = [1, 2]`, en dur depuis v22.1). L'agent produisait donc toujours le même timbre/hauteur/durée de voix, même après une longue exposition à une voix réelle riche. La question complémentaire de l'utilisateur ("le cerveau écoute-t-il précisément le temps du mot ?") a confirmé que l'entrée auditive (MFCC figé) était déjà correcte — le problème était uniquement du côté de l'APPRENTISSAGE de la sortie, pas de la perception.**
+
+**Correctif en trois volets, tous DYNAMIQUES (aucune valeur écrite en dur) :** (1) `hemisphere_audio.py` gagne `estimer_pitch_f0` (autocorrélation, technique standard de pitch-tracking — aucune constante, la fréquence est cherchée dans la plage physique `BORNES_F0`), `estimer_duree_amplitude` (mesures directes du signal : longueur réelle, crête absolue), et l'extraction de F3 est ajoutée à `estimer_formants_lpc` (3e racine LPC triée, déjà calculée mais jusqu'ici ignorée). `estimer_parametres_vocaux_complets`/`_agreges` combinent les trois pour produire les 8 paramètres à partir d'UN enregistrement réel (F1_bw/F2_bw n'ont pas d'équivalent mesurable simplement par LPC — repli sur le centre de leur plage de synthèse, pas une valeur de voix théorique). (2) `lecons_vocales.CacheReferencesVocales` retourne désormais ce dict à 8 dimensions — dérivé de la banque personnelle si elle existe, SINON de la référence `say` elle-même (déjà générée dans ce chemin) : même le repli `say` devient une estimation acoustique dynamique, plus une table théorique figée (`VOYELLES_CIBLES` et `_voyelle_dominante`, devenues mortes, retirées). (3) `noyau._construire_cible_vocale` normalise chaque dimension EFFECTIVEMENT présente dans `formants_cibles` (au lieu de F1/F2 systématiquement) ; `_evaluer_production_vocale` calcule `indices_contraints` à partir des clés réellement fournies — un appelant qui ne donne encore que F1/F2 (`client_professeur.py`) reste contraint à `[1, 2]`, rétrocompatibilité stricte ; un appelant qui fournit les 8 clés (les 3 cursus, l'Arène, via `CacheReferencesVocales`) contraint désormais les 8 dimensions.**
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/audio/hemisphere_audio.py` | `estimer_formants_lpc` retourne aussi `F3` (3e candidat trié des racines LPC déjà calculées). Nouvelles `estimer_pitch_f0` (autocorrélation), `estimer_duree_amplitude` (mesure directe), `estimer_parametres_vocaux_complets`/`_agreges` (les 8 paramètres, combinant les trois). |
+| `src/naulthene/audio/lecons_vocales.py` | `_generer_si_absent` utilise `estimer_parametres_vocaux_agreges`(banque)/`estimer_parametres_vocaux_complets`(repli `say`) au lieu de `estimer_formants_agrege`(2 dims)/`VOYELLES_CIBLES` théorique. `_mot_cible_du_palier` simplifiée (ne retourne plus de formants théoriques, devenus inutiles). `_voyelle_dominante` retirée (plus aucun appelant). |
+| `src/naulthene/cerveau/noyau.py` | Import étendu (`BORNES_F0/F3/BW/DUREE/AMPLITUDE`). `_construire_cible_vocale` : boucle sur les 8 dimensions (clé présente → normalisée, absente → neutre 0.5) au lieu de F1/F2 en dur. `_evaluer_production_vocale` : `indices_contraints` calculés dynamiquement depuis les clés présentes dans `formants_cibles`, plus `[1, 2]` fixe. |
+
+**Validation** : `estimer_pitch_f0`/`estimer_duree_amplitude`/`estimer_parametres_vocaux_complets` testés sur les 5 voyelles + "porte" via `say` (f0 dans une plage plausible 135-207Hz, durée/amplitude cohérentes avec le signal réel, valeurs clampées correctement) ; agrégation multi-prises et repli sur liste vide vérifiés ; `_construire_cible_vocale` testée avec dict complet (8 dims normalisées) et partiel (F1/F2 seuls, reste neutre) ; indices contraints vérifiés dynamiques dans les deux cas (`[0..7]` complet, `[1,2]` partiel = rétrocompatibilité stricte avec `client_professeur.py`) ; run réel de 2 jours sur `naulthene_parole.brain` (cerveau de 300 jours, palier 19/19) confirmant le déblocage effectif : `f0` 190.0→187-189 (mouvement vers la cible 114.7), `F3` 2750.0 (figé depuis 300 jours)→2730-2744 (mouvement vers la cible 2502.1), `durée` 0.3→0.4 (vers la cible 0.6), en seulement 2 jours d'entraînement supplémentaires ; non-régression confirmée sur `cursus_developpemental.py` (2 jours, aucune erreur) ; les 4 points de synchronisation des couches vérifiés intacts ; tous les modules consommateurs importés sans erreur. Les deux cerveaux de test restaurés à leur état pré-vérification après validation.
+
+---
+
 ## [27.5-experimental] - 2026-07-27
 
 ### Dopamine vocale proportionnelle à la méconnaissance — corrige la "boucle infinie de promotion vocale"
