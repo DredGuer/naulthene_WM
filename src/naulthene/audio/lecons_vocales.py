@@ -135,21 +135,25 @@ def _references_depuis_banque(mot: str, racine: Path = RACINE_BANQUE) -> list:
 
 
 class CacheReferencesVocales:
-    """Cache en mémoire des références audio du curriculum vocal — génère chaque
-    référence UNE SEULE FOIS (au premier accès), pas à chaque tick. Le cursus vit
-    des centaines de milliers de ticks vocaux (jusqu'à 1000 jours × 200 ticks
-    d'après-midi) ; ré-invoquer `say`/`afconvert` à cette fréquence serait à la fois
-    lent (latence process) et inutile, les références étant déterministes pour un mot
-    donné. Clé de cache = le mot cible (pas le palier), pour dédupliquer naturellement
-    les paliers qui partagent une voyelle dominante (voir `_mot_cible_du_palier`).
+    """Cache en mémoire des références audio du curriculum vocal — GÉNÈRE (say/lecture
+    disque + extraction MFCC) chaque prise UNE SEULE FOIS par mot (au premier accès),
+    pas à chaque tick. Le cursus vit des centaines de milliers de ticks vocaux (jusqu'à
+    900-1000 jours × 400-800 ticks) ; ré-invoquer `say`/`afconvert`/`soundfile.read` à
+    cette fréquence serait à la fois lent (latence process/E-S disque) et inutile, le
+    contenu de la banque étant stable pendant tout un run. Clé de cache = le mot cible
+    (pas le palier), pour dédupliquer naturellement les paliers qui partagent une
+    voyelle dominante (voir `_mot_cible_du_palier`).
 
     v27.0 : source de la référence = banque vocale disque (voix de l'utilisateur) si
     des prises existent pour ce mot, sinon repli sur `say` — comportement identique à
     avant v27.0 tant qu'aucune prise n'a été enregistrée (voir
-    instruments/enregistreur_voix.py)."""
+    instruments/enregistreur_voix.py). Quand PLUSIEURS prises existent pour un mot,
+    `obtenir_pour_palier` en tire UNE au hasard À CHAQUE APPEL (donc potentiellement à
+    chaque tick) — la génération est mise en cache, le TIRAGE ne l'est pas."""
 
     def __init__(self):
-        self._cache_mfcc = {}          # mot -> vecteur MFCC MOYEN (liste de floats, DIM_MFCC dims)
+        self._cache_mfcc = {}          # mot -> vecteur MFCC MOYEN (liste de floats, DIM_MFCC dims) —
+                                        # conservé pour repli "say" (une seule prise, rien à tirer)
         self._cache_formants = {}      # mot -> dict {"F1":.., "F2":..} — réels (LPC) si banque, théoriques sinon
         self._cache_mfcc_prises = {}   # mot -> liste de MFCC (np.ndarray) des prises INDIVIDUELLES
         self._nb_appels_say = 0        # compteur de vérification (voir tests)
@@ -157,7 +161,7 @@ class CacheReferencesVocales:
         self.source_par_mot = {}       # mot -> "banque (N prise(s))" | "say (repli)"
 
     def _generer_si_absent(self, mot: str, formants_cibles: dict):
-        if mot in self._cache_mfcc:
+        if mot in self._cache_mfcc_prises:
             return
         prises = _references_depuis_banque(mot)
         if prises:
@@ -165,8 +169,9 @@ class CacheReferencesVocales:
             self.source_par_mot[mot] = f"banque ({len(prises)} prise(s))"
             mfcc_prises = [extraire_mfcc(p, sample_rate=SAMPLE_RATE) for p in prises]
             self._cache_mfcc_prises[mot] = mfcc_prises
-            # Moyenne des MFCC (domaine cepstral, quasi-linéaire) plutôt que des ondes —
-            # moyenner des ondes désalignées en phase les annulerait partiellement.
+            # Moyenne conservée pour compat/diagnostic (plus utilisée par obtenir_pour_palier
+            # depuis que celle-ci tire une prise au hasard, voir plus bas) — domaine cepstral,
+            # quasi-linéaire, moyenner les ondes désalignées en phase les annulerait.
             self._cache_mfcc[mot] = np.mean(mfcc_prises, axis=0).tolist()
             # Cible F1/F2 = formants RÉELS estimés par LPC (médiane sur les prises) —
             # décision utilisateur v27.0 : l'agent doit être noté ET entraîné sur ce
@@ -185,18 +190,32 @@ class CacheReferencesVocales:
 
     def obtenir_pour_palier(self, palier: int) -> tuple:
         """Retourne (mfcc: list, formants_cibles: dict) pour le palier donné, générant
-        et mettant en cache la référence audio si c'est la première fois qu'elle est
-        demandée. C'est la méthode d'entrée principale utilisée par la boucle du
-        cursus à chaque tick d'après-midi vocal."""
+        et mettant en cache les références audio si c'est la première fois qu'elles sont
+        demandées. C'est la méthode d'entrée principale utilisée par la boucle du
+        cursus à chaque tick d'après-midi vocal.
+
+        v27.0 (variation naturelle) : quand plusieurs prises existent pour le mot
+        (banque vocale), UNE prise est tirée AU HASARD, UNIFORMÉMENT, À CHAQUE APPEL —
+        donc potentiellement à chaque tick. Décision utilisateur : faire entendre à
+        l'oreille (porte_auditive) la vraie variation naturelle d'une voix humaine
+        (plusieurs "mur" jamais rigoureusement identiques) plutôt qu'un seul gabarit
+        moyenné et figé, sur lequel l'agent apprendrait à reconnaître un son artificiel
+        qui n'existe pas en dehors du cache. Avec une seule prise (repli `say`), le
+        tirage se réduit trivialement à cette unique prise — comportement inchangé."""
         mot_cible, formants_cibles = _mot_cible_du_palier(palier)
         self._generer_si_absent(mot_cible, formants_cibles)
-        return self._cache_mfcc[mot_cible], self._cache_formants[mot_cible]
+        prises = self._cache_mfcc_prises[mot_cible]
+        mfcc = prises[np.random.randint(len(prises))]
+        return mfcc.tolist(), self._cache_formants[mot_cible]
 
     def obtenir_mfcc_prises(self, palier: int) -> list:
         """Les MFCC des prises INDIVIDUELLES du mot du palier (v27.0), pour le canal
         spectral de la récompense mixte (voir hemisphere_audio.recompense_vocale_mixte,
-        noyau._evaluer_production_vocale). Distinct du MFCC MOYEN retourné par
-        obtenir_pour_palier, qui reste l'ENTRÉE de l'oreille (porte_auditive)."""
+        noyau._evaluer_production_vocale) — la liste COMPLÈTE, contrairement à
+        obtenir_pour_palier qui n'en tire qu'UNE au hasard pour l'entrée de l'oreille
+        (porte_auditive). Le score spectral doit rester comparé à TOUTES les prises
+        (max sur l'ensemble, voir recompense_vocale_mixte), pas seulement à celle tirée
+        ce tick-là pour l'audition."""
         mot_cible, formants_cibles = _mot_cible_du_palier(palier)
         self._generer_si_absent(mot_cible, formants_cibles)
         return self._cache_mfcc_prises[mot_cible]
