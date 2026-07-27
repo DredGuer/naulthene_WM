@@ -1,12 +1,12 @@
-# Guide de Lancement — Naulthène AGI (Cuve Persistante + Hémisphère Audio + Cursus par Ères + Cerveau Bébé)
+# Guide de Lancement — Naulthène AGI (Cuve Persistante + Hémisphère Audio + Cursus par Ères + Cerveau Bébé + Cursus de la Parole)
 
-Ce guide couvre le lancement local (Mac) de l'écosystème V21/V22/V23 : le cerveau persistant
+Ce guide couvre le lancement local (Mac) de l'écosystème V21-V27 : le cerveau persistant
 (`daemon_cerveau.py`, dans `src/naulthene/cuve/`) et ses deux clients (`client_corps.py` pour
-MiniGrid, `client_professeur.py` pour les leçons de parole ponctuelles), ainsi que le Cursus
-Développemental par Ères (`cursus_developpemental.py`, dans `src/naulthene/salles_de_classe/`,
-un programme autonome de 1000 jours, voir §6) et le Cerveau Bébé Développemental
-(`cursus_bebe.py`, dans `src/naulthene/salles_de_classe/`, un programme autonome de 1440 jours,
-voir §6bis). Voir `readme.md` pour l'architecture complète, `CHANGELOG.md` pour l'historique
+MiniGrid, `client_professeur.py` pour les leçons de parole ponctuelles), ainsi que trois cursus
+développementaux autonomes (`src/naulthene/salles_de_classe/`) : le Cursus par Ères
+(`cursus_developpemental.py`, 1000 jours, voir §6), le Cerveau Bébé (`cursus_bebe.py`, 1440
+jours, voir §6bis) et le Cursus de la Parole (`cursus_parole.py`, 900 jours, v27.0-expérimental,
+voir §6ter). Voir `readme.md` pour l'architecture complète, `CHANGELOG.md` pour l'historique
 des versions.
 
 Depuis le passage en package Python (voir `CLAUDE.md`, section « Architecture »), tous les
@@ -38,6 +38,36 @@ curl -s http://localhost:11434/api/tags > /dev/null && echo "✅ Ollama actif" |
 ```
 
 `say` (TTS macOS) est natif, rien à installer.
+
+---
+
+## 0bis. Enregistrer ta voix (facultatif, v27.0-expérimental)
+
+**Cette étape est entièrement facultative** — tous les modes de lancement ci-dessous (Cuve,
+Cursus par Ères, Cerveau Bébé, Cursus de la Parole) fonctionnent sans elle, avec un repli
+automatique sur `say` exactement comme avant la v27.0. Elle sert uniquement à remplacer la
+cible théorique des voyelles/mots par la voix réelle de l'utilisateur.
+
+```bash
+cd "/Users/dredguer/Documents/1. Dossier personnel important/1. Adrien/21. AGI"
+source venv/bin/activate
+PYTHONPATH=src python -m naulthene.instruments.enregistreur_voix --prises 3
+```
+
+- Sans `--mots`, enregistre tout le curriculum vocal (`professeur_gemma.CURRICULUM_VOCAL`).
+- `--mots a e i o u porte clé` : ne demande que ces mots-là.
+- `--prises N` (défaut 3) : nombre de prises par mot — **recommandé de rester à 3 minimum**,
+  la cible F1/F2 est estimée par la médiane des prises (une prise ratée, toux ou saturation, est
+  ignorée dès qu'il y en a au moins 3).
+- `--duree 2.0` : durée d'enregistrement par prise, en secondes.
+- `--pas-de-relecture` : désactive la relecture/validation après chaque prise (enregistrement
+  plus rapide, moins de contrôle qualité).
+
+Les prises sont écrites dans `voix/<mot>/<mot>_NN.wav` (jamais trackées par git, comme
+`brains/*.brain` — voir `.gitignore`). N'importe quel cursus qui utilise
+`lecons_vocales.CacheReferencesVocales` (Cursus par Ères, Cerveau Bébé, Cursus de la Parole,
+l'Arène) lit automatiquement cette banque à son prochain lancement — aucune configuration
+supplémentaire.
 
 ---
 
@@ -108,6 +138,10 @@ PYTHONPATH=src python -m naulthene.cuve.client_professeur --port 9999 --palier 2
 | 2–6 | Voyelles a / e / i / o / u |
 | 7–9 | Syllabes ba / ma / pa |
 | 10–11 | Mots courts papa / maman |
+| 12 | Mot "porte" |
+| 13–14 | Combinatoire "ouvre porte" / "prends clé" |
+| 15–18 (v27.0) | Nommer mur / clé / but / vide |
+| 19 (v27.0) | Syntagme couleur+objet "porte jaune" |
 
 Tu **entends l'agent babiller en temps réel**, avec un score de proximité de formants
 affiché à chaque tick. En fin de leçon (si non interrompue), un jugement qualitatif de
@@ -299,6 +333,55 @@ nouvellement greffés" du tableau de dépannage en fin de document.
 
 ---
 
+## 6ter. Le Cursus de la Parole (autonome, 900 jours, v27.0-expérimental)
+
+Comme les deux cursus précédents (§6, §6bis), ce mode ne passe **pas** par `daemon_cerveau.py`
+— c'est un script **standalone** (`src/naulthene/salles_de_classe/cursus_parole.py`) qui pilote
+directement un cerveau à travers **900 jours subjectifs × 800 ticks**, découpés en 3 phases
+pédagogiques (voir `readme.md`, section "Nouveautés v27.0 — L'École de la Parole & Synesthésie") :
+
+| Phase | Jours | Nom | Ce qui change |
+|-------|-------|-----|----------------|
+| 0 | 1–299 | Imprégnation totale | Le professeur nomme systématiquement le mot du curriculum, matin et après-midi (guidage 100%) — corrige même quand l'agent a bon |
+| 1 | 300–599 | Autonomie guidée | Matin : synesthésie (mot lu dans la case devant l'agent) ; après-midi : curriculum. Guidage décroît de 100% vers ~40% |
+| 2 | 600–899 | Émancipation | Synesthésie + syntagmes couleur+objet toute la journée. Guidage ~40% → 10% |
+
+⚠️ **Prérequis pour la synesthésie** : les phases 1-2 ont besoin que l'agent BOUGE réellement
+dans MiniGrid pour que la case devant lui change (voir `noyau.LecteurCaseFrontale`) — c'est pour
+ça que le matin des phases 1-2 est en mode `"minigrid"`, jamais `"vocal_isole"`.
+
+⚠️ **Cerveau séparé** : `cursus_parole.py` charge/sauvegarde un fichier dédié
+`brains/naulthene_parole.brain` — distinct des trois autres écosystèmes (`naulthene_v21.brain`
+Cuve, `naulthene_cursus.brain` Cursus par Ères, `naulthene_bb.brain` Cerveau Bébé). Les quatre
+ne partagent jamais le même cerveau.
+
+✅ **Persistance automatique**, même garantie que les cursus précédents : sauvegarde après
+CHAQUE nuit. `--jours N` ajoute N jours SUPPLÉMENTAIRES à partir de l'état repris.
+
+**Un seul terminal**, pas de Cuve à lancer :
+
+```bash
+cd "/Users/dredguer/Documents/1. Dossier personnel important/1. Adrien/21. AGI"
+source venv/bin/activate
+WANDB_MODE=offline PYTHONPATH=src python -m naulthene.salles_de_classe.cursus_parole --jours 900
+```
+
+**Recommandé pour un premier essai** (valider que tout tourne avant de lancer les 900 jours) :
+
+```bash
+WANDB_MODE=offline PYTHONPATH=src python -m naulthene.salles_de_classe.cursus_parole --jours 3 --no-wandb
+```
+
+Au démarrage, le script préchauffe les références vocales (banque disque `voix/` en priorité,
+repli `say` sinon — voir §0bis) et affiche un résumé (`N mot(s) depuis la banque, M depuis say`)
+puis enchaîne les journées. Chaque journée affiche le bilan de nuit habituel, plus
+`🎓 [PROMOTION VOCALE]` quand le palier vocal progresse. Un changement de phase est signalé par
+`🗣️ [NOUVELLE PHASE]` (jour 300 → Autonomie guidée, jour 600 → Émancipation).
+
+`Ctrl+C` interrompt le script proprement à tout moment (même garde-fous que §6/§6bis).
+
+---
+
 ## 7. L'Arène & Démo Live (observer un cerveau entraîné, sans jamais l'altérer)
 
 Une fenêtre graphique qui affiche MiniGrid en direct (l'agent qui se déplace) + un panneau de
@@ -364,6 +447,7 @@ proprement (fermeture de la fenêtre pygame + de l'environnement MiniGrid, sans 
 | Jugement Gemma très lent (~30s) | Normal — `gemma4:e4b` est un modèle à raisonnement, mesuré à 8-30s/réponse |
 | Rien ne se passe après `--micro` | Vérifie l'autorisation micro macOS (Réglages Système → Confidentialité → Micro → Terminal) |
 | Message "Hémisphères nouvellement greffés" à chaque lancement | Anormal après le premier run réussi — vérifie que la Cuve sauvegarde bien avant l'arrêt (pas de `kill -9`) |
-| Le cursus (§6) ne partage pas mes acquis MiniGrid de la Cuve | Normal et voulu — `brains/naulthene_cursus.brain` (Cursus) et `brains/naulthene_v21.brain` (Cuve) sont deux cerveaux séparés, jamais mélangés (voir §6). Le cursus reprend bien SES PROPRES acquis d'un lancement à l'autre |
+| Le cursus (§6) ne partage pas mes acquis MiniGrid de la Cuve | Normal et voulu — `brains/naulthene_cursus.brain` (Cursus), `brains/naulthene_v21.brain` (Cuve), `brains/naulthene_bb.brain` (Cerveau Bébé) et `brains/naulthene_parole.brain` (Cursus de la Parole) sont quatre cerveaux séparés, jamais mélangés. Chaque cursus reprend bien SES PROPRES acquis d'un lancement à l'autre |
 | `FileNotFoundError` au lancement de l'Arène (§7) | Aucun `brains/naulthene_cursus.brain` trouvé — lance d'abord le Cursus (§6) au moins une nuit, ou pointe `--brain` vers `brains/naulthene_v21.brain` |
 | La fenêtre de l'Arène reste noire/vide | Vérifie que `pygame-ce` est bien installé (`pip list \| grep pygame`) ; regarde la console pour une éventuelle erreur de rendu |
+| La cible F1/F2 reste théorique malgré des prises enregistrées (§0bis) | Vérifie le chemin `voix/<mot>/<mot>_NN.wav` (le mot doit correspondre EXACTEMENT à une cible de `professeur_gemma.CURRICULUM_VOCAL`, accents compris) — au préchauffage, `resume_banque()` affiche "N mot(s) depuis la banque" ; si N=0, aucune prise n'a été trouvée pour aucun mot du curriculum |

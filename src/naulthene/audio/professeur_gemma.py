@@ -51,6 +51,14 @@ TIMEOUT_EMBEDDING = 15.0    # le modèle d'embedding est nettement plus rapide
 # être répercutée dans agi_local_test.py::NB_PALIERS_VOCAUX (utilisé par
 # seuil_jour_vocal_reussi pour interpoler le seuil de promotion) — sinon l'interpolation
 # du seuil École de Rattrapage devient incohérente avec la longueur réelle du curriculum.
+#
+# Paliers 15-19 (v27.0, "École de la Parole & Synesthésie", expérimental) : mots
+# désignant les objets MiniGrid que l'agent voit réellement devant lui (voir
+# noyau.LecteurCaseFrontale) — c'est ce qui rend la synesthésie réelle plutôt que
+# purement déclarative : le mot cible n'est plus tiré d'une table indépendante de ce
+# que l'agent regarde. Note NFD (correctif v27.0, voir lecons_vocales._voyelle_dominante) :
+# "clé" ne contenait AUCUNE voyelle de VOYELLES_CIBLES avant le dépliage des accents
+# ("é" ≠ "e") — vérifié ci-dessous pour chaque nouveau mot.
 CURRICULUM_VOCAL = [
     {"palier": 1, "nom": "Vocaliser", "cible": None},       # n'importe quel son voisé
     {"palier": 2, "nom": "Voyelle 'a'", "cible": "a"},
@@ -66,6 +74,11 @@ CURRICULUM_VOCAL = [
     {"palier": 12, "nom": "Mot 'porte'", "cible": "porte"},
     {"palier": 13, "nom": "Combinatoire 'ouvre porte'", "cible": "ouvre porte"},
     {"palier": 14, "nom": "Combinatoire 'prends clé'", "cible": "prends clé"},
+    {"palier": 15, "nom": "Nommer le mur", "cible": "mur"},           # voyelle: u
+    {"palier": 16, "nom": "Nommer la clé", "cible": "clé"},           # voyelle: e (via NFD)
+    {"palier": 17, "nom": "Nommer le but", "cible": "but"},           # voyelle: u
+    {"palier": 18, "nom": "Nommer le vide", "cible": "vide"},         # voyelle: i
+    {"palier": 19, "nom": "Syntagme 'porte jaune'", "cible": "porte jaune"},  # voyelle: o
 ]
 
 

@@ -19,6 +19,14 @@ Le choix de synthèse par formants (décision utilisateur, voir CONCEPTION_v22_a
 §2-3) réduit l'espace de sortie vocal à ~8 nombres physiques plutôt qu'une onde brute
 arbitraire — c'est ce qui rend le problème de babillage RL tractable (l'agent apprend
 à « placer sa bouche », pas à halluciner un signal audio complet).
+
+v27.0 (expérimental, "École de la Parole & Synesthésie") ajoute deux briques : un
+estimateur de formants réels par analyse LPC (`estimer_formants_lpc`/
+`estimer_formants_agrege`), pour que la cible F1/F2 vienne de la voix de l'utilisateur
+plutôt que de la table théorique VOYELLES_CIBLES ; et une distance/récompense spectrale
+MFCC↔MFCC (`distance_spectrale`/`recompense_spectrale`/`recompense_vocale_mixte`), pour
+noter l'agent sur le son réellement synthétisé, pas seulement sur deux nombres. Voir
+docs/CONCEPTION_v22_audio.md §8.
 """
 
 import numpy as np
@@ -96,13 +104,26 @@ class SynthetiseurFormants:
     def _resonateur(self, signal: np.ndarray, freq: float, bw: float) -> np.ndarray:
         """Filtre résonant du second ordre (biquad passe-bande) centré sur `freq`,
         de largeur `bw` — un formant du conduit vocal. Coefficients dérivés de la
-        forme standard "resonator" (Klatt-like), stable pour freq < sample_rate/2."""
+        forme standard "resonator" (Klatt-like), stable pour freq < sample_rate/2.
+
+        v27.0 : la récurrence IIR est vectorisée via scipy.signal.lfilter (même
+        coefficients, même équation aux différences, sortie numériquement identique à
+        la boucle Python d'origine — ~100x plus rapide). Nécessaire pour évaluer un
+        canal spectral MFCC↔MFCC à chaque tick sans doubler la durée d'un run long (voir
+        recompense_vocale_mixte). Repli sur la boucle Python si scipy est absent — ce
+        module reste "pur numpy, deps lazy", scipy n'est qu'une accélération optionnelle."""
         freq = min(freq, self.sample_rate / 2.0 - 100.0)
         r = np.exp(-np.pi * bw / self.sample_rate)
         theta = 2.0 * np.pi * freq / self.sample_rate
         a1 = 2.0 * r * np.cos(theta)
         a2 = -r * r
         gain = (1.0 - r * r) * 0.5  # normalisation approximative de l'énergie de sortie
+
+        try:
+            from scipy.signal import lfilter
+            return lfilter([gain], [1.0, -a1, -a2], signal)
+        except ImportError:
+            pass
 
         sortie = np.zeros_like(signal)
         y1, y2 = 0.0, 0.0
@@ -164,14 +185,28 @@ MFCC_ECART_TYPE_EMPIRIQUE = 120.0
 
 
 def extraire_mfcc(onde: np.ndarray, sample_rate: int = SAMPLE_RATE, n_mfcc: int = 13,
-                   n_frames: int = 10) -> np.ndarray:
+                   n_frames: int = 10, standardisation: str = "echantillon") -> np.ndarray:
     """Onde audio → vecteur MFCC aplati de taille DIM_MFCC (13×10=130, voir
     agi_local_test.py), standardisé. C'est le "son brut" perçu par `porte_auditive` —
     la moitié physique de la double entrée auditive (l'autre moitié est l'embedding
     sémantique, voir professeur_gemma.py). Padding/troncature à `n_frames` frames
     temporelles fixes pour garantir une dimension constante quelle que soit la durée
-    du son d'entrée. Voir MFCC_MOYENNE_EMPIRIQUE/MFCC_ECART_TYPE_EMPIRIQUE ci-dessus
-    pour le correctif de saturation (v22.1)."""
+    du son d'entrée.
+
+    `standardisation` (v27.0) :
+      - "echantillon" (défaut) : centre/réduit par la moyenne/écart-type du vecteur MFCC
+        LUI-MÊME (CMVN par échantillon), plutôt que par MFCC_MOYENNE_EMPIRIQUE/
+        MFCC_ECART_TYPE_EMPIRIQUE ci-dessus, calibrées une fois sur 7 références `say`.
+        Avec une banque de prises micro réelles (v27.0, lecons_vocales), le niveau
+        d'entrée varie de plusieurs dizaines de dB d'une prise à l'autre — une constante
+        d'échelle fixe re-sature alors la sigmoid de tete_vocale exactement comme le bug
+        v22.1 d'origine (voir MFCC_MOYENNE_EMPIRIQUE ci-dessus). Effet de bord assumé :
+        cette standardisation détruit l'information de niveau absolu (pratique standard,
+        dite CMVN) — acceptable ici car l'identité vocalique est portée par la FORME
+        spectrale, pas le niveau, et le silence est codé en amont par obs_auditive=None
+        (jamais par un vecteur MFCC nul).
+      - "constantes" : comportement strictement v22.1 (MFCC_MOYENNE_EMPIRIQUE/
+        MFCC_ECART_TYPE_EMPIRIQUE), conservé pour comparaison A/B."""
     import librosa
 
     onde64 = onde.astype(np.float64)
@@ -188,7 +223,12 @@ def extraire_mfcc(onde: np.ndarray, sample_rate: int = SAMPLE_RATE, n_mfcc: int 
         indices = np.linspace(0, mfcc.shape[1] - 1, n_frames).astype(int)
         mfcc = mfcc[:, indices]
 
-    mfcc = (mfcc - MFCC_MOYENNE_EMPIRIQUE) / MFCC_ECART_TYPE_EMPIRIQUE
+    if standardisation == "echantillon":
+        mu = float(mfcc.mean())
+        sigma = float(mfcc.std())
+        mfcc = (mfcc - mu) / max(sigma, 1e-3)
+    else:
+        mfcc = (mfcc - MFCC_MOYENNE_EMPIRIQUE) / MFCC_ECART_TYPE_EMPIRIQUE
     return mfcc.flatten().astype(np.float32)  # (n_mfcc * n_frames,) = (DIM_MFCC,)
 
 
@@ -246,3 +286,222 @@ def transcrire_whisper(onde: np.ndarray, sample_rate: int = SAMPLE_RATE, modele:
 
     resultat = _modele_whisper.transcribe(onde16, language="fr", fp16=False)
     return resultat["text"].strip()
+
+
+# --- Analyse acoustique de références réelles (v27.0, "École de la Parole & Synesthésie") ---
+# Jusqu'ici, la cible F1/F2 de toute leçon vocale venait de VOYELLES_CIBLES — une table
+# théorique d'une voyelle moyenne d'un locuteur moyen. La v27.0 permet d'extraire les
+# formants RÉELS d'un enregistrement (la voix de l'utilisateur, voir
+# lecons_vocales.CacheReferencesVocales) et de comparer le son PRODUIT par l'agent, pas
+# seulement les deux nombres qu'il a choisi d'émettre, à ce que l'utilisateur a
+# réellement dit — récompense ET apprentissage doivent porter sur la même vérité.
+ORDRE_LPC_PAR_KHZ = 2                # ordre LPC ≈ 2 + 2*sr_kHz → 2+16=18 à 16 kHz, règle
+                                      # empirique classique pour l'analyse de la parole
+LARGEUR_BANDE_MAX_FORMANT = 400.0    # Hz — au-delà, la racine LPC est trop amortie pour
+                                      # être un vrai formant (bruit / pôle parasite)
+FREQ_MIN_FORMANT = 90.0              # Hz — élimine les racines proches de la composante continue
+FREQ_MAX_FORMANT = 5000.0
+FENETRE_ANALYSE_LPC = 0.025          # 25 ms — fenêtre standard d'analyse de la parole
+PAS_ANALYSE_LPC = 0.010              # 10 ms
+PERCENTILE_ENERGIE_TRAME_LPC = 70    # ne garder que les trames au-delà de ce percentile
+                                      # d'énergie (voir estimer_formants_lpc, étape 2bis)
+
+POIDS_RECOMPENSE_FORMANTS = 0.6   # F1/F2 restent dominants : ce sont les SEULES dimensions
+                                   # où tete_vocale reçoit un gradient MSE dirigé (voir
+                                   # noyau._evaluer_production_vocale, indices [1, 2]).
+POIDS_RECOMPENSE_SPECTRALE = 0.4  # le timbre global (MFCC) apporte la nuance que 2 formants
+                                   # ne capturent pas, mais ne peut pas dominer un canal que
+                                   # l'agent n'a AUCUN moyen direct d'optimiser (pas de
+                                   # gradient dirigé dessus) — sinon le score devient
+                                   # largement non-optimisable, plafond artificiel de
+                                   # progression (même piège que l'ancien seuil fixe 0.5).
+PERIODE_EVAL_SPECTRALE = 10       # le canal spectral (synthèse + MFCC de la production de
+                                   # l'agent) coûte ~100x un score de formants même avec la
+                                   # synthèse vectorisée (librosa.feature.mfcc reste une
+                                   # STFT). Les paramètres vocaux varient très peu d'un tick
+                                   # au suivant (le MFCC de référence est constant sur toute
+                                   # une leçon), donc rafraîchir tous les PERIODE_EVAL_SPECTRALE
+                                   # ticks ne perd quasi aucune information utile.
+
+
+def estimer_formants_lpc(onde: np.ndarray, sample_rate: int = SAMPLE_RATE) -> dict | None:
+    """Estime F1/F2 RÉELS d'un enregistrement par analyse LPC (Linear Predictive Coding)
+    — le filtre INVERSE du modèle source-filtre de SynthetiseurFormants. Décision
+    utilisateur v27.0 : l'agent doit être noté ET entraîné sur la voix de l'utilisateur,
+    pas sur la table théorique VOYELLES_CIBLES.
+
+    Algorithme :
+      1. pré-accentuation y[n] = x[n] - 0.97*x[n-1] (compense la pente spectrale de
+         -6 dB/octave de la source glottique — sans elle F1 est systématiquement
+         sur-estimé en énergie et les formants hauts disparaissent) ;
+      2. fenêtrage de Hamming sur des trames de FENETRE_ANALYSE_LPC, pas PAS_ANALYSE_LPC,
+         en ne gardant que les trames au-delà du PERCENTILE_ENERGIE_TRAME_LPC-ième
+         percentile d'énergie (le NOYAU stable de la voyelle, pas juste "au-dessus du
+         silence") — un seuil relatif à la médiane laisse passer trop de trames
+         d'attaque/chute où la résonance formantique est encore en train de s'établir :
+         sur ces trames, la bande passante du pôle F1 dépasse souvent
+         LARGEUR_BANDE_MAX_FORMANT et se fait filtrer, ce qui pousse F2 dans la case F1
+         et fausse gravement la médiane (validé empiriquement : un seuil à 20% de la
+         médiane donnait F1/F2 inversés sur ~40% des trames de "a", contre un signal
+         propre et stable sur les trames de forte énergie) ;
+      3. LPC d'ordre 2 + sample_rate//1000 par trame (librosa.lpc, algorithme de Burg) ;
+      4. racines du polynôme LPC (np.roots), on garde le demi-plan imaginaire positif ;
+      5. conversion en Hz : f = angle(r) * sr / (2*pi) ; largeur de bande :
+         bw = -ln(|r|) * sr / pi ;
+      6. filtrage des candidats : FREQ_MIN_FORMANT < f < FREQ_MAX_FORMANT et
+         bw < LARGEUR_BANDE_MAX_FORMANT ; tri croissant ; F1 = 1er, F2 = 2e ;
+      7. médiane inter-trames de F1 et de F2 (robuste aux trames aberrantes, contrairement
+         à la moyenne).
+
+    GARDE-FOU NON NÉGOCIABLE : F1/F2 sont clampés aux bornes physiques du synthétiseur
+    (BORNES_F1/BORNES_F2) avant d'être retournés. Sans ce clamp, une cible LPC hors
+    bornes serait physiquement INATTEIGNABLE par tete_vocale (sortie sigmoid démappée
+    dans ces mêmes bornes) — la perte MSE plafonnerait, aucune promotion possible,
+    rejouant le piège historique du seuil de promotion inatteignable sous une forme plus
+    difficile à diagnostiquer (la cause serait dans un module signal, pas un seuil).
+
+    Retourne {"F1": Hz, "F2": Hz} ou None si aucune trame exploitable (silence, clip,
+    signal trop court, ou F1 >= F2 après clamp — trame incohérente) — None est un cas
+    NORMAL que l'appelant doit gérer par repli sur VOYELLES_CIBLES, jamais une exception."""
+    import librosa
+
+    onde64 = np.asarray(onde, dtype=np.float64).flatten()
+    if onde64.size < int(FENETRE_ANALYSE_LPC * sample_rate):
+        return None
+
+    preaccentue = np.append(onde64[0], onde64[1:] - 0.97 * onde64[:-1])
+
+    taille_trame = int(FENETRE_ANALYSE_LPC * sample_rate)
+    pas_trame = int(PAS_ANALYSE_LPC * sample_rate)
+    fenetre = np.hamming(taille_trame)
+    ordre = 2 + sample_rate // 1000
+
+    energies = []
+    trames = []
+    for debut in range(0, max(1, len(preaccentue) - taille_trame + 1), pas_trame):
+        trame = preaccentue[debut:debut + taille_trame]
+        if trame.size < taille_trame:
+            continue
+        trames.append(trame * fenetre)
+        energies.append(float(np.sum(trame ** 2)))
+
+    if not trames:
+        return None
+    seuil_energie = float(np.percentile(energies, PERCENTILE_ENERGIE_TRAME_LPC))
+
+    candidats_f1, candidats_f2 = [], []
+    for trame, energie in zip(trames, energies):
+        if energie < seuil_energie:
+            continue
+        try:
+            coeffs = librosa.lpc(trame, order=ordre)
+        except Exception:
+            continue
+        racines = np.roots(coeffs)
+        racines = racines[racines.imag > 0]
+        if racines.size == 0:
+            continue
+
+        freqs = np.angle(racines) * sample_rate / (2.0 * np.pi)
+        bws = -np.log(np.abs(racines) + 1e-12) * sample_rate / np.pi
+
+        candidats = sorted(
+            f for f, bw in zip(freqs, bws)
+            if FREQ_MIN_FORMANT < f < FREQ_MAX_FORMANT and bw < LARGEUR_BANDE_MAX_FORMANT
+        )
+        if len(candidats) >= 2:
+            candidats_f1.append(candidats[0])
+            candidats_f2.append(candidats[1])
+
+    if not candidats_f1:
+        return None
+
+    f1 = float(np.clip(np.median(candidats_f1), *BORNES_F1))
+    f2 = float(np.clip(np.median(candidats_f2), *BORNES_F2))
+    if f1 >= f2:
+        return None
+    return {"F1": f1, "F2": f2}
+
+
+def estimer_formants_agrege(prises: list, sample_rate: int = SAMPLE_RATE) -> dict | None:
+    """Agrège les estimations LPC de plusieurs prises du MÊME mot par MÉDIANE de F1 et
+    de F2 séparément (pas moyenne : une prise ratée — toux, saturation, mauvais micro —
+    décale la moyenne d'une centaine de Hz, la médiane l'ignore dès 3 prises). Ignore
+    les prises dont estimer_formants_lpc renvoie None. Retourne None si aucune prise
+    n'est exploitable — l'appelant (CacheReferencesVocales) replie alors sur
+    VOYELLES_CIBLES, garantissant qu'une banque de mauvaise qualité dégrade vers le
+    comportement pré-v27.0 plutôt que de casser le cursus."""
+    estimations = [estimer_formants_lpc(p, sample_rate) for p in prises]
+    estimations = [e for e in estimations if e is not None]
+    if not estimations:
+        return None
+    return {
+        "F1": float(np.median([e["F1"] for e in estimations])),
+        "F2": float(np.median([e["F2"] for e in estimations])),
+    }
+
+
+def distance_spectrale(mfcc_a, mfcc_b) -> float:
+    """Distance cosinus normalisée dans [0,1] entre deux vecteurs MFCC de DIM_MFCC dims
+    (0 = timbres identiques, 1 = orthogonaux/opposés) : d = (1 - cos(a,b)) / 2.
+
+    Cosinus et non L2 : après la standardisation par échantillon (v27.0,
+    extraire_mfcc), seule la FORME du vecteur porte de l'information — sa norme est
+    artificiellement ramenée à ~sqrt(DIM_MFCC) pour tout son, donc une L2 mesurerait
+    surtout du bruit de normalisation. Le cosinus est invariant à cette normalisation,
+    ce qui le rend aussi invariant au volume de la prise micro (une prise forte et une
+    prise faible du même « a » donnent la même distance) — exactement la propriété
+    voulue d'une banque de prises hétérogènes."""
+    a = np.asarray(mfcc_a, dtype=np.float64).flatten()
+    b = np.asarray(mfcc_b, dtype=np.float64).flatten()
+    norme_a = np.linalg.norm(a)
+    norme_b = np.linalg.norm(b)
+    if norme_a < 1e-9 or norme_b < 1e-9:
+        return 1.0
+    cos = float(np.dot(a, b) / (norme_a * norme_b))
+    cos = max(-1.0, min(1.0, cos))
+    return (1.0 - cos) / 2.0
+
+
+def recompense_spectrale(mfcc_reference, mfcc_produit, tolerance: float = 0.5) -> float:
+    """Convertit distance_spectrale en score [0,1], même forme linéaire continue que
+    recompense_formants : max(0, 1 - d/tolerance). tolerance=0.5 (vs 0.35 pour les
+    formants) car la distance cosinus sur MFCC est structurellement plus tassée — à
+    recalibrer empiriquement sur les premières prises réelles."""
+    d = distance_spectrale(mfcc_reference, mfcc_produit)
+    return float(max(0.0, 1.0 - d / tolerance))
+
+
+def recompense_vocale_mixte(formants_cibles: dict, formants_produits: dict,
+                             mfcc_references: list = None, mfcc_produit=None,
+                             poids_formants: float = POIDS_RECOMPENSE_FORMANTS,
+                             poids_spectral: float = POIDS_RECOMPENSE_SPECTRALE) -> tuple:
+    """Score acoustique final (décision utilisateur v27.0 : spectral + formants réels).
+    Retourne (score_mixte, score_formants, score_spectral) — les trois pour la
+    télémétrie, seul le premier pilote dopamine/promotion.
+
+    score_mixte = poids_formants * score_formants + poids_spectral * score_spectral,
+    avec poids_formants + poids_spectral == 1.0 donc score_mixte ∈ [0,1] — invariant
+    STRUCTURANT : le score devient poids_vocal côté noyau.py, lui-même facteur du choc
+    dopaminergique (DOPAMINE_MAX - d) * TAUX_CHOC_BASE * poids, qui suppose un poids
+    borné dans [0,1].
+
+    Quand mfcc_references est None ou vide (aucune prise en banque, repli `say`), le
+    score spectral n'est PAS calculé et le score mixte se réduit EXACTEMENT à
+    recompense_formants — rétrocompatibilité stricte avec tous les runs pré-v27.0.
+
+    Sur plusieurs prises de référence : on prend le MAXIMUM des scores spectraux (pas
+    la moyenne) — « ressembler à AU MOINS UNE prononciation valide de l'utilisateur »
+    est le bon critère ; moyenner pénaliserait l'agent pour la variabilité naturelle
+    entre les prises de l'utilisateur lui-même."""
+    assert abs((poids_formants + poids_spectral) - 1.0) < 1e-9, \
+        "poids_formants + poids_spectral doit valoir 1.0 (invariant score_mixte ∈ [0,1])"
+
+    score_formants = recompense_formants(formants_cibles, formants_produits)
+
+    if not mfcc_references or mfcc_produit is None:
+        return score_formants, score_formants, 0.0
+
+    score_spectral = max(recompense_spectrale(ref, mfcc_produit) for ref in mfcc_references)
+    score_mixte = poids_formants * score_formants + poids_spectral * score_spectral
+    return score_mixte, score_formants, score_spectral

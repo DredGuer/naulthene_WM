@@ -341,3 +341,83 @@ le vrai cerveau après 481 jours : elle n'avait presque rien appris, la perte es
 négligeable. Résurrection complète re-testée après correctif : `tick_absolu`, `jour`,
 dopamine et souvenirs spatiaux tous préservés ; 10 ticks MiniGrid post-greffe exécutés
 sans erreur.
+
+---
+
+## 8. v27.0 — De la table théorique aux formants réels ("École de la Parole & Synesthésie")
+
+Depuis la v22.0, `VOYELLES_CIBLES` (§2, table statique de 5 voyelles françaises
+« moyennes ») était la seule vérité disponible pour noter et entraîner `tete_vocale`.
+La v27.0 change ce statut : la table théorique devient un **repli**, pas la référence.
+
+### 8.1 Pourquoi la table théorique ne suffisait pas
+
+Deux limites structurelles, jamais résolues par les correctifs v22.1 (§11) : (a)
+l'agent n'était jamais noté sur le **son qu'il produit réellement**, seulement sur deux
+nombres (F1/F2) démappés de sa sortie sigmoid — `distance_formants` compare des
+paramètres physiques, jamais deux spectres ; (b) la cible elle-même décrit une voyelle
+moyenne d'un locuteur moyen, jamais entendue par l'agent, jamais celle de l'utilisateur
+qui l'élève.
+
+### 8.2 Formants réels par analyse LPC
+
+`hemisphere_audio.estimer_formants_lpc` inverse le modèle source-filtre de
+`SynthetiseurFormants` (§3) : pré-accentuation, fenêtrage de Hamming sur les trames de
+plus forte énergie (le noyau stable de la voyelle — les trames d'attaque/chute
+produisent des pôles à bande passante instable qui inversent F1/F2 s'ils sont
+inclus sans filtrage), LPC de Burg (`librosa.lpc`), racines du polynôme converties en
+fréquence/bande passante, médiane inter-trames. **Garde-fou non négociable** : F1/F2
+sont clampés aux bornes physiques du synthétiseur (`BORNES_F1`/`BORNES_F2`) avant
+d'être retournés — sans ce clamp, une cible LPC hors bornes serait physiquement
+inatteignable par `tete_vocale`, rejouant le piège du seuil de promotion inatteignable
+(voir `CHANGELOG.md [24.0-fix1]`) sous une forme plus difficile à diagnostiquer.
+
+`estimer_formants_agrege` combine plusieurs prises du même mot par médiane (pas
+moyenne) de F1 et F2 séparément — robuste à une prise ratée (toux, saturation) dès 3
+prises.
+
+### 8.3 Récompense mixte formants + spectral
+
+`recompense_vocale_mixte` combine `recompense_formants` (inchangée, §3) et une nouvelle
+`recompense_spectrale` (distance cosinus entre le MFCC de la production de l'agent et
+le MFCC des prises de référence — invariant au volume, propriété nécessaire sur une
+banque de prises micro hétérogènes). Pondération 60/40 en faveur des formants : c'est
+la seule composante sur laquelle `tete_vocale` reçoit un gradient MSE **dirigé** (§11.1
+— la perte supervisée ne porte que sur F1/F2) ; le canal spectral n'agit que via la
+dopamine, lui donner un poids majoritaire créerait un score largement
+non-optimisable. Sans banque enregistrée pour un mot, le score se réduit exactement à
+`recompense_formants` seule — rétrocompatibilité stricte.
+
+Coût : synthétiser l'onde produite par l'agent puis en extraire un MFCC à chaque tick
+coûte ~100× un score de formants (même avec le synthétiseur vectorisé, `lfilter`,
+§ci-dessous). Le canal spectral n'est donc réévalué que tous les `PERIODE_EVAL_SPECTRALE`
+(10) ticks, le dernier score connu étant réutilisé entre deux évaluations — les
+paramètres vocaux varient peu d'un tick au suivant sur une même leçon.
+
+### 8.4 Synesthésie réelle : le mot vient de ce que l'agent voit
+
+`noyau.LecteurCaseFrontale` (nouvelle section 3g) lit la case juste devant l'agent
+(`env.unwrapped.front_pos`) et en déduit un mot (mur/porte/clé/but/vide, puis des
+syntagmes couleur+objet). C'est la fusion audio+vision du tronc cérébral (§4.3, la
+somme dans le bus latent) qui devient une vraie association sémantique — l'oreille
+reçoit le son du mot que l'agent est en train de voir — plutôt qu'une simple
+co-occurrence de deux signaux sans rapport causal.
+
+### 8.5 Dopamine unifiée entre les deux hémisphères
+
+Le point d'agrégation de la dopamine (`poids_evenement`) était un `max()` entre les
+canaux visuels et le canal vocal — un seul canal "gagnait" le tick. Remplacé par une
+agrégation probabiliste ("OU doux", `1 - (1-w_v·visuel)(1-w_a·vocal)`), bornée dans
+[0,1] par construction et strictement rétrocompatible quand `poids_vocal=0`. Voir
+`CHANGELOG.md [27.0-experimental]` pour la formule complète et sa justification.
+
+### 8.6 Consolidation nocturne de l'audio
+
+Jusqu'ici, `rever()` ne rejouait que la mémoire visuelle — l'apprentissage vocal du
+jour s'érodait chaque nuit sans jamais être consolidé. `rever()` reconstruit désormais
+un batch audio quand tous les souvenirs tirés en contiennent un, avec la même rampe de
+prudence (`coeff_jepa_audio`) que l'apprentissage diurne.
+
+**Statut** : comme le reste de cette section, vit uniquement dans `noyau.py` (gitignored),
+pas encore porté sur `agi_google_colab.py`. Voir `CHANGELOG.md [27.0-experimental]` pour
+le détail technique complet et la liste de validation.

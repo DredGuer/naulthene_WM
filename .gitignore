@@ -14,3 +14,16 @@ brains/*.brain
 # "Variante Locale de Test"). Jamais trackée par git, contrairement aux autres
 # modules du client-serveur.
 src/naulthene/cerveau/noyau.py
+
+# Analyses de run et propositions de conception personnelles (diagnostics chiffrés
+# d'un run local précis, notes de travail) — pas des documents de référence du
+# projet, restent locaux.
+docs/1440_JOURS_NAULTHENE_V1.md
+docs/AMELIORATION_V1.md
+
+# Banque vocale de l'utilisateur (v27.0, "École de la Parole & Synesthésie") —
+# enregistrements .wav de la voix de l'utilisateur nommant les concepts du curriculum
+# vocal, générés par instruments/enregistreur_voix.py. Données binaires lourdes,
+# personnelles et spécifiques à une machine — même raisonnement que brains/*.brain.
+voix/*
+!voix/.gitkeep

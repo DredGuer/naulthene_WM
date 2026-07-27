@@ -18,6 +18,7 @@ Il intègre la structure de table des matières globale (avec le contexte applic
 1. [Vue d'Ensemble du Projet](https://www.google.com/search?q=%23vue-densemble-du-projet)
 2. [Journal des Mises à Jour (Changelog)](https://www.google.com/search?q=%23journal-des-mises-%C3%A0-jour)
 3. [Plan d'Action](https://www.google.com/search?q=%23plan-daction)
+3v. [Nouveautés v27.0 (expérimental) — L'École de la Parole & Synesthésie](#nouveautés-v270-expérimental--lécole-de-la-parole--synesthésie-2026-07-27)
 3w. [Nouveautés v26.0 (expérimental) — L'Arène augmentée (mini-IRM + télémétrie complète)](#nouveautés-v260-expérimental--larène-augmentée-mini-irm--télémétrie-complète-2026-07-27)
 3x. [Nouveautés v26.0 (expérimental, §A.5 seul) — Cristallisation Souple](#nouveautés-v260-expérimental-a5-seul--cristallisation-souple-2026-07-27)
 3y. [Nouveautés v25.0 (expérimental) — Le Cerveau Bébé Développemental (0→4 ans)](#nouveautés-v250-expérimental--le-cerveau-bébé-développemental-04-ans-2026-07-24)
@@ -80,6 +81,20 @@ L'agent évolue à travers un cursus scolaire modélisé sous forme d'environnem
 ## 📜 Journal des Mises à Jour
 
 Pour un historique complet commit par commit, consultez [CHANGELOG.md](https://www.google.com/search?q=CHANGELOG.md).
+
+### Nouveautés v27.0 (expérimental) — L'École de la Parole & Synesthésie (2026-07-27)
+
+> ⚠️ **Statut expérimental** : vit uniquement dans `src/naulthene/cerveau/noyau.py` (gitignored, terrain d'essai local) et les modules `src/naulthene/audio/`, `salles_de_classe/cursus_parole.py`, `instruments/enregistreur_voix.py`, pas encore porté sur `agi_google_colab.py`.
+
+Referme trois écarts entre l'hémisphère audio (v22.0-v26.0) et une vraie acquisition du langage ancrée dans le monde : la cible vocale était une table théorique jamais entendue par l'agent, le mot à nommer n'avait aucun rapport avec ce que l'agent regardait, et la dopamine multimodale écrasait un canal au profit de l'autre.
+
+* **La voix de l'utilisateur remplace la table théorique.** Un nouvel outil (`instruments/enregistreur_voix.py`) enregistre plusieurs prises de la voix de l'utilisateur nommant chaque mot du curriculum (`voix/<mot>/<mot>_NN.wav`, recadrage automatique du silence). Un estimateur de formants par analyse LPC (`hemisphere_audio.estimer_formants_lpc`) en extrait F1/F2 RÉELS — clampés aux bornes physiques du synthétiseur pour rester une cible atteignable — et une distance/récompense spectrale MFCC↔MFCC compare le son RÉELLEMENT synthétisé par l'agent à ces prises, pas seulement deux nombres. Le score final mélange les deux (60% formants, 40% spectral — F1/F2 restent dominants car ce sont les seules dimensions sur lesquelles la bouche reçoit un vrai gradient d'apprentissage dirigé). Sans banque enregistrée, le comportement reste exactement celui d'avant v27.0 (repli automatique sur `say`).
+* **La synesthésie devient réelle.** Un nouveau lecteur générique (`LecteurCaseFrontale`) lit le mot à nommer directement dans la case juste devant l'agent — mur, porte, clé, but, vide, puis des syntagmes couleur+objet ("porte jaune") — au lieu d'un curriculum vocal déroulé indépendamment de ce que l'agent voit. Ce qu'il regarde devient ce qu'on lui demande de dire.
+* **La dopamine devient unifiée entre les deux modalités.** Jusqu'ici, `max(canaux visuels, canal vocal)` : un agent qui franchissait une porte ET prononçait correctement son nom au même tick recevait la même dopamine que s'il n'avait fait que l'un des deux. Une agrégation probabiliste ("OU doux", bornée dans [0,1] par construction et rétrocompatible au bit près sans audio) laisse désormais les deux canaux se renforcer l'un l'autre sans que l'un écrase l'autre.
+* **Le rêve consolide enfin l'audio** : jusqu'ici, la nuit ne rejouait que la mémoire visuelle — tout l'apprentissage vocal du jour s'érodait sans jamais être consolidé. Le rêve rejoue désormais l'audio quand le lot tiré en contient (avec la même rampe de prudence que l'apprentissage diurne).
+* **Nouveau cursus dédié** : `salles_de_classe/cursus_parole.py` (`naulthene_parole.brain`), 900 jours × 800 ticks en 3 phases — Imprégnation totale (le professeur nomme systématiquement, corrige même quand l'agent a bon), Autonomie guidée (bascule matin/après-midi entre synesthésie et curriculum, guidage décroissant), Émancipation (synesthésie + syntagmes toute la journée, professeur presque silencieux).
+
+Voir [docs/CHANGELOG.md](docs/CHANGELOG.md) (entrée v27.0) pour le détail technique complet, et [docs/LANCEMENT.md](docs/LANCEMENT.md) pour le guide de lancement (enregistrement de la voix, commande du cursus).
 
 ### Nouveautés v26.0 (expérimental) — L'Arène augmentée (mini-IRM + télémétrie complète) (2026-07-27)
 
@@ -611,6 +626,10 @@ Contrainte mesurée sur ce projet : `gemma4:e4b` (via Ollama) met **~8 à 30 sec
 
 Un `.brain` antérieur à la v22.0 n'a pas `porte_auditive`/`tete_vocale`/`generateur_attente_audio` dans son `state_dict`. `PersistanceAnatomique.charger_ou_naitre` charge désormais avec `load_state_dict(strict=False)` : l'agent hérite de tous ses acquis (vision, MiniGrid, curriculum, mémoire) et les nouvelles couches naissent à leur initialisation aléatoire — l'agent se réveille avec ses souvenirs intacts mais « sourd/muet de naissance qui vient d'être opéré », devant apprendre à entendre/parler par babillage. Deux pièges détectés pendant les tests : l'ancien optimiseur Adam (moins de groupes de paramètres qu'après une greffe) fait planter `optimizer.load_state_dict` — un optimiseur frais est recréé automatiquement dans ce cas ; et le changement `DIM_VECTEUR_BIO` 8→16 (v22.1) change la *forme* de `integrateur_bio` (pas seulement des clés manquantes), confirmé provoquer une `RuntimeError` de mismatch — cette couche est donc explicitement exclue du chargement et renaît à neuf (décision assumée : elle avait une `base_weight` quasi vide, moins de 3% de poids non-nuls, sur le vrai cerveau de production après 481 jours).
 
+### 8. v27.0 : de la table théorique aux formants réels, et une dopamine unifiée
+
+Trois évolutions ferment les plus gros écarts entre cet hémisphère et une vraie acquisition du langage. **La cible n'est plus théorique** : `VOYELLES_CIBLES` (une voyelle moyenne d'un locuteur moyen) devient un simple *repli* — quand la banque vocale de l'utilisateur (`voix/<mot>/*.wav`, voir [§ Démarrage Rapide](#-démarrage-rapide)) contient des prises pour un mot, ses formants réels (estimés par analyse LPC) deviennent la cible F1/F2, ET la récompense se mélange avec une distance spectrale MFCC↔MFCC entre le son que l'agent synthétise et ces mêmes prises — l'agent est enfin noté et entraîné sur ce qu'il entend réellement, pas sur une abstraction. **Le mot vient de ce que l'agent voit** : `LecteurCaseFrontale` lit directement la case devant l'agent (mur/porte/clé/but/vide, puis des syntagmes couleur+objet) pour désigner la cible vocale — la fusion vision+audio du tronc cérébral (§1) devient une vraie association sémantique, pas seulement une co-occurrence de deux signaux. **La dopamine des deux hémisphères s'unifie** : le canal visuel et le canal vocal ne s'écrasent plus mutuellement (`max()`) mais se renforcent via une agrégation probabiliste bornée, strictement rétrocompatible en silence. Voir [Nouveautés v27.0](#nouveautés-v270-expérimental--lécole-de-la-parole--synesthésie-2026-07-27) et [docs/CONCEPTION_v22_audio.md §8](docs/CONCEPTION_v22_audio.md) pour le détail complet.
+
 ---
 
 ## 💻 Stack Technique
@@ -749,6 +768,9 @@ Voir [L'Hémisphère Auditif & Vocal](#lhémisphère-auditif--vocal-expérimenta
 ```bash
 source venv/bin/activate
 pip install sounddevice librosa openai-whisper requests
+pip install scipy soundfile  # v27.0 : scipy accélère la synthèse (repli automatique si absent),
+                              # soundfile lit/écrit la banque vocale — les deux sont optionnels
+                              # au sens strict mais fortement recommandés
 ```
 
 Se branche sur la **même Cuve** que MiniGrid (`daemon_cerveau.py`, un seul cerveau, deux sens) — un `.brain` déjà entamé en MiniGrid se greffe automatiquement les hémisphères audio à sa première résurrection en v22.0 (voir [Greffe rétrocompatible](#6-greffe-rétrocompatible-sur-un-cerveau-déjà-vécu)) :
@@ -766,7 +788,28 @@ PYTHONPATH=src python -m naulthene.cuve.client_professeur --port 9999 --palier 2
 PYTHONPATH=src python -m naulthene.cuve.client_professeur --port 9999 --palier 2 --ticks 100 --micro
 ```
 
-Le babil de l'agent est **joué en temps réel** dans les haut-parleurs à chaque tick vocalisé, avec un score de proximité de formants affiché en direct ; un jugement qualitatif de Gemma s'affiche en fin de leçon (~10-30 secondes d'attente). `--palier` correspond aux 11 paliers de `professeur_gemma.CURRICULUM_VOCAL` (1 = Vocaliser, 2-6 = voyelles, 7-9 = syllabes, 10-11 = mots courts).
+Le babil de l'agent est **joué en temps réel** dans les haut-parleurs à chaque tick vocalisé, avec un score de proximité de formants affiché en direct ; un jugement qualitatif de Gemma s'affiche en fin de leçon (~10-30 secondes d'attente). `--palier` correspond aux 19 paliers de `professeur_gemma.CURRICULUM_VOCAL` (1 = Vocaliser, 2-6 = voyelles, 7-9 = syllabes, 10-11 = mots courts, 12 = "porte", 13-14 = combinatoire, 15-18 = mur/clé/but/vide, 19 = syntagme "porte jaune").
+
+### 6. Enregistrer ta voix, et lancer le Cursus de la Parole (Mac, expérimental, v27.0)
+
+Voir [Nouveautés v27.0](#nouveautés-v270-expérimental--lécole-de-la-parole--synesthésie-2026-07-27) pour le contexte complet. Deux étapes indépendantes — **tout fonctionne sans la première** (repli automatique sur `say`, comportement identique à avant v27.0) :
+
+```bash
+source venv/bin/activate
+
+# Étape facultative — enregistrer ta voix (3 prises par mot recommandées, pour que la
+# médiane des formants estimés par LPC soit robuste à une prise ratée) :
+PYTHONPATH=src python -m naulthene.instruments.enregistreur_voix --prises 3
+# ou seulement quelques mots :
+PYTHONPATH=src python -m naulthene.instruments.enregistreur_voix --mots a e i o u porte clé mur but vide --prises 3
+
+# Lancer le Cursus de la Parole (cerveau dédié naulthene_parole.brain, 900 jours × 800
+# ticks — reprend automatiquement où il s'est arrêté) :
+WANDB_MODE=offline PYTHONPATH=src python -m naulthene.salles_de_classe.cursus_parole   # run complet
+PYTHONPATH=src python -m naulthene.salles_de_classe.cursus_parole --jours 3 --no-wandb  # run court de test
+```
+
+Les prises sont rangées dans `voix/<mot>/<mot>_NN.wav` (jamais trackées par git, comme `brains/*.brain`). Sans elles, le cursus tourne exactement comme avant v27.0 — avec elles, la cible F1/F2 de chaque mot devient la voix réelle de l'utilisateur (estimée par analyse LPC) et la récompense se mélange avec une distance spectrale sur le son réellement synthétisé.
 
 ---
 
