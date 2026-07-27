@@ -1,11 +1,13 @@
-# Guide de Lancement — Naulthène AGI (Cuve Persistante + Hémisphère Audio + Cursus par Ères)
+# Guide de Lancement — Naulthène AGI (Cuve Persistante + Hémisphère Audio + Cursus par Ères + Cerveau Bébé)
 
 Ce guide couvre le lancement local (Mac) de l'écosystème V21/V22/V23 : le cerveau persistant
 (`daemon_cerveau.py`, dans `src/naulthene/cuve/`) et ses deux clients (`client_corps.py` pour
 MiniGrid, `client_professeur.py` pour les leçons de parole ponctuelles), ainsi que le Cursus
 Développemental par Ères (`cursus_developpemental.py`, dans `src/naulthene/salles_de_classe/`,
-un programme autonome de 1000 jours, voir §6). Voir `readme.md` pour l'architecture complète,
-`CHANGELOG.md` pour l'historique des versions.
+un programme autonome de 1000 jours, voir §6) et le Cerveau Bébé Développemental
+(`cursus_bebe.py`, dans `src/naulthene/salles_de_classe/`, un programme autonome de 1440 jours,
+voir §6bis). Voir `readme.md` pour l'architecture complète, `CHANGELOG.md` pour l'historique
+des versions.
 
 Depuis le passage en package Python (voir `CLAUDE.md`, section « Architecture »), tous les
 scripts se lancent depuis la racine du dépôt avec `PYTHONPATH=src` et l'option `-m` (module),
@@ -206,6 +208,94 @@ défaut de `BORNES_ERES`).
 `Ctrl+C` interrompt le script proprement à tout moment — sauvegarde d'urgence automatique de la
 journée déjà consolidée (seule la journée EN COURS au moment du Ctrl+C est perdue, jamais les
 précédentes). Relance simplement la même commande pour reprendre.
+
+---
+
+## 6bis. Le Cerveau Bébé Développemental (autonome, 1440 jours)
+
+Comme le Cursus par Ères (§6), ce mode ne passe **pas** par `daemon_cerveau.py` — c'est un
+script **standalone** (`src/naulthene/salles_de_classe/cursus_bebe.py`, v25.0/v26.0,
+expérimental) qui pilote directement un cerveau à travers **4 ans (1440 jours subjectifs ×
+3600 ticks/jour)** découpés en 5 phases d'âge, avec récompense externe masquée pendant les 240
+premiers jours (voir `readme.md`, section "Nouveautés v25.0 — Le Cerveau Bébé Développemental").
+
+⚠️ **Cerveau séparé** : `cursus_bebe.py` charge/sauvegarde un fichier dédié
+`brains/naulthene_bb.brain` — distinct à la fois de `brains/naulthene_v21.brain` (Cuve) et de
+`brains/naulthene_cursus.brain` (Cursus par Ères). Les trois écosystèmes ne partagent jamais le
+même cerveau ; ne lance pas le daemon (Terminal 1) en même temps, ce n'est pas nécessaire pour
+ce mode.
+
+✅ **Persistance automatique**, même garantie que le Cursus par Ères (§6) : sauvegarde après
+CHAQUE nuit (donc chaque jour subjectif) dans `brains/naulthene_bb.brain`. Relancer la même
+commande **reprend** le cursus là où il en était — `--jours N` ajoute N jours SUPPLÉMENTAIRES à
+partir de l'état repris, ce n'est pas une valeur absolue. Premier lancement : naissance d'un
+cerveau neuf (bus=16), aucun fichier trouvé.
+
+**Un seul terminal**, pas de Cuve à lancer :
+
+```bash
+cd "/Users/dredguer/Documents/1. Dossier personnel important/1. Adrien/21. AGI"
+source venv/bin/activate
+PYTHONPATH=src python3 -m naulthene.salles_de_classe.cursus_bebe --jours 300
+```
+
+- `--jours N` : nombre de jours subjectifs à ajouter à partir de l'état repris (défaut
+  `JOURS_TOTAUX_BEBE` = 1440, un run complet).
+- `--no-wandb` : désactive le logging Weights & Biases (actif par défaut). Sans clé W&B
+  configurée ou hors ligne, ajoute `WANDB_MODE=offline` avant la commande.
+
+### Repartir d'un cerveau neuf (sans perdre l'ancien)
+
+`cursus_bebe.py` n'a pas de flag `--brain` ni `--reset` — le chemin `brains/naulthene_bb.brain`
+est fixe (`FICHIER_BRAIN_BEBE`). Pour faire naître un cerveau neuf plutôt que de reprendre
+celui qui existe, **archive l'ancien fichier au lieu de le supprimer** (il représente des jours
+de run, potentiellement précieux) :
+
+```bash
+cd "/Users/dredguer/Documents/1. Dossier personnel important/1. Adrien/21. AGI"
+mv brains/naulthene_bb.brain brains/naulthene_bb_archive_$(date +%Y%m%d).brain
+
+source venv/bin/activate
+PYTHONPATH=src python3 -m naulthene.salles_de_classe.cursus_bebe --jours 300
+```
+
+Comme aucun fichier n'existe plus à `brains/naulthene_bb.brain`, `charger_ou_naitre()`
+(`persistance.py`) affiche `🐣 Naissance d'un nouveau cerveau (Bus=16)` au lieu de `🧬
+Résurrection du cerveau existant` — bus=16, tick_absolu=0, dopamine neutre, aucun souvenir.
+L'ancien cerveau archivé reste utilisable normalement, y compris avec l'Arène (§7,
+`--brain brains/naulthene_bb_archive_YYYYMMDD.brain`).
+
+Au démarrage, le script ressuscite le cerveau existant (`🧬 Résurrection du cerveau existant`)
+ou en fait naître un nouveau, préchauffe les références vocales (`say` → MFCC, une seule fois),
+puis enchaîne les journées. Chaque nuit affiche le bilan habituel (État Mental, Plasticité,
+Portes franchies, Quêtes Auto, Consolidations/rêve, Potentiomètre de patience, État Viscéral,
+Métabolisme, Mémoire Épisodique, Erreur JEPA/Thermostat).
+
+`Ctrl+C` interrompt le script proprement à tout moment — sauvegarde d'urgence automatique de la
+journée déjà consolidée (seule la journée EN COURS au moment du Ctrl+C est perdue, jamais les
+précédentes). Relance simplement la même commande pour reprendre.
+
+### ⚠️ Cristallisation Souple (v26.0-experimental) active sur ce cerveau
+
+Depuis v26.0, `NaultheneLinearSynaptique.cycle_sommeil()` (dans `noyau.py`, non versionné —
+voir `CLAUDE.md`, section "Variante Locale de Test") protège de l'érosion nocturne les synapses
+sollicitées fortement et régulièrement sur plusieurs nuits (`myeline_cumul`, cliquet
+`cristallisee`, falaise sigmoïde `K_RAIDEUR_CRISTAL` — voir `docs/explications_readme.md` §8.5
+pour le détail algorithmique). Cette mécanique est **transparente en usage normal** — aucune
+nouvelle option de ligne de commande, elle s'applique automatiquement à chaque `cycle_sommeil`
+sur un cerveau `naulthene_bb.brain` existant comme sur un cerveau neuf, sans distinction dans
+les logs console actuels (pas encore de métrique W&B dédiée au nombre de synapses cristallisées
+— à ajouter si un futur diagnostic de run en a besoin).
+
+⚠️ **Sur un `.brain` déjà entraîné avant ce correctif** (comme un run repris depuis v25.0/avant
+la Cristallisation Souple), le premier chargement peut afficher `🌱 Hémisphères nouvellement
+greffés sur ce cerveau` pour toutes les couches — normal et attendu **une seule fois** : les
+deux nouveaux buffers (`myeline_cumul`, `cristallisee`) sont absents de l'ancien `state_dict`
+(`load_state_dict(..., strict=False)`, voir `persistance.py`), donc chaque couche est listée en
+greffe même si seuls ces deux buffers sont réellement neufs — les poids `base_weight`/
+`annexe_weight` déjà appris restent, eux, intacts. Si le message réapparaît à *chaque*
+lancement (pas seulement le premier après la mise à jour), voir la ligne "Message Hémisphères
+nouvellement greffés" du tableau de dépannage en fin de document.
 
 ---
 
