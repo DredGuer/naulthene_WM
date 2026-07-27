@@ -441,10 +441,26 @@ $$
 D_{t+1} = D_t + (D_{min} - D_t) \times 0.01
 $$
 
-**Choc au succès** (`poids_evenement > 0`, le maximum des poids de tous les détecteurs actifs ce tick) :
+**Choc au succès** (`poids_evenement > 0`) :
 $$
 D_{t+1} = D_t + (D_{max} - D_t) \times 0.9 \times w_{evenement}
 $$
+
+Jusqu'à la v26.0, `poids_evenement` était le **maximum** des poids de tous les détecteurs actifs ce tick (jalons, portes, progrès, curiosité, ressources bio, vocal) — un seul canal "gagnait", les autres étaient purement ignorés ce tick-là.
+
+### 9.1 Dopamine unifiée multimodale (expérimental, `noyau.py` uniquement, v27.0)
+
+Un agent qui franchit une porte **et** prononce correctement le mot qu'il regarde au même tick recevait, avec le `max()`, exactement la même dopamine que s'il n'avait fait que l'un des deux — les deux hémisphères (vue, ouïe) ne se renforçaient jamais mutuellement. `poids_evenement` devient une agrégation probabiliste ("OU doux") entre un agrégat visuel (le `max()` d'avant, inchangé en interne) et le canal vocal :
+
+$$
+w_{visuel} = \max\big(w_{palier},\ w_{porte},\ w_{progres},\ w_{curiosite},\ w_{ressource\_bio},\ \mathbb{1}[r_{env}>0]\big)
+$$
+
+$$
+w_{evenement} = 1 - \big(1 - W_{visuel} \cdot w_{visuel}\big)\big(1 - W_{vocal} \cdot w_{vocal}\big), \qquad W_{visuel}=1.0,\ W_{vocal}=0.7
+$$
+
+Trois propriétés motivent ce choix plutôt qu'une simple somme pondérée : **(1) bornée dans $[0,1]$ par construction** pour tout $w_{visuel}, w_{vocal} \in [0,1]$ — invariant nécessaire puisque $w_{evenement}$ multiplie directement le choc ci-dessus ; une somme pondérée exigerait un `clip` explicite, ce formalisme n'en a structurellement pas besoin. **(2) rétrocompatible au bit près** : sans audio ($w_{vocal}=0$), $w_{evenement} = 1-(1-w_{visuel})(1-0) = w_{visuel}$, exactement le `max()` d'avant v27.0. **(3) monotone sans écrasement** : les deux canaux augmentent strictement le résultat, et un canal saturé n'annule jamais l'autre — contrairement au `max()` (canal faible perdu) ou à une moyenne (un canal nul diluerait un canal excellent). $W_{vocal}=0.7 < W_{visuel}=1.0$ car le score vocal est **continu** (non nul à presque chaque tick d'une leçon), contre des canaux visuels **événementiels** (rares) — à parité, le vocal saturerait le réservoir par simple fréquence d'occurrence.
 
 **Ressort nocturne** (une fois par nuit, retour vers la neutralité) :
 $$
@@ -544,6 +560,7 @@ Dès `palier_cible >= 5` (Viser la Porte), le **Mode Libre** s'active : le guida
 | v23-v24 (expérimental) | Cursus Développemental par Ères, Arène de visualisation | Faire cohabiter apprentissage MiniGrid et vocal sur 1000 jours |
 | v25 (expérimental) | Le Cerveau Bébé (0→4 ans), masquage de récompense externe, Module Parent | Pousser le principe développemental à l'extrême : 8 mois 100% auto-supervisés |
 | v26.0 (expérimental, §A.5 seul) | Cristallisation Souple — protection ciblée des synapses matures contre l'érosion nocturne (falaise sigmoïde) | Protéger les fondamentaux acquis sans jamais geler l'apprentissage diurne |
+| v27.0-27.1 (expérimental) | L'École de la Parole & Synesthésie — voix réelle (LPC), synesthésie ancrée (`LecteurCaseFrontale`), dopamine unifiée vue/ouïe, rêve audio, tirage aléatoire d'une prise par tick | Sortir de la table théorique et du curriculum déconnecté de la vision ; unifier le réservoir dopaminergique entre les deux hémisphères |
 
 Voir [CHANGELOG.md](CHANGELOG.md) pour le détail commit par commit et [readme.md](../readme.md) pour la description narrative complète de chaque version.
 
@@ -574,7 +591,11 @@ Voir [CHANGELOG.md](CHANGELOG.md) pour le détail commit par commit et [readme.m
 | `ALPHA_CRISTAL` (v26.0, expérimental) | 0.95 | Vitesse d'accumulation de la myéline cumulée inter-nuits (`myeline_cumul`) |
 | `SEUIL_CRISTAL` (v26.0, expérimental) | 0.80 | Seuil de `myeline_cumul` déclenchant le cliquet `cristallisee = True` |
 | `K_RAIDEUR_CRISTAL` (v26.0, expérimental) | 10.0 | Raideur de la falaise sigmoïde de protection d'une synapse cristallisée |
+| `POIDS_DOPAMINE_VISUEL` (v27.0, expérimental) | 1.0 | Poids du canal visuel dans la dopamine unifiée (§9.1) — modalité mature, poids plein |
+| `POIDS_DOPAMINE_VOCAL` (v27.0, expérimental) | 0.7 | Poids du canal vocal dans la dopamine unifiée (§9.1) — volontairement < 1.0, le score vocal étant continu plutôt qu'événementiel |
+| `POIDS_RECOMPENSE_FORMANTS / SPECTRALE` (v27.0, expérimental) | 0.6 / 0.4 | Pondération du score vocal mixte (`recompense_vocale_mixte`) entre distance de formants et distance spectrale MFCC↔MFCC |
+| `PERIODE_EVAL_SPECTRALE` (v27.0, expérimental) | 10 | Ticks entre deux réévaluations du canal spectral (coût ~100× un score de formants, dernier score réutilisé entre deux évaluations) |
 
 ---
 
-*Document généré à partir d'une lecture directe du code source (`agi_google_colab.py` v17, `agi_local_test.py`) — voir [readme.md](../readme.md) pour la documentation narrative complète et [CLAUDE.md](../CLAUDE.md) pour les règles de maintenance du projet.*
+*Document généré à partir d'une lecture directe du code source (`agi_google_colab.py` v17, `src/naulthene/cerveau/noyau.py` jusqu'à v27.1) — voir [readme.md](../readme.md) pour la documentation narrative complète et [CLAUDE.md](../CLAUDE.md) pour les règles de maintenance du projet.*

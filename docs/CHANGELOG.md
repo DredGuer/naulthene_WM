@@ -4,6 +4,26 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [27.1-experimental] - 2026-07-27
+
+### Tirage aléatoire d'une prise vocale à chaque appel — variation naturelle plutôt qu'un gabarit moyenné figé
+
+| Type | Details |
+|------|---------|
+| **Commit** | `18e8c7a` |
+| **Catégorie** | feat (correctif de conception, mécanique expérimentale) |
+| **Impact** | Fonctionnel (mécanisme d'apprentissage vocal) |
+
+**Décision utilisateur : quand plusieurs prises existent pour un mot (`voix/<mot>/<mot>_01.wav`, `_02.wav`, `_03.wav`...), l'oreille de l'agent (`porte_auditive`) ne doit jamais entendre un seul gabarit artificiel figé, mais la vraie variation naturelle d'une voix humaine — pour forcer l'agent à généraliser (reconnaître "mur" malgré le bruit inter-prise) plutôt qu'à mémoriser un son qui n'existe pas en dehors du cache. Jusqu'ici, `CacheReferencesVocales.obtenir_pour_palier` — la méthode appelée à chaque tick par les 3 cursus et l'Arène — renvoyait la MOYENNE des MFCC de toutes les prises d'un mot, calculée une fois et mise en cache : un seul son moyenné et identique du premier au dernier tick d'un run. Elle tire désormais UNE prise au hasard, uniformément, À CHAQUE APPEL (donc potentiellement à chaque tick) — vérifié sur 300 tirages avec 3 prises synthétiques distinctes : les 3 reviennent, en proportions proches de l'uniforme (83/94/123). Avec 0 ou 1 prise (repli `say` ou banque incomplète), le tirage se réduit trivialement à cette unique prise — comportement strictement inchangé.**
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/audio/lecons_vocales.py` | `_generer_si_absent` : condition de présence en cache basée sur `_cache_mfcc_prises` (liste des prises individuelles) au lieu de `_cache_mfcc` (moyenne) — la moyenne (`_cache_mfcc`) est conservée pour diagnostic/repli `say` mais n'est plus lue par `obtenir_pour_palier`. `obtenir_pour_palier` : tire `prises[np.random.randint(len(prises))]` à chaque appel au lieu de renvoyer la moyenne mise en cache. `obtenir_mfcc_prises` (canal spectral, `recompense_vocale_mixte`) inchangée — continue de comparer au score MAX sur TOUTES les prises, indépendamment de celle tirée pour l'audition ce tick-là. |
+
+**Validation** : fixture de test à 3 prises synthétiques acoustiquement distinctes (tonalités 400/600/800 Hz) — 300 tirages donnent bien 3 signatures MFCC distinctes, aucune ne domine anormalement ; repli `say`/1-prise vérifié strictement stable (10 tirages consécutifs → 1 seule signature) ; tous les modules consommateurs (`cursus_parole.py`, `cursus_bebe.py`, `cursus_developpemental.py`, `lancer_arene.py`) réimportés sans erreur après le changement.
+
+---
+
 ## [27.0-experimental] - 2026-07-27
 
 ### L'École de la Parole & Synesthésie — voix réelle de l'utilisateur, synesthésie ancrée dans la vision, dopamine unifiée
