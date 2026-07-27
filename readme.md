@@ -18,6 +18,7 @@ Il intègre la structure de table des matières globale (avec le contexte applic
 1. [Vue d'Ensemble du Projet](https://www.google.com/search?q=%23vue-densemble-du-projet)
 2. [Journal des Mises à Jour (Changelog)](https://www.google.com/search?q=%23journal-des-mises-%C3%A0-jour)
 3. [Plan d'Action](https://www.google.com/search?q=%23plan-daction)
+3w. [Nouveautés v26.0 (expérimental) — L'Arène augmentée (mini-IRM + télémétrie complète)](#nouveautés-v260-expérimental--larène-augmentée-mini-irm--télémétrie-complète-2026-07-27)
 3x. [Nouveautés v26.0 (expérimental, §A.5 seul) — Cristallisation Souple](#nouveautés-v260-expérimental-a5-seul--cristallisation-souple-2026-07-27)
 3y. [Nouveautés v25.0 (expérimental) — Le Cerveau Bébé Développemental (0→4 ans)](#nouveautés-v250-expérimental--le-cerveau-bébé-développemental-04-ans-2026-07-24)
 3z. [Correctifs v24.0-fix1 à fix5 (expérimental) — École de Rattrapage Vocal & silence de l'Arène](#correctifs-v240-fix1-à-fix5-expérimental--école-de-rattrapage-vocal--silence-de-larène-2026-07-2324)
@@ -79,6 +80,18 @@ L'agent évolue à travers un cursus scolaire modélisé sous forme d'environnem
 ## 📜 Journal des Mises à Jour
 
 Pour un historique complet commit par commit, consultez [CHANGELOG.md](https://www.google.com/search?q=CHANGELOG.md).
+
+### Nouveautés v26.0 (expérimental) — L'Arène augmentée (mini-IRM + télémétrie complète) (2026-07-27)
+
+> ⚠️ **Statut expérimental** : vit dans `src/naulthene/instruments/arene_visuelle.py` et `lancer_arene.py`, tous deux versionnés (contrairement à `noyau.py`), immédiatement disponibles sur `PYTHONPATH=src python -m naulthene.instruments.lancer_arene`.
+
+L'Arène fusionne en une seule fenêtre pygame ce qui vivait jusqu'ici dans deux outils séparés : observer l'agent bouger dans MiniGrid ET observer les activations de son cerveau — sur le **même** agent en mémoire, pas un second `charger_ou_naitre()` qui aurait divergé.
+
+* **Mini-IRM en pygame pur** : une bande sous l'image MiniGrid affiche en direct les barres d'activation du bus latent à 3 étapes du tronc cérébral (vision/mémoire/pensée, une couleur par étape) — le pendant temps-réel du panneau 1 de `irm_cerveau.py`, mais rendu avec des primitives `pygame.draw` plutôt qu'en matplotlib. Mélanger pygame (SDL) et matplotlib (Tk/Qt/macosx) dans le même thread est fragile sur macOS — les deux se disputent la boucle d'événements native Cocoa — d'où le choix de tout garder dans un seul framework graphique.
+* **Télémétrie complète** : le panneau de droite atteint la parité avec le bilan de nuit console (état mental, plasticité, jalons DoorKey, abnégation, mode décision, portes, potentiomètre, curiosité JEPA, viscéral, métabolisme, mémoire épisodique, erreur JEPA/thermostat). Les trois métriques qui n'existent QUE après une vraie nuit (plasticité base, souvenirs rejoués, thermostat de neurogenèse) sont remplacées par des **proxys continus recalculés à la volée** avec la même formule, explicitement marqués comme estimés — jamais confondus avec un vrai bilan nocturne.
+* **Bandeau d'événement** : un changement de palier DoorKey (observable en direct, contrairement à une promotion de *niveau* MiniGrid) déclenche un bandeau temporaire. Une note affichée au démarrage documente explicitement qu'une promotion de niveau MiniGrid ne peut structurellement jamais se produire dans l'Arène — elle est décidée uniquement pendant une vraie nuit (`executer_nuit`), jamais appelée ici pour garantir que l'observation n'altère jamais le cerveau.
+
+Garantie de non-altération inchangée : tout ajout reste de la lecture pure (`torch.no_grad()`, `agent.eval()` déjà en place), aucun nouvel appel à `executer_nuit`/`apprendre_journee`/`rever`/`declencher_neurogenese`.
 
 ### Nouveautés v26.0 (expérimental, §A.5 seul) — Cristallisation Souple (2026-07-27)
 

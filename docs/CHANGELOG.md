@@ -6,6 +6,27 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ## [26.0-experimental] - 2026-07-27
 
+### L'Arène augmentée — mini-IRM en pygame et télémétrie complète en direct
+
+| Type | Details |
+|------|---------|
+| **Commit** | `47bfa2e` |
+| **Catégorie** | feat |
+| **Impact** | Fonctionnel (instrumentation d'observation) |
+
+**L'Arène (`lancer_arene.py`/`arene_visuelle.py`) fusionne désormais en une seule fenêtre pygame ce qui vivait jusqu'ici dans deux outils séparés : voir l'agent bouger dans MiniGrid ET observer les activations de son cerveau, sur le MÊME agent en mémoire (pas un second `charger_ou_naitre()` qui aurait divergé). Une bande "mini-IRM" sous l'image affiche en direct les barres d'activation du bus latent aux 3 étapes du tronc cérébral (vision/mémoire/pensée) — le pendant temps-réel du panneau 1 de `irm_cerveau.py`, mais rendu avec des primitives `pygame.draw` plutôt qu'en matplotlib (mélanger les deux frameworks GUI dans le même thread est fragile sur macOS, SDL et le backend GUI de matplotlib se disputant la boucle d'événements native Cocoa). Le panneau de télémétrie de droite est étendu à la parité complète avec le bilan de nuit console (13 lignes : état mental, plasticité, jalons DoorKey, abnégation, mode décision, portes, potentiomètre, curiosité JEPA, viscéral, métabolisme, mémoire épisodique, erreur JEPA/thermostat) — les trois métriques qui n'existent QUE après une vraie nuit (plasticité base, souvenirs rejoués, thermostat de neurogenèse) sont remplacées par des proxys recalculés en continu avec la même formule, explicitement marqués comme estimés plutôt que présentés comme un vrai bilan nocturne. Un bandeau d'événement temporaire signale un changement de palier DoorKey observé en direct ; une note affichée au démarrage documente explicitement qu'une promotion de NIVEAU MiniGrid ne peut structurellement jamais se produire dans l'Arène (décidée uniquement par `executer_nuit`, jamais appelée ici — garantie de non-altération inchangée).**
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/instruments/arene_visuelle.py` | Fenêtre élargie (1032×652) ; nouvelle bande mini-IRM (`_dessiner_panneau_bus`) ; panneau de télémétrie réécrit pour les 13 lignes de parité avec le bilan de nuit ; nouveau bandeau d'événement (`_dessiner_bandeau_evenement`) ; `dessiner_frame` accepte `activations`/`evenement` optionnels |
+| `src/naulthene/instruments/lancer_arene.py` | Recalcul en lecture seule du tronc cérébral (`_tronc_cerebral` sous `torch.no_grad()`) avant chaque `traiter_tick`, pour alimenter le mini-IRM sur l'observation du tick courant ; `_construire_telemetrie` étendu avec les proxys continus (plasticité base, erreur JEPA/récompense moyenne, thermostat simplifié) ; détection de changement de palier DoorKey par diff entre deux ticks pour déclencher le bandeau |
+
+**Validation** : script de vérification manuel (pas de suite de tests automatisée) — panneau testé en headless (`SDL_VIDEODRIVER=dummy`) sur toutes les combinaisons de clés manquantes/DoorKey actif ou non/bandeau présent ou non, sans crash ; run réel bout-en-bout sur `brains/naulthene_bb.brain` (niveau Doctorat) confirmant des valeurs de télémétrie cohérentes tick par tick ; test synthétique forçant un changement de palier DoorKey sur `brains/naulthene_cursus.brain` confirmant le déclenchement et l'extinction du bandeau ; aucune altération constatée sur les fichiers `.brain` sur disque après les runs de test.
+
+---
+
+## [26.0-experimental] - 2026-07-27
+
 ### Cristallisation Souple — protection ciblée des synapses matures contre l'érosion nocturne (falaise sigmoïde)
 
 | Type | Details |

@@ -302,8 +302,32 @@ nouvellement greffés" du tableau de dépannage en fin de document.
 ## 7. L'Arène & Démo Live (observer un cerveau entraîné, sans jamais l'altérer)
 
 Une fenêtre graphique qui affiche MiniGrid en direct (l'agent qui se déplace) + un panneau de
-télémétrie (dopamine, jauges biologiques, curriculum MiniGrid/DoorKey, ère et palier vocal) dans
-une seule fenêtre, avec le babil de l'agent joué en temps réel dans les haut-parleurs.
+télémétrie + une bande mini-IRM, dans une seule fenêtre, avec le babil de l'agent joué en temps
+réel dans les haut-parleurs.
+
+✨ **Panneau de télémétrie complet (v26.0-experimental)** : parité avec le bilan de nuit console
+(État Mental, Plasticité, Progrès Jalon/Abnégation, Mode Décision, Portes, Potentiomètre,
+Curiosité JEPA, État Viscéral, Métabolisme, Mémoire Épisodique, Erreur JEPA/Thermostat) — la
+plupart de ces valeurs sont recalculées EN CONTINU à chaque tick (identiques à ce que lirait un
+vrai bilan de nuit au même instant). Trois d'entre elles (Plasticité base, souvenirs
+rejoués/rêve, thermostat de neurogenèse) n'existent QUE après un vrai `executer_nuit` — l'Arène
+n'endort jamais le cerveau qu'elle observe, donc ces trois lignes affichent un **proxy estimé**
+(même formule, recalculée sans attendre la nuit), toujours marqué "≈" ou "(estimé)" pour ne
+jamais laisser croire à un vrai bilan nocturne. Un bandeau temporaire signale un changement de
+palier DoorKey observé en direct.
+
+⚠️ **La promotion de NIVEAU MiniGrid (changement de carte, ex. Primaire→Collège) ne peut PAS
+s'observer dans l'Arène** — elle est décidée uniquement pendant une vraie nuit (`executer_nuit`),
+jamais appelée ici par garantie de non-altération. Une note l'explique au démarrage. Pour voir
+une promotion de niveau, relance le Cursus (section 6/6bis) ou la Cuve (section 1-4).
+
+✨ **Mini-IRM en direct (v26.0-experimental)** : une bande sous l'image MiniGrid affiche les
+activations du bus latent à 3 étapes du tronc cérébral (vision/mémoire/pensée, une couleur par
+série) — recalculées tick par tick sur le MÊME cerveau que celui qui joue dans MiniGrid, en
+pygame pur (pas de fenêtre matplotlib séparée, qui serait fragile à faire cohabiter avec pygame
+sur macOS). Pour un diagnostic plus poussé (heatmap de myélinisation, courbe de variance),
+utiliser `irm_cerveau.py` séparément (voir sa propre commande de lancement dans
+[Architecture](../CLAUDE.md#architecture)).
 
 ⚠️ **Prérequis** : il faut un `.brain` à observer — lance d'abord le Cursus (section 6) pendant
 au moins une nuit pour produire `brains/naulthene_cursus.brain`, ou utilise directement le
