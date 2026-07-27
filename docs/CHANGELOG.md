@@ -4,6 +4,26 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [27.2-experimental] - 2026-07-27
+
+### Lecture vocale espacée dans l'Arène — corrige les micro-coupures audio permanentes
+
+| Type | Details |
+|------|---------|
+| **Commit** | N/A — en attente du commit de cette version |
+| **Catégorie** | fix (mécanique expérimentale) |
+| **Impact** | Fonctionnel (qualité de la démo audio, aucune conséquence sur l'entraînement) |
+
+**Signalé par l'utilisateur : le babil de l'agent joué par l'Arène (`lancer_arene.py`) sonnait comme une suite ininterrompue de micro-coupures/craquements. Cause : `jouer_son_temps_reel` était appelée à CHAQUE tick (10/s, `FPS_ARENE`) en mode non-bloquant (`sd.play(..., bloquant=False)`) — un son synthétisé dure entre 0.1 et 0.6s (`hemisphere_audio.BORNES_DUREE`), donc un nouveau `sd.play()` coupait quasi systématiquement le son précédent en plein milieu, indépendamment du niveau réel d'apprentissage vocal du cerveau observé. La lecture (pas le calcul du score) est désormais espacée : un seul son émis toutes les `PERIODE_LECTURE_VOCALE=5` ticks (0.5s, au-dessus de la durée maximale d'un son), laissant chaque vocalisation se terminer avant la suivante. Le score de formants et la télémétrie continuent d'être recalculés à CHAQUE tick — seule l'émission sonore est ralentie.**
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/instruments/lancer_arene.py` | Nouvelle constante `PERIODE_LECTURE_VOCALE=5`. L'appel à `synth.synthetiser`/`jouer_son_temps_reel` est conditionné à `ticks_journee_observation % PERIODE_LECTURE_VOCALE == 0` ; le calcul de `formants_produits`/`score_vocal` (télémétrie) reste hors de cette condition, à chaque tick. |
+
+**Validation** : import du module vérifié sans erreur ; la garantie de non-altération du `.brain` (aucun `executer_nuit`/`apprendre_journee`/`rever` appelé) est inchangée par ce correctif, qui ne touche qu'à la cadence de lecture audio.
+
+---
+
 ## [27.1-experimental] - 2026-07-27
 
 ### Tirage aléatoire d'une prise vocale à chaque appel — variation naturelle plutôt qu'un gabarit moyenné figé

@@ -63,6 +63,18 @@ import naulthene.audio.professeur_gemma as pg
 
 TICKS_BANDEAU_EVENEMENT = 30  # ~3s à FPS_ARENE=10 (voir arene_visuelle.FPS_ARENE)
 
+# v27.1 (correctif signalé par l'utilisateur, "micro-coupures permanentes") : jusqu'ici
+# jouer_son_temps_reel était appelé à CHAQUE tick (10/s, FPS_ARENE) en mode non-bloquant
+# — un son dure entre 0.1 et 0.6s (hemisphere_audio.BORNES_DUREE), donc un nouveau
+# sd.play() coupait quasi systématiquement le son précédent en plein milieu, produisant
+# un crépitement continu indépendant du niveau réel d'apprentissage du cerveau. On
+# n'émet désormais qu'un son toutes les PERIODE_LECTURE_VOCALE ticks (5 × 100ms = 0.5s,
+# légèrement au-dessus de la durée maximale d'un son) — largement suffisant pour que
+# chaque vocalisation se termine avant la suivante. Le score de formants continue
+# d'être recalculé à CHAQUE tick (pas de perte de réactivité sur la télémétrie/le
+# bandeau), seule la LECTURE audio est espacée.
+PERIODE_LECTURE_VOCALE = 5
+
 
 def _construire_telemetrie(etat, score_vocal) -> dict:
     """Rassemble les infos affichables depuis `EtatCognitif` (objet accessible sans
@@ -240,8 +252,12 @@ def lancer_arene(fichier_brain: str = "brains/naulthene_cursus.brain"):
             vecteur_vocal = infos["infos_internes"]["parametres_vocaux"]
             score_vocal = None
             if vecteur_vocal:
-                onde = synth.synthetiser(vecteur_vocal)
-                jouer_son_temps_reel(onde, sample_rate=SAMPLE_RATE, bloquant=False)
+                # v27.1 : lecture espacée (voir PERIODE_LECTURE_VOCALE) — évite de
+                # lancer un nouveau sd.play() par-dessus un son encore en train de
+                # jouer, cause des micro-coupures rapportées à chaque tick.
+                if ticks_journee_observation % PERIODE_LECTURE_VOCALE == 0:
+                    onde = synth.synthetiser(vecteur_vocal)
+                    jouer_son_temps_reel(onde, sample_rate=SAMPLE_RATE, bloquant=False)
                 formants_produits = synth.parametres_depuis_vecteur(vecteur_vocal)
                 score_vocal = recompense_formants(formants_cibles, formants_produits)
 
