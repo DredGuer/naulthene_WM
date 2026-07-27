@@ -4,6 +4,28 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [27.3-experimental] - 2026-07-27
+
+### Rythme de lecture vocale ralenti dans l'Arène — corrige l'effet "métronome" (TUT TUT TUT)
+
+| Type | Details |
+|------|---------|
+| **Commit** | N/A — en attente du commit de cette version |
+| **Catégorie** | fix (mécanique expérimentale) |
+| **Impact** | Fonctionnel (qualité de la démo audio, aucune conséquence sur l'entraînement) |
+
+**Second correctif signalé par l'utilisateur après [27.2] : les micro-coupures avaient disparu, mais le résultat sonnait comme un martèlement régulier ("TUT TUT TUT") plutôt qu'un rythme de parole — `PERIODE_LECTURE_VOCALE=5` (0.5s) laissait le son finir mais enchaînait quasi immédiatement le suivant, sans silence perceptible. Remonté à 18 ticks (≈1.8s à `FPS_ARENE=10`), plus proche du rythme naturel d'un mot prononcé toutes les 1.5-2s. `hemisphere_audio.BORNES_DUREE` (0.1-0.6s, la plage physique que `tete_vocale` apprend à viser sur TOUS les cursus) n'est volontairement PAS touchée — ce n'est qu'un problème de cadence d'AFFICHAGE dans l'Arène, la faire bouger perturberait l'apprentissage en cours sur les autres cursus pour un problème qui n'existe que dans un outil d'observation.**
+
+**Diagnostic complémentaire (échantillonnage réel sur `naulthene_parole.brain`, jour 20/300)** : le "bip" répété plutôt qu'une syllabe qui varie est cohérent avec l'état d'apprentissage — sur 6 ticks consécutifs, `tete_vocale` produit des paramètres vocaux quasi identiques (`f0≈190Hz`, `F1_bw`/`F2_bw`/`durée`/`amplitude` figés sur des valeurs rondes, F1/F2 ne variant que de quelques Hz). Seuls F1/F2 reçoivent un vrai gradient supervisé (voir `noyau._evaluer_production_vocale`) ; les 6 autres paramètres n'évoluent qu'indirectement (LTP/rêve) et n'ont pas encore développé de variation temporelle notable à ce stade — pas un bug, un cerveau encore jeune sur le plan vocal.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/instruments/lancer_arene.py` | `PERIODE_LECTURE_VOCALE` 5 → 18 (≈0.5s → ≈1.8s). |
+
+**Validation** : import du module vérifié sans erreur ; échantillonnage direct des paramètres vocaux produits par `naulthene_parole.brain` sur 6 ticks réels (`traiter_tick`) pour confirmer que le manque de variation vient de l'état d'apprentissage, pas d'un défaut de synthèse.
+
+---
+
 ## [27.2-experimental] - 2026-07-27
 
 ### Lecture vocale espacée dans l'Arène — corrige les micro-coupures audio permanentes

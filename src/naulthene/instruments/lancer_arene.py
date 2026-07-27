@@ -67,13 +67,20 @@ TICKS_BANDEAU_EVENEMENT = 30  # ~3s à FPS_ARENE=10 (voir arene_visuelle.FPS_ARE
 # jouer_son_temps_reel était appelé à CHAQUE tick (10/s, FPS_ARENE) en mode non-bloquant
 # — un son dure entre 0.1 et 0.6s (hemisphere_audio.BORNES_DUREE), donc un nouveau
 # sd.play() coupait quasi systématiquement le son précédent en plein milieu, produisant
-# un crépitement continu indépendant du niveau réel d'apprentissage du cerveau. On
-# n'émet désormais qu'un son toutes les PERIODE_LECTURE_VOCALE ticks (5 × 100ms = 0.5s,
-# légèrement au-dessus de la durée maximale d'un son) — largement suffisant pour que
-# chaque vocalisation se termine avant la suivante. Le score de formants continue
-# d'être recalculé à CHAQUE tick (pas de perte de réactivité sur la télémétrie/le
-# bandeau), seule la LECTURE audio est espacée.
-PERIODE_LECTURE_VOCALE = 5
+# un crépitement continu indépendant du niveau réel d'apprentissage du cerveau.
+#
+# v27.3 (second correctif, signalé par l'utilisateur : "TUT TUT TUT", un martèlement
+# régulier plutôt qu'un rythme de parole) : 5 ticks (0.5s) laissait bien le son finir,
+# mais le suivant redémarrait quasi immédiatement — le résultat sonnait comme un métronome,
+# pas comme des mots espacés naturellement. Remonté à 18 ticks (≈1.8s à FPS_ARENE=10) :
+# un vrai silence sépare deux vocalisations, plus proche du rythme d'un mot prononcé
+# toutes les 1.5-2s. BORNES_DUREE (0.1-0.6s, hemisphere_audio.py) n'est volontairement
+# PAS touchée ici — elle définit la plage physique que tete_vocale apprend à viser sur
+# TOUS les cursus (pas seulement l'affichage de l'Arène), la faire bouger perturberait
+# l'apprentissage déjà en cours plutôt que de corriger un simple problème de cadence
+# d'affichage. Le score de formants continue d'être recalculé à CHAQUE tick (pas de
+# perte de réactivité sur la télémétrie/le bandeau), seule la LECTURE audio est espacée.
+PERIODE_LECTURE_VOCALE = 18
 
 
 def _construire_telemetrie(etat, score_vocal) -> dict:
