@@ -46,6 +46,11 @@ Le projet est organisé en **package Python** sous `src/naulthene/`, avec un dos
 │   │   ├── hemisphere_audio.py   formants, MFCC, synthèse, micro, Whisper
 │   │   ├── lecons_vocales.py     cache de références vocales (TTS macOS)
 │   │   └── professeur_gemma.py   le "Professeur", appelle Gemma via Ollama
+│   ├── exocortex/                ← LE PORT EXOCORTEX C3 (greffon optionnel, v28.0)
+│   │   ├── port_c3.py             bus multiplexeur (PortC3) et contrat neutre
+│   │   │                          (RequeteC3/ReponseC3/PlugC3)
+│   │   └── plugs/                 greffons interchangeables (PlugNul, PlugSimule,
+│   │                               PlugHTTP) qui s'enregistrent sur le port
 │   └── instruments/               ← INSTRUMENTS D'OBSERVATION (lecture seule)
 │       ├── arene_visuelle.py     fenêtre pygame de visualisation en direct
 │       ├── lancer_arene.py       lance l'Arène (pygame + audio)
@@ -90,6 +95,7 @@ En plus du script de référence `colab.py`, le projet dispose d'une copie de tr
 - Vérifier si la modification touche aux **détecteurs génériques** (`DetecteurFranchissementPortes`, `DetecteurProgresPersonnel`) : ils doivent rester agnostiques de la carte — ne jamais y coder un identifiant de niveau ou une position en dur, c'est tout l'intérêt de les distinguer de `DetecteurJalonsDoorKey`
 - Vérifier si la modification touche au **cursus des 7 paliers DoorKey** (`DetecteurJalonsDoorKey`) : les noms de paliers (`NOMS`) et l'ordre de validation sont spécifiques à cet environnement — ne pas réutiliser cette classe telle quelle pour un autre niveau du `PROGRAMME`
 - Vérifier si la modification touche au **rêve adaptatif** (`pourcentage_reve`, `POURCENTAGE_REVE_MIN`, `PLAGE_REVE_MAX`, `IMPORTANCE_REFERENCE_REVE`, `TAILLE_MIN_REVE`) : ne pas réintroduire une taille de batch fixe — le principe explicite du projet est que le pourcentage rejoué émerge de la plasticité et de la richesse de la journée, jamais d'une constante externe
+- Vérifier si la modification touche au **Port Exocortex C3** (`src/naulthene/exocortex/`, `port_c3`, `tete_requete`, `ACTION_DEMANDER`) : l'invariant non négociable est qu'**aucun plug enregistré ⇒ comportement bit-identique à avant v28.0** — l'action `ACTION_DEMANDER` doit rester masquée à `-inf` dans `penser()` tant qu'aucun plug n'est disponible, et `PortC3.canal_emission` doit capturer TOUTE exception d'un plug (jamais de fuite vers le noyau). Ne jamais coder de déclenchement sur seuil d'incertitude pour appeler C3 — c'est un choix appris par REINFORCE (décision utilisateur explicite), pas un `if`. Toute modification touchant `num_actions` doit vérifier que `persistance._greffer_action_supplementaire` reste cohérente (greffe par recopie, jamais par exclusion, sur `tete_motrice`/`generateur_attente`/`generateur_attente_audio`/`actions_eye`) — sinon les `.brain` existants perdent leur tête motrice au chargement
 - Après toute modification des hyperparamètres de la section 4, vérifier la cohérence avec le [README](readme.md) (tableau `config.py` narratif, formules) et mettre à jour la documentation si les valeurs divergent
 - Ce script est prévu pour tourner sur GPU si disponible (`DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")`) — ne pas supposer un device fixe, toujours passer par `DEVICE` ou `.to(DEVICE)`
 
@@ -168,4 +174,4 @@ Utiliser le hash court réel du commit (`git rev-parse --short HEAD`) une fois l
 | `fix` mineur / `refactor` / `docs` | même version + suffixe | 14.0-fix1, 14.0-docs |
 | `chore` / `style` | pas d'incrément | - |
 
-Le script de référence `src/naulthene/cerveau/colab.py` est actuellement en version **17** (voir `readme.md`, table des matières et journal des mises à jour). `src/naulthene/cerveau/noyau.py` porte en plus des mécaniques expérimentales non encore portées (actuellement v18.0/v19.0, voir [Variante Locale de Test](#variante-locale-de-test-mac--srcnaulthenecerveaunoyaupy)) — toute nouvelle mécanique testée localement suit la même échelle de version que le script de référence, marquée `-experimental` tant qu'elle n'y est pas portée. Poursuivre sur cette échelle entière (+1.0 pour la prochaine mécanique majeure) sauf décision contraire de l'utilisateur.
+Le script de référence `src/naulthene/cerveau/colab.py` est actuellement en version **17** (voir `readme.md`, table des matières et journal des mises à jour). `src/naulthene/cerveau/noyau.py` porte en plus toutes les mécaniques expérimentales non encore portées sur `colab.py` (actuellement jusqu'à **v28.0** — Cascade C1→C2→C3 & Port Exocortex — en passant par v18.0 Architecture Homéostatique Biologique, v22 Hémisphère Auditif & Vocal, v27.x École de la Parole, voir [Variante Locale de Test](#variante-locale-de-test-mac--srcnaulthenecerveaunoyaupy) et `readme.md`/`docs/CHANGELOG.md` pour le détail) — toute nouvelle mécanique testée localement suit la même échelle de version que le script de référence, marquée `-experimental` tant qu'elle n'y est pas portée. Poursuivre sur cette échelle entière (+1.0 pour la prochaine mécanique majeure) sauf décision contraire de l'utilisateur.

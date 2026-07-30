@@ -18,6 +18,7 @@ Il intègre la structure de table des matières globale (avec le contexte applic
 1. [Vue d'Ensemble du Projet](https://www.google.com/search?q=%23vue-densemble-du-projet)
 2. [Journal des Mises à Jour (Changelog)](https://www.google.com/search?q=%23journal-des-mises-%C3%A0-jour)
 3. [Plan d'Action](https://www.google.com/search?q=%23plan-daction)
+3u. [Nouveautés v28.0 (expérimental) — La Cascade C1→C2→C3 & le Port Exocortex](#nouveautés-v280-expérimental--la-cascade-c1c2c3--le-port-exocortex-2026-07-30)
 3v. [Nouveautés v27.6 (expérimental) — L'École de la Parole & Synesthésie](#nouveautés-v276-expérimental--lécole-de-la-parole--synesthésie-2026-07-2728)
 3w. [Nouveautés v26.0 (expérimental) — L'Arène augmentée (mini-IRM + télémétrie complète)](#nouveautés-v260-expérimental--larène-augmentée-mini-irm--télémétrie-complète-2026-07-27)
 3x. [Nouveautés v26.0 (expérimental, §A.5 seul) — Cristallisation Souple](#nouveautés-v260-expérimental-a5-seul--cristallisation-souple-2026-07-27)
@@ -81,6 +82,20 @@ L'agent évolue à travers un cursus scolaire modélisé sous forme d'environnem
 ## 📜 Journal des Mises à Jour
 
 Pour un historique complet commit par commit, consultez [CHANGELOG.md](https://www.google.com/search?q=CHANGELOG.md).
+
+### Nouveautés v28.0 (expérimental) — La Cascade C1→C2→C3 & le Port Exocortex (2026-07-30)
+
+> ⚠️ **Statut expérimental** : vit dans `src/naulthene/cerveau/noyau.py` (gitignored, terrain d'essai local) et le nouveau sous-package **versionné** `src/naulthene/exocortex/`, pas encore porté sur `agi_google_colab.py`.
+
+Ouvre le Cœur Organique fermé [C1 (réflexe/instinct) + C2 (raison/JEPA)], 100% autonome depuis l'origine du projet, à un **troisième canal optionnel** : un Exocortex (C3) conçu comme un **Port Multiplexeur** plutôt qu'un appel figé vers un service unique — un bus sur lequel des "Plugs" interchangeables s'enregistrent (`PlugNul`, `PlugSimule`, `PlugHTTP` livrés ; `Plug_Ollama`/`Plug_VectorDB`/`Plug_Web`/`Plug_BrainToBrain` pourront se brancher plus tard sans toucher au noyau). **Principe non négociable, posé par l'utilisateur** : couper le courant de C3 ne doit ni planter, ni changer le comportement d'un cerveau existant — sans plug branché, l'agent se comporte au bit près comme en v27.6.
+
+* **Un choix appris, jamais un seuil.** "Interroger C3" n'est pas un `if erreur_jepa > seuil` : c'est une **8ème action** (`ACTION_DEMANDER`, `num_actions` 7→8) que la tête motrice apprend à jouer par REINFORCE, exactement comme elle apprend à tourner ou ramasser une clé — masquée à `-inf` dans les logits tant qu'aucun plug n'est disponible, et assortie d'un coût (`COUT_REQUETE_C3`) pour que demander reste un choix économique plutôt qu'un réflexe gratuit. Une nouvelle tête de routage (`tete_requete`) choisit en plus vers quel plug émettre, ou de diffuser à tous.
+* **Le détecteur d'impasse fournit un contexte, jamais un déclenchement.** Le rollout mental (`simuler_futur_et_planifier`) calculait déjà, puis jetait, l'écart-type de ses valeurs simulées — c'était l'unique mesure d'indécision du Système 2. Cette valeur (`indecision_c2`) est désormais transmise dans la requête envoyée sur le bus, en simple contexte, aux côtés de l'erreur JEPA du tick — jamais comme condition d'appel.
+* **La trappe de secours est structurelle, pas du code défensif ajouté.** Un plug qui échoue en vol part en quarantaine (cooldown) et n'apparaît plus disponible ; l'action redevient masquée au tick suivant. La curiosité intrinsèque (`DetecteurCuriositeJEPA`) et le Sursaut de Volonté, déjà présents dans le projet, n'ont jamais été conditionnés à C3 — ils restent la réponse par défaut.
+* **L'assimilation réutilise la mécanique existante, sans ouvrir de nouveau canal de gradient.** Une réponse C3 acceptée devient un 3ème canal du "OU doux" v27.0 (dopamine), déclenche le même LTP par tick (`fortifier_synapses`) que tout autre événement marquant, et majore l'importance du souvenir pour qu'il soit rejoué en priorité la nuit — sans introduire de perte supervisée externe dans la politique.
+* **La rétrocompatibilité des `.brain` existants**, le principal risque technique de cette version : passer à 8 actions change la forme de plusieurs couches (`tete_motrice`, `generateur_attente`, `generateur_attente_audio`). Une greffe par recopie partielle (et non par exclusion) préserve au bit près les 7 actions déjà apprises sur tout cerveau existant, la 8ème naissant à une initialisation atténuée — validé sur les trois `.brain` réels du dépôt, dont `naulthene_parole.brain` (300 jours, palier vocal 19/19).
+
+Voir [docs/CHANGELOG.md](docs/CHANGELOG.md) (entrée v28.0-experimental) pour le détail technique complet et [docs/explications_readme.md](docs/explications_readme.md) pour la description algorithmique de la cascade et du protocole du bus.
 
 ### Nouveautés v27.6 (expérimental) — L'École de la Parole & Synesthésie (2026-07-27/28)
 

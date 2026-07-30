@@ -30,7 +30,84 @@ import torch
 from naulthene.cerveau.noyau import (
     AGI_Naulthene, EtatCognitif, DIM_VISUELLE, BUS_REFERENCE_INITIAL,
     PROGRAMME, DEVICE, creer_env, DetecteurJalonsDoorKey, GestionnaireCursusAbnegation,
+    NUM_ACTIONS_BASE, NUM_ACTIONS_AVEC_C3,
 )
+
+
+# v28.0 (expérimental) — Port Exocortex C3 : couches dont la FORME change avec le
+# passage de num_actions=7 à 8. Pour chaque couche, préciser si la dimension
+# supplémentaire touche les LIGNES (sortie, ex: tete_motrice) ou les COLONNES (entrée,
+# ex: generateur_attente — actions_onehot est concaténé en tête, voir _predire_bus).
+# `offset_colonne` : position du bloc "actions_onehot" dans la concaténation d'entrée
+# (0 pour generateur_attente/generateur_attente_audio, qui concatènent
+# [actions_onehot, pensee] — voir _predire_bus/_predire_bus_audio).
+_COUCHES_ACTION_SUPPLEMENTAIRE = {
+    'tete_motrice': {'axe': 'sortie'},
+    'generateur_attente': {'axe': 'entree', 'offset_colonne': 0},
+    'generateur_attente_audio': {'axe': 'entree', 'offset_colonne': 0},
+}
+_BUFFERS_NAULTHENE_LINEAR = (
+    'base_weight', 'myeline_M', 'trace_activation', 'myeline_cumul', 'cristallisee', 'annexe_weight',
+)
+
+
+def _greffer_action_supplementaire(state_dict, agent):
+    """Recopie chaque tenseur affecté par NUM_ACTIONS_BASE=7 → NUM_ACTIONS_AVEC_C3=8
+    dans un tenseur de la forme attendue par `agent` (déjà instancié à 8 actions),
+    plutôt que de laisser `load_state_dict(strict=False)` échouer sur un mismatch de
+    forme (il ne gère que les clés ABSENTES, jamais un mismatch sur une clé présente
+    des deux côtés — voir le filtre integrateur_bio ci-dessus pour le même problème
+    déjà rencontré une fois). Un .brain qui a déjà 8 actions (sauvegardé depuis v28.0)
+    traverse cette fonction sans aucune modification (les formes correspondent déjà)."""
+    resultat = dict(state_dict)
+    for nom_couche, regle in _COUCHES_ACTION_SUPPLEMENTAIRE.items():
+        prefixe = f"{nom_couche}."
+        cle_base = f"{prefixe}base_weight"
+        ancien_base = state_dict.get(cle_base)
+        if ancien_base is None:
+            continue  # couche absente du checkpoint (greffe déjà gérée par strict=False)
+        couche_agent = getattr(agent, nom_couche)
+        forme_attendue = couche_agent.base_weight.shape
+        if tuple(ancien_base.shape) == tuple(forme_attendue):
+            continue  # déjà à la bonne taille (checkpoint post-v28.0), rien à faire
+
+        axe = regle['axe']
+        for nom_buffer in _BUFFERS_NAULTHENE_LINEAR:
+            cle = f"{prefixe}{nom_buffer}"
+            ancien = state_dict.get(cle)
+            if ancien is None:
+                continue
+            nouveau = getattr(couche_agent, nom_buffer).detach().clone()
+            if nom_buffer == 'annexe_weight':
+                # Repart de zéro (comme cycle_sommeil le fait déjà chaque nuit) plutôt
+                # que de recopier un annexe_weight de la veille — l'ancien annexe_weight
+                # a la mauvaise forme et n'a de toute façon de sens que pour la journée
+                # en cours, jamais rechargé tel quel entre deux sessions.
+                nouveau.zero_()
+            elif axe == 'sortie':
+                nouveau[:ancien.shape[0], :] = ancien
+            else:  # axe == 'entree' : le bloc actions_onehot est en tête de la concaténation
+                # La concaténation est [actions_onehot(A), pensee(dim_bus)] (voir
+                # _predire_bus/_predire_bus_audio) : seule la largeur du bloc
+                # actions_onehot change (7→8), le bloc pensee est recopié tel quel
+                # juste après, à son nouvel offset.
+                largeur_actions_ancienne = NUM_ACTIONS_BASE
+                nouveau[:, :largeur_actions_ancienne] = ancien[:, :largeur_actions_ancienne]
+                nouveau[:, NUM_ACTIONS_AVEC_C3:] = ancien[:, largeur_actions_ancienne:]
+            resultat[cle] = nouveau
+        print(f"   🖐️  {nom_couche} greffé(e) de {NUM_ACTIONS_BASE} à {NUM_ACTIONS_AVEC_C3} actions "
+              f"(ACTION_DEMANDER/Port Exocortex C3, v28.0) — acquis existants préservés.")
+
+    # actions_eye est une simple matrice identité (register_buffer, jamais un poids
+    # appris) — pas de recopie partielle à faire, juste la remplacer par l'identité de
+    # la bonne taille si le checkpoint est encore à l'ancienne forme. La retirer du
+    # state_dict la laisse à sa valeur d'__init__ (déjà torch.eye(NUM_ACTIONS_AVEC_C3)),
+    # ce qui est exactement ce qu'on veut.
+    ancien_actions_eye = resultat.get('actions_eye')
+    if ancien_actions_eye is not None and tuple(ancien_actions_eye.shape) != tuple(agent.actions_eye.shape):
+        del resultat['actions_eye']
+
+    return resultat
 
 
 class PersistanceAnatomique:
@@ -178,6 +255,21 @@ class PersistanceAnatomique:
                   f"incompatible avec {tuple(forme_integrateur_attendue)} attendu) — cette couche renaît à neuf.")
         else:
             state_dict_filtre = checkpoint['state_dict']
+
+        # v28.0 (expérimental) — Greffe de la 8ème action (ACTION_DEMANDER, Port
+        # Exocortex C3) par RECOPIE PARTIELLE, PAS par exclusion. Contrairement au
+        # filtre integrateur_bio ci-dessus (qui laisse la couche renaître à neuf sur
+        # mismatch), num_actions passe de 7 à 8 : jeter tete_motrice/
+        # generateur_attente/generateur_attente_audio sur un .brain existant
+        # amputerait l'agent de 300+ jours de tête motrice et de modèle du monde
+        # appris — inacceptable (voir CLAUDE.md, "Toute nouvelle couche
+        # NaultheneLinearSynaptique... "). _greffer_action_supplementaire recopie
+        # chaque bloc [:7] existant dans le nouveau tenseur [:8] et laisse la 8ème
+        # ligne/colonne à son initialisation Xavier atténuée (même sémantique que
+        # NaultheneLinearSynaptique.agrandir(), voir noyau.py) — un .brain sauvegardé
+        # sans la 8ème action reprend l'intégralité de ses acquis existants, et
+        # découvre juste une nouvelle action possible, jamais entraînée.
+        state_dict_filtre = _greffer_action_supplementaire(state_dict_filtre, agent)
 
         resultat_chargement = agent.load_state_dict(state_dict_filtre, strict=False)
         greffe_detectee = bool(resultat_chargement.missing_keys)

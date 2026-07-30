@@ -19,6 +19,7 @@ Ce document explique **comment** et **pourquoi** le cerveau `AGI_Naulthene` fonc
 11. [Le cursus académique et la patience adaptative](#11-le-cursus-académique-et-la-patience-adaptative)
 12. [Évolutions du projet (v7 → v26)](#12-évolutions-du-projet-v7--v26)
 13. [Glossaire des constantes](#13-glossaire-des-constantes)
+14. [La Cascade C1 → C2 → C3 & le Port Exocortex (expérimental)](#14-la-cascade-c1--c2--c3--le-port-exocortex-expérimental)
 
 ---
 
@@ -561,6 +562,7 @@ Dès `palier_cible >= 5` (Viser la Porte), le **Mode Libre** s'active : le guida
 | v25 (expérimental) | Le Cerveau Bébé (0→4 ans), masquage de récompense externe, Module Parent | Pousser le principe développemental à l'extrême : 8 mois 100% auto-supervisés |
 | v26.0 (expérimental, §A.5 seul) | Cristallisation Souple — protection ciblée des synapses matures contre l'érosion nocturne (falaise sigmoïde) | Protéger les fondamentaux acquis sans jamais geler l'apprentissage diurne |
 | v27.0-27.1 (expérimental) | L'École de la Parole & Synesthésie — voix réelle (LPC), synesthésie ancrée (`LecteurCaseFrontale`), dopamine unifiée vue/ouïe, rêve audio, tirage aléatoire d'une prise par tick | Sortir de la table théorique et du curriculum déconnecté de la vision ; unifier le réservoir dopaminergique entre les deux hémisphères |
+| v28.0 (expérimental) | La Cascade C1→C2→C3 & le Port Exocortex — 8ème action apprise (`ACTION_DEMANDER`), Port Multiplexeur `PortC3` + Plugs interchangeables, greffe rétrocompatible 7→8 actions | Ouvrir le Cœur Organique à un greffon externe optionnel sans jamais compromettre l'autonomie biologique ni casser un cerveau existant |
 
 Voir [CHANGELOG.md](CHANGELOG.md) pour le détail commit par commit et [readme.md](../readme.md) pour la description narrative complète de chaque version.
 
@@ -595,7 +597,93 @@ Voir [CHANGELOG.md](CHANGELOG.md) pour le détail commit par commit et [readme.m
 | `POIDS_DOPAMINE_VOCAL` (v27.0, expérimental) | 0.7 | Poids du canal vocal dans la dopamine unifiée (§9.1) — volontairement < 1.0, le score vocal étant continu plutôt qu'événementiel |
 | `POIDS_RECOMPENSE_FORMANTS / SPECTRALE` (v27.0, expérimental) | 0.6 / 0.4 | Pondération du score vocal mixte (`recompense_vocale_mixte`) entre distance de formants et distance spectrale MFCC↔MFCC |
 | `PERIODE_EVAL_SPECTRALE` (v27.0, expérimental) | 10 | Ticks entre deux réévaluations du canal spectral (coût ~100× un score de formants, dernier score réutilisé entre deux évaluations) |
+| `NUM_ACTIONS_BASE / AVEC_C3` (v28.0, expérimental) | 7 / 8 | Nombre d'actions sans/avec la 8ème action `ACTION_DEMANDER` (§14) |
+| `DIM_ROUTAGE_C3` (v28.0, expérimental) | 5 | Sortie fixe de `tete_requete` — jusqu'à 4 plugs adressables en `1_1` + 1 canal de diffusion `1_X` |
+| `COUT_REQUETE_C3` (v28.0, expérimental) | 0.01 | Pénalité en `recompense_interne` à chaque `ACTION_DEMANDER` — rend le choix économique, jamais gratuit |
+| `POIDS_DOPAMINE_C3` (v28.0, expérimental) | 0.5 | Poids du 3ème canal (C3) dans la dopamine unifiée (§14.4) — plus faible que `POIDS_DOPAMINE_VOCAL` |
+| `SEUIL_OVERRIDE_C3` (v28.0, expérimental) | 0.85 | Confiance à partir de laquelle une `ReponseC3` impose l'action plutôt que de biaiser les logits |
+| `FORCE_C3` (v28.0, expérimental) | 0.5 | Poids du biais logits appliqué sous `SEUIL_OVERRIDE_C3` — même ordre de grandeur que `FORCE_PLANIFICATION_GUIDE` |
+| `COOLDOWN_PLUG_ECHEC` (v28.0, expérimental) | 200 | Ticks de quarantaine d'un plug après une exception, avant d'être retenté (`naulthene.exocortex.port_c3`) |
 
 ---
 
-*Document généré à partir d'une lecture directe du code source (`agi_google_colab.py` v17, `src/naulthene/cerveau/noyau.py` jusqu'à v27.1) — voir [readme.md](../readme.md) pour la documentation narrative complète et [CLAUDE.md](../CLAUDE.md) pour les règles de maintenance du projet.*
+## 14. La Cascade C1 → C2 → C3 & le Port Exocortex (expérimental)
+
+> ⚠️ **Statut expérimental** : vit dans `src/naulthene/cerveau/noyau.py` et le sous-package versionné `src/naulthene/exocortex/`, pas encore porté sur `agi_google_colab.py`. Voir [docs/CHANGELOG.md](CHANGELOG.md) (entrée v28.0-experimental) pour le détail commit par commit.
+
+### 14.1 Principe : un troisième cerveau, jamais dans le chemin critique
+
+Jusqu'ici, `penser()` (§5-7) fusionne uniquement C1 (`tete_motrice`) et C2 (`simuler_futur_et_planifier`) en une seule ligne (`logits_finaux = logits_instinct + valeurs_simulees * force_planification`). La v28.0 ajoute un **troisième canal optionnel**, C3 (l'Exocortex), conçu explicitement comme un **Port Multiplexeur** plutôt qu'un appel figé vers un unique service externe :
+
+```python
+class RequeteC3:
+    latent: np.ndarray        # pensee_bio, dim_bus — jamais un tenseur PyTorch
+    num_actions: int
+    indecision_c2: float       # contexte, jamais un déclencheur (voir 14.3)
+    erreur_jepa: float
+    palier_vocal: int
+    mot_frontal: str | None
+
+class ReponseC3:
+    preferences: np.ndarray   # avis sur les num_actions actions, taille (num_actions,)
+    confiance: float           # dans [0, 1]
+    origine: str
+```
+
+`PortC3` (le bus) ne connaît que ce contrat — jamais l'agent, jamais PyTorch. Des `PlugC3` interchangeables s'y enregistrent (`PlugNul` toujours absent, `PlugSimule` déterministe pour les tests, `PlugHTTP` backend générique JSON/HTTP). **Invariant non négociable** : sans plug enregistré, le comportement est bit-identique à la v27.6 — c'est la garantie de fond de toute cette section.
+
+### 14.2 Le choix appris — une 8ème action, pas un seuil
+
+`num_actions` passe de `NUM_ACTIONS_BASE=7` à `NUM_ACTIONS_AVEC_C3=8`. La 8ème action, `ACTION_DEMANDER`, est une action comme les autres pour la tête motrice — apprise par le même REINFORCE, jamais déclenchée par un `if`. Le masquage a lieu dans `penser()`, après la fusion C1+C2 :
+
+```python
+logits_finaux = logits_instinct + (valeurs_simulees * force_planification)
+if not plugs_c3_disponibles:
+    logits_finaux[..., ACTION_DEMANDER] = float("-inf")
+```
+
+Sans plug disponible, l'action est mathématiquement inexistante dans `Categorical(logits=logits_finaux)` — pas juste improbable. Une nouvelle tête `tete_requete` (dim_bus → `DIM_ROUTAGE_C3=5`) choisit en plus vers quel plug émettre (`mode="1_1"`) ou s'il faut diffuser à tous (`mode="1_X"`, dernier canal de sortie). Quand `ACTION_DEMANDER` est choisie, l'action réellement transmise à `env.step()` est toujours l'action MiniGrid "done" (6) — la seule véritablement neutre du jeu (agent immobile, déjà documentée comme telle en v27.4) — jamais un pas d'environnement inventé. Une pénalité `COUT_REQUETE_C3` entre dans `recompense_interne` à chaque demande : sans coût, REINFORCE apprendrait à spammer un canal gratuit.
+
+### 14.3 Le détecteur d'impasse — contexte, jamais déclencheur
+
+Le rollout mental (§6) calculait déjà l'écart-type de ses valeurs cumulées avant de le jeter à la ligne de normalisation :
+
+```python
+indecision_c2 = float(valeur_cumulee.std().item())
+if valeur_cumulee.std() > 1e-6:
+    valeur_cumulee = (valeur_cumulee - valeur_cumulee.mean()) / (valeur_cumulee.std() + 1e-8)
+```
+
+`indecision_c2` (std proche de 0 = C2 n'a pas d'avis tranché) est désormais remonté et transmis dans `RequeteC3.indecision_c2`, aux côtés de l'erreur JEPA du tick (`RequeteC3.erreur_jepa`). **Décision utilisateur explicite** : ces deux valeurs ne déclenchent jamais l'appel à C3 — elles ne font qu'informer le plug interrogé du niveau d'incertitude de l'agent au moment de la requête. Le déclenchement reste entièrement le fait de la tête motrice, un choix appris comme les 7 autres.
+
+### 14.4 Isolation et repli — la trappe de secours
+
+`PortC3.canal_emission` enveloppe chaque appel de plug dans un `try/except` large : aucune panne externe (réseau, timeout, format invalide) ne remonte jamais au noyau. Un plug qui échoue est mis en cooldown (`COOLDOWN_PLUG_ECHEC=200` ticks) plutôt que réinterrogé à chaque tick — la leçon retenue du seul précédent d'appel externe du projet, `professeur_gemma.py` (§ voir `docs/CHANGELOG.md` v28.0), qui n'a ni health-check ni cache d'indisponibilité et peut faire payer jusqu'à 60s de timeout par appel. Sans réponse (bus vide ou plug en échec), l'action a tout de même été jouée « à vide » : l'agent a payé `COUT_REQUETE_C3` sans bénéfice, et la curiosité intrinsèque (`DetecteurCuriositeJEPA`, §2.4) ainsi que le Sursaut de Volonté restent la réponse de repli — ils n'ont jamais été conditionnés à la présence de C3.
+
+### 14.5 Le registre d'assimilation
+
+Une `ReponseC3` reçue lors d'un tick où `ACTION_DEMANDER` a été jouée est mise en attente (`reponse_c3_en_attente`) et appliquée au tick **suivant** — le bus répond à une pensée déjà écoulée, jamais à celle qui vient de se jouer :
+
+$$
+\text{logits}_{finaux} \mathrel{+}= F_{C3} \cdot \text{preferences}_{C3} \qquad \text{si confiance} < \text{SEUIL\_OVERRIDE\_C3}
+$$
+
+Au-delà de `SEUIL_OVERRIDE_C3=0.85`, la réponse **impose** l'action plutôt que de biaiser les logits — le `log_prob` poussé dans le buffer d'entraînement reste alors celui de l'action réellement exécutée sous la distribution courante (`dist.log_prob(action_imposee)`), jamais celui d'un échantillon fictif, pour ne pas invalider le gradient REINFORCE (ce tick devient de facto légèrement off-policy).
+
+Un conseil C3 suivi d'un succès (recompense visuelle positive au même tick) devient un 3ème canal du "OU doux" v27.0 (§9.1), étendu sans rien casser :
+
+$$
+w_{evenement} = 1 - \big(1 - W_{visuel} \cdot w_{visuel}\big)\big(1 - W_{vocal} \cdot w_{vocal}\big)\big(1 - W_{C3} \cdot w_{C3}\big), \qquad W_{C3} = \text{POIDS\_DOPAMINE\_C3} = 0.5
+$$
+
+Toujours bornée dans $[0,1]$ par construction, toujours rétrocompatible à l'identique si $w_{C3}=0$. Le choc dopaminergique qui en résulte appelle déjà `fortifier_synapses` (LTP par tick, §8.3) et majore `micro_boost_ancrage`, donc l'importance du souvenir dans `memoire_moyen_terme` — ce souvenir sera rejoué en priorité la nuit par l'échantillonnage pondéré de `rever()` (§10.2). Aucune perte supervisée dédiée n'est ajoutée : l'assimilation passe entièrement par les mécaniques homéostatiques déjà existantes, jamais par un nouveau canal de gradient — cohérent avec la contrainte "pas de Transformer, pas de signal supervisé externe dans la politique" du plan v26.0 (`docs/AMELIORATION_V1.md`).
+
+### 14.6 Rétrocompatibilité des `.brain` — la greffe par recopie
+
+Passer de 7 à 8 actions change la **forme** de `tete_motrice` (sortie), `generateur_attente`/`generateur_attente_audio` (entrée, le bloc `actions_onehot` de la concaténation `[actions_onehot, pensee]`) et du buffer `actions_eye`. `load_state_dict(strict=False)` (§ voir `persistance.py`) gère les clés *absentes* mais lève une `RuntimeError` sur un mismatch de forme d'une clé *présente* des deux côtés.
+
+`_greffer_action_supplementaire` généralise le patron déjà utilisé pour `integrateur_bio` (filtrage conditionnel sur la forme réelle), mais par **recopie** plutôt que par **exclusion** — jeter ces couches ferait perdre des centaines de jours de tête motrice et de modèle du monde appris. Pour chaque couche affectée, chaque buffer (`base_weight`, `myeline_M`, `trace_activation`, `myeline_cumul`, `cristallisee`) est recopié à l'identique sur son ancien bloc `[:7]`, la 8ème ligne/colonne restant à l'initialisation Xavier atténuée du nouveau tenseur — exactement la sémantique de `NaultheneLinearSynaptique.agrandir()` (§8.4). `annexe_weight` repart toujours de zéro (comme `cycle_sommeil` le fait chaque nuit). Validé sur les trois `.brain` réels du dépôt, dont un cerveau de 300 jours (`naulthene_parole.brain`, palier vocal 19/19) — poids des 7 actions préservés à l'identique bit à bit après chargement.
+
+---
+
+*Document généré à partir d'une lecture directe du code source (`agi_google_colab.py` v17, `src/naulthene/cerveau/noyau.py` jusqu'à v28.0) — voir [readme.md](../readme.md) pour la documentation narrative complète et [CLAUDE.md](../CLAUDE.md) pour les règles de maintenance du projet.*
