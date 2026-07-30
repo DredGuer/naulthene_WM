@@ -27,6 +27,8 @@ Le projet est organisé en **package Python** sous `src/naulthene/`, avec un dos
 ├── LICENSE, NOTICE               licence Apache 2.0 et attribution — voir readme.md
 ├── readme.md                     documentation narrative de référence (table des matières,
 │                                   historique des versions, description scientifique du modèle)
+├── Parcourt_readme.md            guide pratique du système de cursus (commandes de lancement
+│                                   vulgarisées, jours/ticks par parcours, détail des paliers, FAQ)
 ├── CLAUDE.md                     ce fichier
 ├── .gitignore
 │

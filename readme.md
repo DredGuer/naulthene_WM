@@ -18,6 +18,7 @@ Il intègre la structure de table des matières globale (avec le contexte applic
 1. [Vue d'Ensemble du Projet](https://www.google.com/search?q=%23vue-densemble-du-projet)
 2. [Journal des Mises à Jour (Changelog)](https://www.google.com/search?q=%23journal-des-mises-%C3%A0-jour)
 3. [Plan d'Action](https://www.google.com/search?q=%23plan-daction)
+3t. **[Parcourt_readme.md — Guide Complet du Système de Cursus](Parcourt_readme.md)** (commandes de lancement, jours/ticks par parcours, détail des paliers, FAQ)
 3u. [Nouveautés v28.0 (expérimental) — La Cascade C1→C2→C3 & le Port Exocortex](#nouveautés-v280-expérimental--la-cascade-c1c2c3--le-port-exocortex-2026-07-30)
 3v. [Nouveautés v27.6 (expérimental) — L'École de la Parole & Synesthésie](#nouveautés-v276-expérimental--lécole-de-la-parole--synesthésie-2026-07-2728)
 3w. [Nouveautés v26.0 (expérimental) — L'Arène augmentée (mini-IRM + télémétrie complète)](#nouveautés-v260-expérimental--larène-augmentée-mini-irm--télémétrie-complète-2026-07-27)
@@ -76,6 +77,11 @@ L'agent évolue à travers un cursus scolaire modélisé sous forme d'environnem
 * **Lycée** : Manipulation avancée, coffres et outils (`Unlock-5x5`).
 * **Université** : Rétention d'informations temporelles et mémoire à long terme (`MemoryS7`).
 * **Doctorat** : Planification à très long horizon à travers de multiples sous-objectifs (`MultiRoom-N4-S5`).
+
+📖 **Envie de lancer un run et de comprendre concrètement ce qui se passe (commandes, jours,
+ticks par jour, paliers, FAQ) ?** Voir **[Parcourt_readme.md](Parcourt_readme.md)** — le guide
+pratique complet des 4 parcours d'entraînement (Cursus par Ères, Cerveau Bébé, Cursus de la
+Parole, la Cuve).
 
 ---
 

@@ -4,6 +4,34 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [28.0-docs] - 2026-07-30
+
+### Parcourt_readme.md — guide pratique complet du système de cursus (commandes, jours/ticks, paliers, FAQ)
+
+| Type | Details |
+|------|---------|
+| **Commit** | N/A — en attente du commit de cette version |
+| **Catégorie** | docs |
+| **Impact** | Documentation |
+
+**Demande utilisateur : un document unique, à la racine, qui explique de façon vulgarisée et exhaustive TOUT le fonctionnement des 4 parcours d'entraînement (Cursus par Ères, Cerveau Bébé, Cursus de la Parole, la Cuve) — commandes de lancement copier-collables, durée en jours et en ticks/jour de chacun, détail complet des 5 niveaux MiniGrid, des 7 paliers DoorKey, des 19 paliers vocaux, Mode Guidé/Libre, patience adaptative, et un rappel explicite qu'aucune progression ne régresse actuellement. Rédigé à partir d'une lecture directe du code (`noyau.py`, les 3 scripts de `salles_de_classe/`), pas de mémoire — toutes les valeurs (ticks/jour, seuils, poids de choc) vérifiées contre les constantes réelles.**
+
+Nouveau fichier `Parcourt_readme.md`, à la racine du dépôt (comme `readme.md`) plutôt que dans
+`docs/` — c'est un guide pratique de premier niveau ("je veux lancer un run"), complémentaire à
+`docs/LANCEMENT.md` (guide opérationnel technique, options CLI complètes) et
+`docs/explications_readme.md` (détail algorithmique/mathématique). Référencé depuis `readme.md`
+(table des matières + lien en tête de la Vue d'Ensemble) et `CLAUDE.md` (arborescence).
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `Parcourt_readme.md` | **Nouveau.** 14 sections : vue d'ensemble des 4 parcours, détail par cursus (commande, rythme ticks/jour, phases/ères), les 5 niveaux MiniGrid, les 7 paliers DoorKey, les 19 paliers vocaux, Mode Guidé/Libre, patience adaptative, absence de régression, emplacement des `.brain`, lecture annotée d'un bilan de nuit, FAQ. |
+| `readme.md` | Entrée `3t.` dans la table des matières pointant vers `Parcourt_readme.md` ; lien de renvoi ajouté juste après le tableau des 5 niveaux dans la Vue d'Ensemble. |
+| `CLAUDE.md` | `Parcourt_readme.md` ajouté à l'arborescence *Architecture* (fichiers racine). |
+
+**Validation** : toutes les valeurs numériques du document (ticks/jour par cursus : 400/3600/800 ; seuils DoorKey 2+2 ; seuils vocaux 0.15→0.45 ; `PATIENCE_MIN/MAX` 50/350 ; `FORCE_PLANIFICATION_GUIDE/LIBRE` 0.5/0.85 ; `SEUIL_PALIER_MODE_LIBRE=5` ; `JOUR_FIN_MASQUAGE_EXTERNE=240`) vérifiées par grep direct sur `noyau.py` et les 3 scripts de cursus avant rédaction, aucune valeur inventée ou approximée.
+
+---
+
 ## [28.0-experimental] - 2026-07-30
 
 ### La Cascade C1 → C2 → C3 & le Port Exocortex — un troisième cerveau optionnel, jamais dans le chemin de gradient
