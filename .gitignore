@@ -27,3 +27,8 @@ docs/AMELIORATION_V1.md
 # personnelles et spécifiques à une machine — même raisonnement que brains/*.brain.
 voix/*
 !voix/.gitkeep
+
+# Notes de travail personnelles (rapports d'évaluation de rétention générés par
+# instruments/evaluer_cerveau.py, diagnostics ponctuels...) — spécifiques à une
+# machine/un run local précis, jamais des documents de référence du projet.
+docs/notes/
