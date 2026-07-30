@@ -4,6 +4,31 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [28.0-docs2] - 2026-07-30
+
+### Parcourt_readme.md déplacé de la racine vers docs/
+
+| Type | Details |
+|------|---------|
+| **Commit** | N/A — en attente du commit de cette version |
+| **Catégorie** | docs |
+| **Impact** | Documentation |
+
+**Demande utilisateur : ranger `Parcourt_readme.md` dans `docs/` plutôt qu'à la racine.**
+
+`git mv Parcourt_readme.md docs/Parcourt_readme.md` (historique préservé). Tous les liens
+relatifs internes au fichier corrigés (`../readme.md` pour remonter à la racine, chemins courts
+vers `CHANGELOG.md`/`LANCEMENT.md`/`explications_readme.md` désormais dans le même dossier).
+`readme.md` et `CLAUDE.md` mis à jour pour pointer vers `docs/Parcourt_readme.md`.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `docs/Parcourt_readme.md` | Déplacé depuis la racine (`git mv`), liens internes corrigés pour le nouvel emplacement. |
+| `readme.md` | Liens mis à jour : `Parcourt_readme.md` → `docs/Parcourt_readme.md`. |
+| `CLAUDE.md` | Entrée déplacée de la liste des fichiers racine vers la description du dossier `docs/`. |
+
+---
+
 ## [28.0-docs] - 2026-07-30
 
 ### Parcourt_readme.md — guide pratique complet du système de cursus (commandes, jours/ticks, paliers, FAQ)

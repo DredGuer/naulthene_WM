@@ -3,8 +3,8 @@
 Ce document explique, en langage clair, **comment Naulthène apprend au fil du temps** : les
 commandes pour lancer chaque parcours, combien de temps ça prend, ce que chaque palier signifie
 concrètement, et comment lire les logs/W&B pour suivre la progression. C'est le complément
-pratique de [readme.md](readme.md) (vision d'ensemble et formules) et
-[docs/explications_readme.md](docs/explications_readme.md) (détail algorithmique) — ici, l'angle
+pratique de [readme.md](../readme.md) (vision d'ensemble et formules) et
+[docs/explications_readme.md](explications_readme.md) (détail algorithmique) — ici, l'angle
 est **"je veux lancer un run et comprendre ce qui se passe"**.
 
 Référence code : `src/naulthene/cerveau/noyau.py` (v28.0) et les trois scripts de
@@ -45,8 +45,8 @@ ce que tu veux observer.
 | **La Cuve** | `daemon_cerveau.py` + clients | `brains/naulthene_v21.brain` | illimité, manuel | pas de notion de "jour" fixe | Contrôle manuel tick par tick, alterner MiniGrid/vocal à la demande |
 
 **Tous les 4 lancent le même cerveau (`AGI_Naulthene`)** avec la même architecture (v28.0 : 8
-actions, dont l'action C3 optionnelle — voir `docs/CHANGELOG.md` v28.0) — seule la boucle qui
-pilote les journées change.
+actions, dont l'action C3 optionnelle — voir [docs/CHANGELOG.md](CHANGELOG.md), entrée v28.0) —
+seule la boucle qui pilote les journées change.
 
 **Convention commune aux 3 cursus autonomes** (par Ères, Bébé, Parole) :
 - Chacun **sauvegarde après chaque nuit** — interrompre avec `Ctrl+C` ne perd au pire que la
@@ -192,7 +192,7 @@ PYTHONPATH=src python -m naulthene.instruments.enregistreur_voix --prises 3
 ```
 
 Sans cette étape, le cursus fonctionne quand même — repli automatique sur la voix de synthèse
-macOS (`say`). Voir `docs/LANCEMENT.md` §0bis pour le détail complet.
+macOS (`say`). Voir [docs/LANCEMENT.md](LANCEMENT.md) §0bis pour le détail complet.
 
 ### Le rythme d'une journée : 800 ticks
 
@@ -245,7 +245,7 @@ PYTHONPATH=src python -m naulthene.cuve.client_professeur --port 9999 --palier 2
 
 Il n'y a **pas de notion de "jour" fixe** ici — une nuit (`executer_nuit`) se déclenche
 automatiquement dès qu'un certain nombre de ticks s'est accumulé, comme dans les cursus
-autonomes, mais tu contrôles quand arrêter chaque session. Voir `docs/LANCEMENT.md` §1-5 pour le
+autonomes, mais tu contrôles quand arrêter chaque session. Voir [docs/LANCEMENT.md](LANCEMENT.md) §1-5 pour le
 détail complet (options, dépannage).
 
 ---
@@ -320,7 +320,7 @@ Même mécanique 2+2 que les paliers DoorKey, mais le **seuil de réussite du jo
 — il **augmente progressivement** avec le palier déjà atteint : `0.15` (très permissif, palier 1)
 jusqu'à `0.45` (exigeant, palier 19). C'est volontaire : un seuil fixe trop haut avait bloqué un
 run réel de 1000 jours à 0 promotion (l'oreille n'apprenait jamais rien) — voir
-`docs/explications_readme.md` §11.3 pour le détail.
+[docs/explications_readme.md](explications_readme.md) §11.3 pour le détail.
 
 ---
 
@@ -456,14 +456,14 @@ le temps réel par jour affiché en console, puis d'extrapoler.
 **Le cursus s'est arrêté tout seul, pourquoi ?**
 Vérifie le message affiché juste avant la fin. Le Cursus par Ères a un garde-fou : si après 100
 jours le palier vocal n'a jamais quitté le palier 1 (aucun premier succès), le script s'arrête
-proprement plutôt que de tourner à vide (voir `docs/LANCEMENT.md`, section Dépannage).
+proprement plutôt que de tourner à vide (voir [docs/LANCEMENT.md](LANCEMENT.md), section Dépannage).
 
 **Comment observer un cerveau entraîné sans risquer de l'abîmer ?**
 L'Arène (`PYTHONPATH=src python -m naulthene.instruments.lancer_arene --brain <fichier>`) —
-lecture seule garantie, ne modifie jamais le `.brain`. Voir `docs/LANCEMENT.md` §7.
+lecture seule garantie, ne modifie jamais le `.brain`. Voir [docs/LANCEMENT.md](LANCEMENT.md) §7.
 
 **Est-ce que le Port Exocortex C3 (v28.0) change quelque chose à ces cursus ?**
 Non, par défaut. Les 3 cursus autonomes n'enregistrent aucun plug C3 — l'action supplémentaire
 `ACTION_DEMANDER` reste masquée et le comportement est identique à avant la v28.0. Voir
-`docs/CHANGELOG.md` (entrée v28.0-experimental) et `docs/LANCEMENT.md` §8 pour tester ce canal
+[docs/CHANGELOG.md](CHANGELOG.md) (entrée v28.0-experimental) et [docs/LANCEMENT.md](LANCEMENT.md) §8 pour tester ce canal
 séparément.
