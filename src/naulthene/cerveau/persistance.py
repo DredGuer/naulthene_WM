@@ -31,6 +31,7 @@ from naulthene.cerveau.noyau import (
     AGI_Naulthene, EtatCognitif, DIM_VISUELLE, BUS_REFERENCE_INITIAL,
     PROGRAMME, DEVICE, creer_env, DetecteurJalonsDoorKey, GestionnaireCursusAbnegation,
     NUM_ACTIONS_BASE, NUM_ACTIONS_AVEC_C3, DIM_VECTEUR_BIO,
+    DIM_TOUCHER, DIM_CHIMIE, DIM_EXO,
 )
 
 
@@ -172,8 +173,18 @@ def _greffer_vecteur_bio_etendu(state_dict, agent):
         resultat[cle] = nouveau
 
     nb_nouvelles = largeur_attendue - largeur_checkpoint
+    # Libellé déduit de la LARGEUR BIO réellement portée par le checkpoint, et non du
+    # nombre de dimensions ajoutées : DIM_TOUCHER+DIM_CHIMIE et DIM_EXO valent tous deux
+    # 8, donc `nb_nouvelles == 8` est ambigu (un .brain pré-v29 comme un .brain v29
+    # gagnent 8 dims, mais pas les mêmes). La largeur d'origine, elle, est sans ambiguïté.
+    largeur_bio_checkpoint = largeur_checkpoint - dim_bus_attendue
+    if largeur_bio_checkpoint <= 16:
+        libelle = "toucher/odorat/goût (v29.0)" if nb_nouvelles == DIM_TOUCHER + DIM_CHIMIE \
+            else "toucher/odorat/goût + Exo-Sens (v29.0 + v30.0)"
+    else:
+        libelle = "Exo-Sens, le 6ème sens (v30.0)"
     print(f"   👃 integrateur_bio greffé de {largeur_checkpoint} à {largeur_attendue} dims d'entrée "
-          f"(+{nb_nouvelles} : toucher/odorat/goût, Bus Sensoriel v29.0) — acquis existants préservés.")
+          f"(+{nb_nouvelles} : {libelle}) — acquis existants préservés.")
     return resultat, True
 
 
@@ -244,6 +255,15 @@ class PersistanceAnatomique:
             'tick_absolu': etat.tick_absolu,
             'jour': etat.jour,
         }
+        # v30.0 — crée le dossier parent s'il n'existe pas. Depuis l'ajout du flag
+        # `--brain` aux cursus (convention de nommage horodatée, voir CLAUDE.md), le
+        # chemin peut pointer vers un sous-dossier absent (ex. brains/old_V30/...) :
+        # sans ce mkdir, torch.save échouerait par FileNotFoundError APRÈS une journée
+        # entière de calcul — le pire moment possible pour découvrir le problème.
+        dossier = os.path.dirname(self.fichier)
+        if dossier:
+            os.makedirs(dossier, exist_ok=True)
+
         # Écriture atomique : on écrit dans un fichier temporaire puis on renomme,
         # pour ne jamais laisser un .brain à moitié écrit si le process est tué en
         # plein torch.save (ex: kill -9 pendant une sauvegarde d'urgence).
@@ -387,6 +407,18 @@ class PersistanceAnatomique:
 
         # --- Souvenirs ---
         etat.memoire_episodique_spatiale.souvenirs = checkpoint['souvenirs_spatiaux']
+        # v31.1 — compactage des doublons historiques. La déduplication d'
+        # `enregistrer_evenement` ne vaut que pour les nouveaux souvenirs ; un `.brain`
+        # antérieur porte encore tous les siens. Mesuré sur naulthene_parole (480 000
+        # ticks) : 200 souvenirs pour 18 repères distincts, soit 91 % de redondance — la
+        # « saturation » observée n'était pas un manque de place. Le tick le plus récent
+        # de chaque repère est conservé, donc aucune information n'est perdue : seules
+        # les répétitions disparaissent.
+        supprimes = etat.memoire_episodique_spatiale.dedupliquer()
+        if supprimes:
+            restants = len(etat.memoire_episodique_spatiale.souvenirs)
+            print(f"   🧹 Mémoire spatiale compactée : {supprimes} doublon(s) fusionné(s) "
+                  f"→ {restants} repère(s) distinct(s) (v31.1, aucune information perdue).")
 
         # --- Curriculum & progression ---
         etat.niveau_actuel = checkpoint['niveau_actuel']

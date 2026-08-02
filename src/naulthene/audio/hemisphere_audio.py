@@ -26,7 +26,7 @@ estimateur de formants réels par analyse LPC (`estimer_formants_lpc`/
 plutôt que de la table théorique VOYELLES_CIBLES ; et une distance/récompense spectrale
 MFCC↔MFCC (`distance_spectrale`/`recompense_spectrale`/`recompense_vocale_mixte`), pour
 noter l'agent sur le son réellement synthétisé, pas seulement sur deux nombres. Voir
-docs/CONCEPTION_v22_audio.md §8.
+docs/Old_Archive_rmd/CONCEPTION_v22_audio.md §8.
 """
 
 import numpy as np

@@ -48,13 +48,30 @@ class RequeteC3:
 
 @dataclass
 class ReponseC3:
-    """Ce qu'un plug renvoie. `preferences` est un avis brut sur les `num_actions`
-    actions possibles (pas nécessairement une distribution normalisée — c'est
-    `PortC3.agreger` et l'appelant qui décident de la mise à l'échelle, exactement
-    comme `valeurs_simulees` dans `simuler_futur_et_planifier`)."""
-    preferences: np.ndarray               # shape (num_actions,)
+    """Ce qu'un plug renvoie.
+
+    v30.0 — **le pivot de C3 en 6ème sens**. Jusqu'en v29.x, un plug rendait un avis sur
+    les actions (`preferences`) : C3 était un canal de DÉCISION, consulté via une 8ème
+    action apprise. Depuis la v30.0, C3 est un canal de PERCEPTION — le plug rend un
+    vecteur perceptif `perception` (DIM_EXO=8 dims normalisées) que l'agent « sent » en
+    continu, au même titre que le toucher ou l'odorat, sans jamais avoir à le demander.
+
+    Les deux champs coexistent et sont tous deux optionnels :
+
+    - `perception` : le vecteur exogène Z_exogène, shape (8,), valeurs attendues dans
+      [0, 1] (le noyau clippe de toute façon — voir `BusSensoriel.percevoir_exogene`).
+      C'est le canal de la v30.0.
+    - `preferences` : l'avis sur les actions, shape (num_actions,). **Conservé pour la
+      rétrocompatibilité** des plugs écrits en v28.0 (`PlugSimule`, `PlugHTTP`) et parce
+      que `ACTION_DEMANDER` reste présente dans le réseau (masquée en permanence, jamais
+      amputée des `.brain` existants). Un plug purement perceptif laisse ce champ à None.
+
+    Un plug peut donc être perceptif (v30), décisionnel (v28, historique), ou les deux —
+    le port ne juge pas, il transporte."""
     confiance: float                      # dans [0, 1]
     origine: str                          # nom du plug ayant répondu
+    perception: Optional[np.ndarray] = None   # v30.0 — Z_exogène, shape (DIM_EXO,)
+    preferences: Optional[np.ndarray] = None  # v28.0 — avis sur les actions, shape (num_actions,)
     latence_ms: float = 0.0
 
 
@@ -142,23 +159,39 @@ class PortC3:
         return reponses
 
     @staticmethod
+    def _moyenne_ponderee(vecteurs: list, poids: list) -> Optional[np.ndarray]:
+        """Moyenne pondérée d'une liste de vecteurs, en ignorant les None. Retourne None
+        si aucun vecteur exploitable — jamais une valeur inventée. Un poids total nul
+        (toutes les confiances à 0) retombe sur une moyenne simple plutôt qu'une
+        division par zéro."""
+        paires = [(v, p) for v, p in zip(vecteurs, poids) if v is not None]
+        if not paires:
+            return None
+        total = sum(p for _, p in paires)
+        if total <= 0.0:
+            return np.mean([v for v, _ in paires], axis=0)
+        return sum(v * p for v, p in paires) / total
+
+    @staticmethod
     def agreger(reponses: list[ReponseC3]) -> Optional[ReponseC3]:
-        """Moyenne des préférences pondérée par la confiance de chaque plug — repli
-        None si aucune réponse (bus vide ou tous les plugs en échec), jamais une
-        valeur inventée (même philosophie que professeur_gemma.juger_qualitatif)."""
+        """Fusionne les réponses de plusieurs plugs en une seule, pondérée par la
+        confiance de chacun — repli None si aucune réponse (bus vide ou tous les plugs
+        en échec), jamais une valeur inventée (même philosophie que
+        `professeur_gemma.juger_qualitatif`).
+
+        v30.0 : agrège les DEUX canaux indépendamment — `perception` (le 6ème sens) et
+        `preferences` (l'avis historique sur les actions). Chacun ignore les plugs qui ne
+        le fournissent pas, si bien qu'un bus mélangeant un plug perceptif (v30) et un
+        plug décisionnel (v28) produit une réponse cohérente sur les deux canaux, sans
+        qu'aucun des deux ne plante sur le `None` de l'autre."""
         if not reponses:
             return None
-        poids_total = sum(r.confiance for r in reponses)
-        if poids_total <= 0.0:
-            # Toutes les réponses sont à confiance nulle : moyenne simple plutôt
-            # qu'une division par zéro.
-            preferences = np.mean([r.preferences for r in reponses], axis=0)
-            confiance = 0.0
-        else:
-            preferences = sum(r.preferences * r.confiance for r in reponses) / poids_total
-            confiance = poids_total / len(reponses)
+        poids = [r.confiance for r in reponses]
+        poids_total = sum(poids)
+        confiance = 0.0 if poids_total <= 0.0 else poids_total / len(reponses)
         return ReponseC3(
-            preferences=preferences,
+            perception=PortC3._moyenne_ponderee([r.perception for r in reponses], poids),
+            preferences=PortC3._moyenne_ponderee([r.preferences for r in reponses], poids),
             confiance=float(np.clip(confiance, 0.0, 1.0)),
             origine="+".join(r.origine for r in reponses),
             latence_ms=max((r.latence_ms for r in reponses), default=0.0),

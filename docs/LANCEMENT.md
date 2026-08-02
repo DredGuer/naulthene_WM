@@ -1,21 +1,29 @@
 # Guide de Lancement — Naulthène AGI (Cuve Persistante + Hémisphère Audio + Cursus par Ères + Cerveau Bébé + Cursus de la Parole + Port Exocortex C3 + Bus Sensoriel)
 
-Ce guide couvre le lancement local (Mac) de l'écosystème V21-V29 : le cerveau persistant
+Ce guide couvre le lancement local (Mac) de l'écosystème V21-V30 : le cerveau persistant
 (`daemon_cerveau.py`, dans `src/naulthene/cuve/`) et ses deux clients (`client_corps.py` pour
 MiniGrid, `client_professeur.py` pour les leçons de parole ponctuelles), trois cursus
 développementaux autonomes (`src/naulthene/salles_de_classe/`) : le Cursus par Ères
 (`cursus_developpemental.py`, 1000 jours, voir §6), le Cerveau Bébé (`cursus_bebe.py`, 1440
 jours, voir §6bis) et le Cursus de la Parole (`cursus_parole.py`, 900 jours, v27.0-expérimental,
 voir §6ter), le Port Exocortex C3 (`src/naulthene/exocortex/`, v28.0-expérimental, voir §8),
-ainsi que le Bus Sensoriel des 5 sens (`src/naulthene/cerveau/bus_sensoriel.py`,
-v29.0-expérimental, voir §9). Voir `readme.md` pour l'architecture complète, `CHANGELOG.md`
-pour l'historique des versions.
+le Bus Sensoriel des 5 sens (`src/naulthene/cerveau/bus_sensoriel.py`, v29.0-expérimental, voir
+§9), l'Exo-Sens — le 6ᵉ sens (v30.0-expérimental, voir §10) et les métriques de calibrage
+(v30.1, voir §11). Voir `readme.md` pour l'architecture complète, `CHANGELOG.md` pour
+l'historique des versions, et [Old_Archive_rmd/](Old_Archive_rmd/) pour les documents de
+conception historiques.
 
-> 🆕 **v29.0 — rien à configurer.** Le Bus Sensoriel (toucher, odorat, goût) est **actif
+> 🆕 **v29.0/v29.1 — rien à configurer.** Le Bus Sensoriel (toucher, odorat, goût) est **actif
 > automatiquement** dans tous les modes ci-dessous : aucune option de ligne de commande, aucun
 > flag. Le seul point à connaître est le message de greffe `👃 integrateur_bio greffé de N à M
 > dims d'entrée` au premier chargement d'un `.brain` antérieur — normal, une seule fois, les
-> acquis sont préservés (voir §9 et le tableau de dépannage).
+> acquis sont préservés (voir §9 et le tableau de dépannage). Depuis la v29.1, chaque bilan de
+> nuit affiche en plus une ligne « Les 5 Sens » (voir §9bis).
+>
+> 🆕 **v30.0 — également rien à configurer.** L'odorat devient un gradient exponentiel (plus
+> discriminant en proximité) et l'agent gagne un **6ᵉ sens exogène** (l'Exo-Sens) — mais celui-ci
+> reste **totalement neutre tant qu'aucun plug C3 n'est branché**, ce qui est le cas par défaut de
+> tous les modes ci-dessous. Voir §10 pour brancher un plug et observer ce 6ᵉ sens.
 
 Depuis le passage en package Python (voir `CLAUDE.md`, section « Architecture »), tous les
 scripts se lancent depuis la racine du dépôt avec `PYTHONPATH=src` et l'option `-m` (module),
@@ -92,7 +100,7 @@ PYTHONPATH=src python -m naulthene.cuve.daemon_cerveau --port 9999 --brain brain
 - Ressuscite ton cerveau existant (tick_absolu, dopamine, curriculum, souvenirs intacts).
 - Si c'est la première connexion depuis la V22, tu verras des messages de greffe :
   `🌱 Hémisphères nouvellement greffés` et `🔄 integrateur_bio exclu du chargement` —
-  normal, une fois seulement (voir `CONCEPTION_v22_audio.md` §11 pour le détail).
+  normal, une fois seulement (voir `docs/Old_Archive_rmd/CONCEPTION_v22_audio.md` §11 pour le détail).
 - **Depuis la v29.0**, un `.brain` antérieur affiche en plus, une seule fois,
   `👃 integrateur_bio greffé de N à M dims d'entrée (+8 : toucher/odorat/goût)` — la couche
   n'est **plus jamais exclue** dans ce cas, elle est greffée par recopie et **tous les acquis
@@ -649,7 +657,7 @@ Comment lire la sortie :
 | `contact` | 1 = l'agent est au contact d'un mur ou d'une porte fermée devant lui, 0 = la voie est libre |
 | `main` | 1 = l'agent porte un objet (la clé, typiquement), 0 = mains vides |
 | `orient` | Orientation encodée sur le cercle (cos, sin) — évite la fausse discontinuité entre les directions 3 et 0 |
-| `odorat` | 1.00 = l'agent est SUR la ressource, 0.25 = elle est à 3 cases, 0.00 = hors de portée (> 4 cases) |
+| `odorat` | Depuis la v30.0, **atténuation exponentielle** `exp(-0.8 × distance)` : 1.00 au contact, 0.45 à 1 case, 0.20 à 2 cases, coupé à 0.00 au-delà de ~5 cases (voir §10d) |
 | `gout` | 1.00 juste après une bouchée, puis décroît (~10 ticks) jusqu'à 0 |
 
 ### 9b. Vérifier la hiérarchie des 5 sens
@@ -676,7 +684,7 @@ gout     | faible   |   2 dims | JEPA=False | vecteur_bio → integrateur_bio
 `JEPA=False` sur les trois sens faibles est **voulu** : ils entrent par `integrateur_bio`, juste
 avant la décision, donc ils n'entrent **jamais** dans ce que le modèle du monde doit prédire. Un
 cerveau déjà entraîné sur des centaines de jours ne voit donc pas sa physique visuelle perturbée
-(voir `docs/EXPLICATIONS_v29_sens.md` §4).
+(voir `docs/Old_Archive_rmd/EXPLICATIONS_v29_sens.md` §4).
 
 ### 9c. Recharger un `.brain` pré-v29.0 — vérifier la greffe automatique
 
@@ -736,12 +744,13 @@ Côté **W&B**, 7 métriques `Sens_*` sont loggées chaque nuit (`Sens_Bus_Actif
 `Sens_Odorat_Max`, `Sens_Odorat_Ticks_Actifs_Ratio`, `Sens_Gout_Ticks_Actifs`). Elles sont
 **absentes** du log en mode `vocal_isole` pur (aucun environnement MiniGrid lu) — c'est normal.
 
-> ⚠️ **`Odorat` proche de 100 % est ATTENDU sur les petits niveaux.** Avec `PORTEE_ODORAT = 4`
-> cases et 4 sources générées, la couverture atteint 97,6 % sur `Empty-8x8` et 100 % sur
-> `DoorKey-6x6` — l'odorat y est quasi constamment saturé et porte donc peu d'information. Il ne
-> redevient discriminant qu'au Doctorat (`MultiRoom`, ~57 %). Ce n'est pas une panne : c'est un
-> réglage à trancher (voir `docs/EXPLICATIONS_v29_sens.md` §12). Un `Odorat` à **0 %** en
-> revanche, sur un niveau où des ressources existent, mérite investigation.
+> ⚠️ **Ce pourcentage mesure la PRÉSENCE d'une trace, pas son intensité.** Depuis la v30.0
+> (atténuation exponentielle, voir §10d), il peut rester élevé alors même que le signal est devenu
+> bien plus discriminant : le seuil de coupure est bas, donc une odeur très faible compte encore
+> comme « active ». Ce qu'il faut regarder, c'est `Sens_Odorat_Moyen` dans W&B — passé de ~0.54
+> (v29, rampe linéaire) à ~0.32 sur un run réel `Empty-8x8`, avec l'odeur forte (> 0.45) réduite
+> à ~30 % des ticks au lieu d'être permanente. Un `Odorat` à **0 %** en revanche, sur un niveau où
+> des ressources existent, mérite investigation.
 
 ### 9d. Ce que la v29.0 ne change PAS
 
@@ -751,6 +760,213 @@ Côté **W&B**, 7 métriques `Sens_*` sont loggées chaque nuit (`Sens_Bus_Actif
 - **L'invariant du Port Exocortex (§8) reste intact** : sans plug enregistré, `ACTION_DEMANDER`
   est toujours masquée à `-inf` et n'est jamais jouée.
 - **Aucune nouvelle dépendance** à installer (le Bus Sensoriel est du numpy pur).
+
+---
+
+## 10. L'Exo-Sens — le 6ᵉ sens (v30.0-expérimental)
+
+Depuis la v30.0, l'Exocortex C3 n'est plus un « 3ᵉ cerveau » que l'agent interroge par une action :
+c'est un **6ᵉ sens**, perçu **en continu** comme le toucher ou l'odorat. L'agent ne décide jamais
+de « demander » — il sent le monde numérique en permanence, et c'est son cerveau qui apprend seul
+(par myélinisation de `integrateur_bio`) quelle attention y accorder.
+
+✅ **Neutre par défaut.** Sans plug branché — le cas de **tous** les modes des sections 1-7 — le
+vecteur exogène est nul et le comportement est strictement celui de la v29.1. Aucune ligne
+« Exo-Sens » n'apparaît au bilan de nuit, aucune clé `Sens_Exo_*` n'est loggée.
+
+### 10a. Brancher un plug perceptif local et observer le 6ᵉ sens
+
+`PlugMemoireAugmentee` est 100 % local et déterministe (aucun réseau) : il traduit un résumé de la
+mémoire épisodique de l'agent en 8 dims perçues. C'est le plug de validation à essayer en premier.
+
+```bash
+cd "/Users/dredguer/Documents/1. Dossier personnel important/1. Adrien/21. AGI"
+source venv/bin/activate
+PYTHONPATH=src WANDB_MODE=disabled python3 -c "
+import naulthene.cerveau.noyau as noyau
+from naulthene.exocortex.plugs.plug_memoire_augmentee import (
+    PlugMemoireAugmentee, source_depuis_memoire_spatiale)
+
+etat = noyau.initialiser_etat_cognitif()
+etat.agent.port_c3.enregistrer(
+    PlugMemoireAugmentee(source=source_depuis_memoire_spatiale(etat)))
+noyau.demarrer_journee(etat)
+
+for _ in range(400):
+    noyau.traiter_tick(etat)
+
+s = etat.bus_sensoriel.interpreter(etat.env, reponse_c3=etat.perception_exogene_cache)
+print('Z_exogene (8 dims) :', [round(v, 3) for v in s[8:]])
+log = noyau.executer_nuit(etat)
+for k in sorted(k for k in log if k.startswith('Sens_Exo')):
+    print(f'  {k} = {log[k]}')
+"
+```
+
+Attendu : une ligne `├─ Exo-Sens (C3) : 🔌 Perçu ...% des ticks` au bilan de nuit, et
+**~20 rafraîchissements pour 400 ticks** — le bus n'est interrogé qu'un tick sur
+`PERIODE_PERCEPTION_EXO=20`, la perception étant mise en cache entre deux appels.
+
+### 10b. Pourquoi ce cache ? (la latence)
+
+Un plug HTTP réel (Ollama, RAG, API) coûte de **100 ms à 30 s** par appel. L'interroger à chaque
+tick rendrait un run de 300 jours × 400 ticks totalement impraticable. Le rafraîchissement
+périodique est une **fréquence d'échantillonnage de capteur**, pas une règle cognitive : le cerveau,
+lui, perçoit bien quelque chose à chaque tick.
+
+### 10c. Brancher un vrai backend (Ollama, RAG, API IA)
+
+Aucun code du noyau n'est à toucher : `PlugHTTP` (livré en v28.0) est un backend générique
+JSON/HTTP. Un service doit simplement renvoyer un vecteur de 8 valeurs dans `[0, 1]` que le plug
+place dans `ReponseC3.perception`. Les deux familles de plugs coexistent — un plug **perceptif**
+(v30, champ `perception`) et un plug **décisionnel** (v28, champ `preferences`) peuvent être
+branchés simultanément sur le même bus.
+
+⚠️ **Le vecteur est clippé dans [0, 1] côté noyau** et un vecteur de mauvaise taille est ignoré
+(perception neutre + un avertissement unique). Un service externe n'est jamais supposé fiable :
+une dimension hors échelle écraserait `integrateur_bio`, et un plug défaillant **ne doit jamais**
+rendre l'agent aveugle à ses 5 sens physiques.
+
+### 10d. L'odorat a changé de forme (v30.0)
+
+L'odorat suit désormais une **atténuation exponentielle** `exp(-0.8 × distance)` au lieu d'une
+rampe linéaire : 1.00 au contact, 0.45 à une case, 0.20 à deux, négligeable au-delà. Concrètement,
+sur un run réel `Empty-8x8`, l'odeur forte (> 0.45) ne survient plus que ~30 % du temps au lieu
+d'être quasi permanente — le sens redevient une **boussole de proximité**. Le pourcentage brut
+affiché au bilan (`👃 Odorat ...%`) peut rester élevé (le seuil de coupure est bas) : c'est
+l'**intensité** qui compte désormais, pas la simple présence d'une trace.
+
+---
+
+## 11. Lire les métriques de calibrage (v30.1) — mémoire & sursaut
+
+La v30.1 a rendu **mesurables** deux constantes arbitraires. La **v31.0 en a corrigé une** :
+`capacite_max` est désormais proportionnelle (`dim_bus × 12 × (1 + déficit_bio)`, voir §12).
+`EXTENSION_PATIENCE_SURSAUT = 50` reste fixe, en attente des courbes `Sursaut_*`.
+
+### 11a. La mémoire épisodique est-elle limitée par sa capacité ?
+
+Le bilan de nuit affiche désormais :
+
+```
+├─ Mémoire Épiso. : 🗺️ 200/1152 souvenir(s) spatial(aux) — rappel 65% des tentatives (proximité moy 0.27) [cap. 96×12 adaptée]
+```
+
+Depuis la v31.0, le dénominateur **bouge d'une nuit à l'autre** (il suit `dim_bus` et le déficit
+bio) — d'où le suffixe `[cap. N×12 adaptée]` qui rappelle son origine.
+
+| Ce que tu observes | Interprétation |
+|---|---|
+| `⚠️ SATURÉE` malgré la capacité adaptative | Anormal depuis la v31.0 sauf débit d'événements très élevé — vérifier `Memoire_Capacite_Courante` |
+| Proximité qui **baisse** dans le temps | La mémoire se remplit de souvenirs lointains → surveiller, mais la capacité n'est plus le facteur limitant |
+| `Memoire_Age_Plus_Vieux_Souvenir` qui **s'effondre** | La mémoire ne remonte plus assez loin → avec la capacité adaptative, signalerait un débit anormal plutôt qu'un manque de place |
+
+Courbes W&B : `Memoire_Taux_Saturation`, `Memoire_Taux_Rappel_Reussi`,
+`Memoire_Proximite_Moyenne`, `Memoire_Fraicheur_Moyenne`, `Memoire_Age_Plus_Vieux_Souvenir`.
+
+> À croiser impérativement : `Memoire_Taux_Saturation` **seul** ne prouve rien. Une mémoire pleine
+> dont le rappel reste excellent est une mémoire **bien dimensionnée**, pas une mémoire saturée.
+
+### 11b. Le Sursaut de Volonté sert-il à quelque chose ?
+
+```
+├─ Potentiomètre  : ⏳ Patience ... (2 abandon(s) lucide(s), 10 Sursaut(s) → 30% de victoires, ...)
+```
+
+C'est **la métrique décisive** pour trancher le sens d'une extension adaptative :
+
+| `Sursaut_Taux_Victoire` | Lecture | Direction suggérée |
+|---|---|---|
+| Élevé (> ~40 %) | Le sursaut sauve réellement des épisodes | **« Muscle »** — le renforcer quand il réussit |
+| Faible (< ~15 %) | Il ne fait que retarder un échec | **« Habituation »** — l'atténuer, voire le réserver |
+| Intermédiaire | Dépend du niveau/palier | Croiser avec `Palier_Cible` et `Mode_Libre` |
+
+⚠️ Ces métriques n'apparaissent qu'en **Mode Libre** (palier DoorKey ≥ 5), seul contexte où le
+Sursaut est actif. Sur un run encore en Primaire/paliers bas, elles seront simplement absentes —
+c'est normal, pas une panne.
+
+### 11c. Ce que la v30.1 ne fait PAS
+
+Aucune formule adaptative n'est écrite. `capacite_max` vaut toujours 200, l'extension de sursaut
+toujours 50 ticks. **Le comportement de l'agent est strictement inchangé** — vérifié par empreinte
+de la séquence d'actions à graine fixée, identique avant/après. Cette version ne fait que rendre
+observable ce qui devra être calibré.
+
+---
+
+## 12. La Mémoire Proportionnelle & le Rêve (v31.0-expérimental)
+
+✅ **Rien à configurer** — les deux mécaniques s'appliquent automatiquement, une fois par nuit.
+
+### 12a. Une capacité mnésique qui suit le cerveau
+
+`capacite_max = 200` était une constante arbitraire. Elle est désormais **proportionnelle** :
+
+```
+capacité = dim_bus × 12 × (1 + déficit_bio)      (plancher : 200)
+```
+
+| `dim_bus` | agent repu | agent épuisé |
+|---|---|---|
+| 16 (naissance) | **200** | 384 |
+| 48 | 576 | 1152 |
+| 96 | 1152 | 2304 |
+
+Deux facteurs : le **substrat neural** (un cerveau qui a grandi par neurogenèse retient plus) et
+le **besoin** (un agent affamé a un usage réel du souvenir des ressources). À la naissance, la
+valeur est exactement 200 — aucune rupture avec les runs antérieurs.
+
+La ligne de bilan affiche l'origine de la capacité :
+
+```
+├─ Mémoire Épiso. : 🗺️ 200/1152 souvenir(s) spatial(aux) — rappel 65% ... [cap. 96×12 adaptée]
+```
+
+Courbe W&B : `Memoire_Capacite_Courante` (le dénominateur bouge d'une nuit à l'autre — en tenir
+compte pour relire `Memoire_Taux_Saturation`).
+
+### 12bis. La déduplication mnésique (v31.1)
+
+Au premier chargement d'un `.brain` antérieur à la v31.1, tu verras :
+
+```
+🧹 Mémoire spatiale compactée : 182 doublon(s) fusionné(s) → 18 repère(s) distinct(s)
+```
+
+**Normal, une seule fois, et aucune information n'est perdue** : seul le tick le plus récent de
+chaque repère est conservé. Un `.brain` réel contenait 200 souvenirs pour seulement 18 lieux
+distincts — 91 % de redondance. Depuis la v31.1, revisiter un lieu déjà connu **rafraîchit** son
+repère au lieu d'en empiler un nouveau.
+
+La ligne de bilan indique le travail effectué et l'origine de la capacité :
+
+```
+├─ Mémoire Épiso. : 🗺️ 18/200 souvenir(s) — rappel 100% ... [cap. bornée par la carte : ×3/case] — 12 doublon(s) évité(s)
+```
+
+| Ce que tu vois | Signification |
+|---|---|
+| `[cap. bornée par la carte : ×3/case]` | La capacité est bridée par la **taille du monde**, pas par le cerveau — normal sur les petites cartes |
+| `[cap. 48×12 adaptée]` | La capacité suit `dim_bus` (grandes cartes type `MultiRoom`) |
+| `N doublon(s) évité(s)` | La déduplication travaille : autant de repères rafraîchis au lieu d'être empilés |
+
+Courbes W&B : `Memoire_Doublons_Evites`, `Memoire_Cap_Densite_Actif`, `Memoire_Densite_Par_Case`.
+
+### 12b. Pourquoi le rêve s'effondrait sur un cerveau mature
+
+L'importance d'un souvenir est multipliée par `empreinte_enfance = 16/dim_bus`, mais était
+comparée à une référence **constante**. Un cerveau plus grand rêvait donc mécaniquement de moins
+en moins : **60 % à `dim_bus=16`, 15 % à `dim_bus=96`**. La référence suit désormais la même
+échelle, et le pourcentage redevient invariant à la taille du cerveau.
+
+Courbes W&B : `Reve_Facteur_Richesse` et `Reve_Empreinte_Enfance` (à croiser avec
+`Pourcentage_Reve`).
+
+> ⚠️ **Un rêve modeste n'est pas forcément un problème.** Une part de la baisse sur un cerveau
+> mature est **saine** : l'erreur JEPA moyenne chute de 0,227 (`dim_bus=16`) à 0,019
+> (`dim_bus=96`) parce que l'agent **comprend mieux son monde** — il a objectivement moins à
+> consolider. La v31.0 retire le biais d'échelle, jamais ce signal réel. Pour distinguer les
+> deux, regarder `Erreur_JEPA` : si elle est basse ET le rêve bas, c'est normal.
 
 ---
 
@@ -771,8 +987,8 @@ Côté **W&B**, 7 métriques `Sens_*` sont loggées chaque nuit (`Sens_Bus_Actif
 | `ACTION_DEMANDER` (action 7) n'est jamais jouée même avec un plug enregistré | Comportement normal sur un cerveau jamais entraîné à ce choix — voir §8c, il faut soit biaiser artificiellement `tete_motrice` pour un test, soit laisser un vrai run apprendre ce choix par lui-même (REINFORCE, pas un seuil codé en dur) |
 | Message `👃 integrateur_bio greffé de N à M dims d'entrée` au chargement (§9c) | Normal et attendu **une seule fois** sur un `.brain` créé avant la v29.0 — le vecteur viscéral passe de 16 à 24 dims (toucher/odorat/goût). La greffe **préserve tous les acquis au bit près**, les 8 nouvelles dimensions naissent vierges. Si le message réapparaît à CHAQUE lancement, vérifie que la sauvegarde qui suit s'est bien effectuée (pas de `kill -9` avant `💾 Cerveau cristallisé avec succès`) |
 | Message `🔄 integrateur_bio exclu du chargement` depuis la v29.0 | **Anormal** pour un simple passage 16→24 dims — ce cas est censé être pris en charge par la greffe (`👃`, ligne ci-dessus). L'exclusion ne subsiste qu'en trappe de secours pour un mismatch qu'on ne sait pas greffer (ex. `dim_bus` incohérent entre le `.brain` et l'agent recréé). Vérifie que le `.brain` n'a pas été produit par une autre architecture/branche |
-| L'odorat reste à 0.00 en permanence (§9a) | Normal si aucune source n'est à portée : `PORTEE_ODORAT=4` cases seulement, et les ressources ne sont générées que par `DetecteurRessourcesBiologiques` (Ball rouge = Nourriture, Ball bleue = Eau). Sur un niveau sans ressource générée, ou avec l'agent à plus de 4 cases, 0.00 est le bon résultat |
+| L'odorat reste à 0.00 en permanence (§9a) | Normal si aucune source n'est proche : depuis la v30.0 le signal suit `exp(-0.8 × distance)` et tombe sous le seuil de coupure au-delà de ~5 cases. Les ressources ne sont générées que par `DetecteurRessourcesBiologiques` (Ball rouge = Nourriture, Ball bleue = Eau) — sur un niveau sans ressource générée, 0.00 est le bon résultat |
 | Le toucher renvoie toujours `0.0` sur les 4 dims | Le bus s'est désactivé — cherche l'avertissement `⚠️ Bus sensoriel (toucher/odorat/goût) désactivé (API minigrid incompatible : ...)` affiché **une seule fois** dans la console. Même dégradation gracieuse que les détecteurs génériques : l'entraînement continue normalement, seuls les 3 sens faibles sont neutres. Depuis la v29.1, le suffixe `⚠️ BUS DÉSACTIVÉ` s'affiche en plus à **chaque** bilan de nuit et `Sens_Bus_Actif` passe à 0 dans W&B |
 | Ligne `Les 5 Sens` absente du bilan de nuit (v29.1) | Normal en mode `vocal_isole` pur (aucun environnement MiniGrid lu ce jour-là) : `ticks_sensoriels_jour = 0`, la ligne est volontairement masquée plutôt que d'afficher des ratios vides. Elle réapparaît dès qu'une journée comporte des ticks MiniGrid |
-| `Odorat` proche de 96-100 % à chaque nuit | **Attendu** sur les 4 premiers niveaux : `PORTEE_ODORAT=4` couvre 97,6 % d'`Empty-8x8` et 100 % de `DoorKey-6x6`. L'odorat n'est vraiment discriminant qu'au Doctorat (`MultiRoom`, ~57 %). Voir `docs/EXPLICATIONS_v29_sens.md` §12 pour l'arbitrage (portée réduite vs normalisation par taille de carte) |
+| `Odorat` proche de 96-100 % à chaque nuit | **Ce pourcentage compte la PRÉSENCE d'une trace, pas son intensité** — il peut rester haut alors que le signal est devenu discriminant (le seuil de coupure est bas). Depuis la v30.0, regarder `Sens_Odorat_Moyen` : ~0.32 sur `Empty-8x8` contre ~0.54 en v29, avec l'odeur forte (> 0.45) réduite à ~30 % des ticks. Voir §10d |
 | `Portage` reste à 0 % sur DoorKey | L'agent n'a jamais ramassé la clé de la journée — cohérent avec un palier DoorKey encore bas (< 3, « Toucher / Prendre »). Cette métrique est un bon indicateur avancé de la maîtrise des paliers 3-4, avant même que la victoire n'arrive |
