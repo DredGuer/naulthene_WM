@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 | Type | Details |
 |------|---------|
-| **Commit** | N/A — en attente du commit de cette version |
+| **Commit** | `cc73be4` |
 | **Catégorie** | docs |
 | **Impact** | Documentation |
 
