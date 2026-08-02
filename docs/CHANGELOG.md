@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 | Type | Details |
 |------|---------|
-| **Commit** | N/A — en attente du commit de cette version |
+| **Commit** | `11cc1a6` |
 | **Catégorie** | fix (correctif d'un effet de bord de la v31.0) |
 | **Impact** | Fonctionnel (contenu réel de la mémoire spatiale) |
 
