@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 | Type | Details |
 |------|---------|
-| **Commit** | N/A — en attente du commit de cette version |
+| **Commit** | `6fbe3df` |
 | **Catégorie** | feat (nouvelle mécanique cognitive majeure, expérimentale) |
 | **Impact** | Critique (architecture du réseau, persistance) |
 
