@@ -88,7 +88,7 @@ la Parole, la Cuve).
 
 ## 📜 Journal des Mises à Jour
 
-Pour un historique complet commit par commit, consultez [CHANGELOG.md](https://www.google.com/search?q=CHANGELOG.md).
+Pour un historique complet commit par commit, consultez [docs/CHANGELOG.md](docs/CHANGELOG.md).
 
 ### Nouveautés v29.0 (expérimental) — Le Bus Sensoriel Multimodal & l'Identité C1/C2 explicite (2026-08-02)
 
@@ -329,7 +329,13 @@ Trois défauts détectés à la revue de la v22.0 (dont un critique) et corrigé
 
 ## 🛠️ Plan d'Action
 
-Retrouvez le plan de développement stratégique complet dans [plan_creat.md](https://www.google.com/search?q=plan_creat.md).
+Le plan de développement se lit aujourd'hui à travers trois documents complémentaires :
+[docs/Parcourt_readme.md](docs/Parcourt_readme.md) (guide pratique des 4 parcours d'entraînement),
+[docs/AMELIORATION_V1.md](docs/AMELIORATION_V1.md) (pistes d'évolution de l'architecture) et
+[docs/CHANGELOG.md](docs/CHANGELOG.md) (ce qui a déjà été livré, version par version).
+
+> *Note : ce paragraphe renvoyait auparavant à un fichier `plan_creat.md` qui n'a jamais existé
+> dans le dépôt — lien mort corrigé en v29.1.*
 
 ---
 
