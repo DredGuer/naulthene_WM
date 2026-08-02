@@ -4,6 +4,224 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [29.1-experimental] - 2026-08-02
+
+### Télémétrie des 5 Sens — les rendre observables, et un diagnostic de saturation de l'odorat
+
+| Type | Details |
+|------|---------|
+| **Commit** | `6368e02` |
+| **Catégorie** | feat (télémétrie, expérimentale) |
+| **Impact** | Fonctionnel (observabilité — aucun impact sur la décision ni le gradient) |
+
+**Constat utilisateur : « dans les tests tu as implémenté tous les sens et mis dans chaque jour pour suivre entièrement tous les éléments ? » — non. La v29.0 câblait bien les 5 sens dans la décision (l'agent les utilise réellement), mais AUCUN des 3 sens ajoutés n'était instrumenté : zéro clé W&B, zéro ligne au bilan de nuit, zéro compteur journalier. Les validations v29.0 étaient des tests PONCTUELS (lecture des signaux à un instant T), pas du suivi. Conséquence concrète : sur un run de 300 jours, il aurait été impossible de répondre à « l'odorat a-t-il jamais servi ? », et une désactivation silencieuse du bus (dégradation gracieuse) n'aurait laissé qu'un unique avertissement console, noyé dans les logs.**
+
+**Audit préalable** : comparaison systématique des 21 compteurs `*_jour` de `EtatCognitif` avec ce qui est réellement loggé. Résultat — **tous les compteurs pré-v29 sont correctement instrumentés** (y compris la télémétrie C3 de la v28.0). L'écart était strictement limité à la v29.0.
+
+**Les 7 nouvelles clés W&B** (préfixe `Sens_`, absentes du log si aucun tick sensoriel n'a été vécu — même logique conditionnelle que le bloc C3) :
+
+| Clé | Ce qu'elle mesure |
+|-----|-------------------|
+| `Sens_Bus_Actif` | **Métrique de santé** : 0 si le bus s'est désactivé en vol (API minigrid incompatible) |
+| `Sens_Toucher_Contact_Ratio` | Part des ticks au contact d'un obstacle (proxy de blocage) |
+| `Sens_Toucher_Portage_Ratio` | Part des ticks avec un objet en main — très parlant sur DoorKey (la clé) |
+| `Sens_Odorat_Moyen` | Intensité moyenne (nourriture + eau) sur la journée |
+| `Sens_Odorat_Max` | Pic d'intensité de la journée |
+| `Sens_Odorat_Ticks_Actifs_Ratio` | Part des ticks où au moins une odeur est perçue |
+| `Sens_Gout_Ticks_Actifs` | Nombre de ticks avec une trace gustative rémanente |
+
+Plus une ligne au bilan de nuit console, dans le style des lignes existantes, affichée uniquement si des ticks sensoriels ont eu lieu :
+
+```
+  ├─ Les 5 Sens     : ✋ Contact 28.5% | 🔑 Portage 20.5% | 👃 Odorat 96.0% des ticks (max 1.50) | 👅 Goût 75 tick(s)
+```
+
+Le suffixe `⚠️ BUS DÉSACTIVÉ` s'ajoute si le bus est tombé — l'alerte devient visible à chaque nuit au lieu d'un unique message au moment de la panne.
+
+**⚠️ Diagnostic immédiat livré par cette télémétrie : l'odorat sature sur les petites cartes.** Dès le premier jour instrumenté, `Sens_Odorat_Ticks_Actifs_Ratio = 0.96` et `Sens_Odorat_Max = 1.50` (sur un maximum théorique de 2.0). Vérification par calcul de couverture (4 sources, portée de Manhattan) :
+
+| Carte | `PORTEE_ODORAT=4` (actuelle) | portée 2 | portée 1 |
+|-------|------------------------------|----------|----------|
+| `Empty-8x8` (intérieur 6×6) | **97.6 %** | 73.3 % | 41.6 % |
+| `DoorKey-6x6` (intérieur 4×4) | **100.0 %** | 94.9 % | 71.8 % |
+| `MultiRoom-N4-S5` (~13×13) | 56.7 % | 24.5 % | 10.7 % |
+
+Sur les 4 premiers niveaux du `PROGRAMME` (les plus petits), l'odorat est donc **quasi constamment saturé** : un signal presque toujours actif porte très peu d'information, et l'agent ne peut pas s'en servir pour s'orienter. Il ne redevient discriminant qu'au Doctorat (`MultiRoom`).
+
+**Aucune valeur n'a été modifiée** — `PORTEE_ODORAT` reste à 4.0. C'est un constat livré à l'utilisateur, pas un correctif appliqué unilatéralement : le bon réglage dépend de l'intention (un odorat « ambiance de proximité » saturé est un choix valide ; un odorat « boussole vers la ressource » demanderait une portée 1-2, ou une normalisation par la taille de la carte). La télémétrie est désormais en place pour trancher sur données réelles.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | 7 compteurs journaliers dans `_reinitialiser_buffers_journee` ; accumulation dans `traiter_tick` juste après la lecture du bus (indices figés par le contrat de `BusSensoriel.interpreter`) ; ligne « Les 5 Sens » au bilan de nuit ; bloc de 7 clés `Sens_*` dans `log_wandb`. |
+
+**Validation** :
+- **400 ticks + nuit** : compteurs cohérents (400 ticks sensoriels, contact 114, portage 82, goût 75) et 7 clés `Sens_*` présentes dans le dict retourné par `executer_nuit`.
+- **Remise à zéro** confirmée au `demarrer_journee` suivant (pas de cumul depuis la naissance — le piège exact du bug `score_vocal_jour` de la v27.0).
+- **Mode `vocal_isole` pur** (aucun env MiniGrid) : `ticks_sensoriels_jour = 0` et clés `Sens_*` **absentes** du log — pas de ligne trompeuse ni de division par zéro.
+- **Désactivation du bus en vol** : `Sens_Bus_Actif = 0` et `⚠️ BUS DÉSACTIVÉ` affiché au bilan.
+- **Non-régression** : 400 ticks + nuit + neurogenèse + plug C3 + 200 ticks + nuit ; 44 puis 47 clés loggées, les 7 `Sens_*` présentes les deux nuits ; tous les modules importent.
+- Les 4 points d'entrée (`cursus_developpemental`, `cursus_bebe`, `cursus_parole`, `daemon_cerveau`) loggent le dict retourné par `executer_nuit` — **les nouvelles clés y remontent automatiquement**, sans modification de ces scripts.
+
+---
+
+## [29.0-experimental] - 2026-08-02
+
+### Le Bus Sensoriel Multimodal & l'Identité C1/C2 explicite — les 5 sens, et une frontière nommée entre le réflexe et le néo-cortex
+
+| Type | Details |
+|------|---------|
+| **Commit** | `6fbe3df` |
+| **Catégorie** | feat (nouvelle mécanique cognitive majeure, expérimentale) |
+| **Impact** | Critique (architecture du réseau, persistance) |
+
+**Contexte utilisateur (voir `docs/Maj_V29_readme.md`) : trois idées à intégrer au dépôt existant sans casser ce qui fonctionne. (1) La hiérarchie des 5 sens — tous les sens ne coûtent pas le même prix en calcul, mais c'est la combinaison de leur diversité qui fait émerger une compréhension du monde ; jusqu'en v28.0 Naulthène n'avait que ses deux sens gourmands (vue, ouïe), les trois sens faibles à moyens n'existaient nulle part. (2) L'identité C1/C2 explicite — la distinction réflexe/néo-cortex existait déjà dans le code (`tete_motrice` d'un côté, `simuler_futur_et_planifier` de l'autre) mais restait implicite, entrelacée dans le corps de `penser()`. (3) La boucle de distillation C2 → C1 — qui, contrairement au reste, n'avait PAS besoin d'être écrite : elle est déjà réalisée par le cycle jour/nuit existant (`annexe_weight` → `base_weight` → Cristallisation Souple v26.0), et l'audit de cette version l'a confirmée plutôt que de la réimplémenter en double.**
+
+**Deux décisions structurantes prises par l'utilisateur à la conception :**
+- **Câblage des nouveaux sens** : `DIM_VECTEUR_BIO` passe de 16 à 24 dims — le toucher et la chimie entrent par la **queue du vecteur bio** (donc par `integrateur_bio`, juste avant la décision), **pas** par une nouvelle porte synaptique sommée dans le bus latent. Conséquence voulue : les sens faibles ne polluent jamais la cible JEPA (`perte_jepa` compare toujours le bus prédit au bus réel de la **vision seule**), et un cerveau entraîné sur 300+ jours ne voit pas son modèle du monde perturbé.
+- **Portée du refactor C1/C2** : **restructuration pure, zéro changement de comportement**. C2 continue d'être sollicité à chaque tick. L'alternative (C1 court-circuite C2 quand il est confiant) a été explicitement écartée : elle aurait introduit un déclenchement sur seuil codé en dur dans le chemin de décision — exactement de la même nature que ce que `CLAUDE.md` interdit déjà pour l'appel à C3.
+
+**1. Le Bus Sensoriel — l'Interpréteur des 5 Sens (`bus_sensoriel.py`, nouveau)**
+
+Module **pur numpy**, qui n'importe jamais `noyau.py` (même discipline que `exocortex/port_c3.py` : aucun cycle d'import, aucune dépendance au réseau). Il ne fait que traduire l'environnement en signaux normalisés. La hiérarchie de gourmandise énergétique implémentée suit exactement le document de conception :
+
+| Sens | Gourmandise | Dims | Chemin dans le cerveau | Dans la cible JEPA ? |
+|------|-------------|------|------------------------|----------------------|
+| **Vue** | Extrême | 147 | `porte_visuelle` → `bus_latent` | ✅ oui |
+| **Ouïe** | Élevée | 130 | `porte_auditive` → `bus_latent` | ✅ oui (tête séparée) |
+| **Toucher** | Moyenne | 4 | `vecteur_bio` → `integrateur_bio` | ❌ non |
+| **Odorat** | Faible | 2 | `vecteur_bio` → `integrateur_bio` | ❌ non |
+| **Goût** | Faible | 2 | `vecteur_bio` → `integrateur_bio` | ❌ non |
+
+- **Le toucher (`DIM_TOUCHER=4`)** : contact frontal (via l'API native `can_overlap()`, plus fiable qu'une liste de types codée en dur), objet en main (`carrying` — en v28.0 l'agent ne savait qu'il tenait la clé qu'indirectement, par la vue), et orientation encodée **sur le cercle** (cos, sin) plutôt qu'en entier 0-3, pour éviter la discontinuité artificielle entre les directions 3 et 0 qui sont voisines dans le monde réel.
+- **L'odorat (2 dims)** : intensité de la source de Nourriture/Eau la plus proche, décroissant linéairement sur `PORTEE_ODORAT=4` cases (distance de Manhattan, cohérente avec `DetecteurJalonsDoorKey._distance`). Réutilise la convention déjà posée par `DetecteurRessourcesBiologiques` (Ball rouge = Nourriture, Ball bleue = Eau). Portée volontairement courte : c'est un signal de survie grossier qui oriente, pas une carte — la cartographie précise reste le travail de la vue et de `MemoireEpisodiqueSpatiale`.
+- **Le goût (2 dims)** : trace **rémanente** de la dernière ressource réellement consommée, décroissant à `DECROISSANCE_GOUT=0.85`/tick (~10 ticks de persistance). C'est le seul état inter-tick du bus, remis à zéro à chaque épisode — un goût est une sensation immédiate liée à une bouchée, pas un état vital continu comme les jauges du `BiologicalHomeostasisEngine`.
+- **Dégradation** : identique aux détecteurs génériques §3b — `_MINIGRID_OK` faux ou toute exception d'API désactive le bus définitivement après **un** avertissement et renvoie des zéros. Jamais de crash, jamais de changement du chemin de gradient.
+
+**2. L'identité C1/C2 explicite (`noyau.py` §2, renommée)**
+
+La section 2 devient « LE CERVEAU C1 (RÉFLEXE) & C2 (NÉO-CORTEX) ». Le corps de `penser()` est désormais l'**arbitrage seul**, et la frontière est encapsulée dans deux méthodes nommées :
+
+- **`_executer_c1_reflexe()`** — tout ce qui coûte quasi rien : compression du flux des 5 sens (`_tronc_cerebral` pour les deux sens gourmands, queue du `vecteur_bio` pour les trois autres), contexte épisodique, intégration viscérale, et le réflexe moteur immédiat (`tete_motrice`) en latence zéro.
+- **`_solliciter_c2_neocortex()`** — le moteur analytique lourd (`simuler_futur_et_planifier` + JEPA). Il ne reçoit **que** `pensee_bio`, l'état déjà compressé par C1 : jamais les pixels, jamais le MFCC brut, jamais l'environnement — exactement le schéma de `Maj_V29_readme.md`.
+
+La fusion `logits_instinct + valeurs_simulees * force_planification` reste **strictement inchangée** depuis la v13.0.
+
+**3. La distillation C2 → C1 : auditée, pas réimplémentée**
+
+Le document de conception présente la distillation comme « la pièce maîtresse ». L'audit de cette version confirme qu'elle est **déjà entièrement réalisée** par le cycle de vie existant de `NaultheneLinearSynaptique` : `annexe_weight` accumule le gradient diurne (C2 guide l'expérience) → `cycle_sommeil()` le consolide dans `base_weight` (C2 → C1) → la Cristallisation Souple (v26.0) fige définitivement les synapses les plus myélinisées. Aucun code ajouté ; la boucle est documentée dans `readme.md` plutôt que dupliquée.
+
+**4. Rétrocompatibilité des `.brain` — greffe par recopie, jamais par exclusion**
+
+`DIM_VECTEUR_BIO` 16 → 24 change la **forme** de `integrateur_bio` (entrée `dim_bus + 16` → `dim_bus + 24`). Le filtre historique de `charger_ou_naitre` traitait ce cas en **excluant** la couche, qui renaissait à neuf — c'est le symptôme exact du bug v24.0-fix4 (bouche silencieuse dans l'Arène). Inacceptable sur un `.brain` portant 1000 jours de vécu.
+
+Nouvelle fonction `_greffer_vecteur_bio_etendu`, appelée **en amont** du filtre : les `dim_bus + 16` premières colonnes gardent leurs poids appris, les 8 dernières conservent leur initialisation Xavier atténuée (même sémantique que `NaultheneLinearSynaptique.agrandir()`). L'agent se réveille avec tous ses acquis et découvre simplement qu'il a désormais un toucher, un odorat et un goût, encore muets. Le filtre d'exclusion reste en place derrière, comme trappe de secours pour tout autre mismatch qu'on ne sait pas greffer.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/bus_sensoriel.py` | **Nouveau.** `BusSensoriel` (toucher, odorat, goût), constantes `DIM_TOUCHER`/`DIM_CHIMIE`/`PORTEE_ODORAT`/`DECROISSANCE_GOUT`, et `hierarchie_sensorielle()` (description déclarative des 5 sens, lecture seule, pour la doc/télémétrie). Pur numpy, aucun import de `noyau`. |
+| `src/naulthene/cerveau/noyau.py` | Version 28 → 29. §2 renommée « LE CERVEAU C1 (RÉFLEXE) & C2 (NÉO-CORTEX) » + note de restructuration. Ajout de `_executer_c1_reflexe()` et `_solliciter_c2_neocortex()` ; `penser()` réduit à l'arbitrage. `DIM_VECTEUR_BIO` 16 → 24. `obtenir_vecteur_bio(..., signaux_sensoriels=None)`. `EtatCognitif.bus_sensoriel`, lecture des sens dans `traiter_tick` avant `penser()`, signal de goût sur consommation FOOD/WATER, reset de la trace de goût aux 2 sites de fin d'épisode. |
+| `src/naulthene/cerveau/persistance.py` | Nouvelle `_greffer_vecteur_bio_etendu()` (recopie partielle de `integrateur_bio`, 16 → 24 dims bio), câblée en amont du filtre d'exclusion existant, qui devient une trappe de secours. Import de `DIM_VECTEUR_BIO`. |
+| `docs/EXPLICATIONS_v29_sens.md` | **Nouveau.** Document explicatif dédié en 11 sections : le problème résolu, la hiérarchie des 5 sens, le détail du Bus Sensoriel (formules du toucher/odorat/goût), pourquoi les sens faibles restent hors de la cible JEPA, l'identité C1/C2, la boucle de distillation (avec table de correspondance note de conception ↔ code existant), JEPA comme Intuition globale, la greffe des `.brain`, les 2 options **volontairement écartées** et pourquoi, la table des 13 validations, le glossaire des constantes. |
+| `docs/explications_readme.md` | Nouvelle §15 (résumé algorithmique en 5 sous-sections, renvoi vers le document dédié) + entrée dans la table des matières + pied de page mis à jour (v28.0 → v29.0). |
+| `docs/LANCEMENT.md` | En-tête V21-V28 → V21-V29 + encadré « rien à configurer ». Note de greffe `👃` en §1. Nouvelle **§9** (observer les 5 sens en direct, vérifier la hiérarchie, tester la greffe sur une copie de `.brain`, ce que la v29.0 ne change pas). 4 nouvelles lignes de dépannage. |
+| `readme.md` | Section « Nouveautés v29.0 » + entrée `3s.` dans la table des matières + diagramme d'architecture cognitico-biologique refait (les 5 sens en entrée, blocs C1/C2 nommés, flèche de distillation) + 3 nouvelles sous-sections d'architecture (Bus Sensoriel & hiérarchie, JEPA comme Intuition, boucle de distillation). |
+| `CLAUDE.md` | `bus_sensoriel.py` et `EXPLICATIONS_v29_sens.md` ajoutés à l'arborescence ; §2 renommée « C1 (Réflexe) & C2 (Néo-Cortex) » ; 2 puces d'aperçu (C1/C2 nommés, Bus Sensoriel) ; **3 nouveaux garde-fous** dans *Before Modifying Code* (invariants du Bus Sensoriel/vecteur bio, frontière C1/C2 sans court-circuit, greffe par recopie jamais par exclusion) ; version expérimentale de référence 28.0 → 29.0. |
+
+**Validation** (aucun test automatisé dans ce projet — vérifications manuelles exécutées avant livraison) :
+- `DIM_VECTEUR_BIO = 24`, `integrateur_bio` en `(16, 40)` sur un cerveau neuf ; `penser()` renvoie 8 logits, `ACTION_DEMANDER` toujours masquée à `-inf` sans plug (**invariant v28.0 préservé**).
+- **Greffe d'un `.brain` simulé pré-v29.0** : les 32 premières colonnes recopiées **bit à bit** (`torch.equal` = True) sur tous les buffers (y compris `cristallisee`, booléen), `annexe_weight` remis à zéro, 8 nouvelles colonnes non nulles ; `load_state_dict` sans clé manquante ni inattendue. Un `.brain` déjà v29.0 traverse la fonction **sans modification**.
+- **400 ticks** consécutifs sur `MiniGrid-DoorKey-5x5-v0` : signaux sensoriels cohérents (contact frontal = 1.0 face à un mur, odorat = 0.25 pour une source d'eau à 3 cases, goût décroissant de 1.0 → 0.142 en 12 ticks).
+- **Nuit complète** puis **neurogenèse** : `integrateur_bio` passe de `(16, 40)` à `(32, 56)` — le segment bio reste fixe à 24 dims pendant que `dim_bus` double (**invariant `segments_in` respecté**) ; 60 ticks post-neurogenèse OK.
+- **Round-trip complet** `PersistanceAnatomique.sauvegarder()` → `charger_ou_naitre()` : `integrateur_bio` identique (`torch.equal` = True), 30 ticks après résurrection OK.
+- Chemins **`mode_perception="vocal_isole"`** (sans env MiniGrid, 8 nouvelles dims neutres) et **MiniGrid + audio** testés ; tous les modules de la Cuve, des salles de classe et des instruments importent sans erreur.
+
+---
+
+## [28.0-docs2] - 2026-07-30
+
+### Parcourt_readme.md déplacé de la racine vers docs/
+
+| Type | Details |
+|------|---------|
+| **Commit** | N/A — en attente du commit de cette version |
+| **Catégorie** | docs |
+| **Impact** | Documentation |
+
+**Demande utilisateur : ranger `Parcourt_readme.md` dans `docs/` plutôt qu'à la racine.**
+
+`git mv Parcourt_readme.md docs/Parcourt_readme.md` (historique préservé). Tous les liens
+relatifs internes au fichier corrigés (`../readme.md` pour remonter à la racine, chemins courts
+vers `CHANGELOG.md`/`LANCEMENT.md`/`explications_readme.md` désormais dans le même dossier).
+`readme.md` et `CLAUDE.md` mis à jour pour pointer vers `docs/Parcourt_readme.md`.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `docs/Parcourt_readme.md` | Déplacé depuis la racine (`git mv`), liens internes corrigés pour le nouvel emplacement. |
+| `readme.md` | Liens mis à jour : `Parcourt_readme.md` → `docs/Parcourt_readme.md`. |
+| `CLAUDE.md` | Entrée déplacée de la liste des fichiers racine vers la description du dossier `docs/`. |
+
+---
+
+## [28.0-docs] - 2026-07-30
+
+### Parcourt_readme.md — guide pratique complet du système de cursus (commandes, jours/ticks, paliers, FAQ)
+
+| Type | Details |
+|------|---------|
+| **Commit** | N/A — en attente du commit de cette version |
+| **Catégorie** | docs |
+| **Impact** | Documentation |
+
+**Demande utilisateur : un document unique, à la racine, qui explique de façon vulgarisée et exhaustive TOUT le fonctionnement des 4 parcours d'entraînement (Cursus par Ères, Cerveau Bébé, Cursus de la Parole, la Cuve) — commandes de lancement copier-collables, durée en jours et en ticks/jour de chacun, détail complet des 5 niveaux MiniGrid, des 7 paliers DoorKey, des 19 paliers vocaux, Mode Guidé/Libre, patience adaptative, et un rappel explicite qu'aucune progression ne régresse actuellement. Rédigé à partir d'une lecture directe du code (`noyau.py`, les 3 scripts de `salles_de_classe/`), pas de mémoire — toutes les valeurs (ticks/jour, seuils, poids de choc) vérifiées contre les constantes réelles.**
+
+Nouveau fichier `Parcourt_readme.md`, à la racine du dépôt (comme `readme.md`) plutôt que dans
+`docs/` — c'est un guide pratique de premier niveau ("je veux lancer un run"), complémentaire à
+`docs/LANCEMENT.md` (guide opérationnel technique, options CLI complètes) et
+`docs/explications_readme.md` (détail algorithmique/mathématique). Référencé depuis `readme.md`
+(table des matières + lien en tête de la Vue d'Ensemble) et `CLAUDE.md` (arborescence).
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `Parcourt_readme.md` | **Nouveau.** 14 sections : vue d'ensemble des 4 parcours, détail par cursus (commande, rythme ticks/jour, phases/ères), les 5 niveaux MiniGrid, les 7 paliers DoorKey, les 19 paliers vocaux, Mode Guidé/Libre, patience adaptative, absence de régression, emplacement des `.brain`, lecture annotée d'un bilan de nuit, FAQ. |
+| `readme.md` | Entrée `3t.` dans la table des matières pointant vers `Parcourt_readme.md` ; lien de renvoi ajouté juste après le tableau des 5 niveaux dans la Vue d'Ensemble. |
+| `CLAUDE.md` | `Parcourt_readme.md` ajouté à l'arborescence *Architecture* (fichiers racine). |
+
+**Validation** : toutes les valeurs numériques du document (ticks/jour par cursus : 400/3600/800 ; seuils DoorKey 2+2 ; seuils vocaux 0.15→0.45 ; `PATIENCE_MIN/MAX` 50/350 ; `FORCE_PLANIFICATION_GUIDE/LIBRE` 0.5/0.85 ; `SEUIL_PALIER_MODE_LIBRE=5` ; `JOUR_FIN_MASQUAGE_EXTERNE=240`) vérifiées par grep direct sur `noyau.py` et les 3 scripts de cursus avant rédaction, aucune valeur inventée ou approximée.
+
+---
+
+## [28.0-experimental] - 2026-07-30
+
+### La Cascade C1 → C2 → C3 & le Port Exocortex — un troisième cerveau optionnel, jamais dans le chemin de gradient
+
+| Type | Details |
+|------|---------|
+| **Commit** | N/A — en attente du commit de cette version |
+| **Catégorie** | feat (nouvelle mécanique cognitive majeure, expérimentale) |
+| **Impact** | Critique (architecture du réseau, persistance) |
+
+**Contexte utilisateur : ouvrir Naulthène à un greffon externe optionnel (Exocortex C3 — LLM lourd, RAG, recherche web, ou un autre cerveau Naulthène) sans jamais compromettre l'autonomie biologique du Cœur Organique [C1 (réflexe) + C2 (raison/JEPA)]. Principe non négociable posé par l'utilisateur : couper le courant de C3 ne doit ni planter, ni renvoyer d'erreur, ni changer le comportement d'un cerveau existant — l'agent bascule silencieusement sur sa curiosité intrinsèque déjà présente. Décision structurante : "interroger C3" n'est PAS un déclenchement sur seuil d'incertitude, c'est un CHOIX APPRIS par REINFORCE (une 8ème action, "tendre la main"), au même titre que les 7 actions MiniGrid — l'agent apprend lui-même quand demander de l'aide, jamais un `if erreur > seuil`. C3 est conçu comme un Port Multiplexeur (bus) sur lequel des "Plugs" interchangeables s'enregistrent (BrainToBrain, Ollama, VectorDB, Web...), plutôt qu'un appel figé vers un service unique.**
+
+**Chantier 1 — Le Port Multiplexeur** (nouveau sous-package versionné `src/naulthene/exocortex/`) : `PortC3` (le bus), `RequeteC3`/`ReponseC3` (le contrat neutre — uniquement des vecteurs numpy et des scalaires, jamais un tenseur PyTorch, jamais l'agent lui-même), `PlugC3` (classe de base abstraite). Isolation totale : `canal_emission` capture TOUTE exception d'un plug (jamais de fuite vers le noyau) et met le plug fautif en cooldown (`COOLDOWN_PLUG_ECHEC=200` ticks) plutôt que de repayer un timeout complet à chaque tick — la leçon retenue du seul précédent d'appel externe du projet (`professeur_gemma.py`, aucun health-check, jusqu'à 60s de timeout par appel). Trois plugs livrés : `PlugNul` (toujours absent, mode nominal), `PlugSimule` (déterministe, flag `panne` activable en vol pour les crash-tests), `PlugHTTP` (backend générique JSON/HTTP, choix explicite de l'utilisateur plutôt qu'un fournisseur figé).
+
+**Chantier 2 — Le choix appris.** `num_actions` passe de 7 (`NUM_ACTIONS_BASE`) à 8 (`NUM_ACTIONS_AVEC_C3`) : la 8ème action, `ACTION_DEMANDER`, est masquée à `-inf` dans les logits tant qu'aucun plug n'est disponible (`penser()`) — comportement bit-identique à la v27.6 sans plug branché. Nouvelle couche `tete_requete` (tête de routage : vers quel plug émettre, ou diffusion `1_X`), ajoutée aux 4 points de synchronisation (`__init__`, `fortifier_synapses`, `cycle_sommeil_global`, `declencher_neurogenese` — les 4, pas 3, contrairement à la formulation générique de CLAUDE.md). Le rollout mental (`simuler_futur_et_planifier`) remonte désormais aussi `indecision_c2` (l'écart-type brut du rollout, calculé puis jeté depuis la v10.0) — un simple CONTEXTE transmis dans `RequeteC3`, jamais un déclencheur (décision utilisateur explicite). L'action `ACTION_DEMANDER` substitue l'action MiniGrid "done" (6, seule action réellement neutre) à `env.step()` — jamais un pas d'environnement inventé — et coûte `COUT_REQUETE_C3=0.01` en `recompense_interne` (sans quoi REINFORCE apprendrait à spammer le bus gratuitement).
+
+**Chantier 3 — La trappe de secours.** Purement structurelle, aucun code nouveau : sans plug, le masquage rend l'action inexistante ; un plug qui échoue en vol part en cooldown et la curiosité intrinsèque (`DetecteurCuriositeJEPA`) et le Sursaut de Volonté restent actifs en permanence, jamais conditionnés à C3.
+
+**Chantier 4 — Registre d'Assimilation.** Une réponse C3 est mise en attente (`reponse_c3_en_attente`) et appliquée au tick SUIVANT (le bus répond après coup, jamais dans le même pas que l'émission) : sous `SEUIL_OVERRIDE_C3=0.85` de confiance, elle biaise les logits (`+= FORCE_C3 * préférences`, même forme que l'arbitrage C2) ; au-dessus, elle impose l'action (le `log_prob` reste alors celui de l'action réellement jouée sous la distribution courante, pour ne pas invalider REINFORCE). Un conseil C3 suivi d'un succès devient un 3ème canal du "OU doux" v27.0 (`POIDS_DOPAMINE_C3=0.5`, formule étendue à 3 facteurs, toujours bornée dans [0,1] et rétrocompatible à l'identique si `poids_c3=0`) — le LTP (`fortifier_synapses`) et l'importance majorée du souvenir (`micro_boost_ancrage`, déjà existant) font le reste : la trace est rejouée en priorité la nuit, sans réintroduire de distillation supervisée dans la politique (hors du chemin de gradient, cohérent avec la contrainte "pas de Transformer" de `docs/AMELIORATION_V1.md`).
+
+**Le risque n°1 : rétrocompatibilité des `.brain` existants.** `load_state_dict(strict=False)` gère les clés absentes mais PAS un mismatch de forme sur une clé présente des deux côtés — passer à 8 actions change la forme de `tete_motrice`/`generateur_attente`/`generateur_attente_audio`/`actions_eye`. Nouvelle fonction `_greffer_action_supplementaire` (généralise le patron du filtre `integrateur_bio` déjà existant, mais par RECOPIE plutôt que par exclusion) : chaque bloc `[:7]` existant est recopié dans le nouveau tenseur `[:8]`, la 8ème ligne/colonne restant à son initialisation Xavier atténuée — même sémantique que `NaultheneLinearSynaptique.agrandir()`.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/exocortex/__init__.py`, `port_c3.py`, `plugs/{__init__,plug_nul,plug_simule,plug_http}.py` | **Nouveaux**, versionnés — le Port Multiplexeur et 3 plugs. |
+| `src/naulthene/cerveau/noyau.py` | Nouvelle section `# --- 3h. LE PORT EXOCORTEX C3 ---` (constantes) ; `num_actions=8` par défaut ; couche `tete_requete` (4 points de sync) ; `port_c3` sur `AGI_Naulthene` ; `penser()` masque l'action 7 et retourne `logits_routage`/`indecision_c2` en plus ; `simuler_futur_et_planifier` remonte `indecision_c2` ; `traiter_tick` : émission/réception C3, coût, dopamine 3ème canal, override/biais de la réponse en attente, télémétrie W&B (`Dopamine_Poids_C3_Moyen`, `Requetes_C3_Jour`, `Reponses_C3_Jour`, `Taux_Reponse_C3`). |
+| `src/naulthene/cerveau/persistance.py` | Nouvelle fonction `_greffer_action_supplementaire` (greffe par recopie 7→8) appelée dans `charger_ou_naitre` avant `load_state_dict`. |
+
+**Validation** : import de tous les modules du package sans erreur (`noyau`, `persistance`, `daemon_cerveau`, `client_corps`, `lancer_arene`, `irm_cerveau`, `evaluer_cerveau`) ; test d'invariance (300 ticks sans plug, `ACTION_DEMANDER` jamais échantillonnée, seules les 7 actions historiques apparaissent) ; test de rétrocompatibilité sur les 3 vrais `.brain` existants (`naulthene_parole.brain` 300j palier vocal 19/19, `naulthene_cursus.brain`, `naulthene_bb.brain`) chargés sans exception, poids des 7 actions existantes préservés au bit près (vérifié par égalité tensorielle exacte) ; test de déconnexion en vol (`PlugSimule.panne` basculé en cours d'épisode) : aucune exception ne remonte, le plug part en cooldown, l'action redevient masquée au tick suivant ; test des 4 points de synchronisation (`tete_requete` correctement traitée par `cycle_sommeil_global`/`fortifier_synapses`/`declencher_neurogenese`) ; runs réels de 2 jours subjectifs sur les 3 cursus (`cursus_developpemental.py`, `cursus_bebe.py`, `cursus_parole.py`, cerveaux neufs isolés) sans aucune erreur, y compris une neurogenèse réelle traversant `tete_requete`. Les `.brain` réels du dépôt vérifiés strictement inchangés (comparaison octet à octet) après tous les tests.
+
+---
+
 ## [27.6-experimental] - 2026-07-27
 
 ### Gradient vocal étendu aux 8 paramètres — la voix intègre f0/F3/durée/amplitude, dynamiquement, jamais en dur
