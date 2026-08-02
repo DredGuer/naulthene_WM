@@ -8,7 +8,7 @@ Naulthène AGI est un projet de recherche (packagé en `src/naulthene/`, cœur d
 
 - Un **modèle du monde JEPA** (Joint Embedding Predictive Architecture) qui prédit l'état latent suivant plutôt que l'observation brute (`generateur_attente`, `perte_jepa`)
 - Un **Système 1** instinctif (tête motrice Acteur-Critique classique) et un **Système 2** délibératif qui simule mentalement les conséquences de ses actions sur un horizon de plusieurs pas (`simuler_futur_et_planifier`) avant de arbitrer entre les deux — nommés explicitement **C1** (réflexe) et **C2** (néo-cortex) depuis la v29.0, C2 ne recevant jamais que l'état déjà compressé par C1
-- Un **Bus Sensoriel multimodal** (`bus_sensoriel.py`, v29.0) qui donne à l'agent les **5 sens** hiérarchisés par gourmandise énergétique : vue et ouïe (gourmands, chacun avec sa porte synaptique dans le bus latent et sa cible JEPA), puis toucher, odorat et goût (faibles à moyens, injectés en queue du `vecteur_bio` donc hors de la cible JEPA)
+- Un **Bus Sensoriel multimodal** (`bus_sensoriel.py`, v29.0/v30.0) qui donne à l'agent les **5 sens** hiérarchisés par gourmandise énergétique : vue et ouïe (gourmands, chacun avec sa porte synaptique dans le bus latent et sa cible JEPA), puis toucher, odorat et goût (faibles à moyens, injectés en queue du `vecteur_bio` donc hors de la cible JEPA) — plus, depuis la v30.0, un **6ᵉ sens exogène** (l'**Exo-Sens**) : le monde numérique (LLM/RAG, APIs, IoT) perçu en continu via le Port C3, sans jamais être « interrogé » par une action
 - Une **mémoire épisodique** de contexte (moyenne glissante des états latents récents de l'épisode, `vecteurs_episodiques`) et une mémoire tampon court terme (`hippocampe`)
 - Un **réservoir dopaminergique homéostatique** ($D_t \in [0.001, 10.0]$) qui module la motivation et la plasticité synaptique en fonction des succès/échecs vécus dans la journée
 - Une **plasticité structurelle** (`NaultheneLinearSynaptique`) : chaque couche a un poids de base figé et un poids "annexe" appris pendant la journée, consolidé (ou érodé) chaque nuit selon une trace de myéline — avec neurogenèse (ajout de dimensions) déclenchée par un thermostat d'erreur JEPA
@@ -35,8 +35,8 @@ Le projet est organisé en **package Python** sous `src/naulthene/`, avec un dos
 │   ├── cerveau/                  ← LE CERVEAU (cœur cognitif)
 │   │   ├── noyau.py              terrain d'essai local (ex-agi_local_test.py, gitignoré)
 │   │   ├── colab.py              script de référence versionné (ex-agi_google_colab.py)
-│   │   ├── bus_sensoriel.py      l'Interpréteur des 5 sens (v29.0) — toucher, odorat, goût ;
-│   │   │                          pur numpy, n'importe JAMAIS noyau.py
+│   │   ├── bus_sensoriel.py      l'Interpréteur des sens (v29.0/v30.0) — toucher, odorat, goût,
+│   │   │                          et l'Exo-Sens (6ème sens) ; pur numpy, n'importe JAMAIS noyau.py
 │   │   └── persistance.py        cristallisation/résurrection de l'état cognitif (.brain)
 │   ├── salles_de_classe/         ← LES SALLES DE CLASSE (cursus d'entraînement)
 │   │   ├── cursus_bebe.py        paradigme développemental "Bébé" (0→4 ans)
@@ -53,7 +53,7 @@ Le projet est organisé en **package Python** sous `src/naulthene/`, avec un dos
 │   │   ├── port_c3.py             bus multiplexeur (PortC3) et contrat neutre
 │   │   │                          (RequeteC3/ReponseC3/PlugC3)
 │   │   └── plugs/                 greffons interchangeables (PlugNul, PlugSimule,
-│   │                               PlugHTTP) qui s'enregistrent sur le port
+│   │                               PlugHTTP, PlugMemoireAugmentee) qui s'enregistrent sur le port
 │   └── instruments/               ← INSTRUMENTS D'OBSERVATION (lecture seule)
 │       ├── arene_visuelle.py     fenêtre pygame de visualisation en direct
 │       ├── lancer_arene.py       lance l'Arène (pygame + audio)
@@ -65,8 +65,8 @@ Le projet est organisé en **package Python** sous `src/naulthene/`, avec un dos
                                     système de cursus, commandes de lancement, jours/ticks par parcours,
                                     détail des paliers, FAQ — CONCEPTION_v22_audio.md,
                                     EXPLICATIONS_v29_sens.md — doc dédiée du Bus Sensoriel & de
-                                    l'identité C1/C2 — CONCEPTION_v30_exo_sens.md — cadrage de la
-                                    v30 en cours, PAS un état livré — et les analyses de run)
+                                    l'identité C1/C2 — CONCEPTION_v30_exo_sens.md — cadrage et
+                                    arbitrages de la v30 (Exo-Sens) — et les analyses de run)
 ```
 
 Le cœur de référence est `src/naulthene/cerveau/colab.py` (ex-`agi_google_colab.py`, pensé pour tourner sur Google Colab). Structure interne (sections numérotées par des commentaires `# --- N. ... ---`) :
@@ -106,6 +106,7 @@ En plus du script de référence `colab.py`, le projet dispose d'une copie de tr
 - Vérifier si la modification touche au **Port Exocortex C3** (`src/naulthene/exocortex/`, `port_c3`, `tete_requete`, `ACTION_DEMANDER`) : l'invariant non négociable est qu'**aucun plug enregistré ⇒ comportement bit-identique à avant v28.0** — l'action `ACTION_DEMANDER` doit rester masquée à `-inf` dans `penser()` tant qu'aucun plug n'est disponible, et `PortC3.canal_emission` doit capturer TOUTE exception d'un plug (jamais de fuite vers le noyau). Ne jamais coder de déclenchement sur seuil d'incertitude pour appeler C3 — c'est un choix appris par REINFORCE (décision utilisateur explicite), pas un `if`. Toute modification touchant `num_actions` doit vérifier que `persistance._greffer_action_supplementaire` reste cohérente (greffe par recopie, jamais par exclusion, sur `tete_motrice`/`generateur_attente`/`generateur_attente_audio`/`actions_eye`) — sinon les `.brain` existants perdent leur tête motrice au chargement
 - Vérifier si la modification touche au **Bus Sensoriel / vecteur bio** (`src/naulthene/cerveau/bus_sensoriel.py`, `DIM_VECTEUR_BIO`, `DIM_TOUCHER`, `DIM_CHIMIE`, `obtenir_vecteur_bio`) : trois invariants v29.0. (1) `bus_sensoriel.py` reste **pur numpy** et n'importe **jamais** `noyau.py` — c'est ce qui garantit l'absence de cycle d'import, même discipline que `exocortex/port_c3.py`. (2) Toute nouvelle dimension du vecteur bio s'ajoute **EN QUEUE**, jamais au milieu : l'ordre de concaténation de `obtenir_vecteur_bio` est un contrat partagé avec `BusSensoriel.interpreter` et avec `persistance._greffer_vecteur_bio_etendu`, qui recopie les N premières colonnes d'un ancien `.brain` — une insertion au milieu décalerait silencieusement tous les acquis. (3) Les sens faibles (toucher, odorat, goût) n'entrent **jamais** dans `bus_latent` : ils passent par `integrateur_bio`, donc restent hors de la cible JEPA (`perte_jepa` compare toujours le bus prédit au bus réel de la **vision seule**). Ne pas leur donner de porte synaptique sommée dans le tronc cérébral sans demande explicite de l'utilisateur
 - Vérifier si la modification touche à la **frontière C1/C2** (`_executer_c1_reflexe`, `_solliciter_c2_neocortex`, `penser`) : le découpage v29.0 est une **restructuration pure** (décision utilisateur explicite) — C2 est sollicité à chaque tick, exactement comme avant, et l'arbitrage `logits_instinct + valeurs_simulees * force_planification` est inchangé depuis la v13.0. Ne **pas** y introduire de court-circuit conditionnel ("C1 saute C2 s'il est confiant") sans demande explicite : ce serait un déclenchement sur seuil codé en dur dans le chemin de décision, de la même nature que ce que ce fichier interdit déjà pour l'appel à C3. C2 ne doit par ailleurs jamais recevoir autre chose que l'état déjà compressé par C1 (`pensee_bio`) — jamais l'observation brute, jamais l'environnement
+- Vérifier si la modification touche à l'**Exo-Sens** (`DIM_EXO`, `percevoir_exogene`, `_rafraichir_perception_exogene`, `PERIODE_PERCEPTION_EXO`, `ReponseC3.perception`) : quatre invariants v30.0. (1) L'Exo-Sens est une **perception continue**, jamais une action ni un déclenchement — ne **pas** y réintroduire de seuil (« si l'erreur JEPA monte, interroger C3 ») : c'est ce que le projet a refusé trois fois (v28 pour l'appel à C3, v29 pour le court-circuit C1→C2, v30 pour cette boucle d'attention). L'attention accordée aux 8 dims doit émerger de la myélinisation de `integrateur_bio`. (2) `ACTION_DEMANDER` reste masquée à `-inf` **en permanence** et `num_actions` reste à 8 — la colonne est dormante mais jamais amputée (4 `.brain` du dépôt sont à 8 actions). (3) `percevoir_exogene` **clippe toujours** dans [0,1] et rejette un vecteur de mauvaise taille : un service externe n'est pas maîtrisé, et une dimension hors échelle écraserait `integrateur_bio`. Un Exo-Sens invalide ne doit **jamais** désactiver les 5 sens physiques (avertissement séparé, voir `_avertir_exo`). (4) Le bus n'est interrogé qu'un tick sur `PERIODE_PERCEPTION_EXO` avec mise en cache — un plug HTTP à 100 ms-30 s rendrait sinon impraticable un run de 120 000 ticks
 - **Toute nouvelle mécanique observable doit être instrumentée dans le même commit** (leçon de la v29.1) : un compteur remis à zéro dans `_reinitialiser_buffers_journee`, accumulé dans `traiter_tick`, puis agrégé dans `executer_nuit` (ligne du bilan console **et** clé dans le dict `log_wandb` retourné). Sans cela, la mécanique est invisible sur un run long et son utilité réelle indémontrable — la v29.0 avait livré les 5 sens sans aucune télémétrie, écart corrigé en v29.1. Deux règles : ne jamais créer un compteur journalier par `getattr(etat, "...", 0)` sans l'ajouter à `_reinitialiser_buffers_journee` (piège du bug `score_vocal_jour` v27.0, où la « moyenne du jour » cumulait depuis la naissance), et rendre les clés **conditionnelles** quand la mécanique peut être inactive (voir les blocs `Sens_*` et C3), plutôt que de logger des zéros trompeurs
 - Vérifier si la modification touche à la **rétrocompatibilité des `.brain`** (`persistance.py`) : la règle générale est **greffe par recopie, jamais par exclusion**. Exclure une couche sur mismatch de forme la fait renaître à neuf et détruit des centaines de jours d'acquis (bug v24.0-fix4, symptôme : bouche silencieuse dans l'Arène). Les deux greffes existantes — `_greffer_action_supplementaire` (7→8 actions, v28.0) et `_greffer_vecteur_bio_etendu` (vecteur bio 16→24, v29.0) — sont le modèle à suivre ; le filtre d'exclusion ne reste qu'en trappe de secours pour les mismatchs qu'on ne sait pas greffer
 - Après toute modification des hyperparamètres de la section 4, vérifier la cohérence avec le [README](readme.md) (tableau `config.py` narratif, formules) et mettre à jour la documentation si les valeurs divergent
@@ -141,13 +142,14 @@ Il n'y a ni linter ni suite de tests automatisés configurés. Toute vérificati
 | Branche | Contenu | État |
 |---|---|---|
 | `master` | v28.0 (Port Exocortex C3) + v29.0 (Bus Sensoriel & identité C1/C2) + v29.1 (télémétrie des 5 sens) | intégrée, poussée |
-| `feat/v30-exo-sens` | v30.0 — l'Exo-Sens (C3 en 6ᵉ sens, odorat dynamique) | **cadrage seul**, aucun code livré — voir `docs/CONCEPTION_v30_exo_sens.md` |
+| `feat/v30-exo-sens` | v30.0 — l'Exo-Sens (C3 en 6ᵉ sens, odorat dynamique exponentiel) | **implémentée et validée**, en attente de merge — voir `docs/CONCEPTION_v30_exo_sens.md` |
 | `feat/v28-exocortex-c3` | branche d'origine des v28/v29, désormais mergée dans `master` | conservée pour l'historique |
 
-Le travail en cours se fait sur `feat/v30-exo-sens`, rebasée sur `master`. Deux décisions déjà
-prises pour la v30 (voir le document de cadrage) : `num_actions` **reste à 8** avec
-`ACTION_DEMANDER` masquée en permanence (ne jamais amputer un `.brain` — 4 des cerveaux du dépôt
-sont déjà à 8 actions), et le vecteur bio passerait de 24 à 32 dims **en queue**.
+Le travail en cours se fait sur `feat/v30-exo-sens`, rebasée sur `master`. Décisions structurantes
+de la v30, déjà appliquées : `num_actions` **reste à 8** avec `ACTION_DEMANDER` masquée en
+permanence (ne jamais amputer un `.brain` — 4 des cerveaux du dépôt sont déjà à 8 actions), le
+vecteur bio passe de 24 à 32 dims **en queue**, et l'Exo-Sens est perçu **en continu sans aucun
+seuil de déclenchement**.
 
 - Ne créer un commit que si l'utilisateur le demande explicitement
 - Toujours créer un nouveau commit plutôt qu'un `--amend`, sauf demande contraire
@@ -199,4 +201,4 @@ Utiliser le hash court réel du commit (`git rev-parse --short HEAD`) une fois l
 | `fix` mineur / `refactor` / `docs` | même version + suffixe | 14.0-fix1, 14.0-docs |
 | `chore` / `style` | pas d'incrément | - |
 
-Le script de référence `src/naulthene/cerveau/colab.py` est actuellement en version **17** (voir `readme.md`, table des matières et journal des mises à jour). `src/naulthene/cerveau/noyau.py` porte en plus toutes les mécaniques expérimentales non encore portées sur `colab.py` (actuellement jusqu'à **v29.1** — Bus Sensoriel Multimodal, Identité C1/C2 explicite & télémétrie des 5 sens — en passant par v18.0 Architecture Homéostatique Biologique, v22 Hémisphère Auditif & Vocal, v27.x École de la Parole, v28.0 Cascade C1→C2→C3 & Port Exocortex, voir [Variante Locale de Test](#variante-locale-de-test-mac--srcnaulthenecerveaunoyaupy) et `readme.md`/`docs/CHANGELOG.md` pour le détail) — toute nouvelle mécanique testée localement suit la même échelle de version que le script de référence, marquée `-experimental` tant qu'elle n'y est pas portée. Poursuivre sur cette échelle entière (+1.0 pour la prochaine mécanique majeure) sauf décision contraire de l'utilisateur.
+Le script de référence `src/naulthene/cerveau/colab.py` est actuellement en version **17** (voir `readme.md`, table des matières et journal des mises à jour). `src/naulthene/cerveau/noyau.py` porte en plus toutes les mécaniques expérimentales non encore portées sur `colab.py` (actuellement jusqu'à **v30.0** — l'Odorat Dynamique & l'Exo-Sens, C3 devenu 6ème sens — en passant par v18.0 Architecture Homéostatique Biologique, v22 Hémisphère Auditif & Vocal, v27.x École de la Parole, v28.0 Cascade C1→C2→C3 & Port Exocortex, v29.0/v29.1 Bus Sensoriel & télémétrie des 5 sens, voir [Variante Locale de Test](#variante-locale-de-test-mac--srcnaulthenecerveaunoyaupy) et `readme.md`/`docs/CHANGELOG.md` pour le détail) — toute nouvelle mécanique testée localement suit la même échelle de version que le script de référence, marquée `-experimental` tant qu'elle n'y est pas portée. Poursuivre sur cette échelle entière (+1.0 pour la prochaine mécanique majeure) sauf décision contraire de l'utilisateur.

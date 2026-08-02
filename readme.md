@@ -19,7 +19,7 @@ Il intègre la structure de table des matières globale (avec le contexte applic
 2. [Journal des Mises à Jour (Changelog)](https://www.google.com/search?q=%23journal-des-mises-%C3%A0-jour)
 3. [Plan d'Action](https://www.google.com/search?q=%23plan-daction)
 3t. **[Parcourt_readme.md — Guide Complet du Système de Cursus](docs/Parcourt_readme.md)** (commandes de lancement, jours/ticks par parcours, détail des paliers, FAQ)
-3q. 🚧 [v30.0 (en cours de conception) — L'Unification & l'Extensibilité (l'Exo-Sens)](#-v300-en-cours-de-conception--lunification--lextensibilité-lexo-sens)
+3q. [Nouveautés v30.0 (expérimental) — L'Unification & l'Extensibilité : l'Odorat Dynamique & l'Exo-Sens](#nouveautés-v300-expérimental--lunification--lextensibilité--lodorat-dynamique--lexo-sens-2026-08-02)
 3r. [Nouveautés v29.1 (expérimental) — Télémétrie des 5 Sens](#nouveautés-v291-expérimental--télémétrie-des-5-sens-2026-08-02)
 3s. [Nouveautés v29.0 (expérimental) — Le Bus Sensoriel Multimodal & l'Identité C1/C2](#nouveautés-v290-expérimental--le-bus-sensoriel-multimodal--lidentité-c1c2-explicite-2026-08-02)
 3u. [Nouveautés v28.0 (expérimental) — La Cascade C1→C2→C3 & le Port Exocortex](#nouveautés-v280-expérimental--la-cascade-c1c2c3--le-port-exocortex-2026-07-30)
@@ -92,33 +92,54 @@ la Parole, la Cuve).
 
 Pour un historique complet commit par commit, consultez [docs/CHANGELOG.md](docs/CHANGELOG.md).
 
-> 📍 **État du dépôt (2026-08-02)** — la branche `master` intègre désormais les versions
-> **v28.0** (Port Exocortex C3), **v29.0** (Bus Sensoriel & identité C1/C2) et **v29.1**
-> (télémétrie des 5 sens). La **v30.0** (« l'Exo-Sens ») est **en cours de conception** sur la
-> branche `feat/v30-exo-sens` — rien n'en est encore livré, voir
-> [docs/CONCEPTION_v30_exo_sens.md](docs/CONCEPTION_v30_exo_sens.md) pour le cadrage.
+> 📍 **État du dépôt (2026-08-02)** — la branche `master` intègre les versions **v28.0** (Port
+> Exocortex C3), **v29.0** (Bus Sensoriel & identité C1/C2) et **v29.1** (télémétrie des 5 sens).
+> La **v30.0** (« l'Exo-Sens ») est **implémentée et validée** sur la branche
+> `feat/v30-exo-sens`, en attente de merge — voir
+> [docs/CONCEPTION_v30_exo_sens.md](docs/CONCEPTION_v30_exo_sens.md) pour le cadrage et les
+> arbitrages.
 
-### 🚧 v30.0 (en cours de conception) — L'Unification & l'Extensibilité (l'Exo-Sens)
+### Nouveautés v30.0 (expérimental) — L'Unification & l'Extensibilité : l'Odorat Dynamique & l'Exo-Sens (2026-08-02)
 
-> ⚠️ **Rien n'est encore implémenté.** Cette section décrit une cible, pas un état livré. Le
-> document de cadrage complet (décisions tranchées, points ouverts, invariants) est dans
-> [docs/CONCEPTION_v30_exo_sens.md](docs/CONCEPTION_v30_exo_sens.md).
+> ⚠️ **Statut expérimental** : vit dans `src/naulthene/cerveau/noyau.py` (gitignored, terrain d'essai local), `bus_sensoriel.py`, `persistance.py` et `src/naulthene/exocortex/`, pas encore porté sur `src/naulthene/cerveau/colab.py`. Cadrage complet et décisions dans [docs/CONCEPTION_v30_exo_sens.md](docs/CONCEPTION_v30_exo_sens.md).
 
-La v30.0 doit concrétiser le pivot conceptuel amorcé par la v29 : transformer l'Exocortex **C3**
-d'un « 3ᵉ cerveau » en un **6ᵉ sens exogène** (l'*Exo-Sens*), et corriger la physique de l'odorat
-local. Trois chantiers :
+Concrétise le pivot amorcé par la v29 : l'Exocortex **C3** cesse d'être un « 3ᵉ cerveau » pour
+devenir un **6ᵉ sens exogène**, et l'odorat retrouve son rôle de boussole de proximité.
 
-1. **L'Odorat Dynamique** — portée relative à la géométrie de la carte, pour corriger la
-   saturation diagnostiquée en v29.1.
-2. **Le pivot de C3** — l'Exocortex cesse d'être un canal de *décision* (une action jouée) pour
-   devenir un canal de *perception* : `DIM_VECTEUR_BIO` passerait de 24 à 32 dims, l'agent
-   « percevant » le monde numérique (LLM/RAG, bases vectorielles, APIs, IoT) au lieu de
-   l'interroger. Le contrat `PlugC3` (v28.0) est déjà générique et n'a pas à être réinventé.
-3. **La Boucle d'Attention Exogène** — comment l'agent module son attention à ce 6ᵉ sens.
+* **L'Odorat Dynamique.** La rampe linéaire à portée fixe saturait les petites cartes (diagnostic
+  v29.1). Elle est remplacée par une **atténuation exponentielle** $S(d) = e^{-0.8 \cdot d}$ — un
+  gradient de diffusion chimique plutôt qu'un cercle à bord net : 1.00 au contact, 0.45 à une
+  case, 0.20 à deux, négligeable au-delà. Le critère de jugement retenu n'est pas la couverture
+  mais le **gradient** (l'écart entre cases voisines, seul porteur d'information directionnelle) :
+  il gagne **+56 % sur `DoorKey-6x6`**, la carte où le problème avait été diagnostiqué. Sur un run
+  réel, l'odeur forte ne survient plus que 30 % du temps au lieu d'être permanente.
+* **L'Exo-Sens : une perception, pas une décision.** `DIM_VECTEUR_BIO` passe de 24 à 32 dims.
+  L'agent ne « demande » plus rien à C3 — il **perçoit en continu** le monde numérique (LLM/RAG,
+  bases vectorielles, APIs, IoT) au même titre que le toucher. **Aucun seuil, aucun `if`** dans le
+  chemin de décision : l'attention accordée à ces 8 dimensions émerge de la myélinisation de
+  `integrateur_bio`. Du bruit verra ses poids tomber vers 0 ; une information utile les verra se
+  renforcer. C'est la seule option cohérente avec les refus déjà posés en v28 (seuil pour appeler
+  C3) et v29 (court-circuit C1→C2).
+* **La 8ᵉ action masquée, jamais amputée.** `ACTION_DEMANDER` n'a plus de rôle mais **reste dans
+  le réseau**, masquée en permanence. Repasser à 7 actions aurait imposé une greffe *inverse*
+  jetant des poids appris sur les 4 `.brain` déjà à 8 actions — première violation de la règle
+  « greffe par recopie, jamais par exclusion ». La colonne 8 devient dormante et réactivable.
+* **Le contrat des plugs s'élargit sans rien casser.** `ReponseC3` porte désormais `perception`
+  (v30) *et* `preferences` (v28), agrégés indépendamment : un bus mélangeant les deux familles
+  fonctionne. Un premier **`PlugMemoireAugmentee`** local et déterministe valide que C1/C2 digèrent
+  le signal exogène avant d'introduire la latence d'un vrai service — n'importe quel backend
+  (Ollama, RAG, API) se branche ensuite via `PlugHTTP`, sans toucher au noyau.
+* **La latence, traitée comme une fréquence d'échantillonnage.** Un plug HTTP coûte 100 ms à 30 s ;
+  la perception est donc rafraîchie tous les 20 ticks et mise en cache — 20 appels pour 400 ticks.
+  C'est une contrainte de capteur, pas une règle cognitive : le cerveau perçoit à chaque tick.
+* **Validé sur tes vrais cerveaux** : `naulthene_parole` (pré-v29) greffé 64→80 dims **et** 7→8
+  actions en conservant ses 480 000 ticks et son palier vocal 19/19 ; `naulthene_cursus` (v29)
+  greffé 72→80 avec ses 120 000 ticks intacts.
 
-**Deux points restent ouverts et sont documentés comme tels** : la formule d'odorat proposée ne
-corrige pas les cartes 4×4 (et aggrave le Doctorat), et le déclenchement d'attention envisagé
-réintroduirait un seuil codé en dur — exactement ce que les v28 et v29 ont refusé deux fois.
+> ⚠️ **Contrepartie assumée** : l'exponentielle portant moins loin qu'une rampe à 4 cases,
+> `MultiRoom` (Doctorat) perd un peu de gradient olfactif. Cohérent avec le rôle voulu du sens
+> (proximité, pas cartographie longue distance — celle-ci reste le travail de la vue et de la
+> mémoire spatiale), mais à surveiller via `Sens_Odorat_*` sur un run au Doctorat.
 
 ### Nouveautés v29.1 (expérimental) — Télémétrie des 5 Sens (2026-08-02)
 

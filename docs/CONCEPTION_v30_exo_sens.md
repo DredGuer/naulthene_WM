@@ -1,9 +1,14 @@
 # Conception v30.0 — L'Unification & l'Extensibilité (l'Exo-Sens)
 
-> 🚧 **Document de cadrage, pas de compte-rendu.** Il fixe la cible, les décisions déjà
-> tranchées et les points ouverts de la v30.0 **avant** implémentation. Branche dédiée :
-> `feat/v30-exo-sens`. Rien de ce qui suit n'est encore livré — voir
-> [CHANGELOG.md](CHANGELOG.md) pour ce qui existe réellement (v29.1 à ce jour).
+> ✅ **Statut : IMPLÉMENTÉE ET VALIDÉE** (2026-08-02, branche `feat/v30-exo-sens`).
+> Ce document reste le cadrage d'origine — il conserve la trace des arbitrages, y compris des
+> options **écartées** et pourquoi. Pour ce qui a réellement été livré et les validations
+> exécutées, voir [CHANGELOG.md](CHANGELOG.md), entrée `[30.0-experimental]`.
+>
+> **Deux arbitrages tranchés par l'utilisateur après ce cadrage**, qui remplacent ce qui était
+> alors « point ouvert » : l'odorat suit une **atténuation exponentielle** `exp(-0.8·d)` (et non
+> une portée relative à la géométrie, qui ne corrigeait pas les cartes 4×4 — voir §2), et le
+> chantier 3 retient la **perception continue sans aucun seuil** (voir §4).
 
 La v29.1 a validé la séparation explicite **C1/C2** et les **5 sens physiques**. La v30.0
 concrétise le pivot conceptuel : transformer l'Exocortex **C3** d'un « 3ᵉ cerveau » en un

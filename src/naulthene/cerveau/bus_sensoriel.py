@@ -22,6 +22,17 @@ document de conception :
 | Toucher       | Moyenne     | 4 dims dans `vecteur_bio` → `integrateur_bio`            |
 | Odorat        | Faible      | 2 dims chimiques dans `vecteur_bio`                      |
 | Goût          | Faible      | 2 dims chimiques dans `vecteur_bio`                      |
+| **Exo-Sens**  | *Externe*   | 8 dims dans `vecteur_bio` (v30.0, voir ci-dessous)       |
+
+v30.0 — **le 6ème sens (l'Exo-Sens)**. L'Exocortex C3 cesse d'être un « 3ème cerveau »
+qu'on interroge via une action apprise pour devenir un **canal perceptif exogène** : le
+monde numérique (LLM/RAG, bases vectorielles, APIs, capteurs IoT) est *senti* en continu,
+exactement comme le toucher. L'agent n'a plus à décider de demander ; c'est
+`integrateur_bio` qui apprend seul, par myélinisation, quelle attention accorder à ces
+dimensions — du bruit verra ses poids tomber vers 0, une information utile les verra se
+renforcer. Aucun `if` de déclenchement n'existe dans le chemin de décision, cohérent avec
+les refus posés en v28 (seuil pour C3) et v29 (court-circuit C1→C2). Sans plug branché,
+le vecteur est nul et le comportement est strictement celui de la v29.1.
 
 Décision structurante (utilisateur, v29.0) : le toucher et la chimie N'ONT PAS de porte
 synaptique dédiée sommée dans le bus latent. Ils entrent par la QUEUE du `vecteur_bio`
@@ -51,12 +62,54 @@ except Exception:
 # dans le segment non-extensible `DIM_VECTEUR_BIO` de `integrateur_bio`.
 DIM_TOUCHER = 4   # contact frontal, objet en main, orientation (cos, sin)
 DIM_CHIMIE = 4    # odorat (nourriture, eau) + goût (dernière ressource consommée)
+DIM_EXO = 8       # v30.0 — le 6ème sens, l'Exo-Sens (vecteur perceptif exogène)
 
-# Portée de l'odorat, en cases de la grille (distance de Manhattan). L'odorat est le seul
-# sens « à distance » des deux sens chimiques : il décroît linéairement avec la distance
-# à la source la plus proche, et vaut 0 au-delà. Volontairement court (4 cases) — c'est
-# un signal de survie grossier qui oriente, pas une carte : la cartographie précise reste
-# le travail de la vue et de MemoireEpisodiqueSpatiale.
+# --- ODORAT : atténuation exponentielle de proximité (v30.0) ---
+#
+# En v29.x, l'odorat décroissait LINÉAIREMENT sur une portée fixe de 4 cases
+# (`PORTEE_ODORAT = 4.0`). La télémétrie v29.1 a montré que ce réglage saturait : 97,6 %
+# de couverture sur Empty-8x8 et 100 % sur DoorKey-6x6 — un signal presque toujours actif
+# porte très peu d'information, et l'agent ne pouvait pas s'en servir pour s'orienter.
+#
+# Une portée relative à la géométrie de la carte (min(W,H)/3) a été envisagée puis écartée :
+# elle ne corrigeait PAS les cartes 4×4 (DoorKey/Unlock restaient à 95 % de couverture) et
+# AGGRAVAIT le Doctorat en augmentant la portée de 4 à 5. Le problème n'était pas la portée,
+# c'était la FORME de la décroissance : une coupure linéaire franche laisse un plateau de
+# signal fort sur presque toute une petite carte.
+#
+# En biologie, une odeur n'est pas un cercle à bord net : c'est un gradient de diffusion
+# chimique qui chute très vite près de la source. D'où l'atténuation exponentielle :
+#
+#     S(d) = exp(-LAMBDA_ODORAT * d)      avec LAMBDA_ODORAT = 0.8
+#
+#     d=0 → 1.000 (contact)   d=1 → 0.449   d=2 → 0.202
+#     d=3 → 0.091             d=4 → 0.041   d≥5 → négligeable
+#
+# Ce qui compte n'est pas la « couverture » mais le GRADIENT (l'écart de signal entre deux
+# cases voisines) : c'est lui qui permet à l'agent de savoir dans quelle direction aller.
+# Mesuré sur 600 placements aléatoires de 4 sources, gradient moyen entre cases voisines :
+#
+#     Carte          | linéaire portée 4 | exponentiel λ=0.8
+#     Empty-8x8      |       0.208       |       0.221
+#     DoorKey-6x6    |       0.196       |       0.305   (+56 %)
+#     MemoryS7       |       0.207       |       0.259
+#     MultiRoom      |       0.118       |       0.084   (voir ci-dessous)
+#
+# DoorKey — la carte où le problème avait été diagnostiqué — gagne 56 % de gradient : c'est
+# exactement le rôle de « boussole de proximité » recherché. En contrepartie assumée,
+# MultiRoom (Doctorat, 13×13) perd un peu de gradient : l'exponentielle porte moins loin
+# qu'une rampe linéaire à 4 cases. C'est cohérent avec le rôle voulu du sens (proximité,
+# pas cartographie longue distance — celle-ci reste le travail de la vue et de
+# MemoireEpisodiqueSpatiale), mais à surveiller via `Sens_Odorat_*` sur un run au Doctorat.
+LAMBDA_ODORAT = 0.8
+
+# Sous ce seuil, le signal est coupé net à 0.0 plutôt que de traîner une valeur infinitésimale
+# (à d=6, exp(-4.8) ≈ 0.008). Évite qu'une source à l'autre bout de la carte maintienne
+# `Sens_Odorat_Ticks_Actifs_Ratio` artificiellement à 100 % avec un signal inexploitable.
+SEUIL_COUPURE_ODORAT = 0.02
+
+# Conservée pour la rétrocompatibilité documentaire (v29.x) — n'est plus utilisée par le
+# calcul depuis la v30.0, l'atténuation exponentielle n'ayant pas de portée franche.
 PORTEE_ODORAT = 4.0
 
 # Objets MiniGrid qui « sentent » quelque chose. Réutilise la convention déjà posée par
@@ -90,6 +143,9 @@ class BusSensoriel:
     def __init__(self):
         self.actif = _MINIGRID_OK
         self._avertissement_donne = False
+        # v30.0 — avertissement distinct pour l'Exo-Sens : un plug qui renvoie un vecteur
+        # malformé ne doit jamais désactiver les 5 sens physiques (voir _avertir_exo).
+        self._avertissement_exo_donne = False
         # Trace de goût : [nourriture, eau], décroît à chaque tick.
         self._gout_courant = np.zeros(2, dtype=np.float32)
 
@@ -158,10 +214,12 @@ class BusSensoriel:
         """Odorat (à distance) + goût (au contact), en DIM_CHIMIE=4 dims :
 
         - `odeur_nourriture`, `odeur_eau` : intensité dans [0, 1] de la source la plus
-          proche du type correspondant, décroissant linéairement sur PORTEE_ODORAT cases
-          (distance de Manhattan, cohérente avec la métrique déjà utilisée par
-          `DetecteurJalonsDoorKey._distance` et `MemoireEpisodiqueSpatiale`). 0.0 si
-          aucune source à portée.
+          proche du type correspondant. v30.0 — décroissance **exponentielle**
+          `exp(-LAMBDA_ODORAT * d)` (distance de Manhattan, cohérente avec la métrique déjà
+          utilisée par `DetecteurJalonsDoorKey._distance` et `MemoireEpisodiqueSpatiale`),
+          coupée à 0.0 sous `SEUIL_COUPURE_ODORAT`. Remplace la rampe linéaire de la v29.x,
+          qui saturait les petites cartes — voir le commentaire de `LAMBDA_ODORAT` en tête
+          de module pour le diagnostic et les mesures de gradient.
         - `gout_nourriture`, `gout_eau` : la trace rémanente de la dernière ressource
           effectivement consommée, décroissant à DECROISSANCE_GOUT par tick (voir
           `signaler_consommation`, appelée par la boucle principale au moment exact où
@@ -193,8 +251,11 @@ class BusSensoriel:
 
                 for i, couleur in enumerate((COULEUR_NOURRITURE, COULEUR_EAU)):
                     d = distances[couleur]
-                    if d is not None and d <= PORTEE_ODORAT:
-                        odeurs[i] = float(1.0 - (d / PORTEE_ODORAT))
+                    if d is None:
+                        continue
+                    # v30.0 — gradient de diffusion chimique plutôt qu'un cercle à bord net.
+                    intensite = float(np.exp(-LAMBDA_ODORAT * d))
+                    odeurs[i] = intensite if intensite >= SEUIL_COUPURE_ODORAT else 0.0
             except Exception as e:
                 self._avertir(e)
                 odeurs = [0.0, 0.0]
@@ -217,24 +278,88 @@ class BusSensoriel:
         self._gout_courant *= self.DECROISSANCE_GOUT
         self._gout_courant[self._gout_courant < 1e-3] = 0.0
 
-    # --- 3. L'INTERPRÉTEUR UNIFIÉ ---
+    # --- 3. L'EXO-SENS — LE 6ème SENS (v30.0) ---
 
-    def interpreter(self, env, action_item=None) -> list:
-        """Point d'entrée unique : renvoie les DIM_TOUCHER + DIM_CHIMIE = 8 dims des
-        sens faibles à moyens, dans l'ordre exact attendu par la queue du `vecteur_bio`
-        (voir `BiologicalHomeostasisEngine.obtenir_vecteur_bio`) :
+    def percevoir_exogene(self, reponse_c3=None) -> list:
+        """Transducteur du 6ème sens : traduit une `ReponseC3` en DIM_EXO=8 dims
+        normalisées, perçues **en continu** au même titre que le toucher ou l'odorat.
 
-            [contact, objet_en_main, orient_cos, orient_sin,
-             odeur_food, odeur_water, gout_food, gout_water]
+        C'est le pivot conceptuel de la v30.0 : C3 n'est plus un « 3ème cerveau » qu'on
+        interroge par une action apprise, mais un **canal perceptif exogène**. L'agent ne
+        décide pas de « demander » — il *sent* le monde numérique en permanence, et c'est
+        `integrateur_bio` qui apprend seul, par myélinisation, à quel point ces dimensions
+        méritent son attention. Si le plug envoie du bruit, les poids correspondants
+        tomberont naturellement vers 0 ; s'il envoie de l'information utile, ils se
+        renforceront. **Aucun `if` de déclenchement dans le chemin de décision** — c'est
+        ce qui rend cette option cohérente avec les refus posés en v28 (seuil pour C3) et
+        v29 (court-circuit C1→C2).
+
+        `reponse_c3=None` (aucun plug branché, ou aucun n'a répondu) ⇒ vecteur nul : le
+        comportement redevient **strictement identique à la v29.1**. C'est l'invariant de
+        frugalité du projet — sans greffon, l'organisme est inchangé, et le coût se réduit
+        à des multiplications par zéro déjà vectorisées.
+
+        Les valeurs sont **clippées dans [0, 1]** ici plutôt que de faire confiance au
+        plug : un service externe est par nature non maîtrisé, et une dimension à 10^6
+        écraserait `integrateur_bio` par simple échelle (les 5 sens physiques sont tous
+        bornés — voir la discipline de normalisation en tête de module). Un vecteur de
+        mauvaise taille est ignoré (vecteur nul) plutôt que tronqué au hasard.
+        """
+        neutre = [0.0] * DIM_EXO
+        if reponse_c3 is None:
+            return neutre
+        perception = getattr(reponse_c3, "perception", None)
+        if perception is None:
+            return neutre  # plug purement décisionnel (v28) : rien à percevoir
+        try:
+            vecteur = np.asarray(perception, dtype=np.float32).flatten()
+            if vecteur.shape[0] != DIM_EXO:
+                self._avertir_exo(
+                    f"vecteur de perception de taille {vecteur.shape[0]}, {DIM_EXO} attendues"
+                )
+                return neutre
+            if not np.all(np.isfinite(vecteur)):
+                self._avertir_exo("vecteur de perception contenant NaN/inf")
+                return neutre
+            return [float(v) for v in np.clip(vecteur, 0.0, 1.0)]
+        except Exception as e:
+            self._avertir_exo(f"vecteur de perception illisible ({e})")
+            return neutre
+
+    def _avertir_exo(self, motif: str):
+        """Avertissement UNE SEULE FOIS sur un Exo-Sens malformé — même discipline que
+        `_avertir` pour les sens physiques. Contrairement à lui, ne désactive PAS le bus :
+        un plug qui renvoie un vecteur invalide ne doit pas rendre l'agent aveugle,
+        sourd et insensible ; seul l'Exo-Sens retombe à neutre pour ce tick."""
+        if not self._avertissement_exo_donne:
+            print(f"⚠️  Exo-Sens ignoré ce tick ({motif}) — vecteur neutre utilisé. "
+                  f"Les 5 sens physiques ne sont pas affectés.")
+            self._avertissement_exo_donne = True
+
+    # --- 4. L'INTERPRÉTEUR UNIFIÉ ---
+
+    def interpreter(self, env, action_item=None, reponse_c3=None) -> list:
+        """Point d'entrée unique : renvoie les DIM_TOUCHER + DIM_CHIMIE + DIM_EXO = 16
+        dims des sens faibles à moyens ET du 6ème sens, dans l'ordre exact attendu par la
+        queue du `vecteur_bio` (voir `BiologicalHomeostasisEngine.obtenir_vecteur_bio`) :
+
+            [contact, objet_en_main, orient_cos, orient_sin,        ← toucher (v29.0)
+             odeur_food, odeur_water, gout_food, gout_water,        ← chimie  (v29.0)
+             exo_0 .. exo_7]                                        ← Exo-Sens (v30.0)
 
         L'ordre de cette concaténation est un CONTRAT : il doit rester synchronisé avec
         `obtenir_vecteur_bio` et avec la greffe de rétrocompatibilité de
-        `persistance._greffer_vecteur_bio_etendu` (qui recopie les 16 premières dims d'un
-        ancien `.brain` et laisse ces 8 nouvelles à leur initialisation). Ne jamais
-        insérer une dimension au milieu — toujours ajouter en queue.
+        `persistance._greffer_vecteur_bio_etendu` (qui recopie les N premières dims d'un
+        ancien `.brain` et laisse les nouvelles à leur initialisation). Ne jamais insérer
+        une dimension au milieu — **toujours ajouter en queue**.
+
+        `reponse_c3=None` (défaut) ⇒ les 8 dims de l'Exo-Sens sont nulles, comportement
+        strictement identique à la v29.1.
         """
         self.decroitre_gout()
-        return self.lire_toucher(env, action_item) + self.lire_chimie(env)
+        return (self.lire_toucher(env, action_item)
+                + self.lire_chimie(env)
+                + self.percevoir_exogene(reponse_c3))
 
     @staticmethod
     def hierarchie_sensorielle() -> dict:
@@ -253,4 +378,11 @@ class BusSensoriel:
                        "chemin": "vecteur_bio → integrateur_bio", "jepa": False},
             "gout": {"gourmandise": "faible", "dims": 2,
                      "chemin": "vecteur_bio → integrateur_bio", "jepa": False},
+            # v30.0 — le 6ème sens. "gourmandise" externe : le coût n'est pas dans le
+            # cerveau (8 dims, négligeable) mais chez le plug (réseau, LLM, base
+            # vectorielle) — d'où une catégorie à part plutôt qu'un rang dans l'échelle
+            # physique. "exogene": True le distingue des 5 sens du monde physique.
+            "exo_sens": {"gourmandise": "externe", "dims": DIM_EXO,
+                         "chemin": "PortC3 → vecteur_bio → integrateur_bio",
+                         "jepa": False, "exogene": True},
         }

@@ -18,10 +18,10 @@ pour l'historique des versions.
 > acquis sont préservés (voir §9 et le tableau de dépannage). Depuis la v29.1, chaque bilan de
 > nuit affiche en plus une ligne « Les 5 Sens » (voir §9bis).
 >
-> 📍 **État du dépôt** : `master` intègre les v28.0, v29.0 et v29.1 — c'est ce que décrit ce
-> guide. La **v30.0** (« l'Exo-Sens ») est en cours de conception sur `feat/v30-exo-sens` et
-> **n'est pas encore utilisable** ; aucune commande de ce guide ne la concerne. Voir
-> [CONCEPTION_v30_exo_sens.md](CONCEPTION_v30_exo_sens.md).
+> 🆕 **v30.0 — également rien à configurer.** L'odorat devient un gradient exponentiel (plus
+> discriminant en proximité) et l'agent gagne un **6ᵉ sens exogène** (l'Exo-Sens) — mais celui-ci
+> reste **totalement neutre tant qu'aucun plug C3 n'est branché**, ce qui est le cas par défaut de
+> tous les modes ci-dessous. Voir §10 pour brancher un plug et observer ce 6ᵉ sens.
 
 Depuis le passage en package Python (voir `CLAUDE.md`, section « Architecture »), tous les
 scripts se lancent depuis la racine du dépôt avec `PYTHONPATH=src` et l'option `-m` (module),
@@ -742,12 +742,13 @@ Côté **W&B**, 7 métriques `Sens_*` sont loggées chaque nuit (`Sens_Bus_Actif
 `Sens_Odorat_Max`, `Sens_Odorat_Ticks_Actifs_Ratio`, `Sens_Gout_Ticks_Actifs`). Elles sont
 **absentes** du log en mode `vocal_isole` pur (aucun environnement MiniGrid lu) — c'est normal.
 
-> ⚠️ **`Odorat` proche de 100 % est ATTENDU sur les petits niveaux.** Avec `PORTEE_ODORAT = 4`
-> cases et 4 sources générées, la couverture atteint 97,6 % sur `Empty-8x8` et 100 % sur
-> `DoorKey-6x6` — l'odorat y est quasi constamment saturé et porte donc peu d'information. Il ne
-> redevient discriminant qu'au Doctorat (`MultiRoom`, ~57 %). Ce n'est pas une panne : c'est un
-> réglage à trancher (voir `docs/EXPLICATIONS_v29_sens.md` §12). Un `Odorat` à **0 %** en
-> revanche, sur un niveau où des ressources existent, mérite investigation.
+> ⚠️ **Ce pourcentage mesure la PRÉSENCE d'une trace, pas son intensité.** Depuis la v30.0
+> (atténuation exponentielle, voir §10d), il peut rester élevé alors même que le signal est devenu
+> bien plus discriminant : le seuil de coupure est bas, donc une odeur très faible compte encore
+> comme « active ». Ce qu'il faut regarder, c'est `Sens_Odorat_Moyen` dans W&B — passé de ~0.54
+> (v29, rampe linéaire) à ~0.32 sur un run réel `Empty-8x8`, avec l'odeur forte (> 0.45) réduite
+> à ~30 % des ticks au lieu d'être permanente. Un `Odorat` à **0 %** en revanche, sur un niveau où
+> des ressources existent, mérite investigation.
 
 ### 9d. Ce que la v29.0 ne change PAS
 
@@ -757,6 +758,81 @@ Côté **W&B**, 7 métriques `Sens_*` sont loggées chaque nuit (`Sens_Bus_Actif
 - **L'invariant du Port Exocortex (§8) reste intact** : sans plug enregistré, `ACTION_DEMANDER`
   est toujours masquée à `-inf` et n'est jamais jouée.
 - **Aucune nouvelle dépendance** à installer (le Bus Sensoriel est du numpy pur).
+
+---
+
+## 10. L'Exo-Sens — le 6ᵉ sens (v30.0-expérimental)
+
+Depuis la v30.0, l'Exocortex C3 n'est plus un « 3ᵉ cerveau » que l'agent interroge par une action :
+c'est un **6ᵉ sens**, perçu **en continu** comme le toucher ou l'odorat. L'agent ne décide jamais
+de « demander » — il sent le monde numérique en permanence, et c'est son cerveau qui apprend seul
+(par myélinisation de `integrateur_bio`) quelle attention y accorder.
+
+✅ **Neutre par défaut.** Sans plug branché — le cas de **tous** les modes des sections 1-7 — le
+vecteur exogène est nul et le comportement est strictement celui de la v29.1. Aucune ligne
+« Exo-Sens » n'apparaît au bilan de nuit, aucune clé `Sens_Exo_*` n'est loggée.
+
+### 10a. Brancher un plug perceptif local et observer le 6ᵉ sens
+
+`PlugMemoireAugmentee` est 100 % local et déterministe (aucun réseau) : il traduit un résumé de la
+mémoire épisodique de l'agent en 8 dims perçues. C'est le plug de validation à essayer en premier.
+
+```bash
+cd "/Users/dredguer/Documents/1. Dossier personnel important/1. Adrien/21. AGI"
+source venv/bin/activate
+PYTHONPATH=src WANDB_MODE=disabled python3 -c "
+import naulthene.cerveau.noyau as noyau
+from naulthene.exocortex.plugs.plug_memoire_augmentee import (
+    PlugMemoireAugmentee, source_depuis_memoire_spatiale)
+
+etat = noyau.initialiser_etat_cognitif()
+etat.agent.port_c3.enregistrer(
+    PlugMemoireAugmentee(source=source_depuis_memoire_spatiale(etat)))
+noyau.demarrer_journee(etat)
+
+for _ in range(400):
+    noyau.traiter_tick(etat)
+
+s = etat.bus_sensoriel.interpreter(etat.env, reponse_c3=etat.perception_exogene_cache)
+print('Z_exogene (8 dims) :', [round(v, 3) for v in s[8:]])
+log = noyau.executer_nuit(etat)
+for k in sorted(k for k in log if k.startswith('Sens_Exo')):
+    print(f'  {k} = {log[k]}')
+"
+```
+
+Attendu : une ligne `├─ Exo-Sens (C3) : 🔌 Perçu ...% des ticks` au bilan de nuit, et
+**~20 rafraîchissements pour 400 ticks** — le bus n'est interrogé qu'un tick sur
+`PERIODE_PERCEPTION_EXO=20`, la perception étant mise en cache entre deux appels.
+
+### 10b. Pourquoi ce cache ? (la latence)
+
+Un plug HTTP réel (Ollama, RAG, API) coûte de **100 ms à 30 s** par appel. L'interroger à chaque
+tick rendrait un run de 300 jours × 400 ticks totalement impraticable. Le rafraîchissement
+périodique est une **fréquence d'échantillonnage de capteur**, pas une règle cognitive : le cerveau,
+lui, perçoit bien quelque chose à chaque tick.
+
+### 10c. Brancher un vrai backend (Ollama, RAG, API IA)
+
+Aucun code du noyau n'est à toucher : `PlugHTTP` (livré en v28.0) est un backend générique
+JSON/HTTP. Un service doit simplement renvoyer un vecteur de 8 valeurs dans `[0, 1]` que le plug
+place dans `ReponseC3.perception`. Les deux familles de plugs coexistent — un plug **perceptif**
+(v30, champ `perception`) et un plug **décisionnel** (v28, champ `preferences`) peuvent être
+branchés simultanément sur le même bus.
+
+⚠️ **Le vecteur est clippé dans [0, 1] côté noyau** et un vecteur de mauvaise taille est ignoré
+(perception neutre + un avertissement unique). Un service externe n'est jamais supposé fiable :
+une dimension hors échelle écraserait `integrateur_bio`, et un plug défaillant **ne doit jamais**
+rendre l'agent aveugle à ses 5 sens physiques.
+
+### 10d. L'odorat a changé de forme (v30.0)
+
+L'odorat suit désormais une **atténuation exponentielle** `exp(-0.8 × distance)` au lieu d'une
+rampe linéaire : 1.00 au contact, 0.45 à une case, 0.20 à deux, négligeable au-delà. Concrètement,
+sur un run réel `Empty-8x8`, l'odeur forte (> 0.45) ne survient plus que ~30 % du temps au lieu
+d'être quasi permanente — le sens redevient une **boussole de proximité**. Le pourcentage brut
+affiché au bilan (`👃 Odorat ...%`) peut rester élevé (le seuil de coupure est bas) : c'est
+l'**intensité** qui compte désormais, pas la simple présence d'une trace.
 
 ---
 

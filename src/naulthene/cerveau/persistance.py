@@ -31,6 +31,7 @@ from naulthene.cerveau.noyau import (
     AGI_Naulthene, EtatCognitif, DIM_VISUELLE, BUS_REFERENCE_INITIAL,
     PROGRAMME, DEVICE, creer_env, DetecteurJalonsDoorKey, GestionnaireCursusAbnegation,
     NUM_ACTIONS_BASE, NUM_ACTIONS_AVEC_C3, DIM_VECTEUR_BIO,
+    DIM_TOUCHER, DIM_CHIMIE, DIM_EXO,
 )
 
 
@@ -172,8 +173,18 @@ def _greffer_vecteur_bio_etendu(state_dict, agent):
         resultat[cle] = nouveau
 
     nb_nouvelles = largeur_attendue - largeur_checkpoint
+    # Libellé déduit de la LARGEUR BIO réellement portée par le checkpoint, et non du
+    # nombre de dimensions ajoutées : DIM_TOUCHER+DIM_CHIMIE et DIM_EXO valent tous deux
+    # 8, donc `nb_nouvelles == 8` est ambigu (un .brain pré-v29 comme un .brain v29
+    # gagnent 8 dims, mais pas les mêmes). La largeur d'origine, elle, est sans ambiguïté.
+    largeur_bio_checkpoint = largeur_checkpoint - dim_bus_attendue
+    if largeur_bio_checkpoint <= 16:
+        libelle = "toucher/odorat/goût (v29.0)" if nb_nouvelles == DIM_TOUCHER + DIM_CHIMIE \
+            else "toucher/odorat/goût + Exo-Sens (v29.0 + v30.0)"
+    else:
+        libelle = "Exo-Sens, le 6ème sens (v30.0)"
     print(f"   👃 integrateur_bio greffé de {largeur_checkpoint} à {largeur_attendue} dims d'entrée "
-          f"(+{nb_nouvelles} : toucher/odorat/goût, Bus Sensoriel v29.0) — acquis existants préservés.")
+          f"(+{nb_nouvelles} : {libelle}) — acquis existants préservés.")
     return resultat, True
 
 

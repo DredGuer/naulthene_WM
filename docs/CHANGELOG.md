@@ -4,6 +4,85 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [30.0-experimental] - 2026-08-02
+
+### L'Unification & l'Extensibilité — l'Odorat Dynamique & l'Exo-Sens (C3 devient le 6ᵉ sens)
+
+| Type | Details |
+|------|---------|
+| **Commit** | N/A — en attente du commit de cette version |
+| **Catégorie** | feat (nouvelle mécanique cognitive majeure, expérimentale) |
+| **Impact** | Critique (architecture du réseau, persistance, contrat des plugs) |
+
+**Arbitrages utilisateur, tranchés avant implémentation (voir `docs/CONCEPTION_v30_exo_sens.md`) : (1) l'odorat passe d'une rampe linéaire à une atténuation exponentielle `exp(-0.8·d)`, un gradient de diffusion chimique plutôt qu'un cercle à bord net ; (2) C3 cesse d'être un « 3ᵉ cerveau » interrogé par une action apprise pour devenir un 6ᵉ sens perçu en continu, SANS aucun seuil de déclenchement — l'attention à ce canal doit émerger de la myélinisation de `integrateur_bio`, pas d'un `if` ; (3) `num_actions` reste à 8 avec `ACTION_DEMANDER` masquée en permanence, pour ne jamais amputer les `.brain` existants.**
+
+**1. Chantier 1 — l'Odorat Dynamique (atténuation exponentielle)**
+
+La v29.1 avait diagnostiqué la saturation de l'odorat (97,6 % de couverture sur `Empty-8x8`, 100 % sur `DoorKey-6x6`). Une portée relative à la géométrie (`min(W,H)/3`) avait été envisagée puis **écartée** : elle ne corrigeait pas les cartes 4×4 et *aggravait* le Doctorat (portée 4→5). Le problème n'était pas la portée mais la **forme** de la décroissance.
+
+$$S(d) = \exp(-\lambda \cdot d), \qquad \lambda = \text{LAMBDA\_ODORAT} = 0.8$$
+
+| d | 0 | 1 | 2 | 3 | 4 |
+|---|---|---|---|---|---|
+| S(d) | 1.000 | 0.449 | 0.202 | 0.091 | 0.041 |
+
+Le critère retenu pour juger n'est **pas la couverture mais le GRADIENT** (écart de signal entre cases voisines) — c'est lui qui permet à l'agent de savoir vers où aller. Mesuré sur 600 placements aléatoires de 4 sources :
+
+| Carte | linéaire portée 4 | exponentiel λ=0.8 |
+|---|---|---|
+| `Empty-8x8` | 0.208 | **0.221** |
+| `DoorKey-6x6` | 0.196 | **0.305** (+56 %) |
+| `MemoryS7` | 0.207 | **0.259** |
+| `MultiRoom` | 0.118 | 0.084 |
+
+Sur un run réel de 400 ticks (`Empty-8x8`), l'intensité moyenne passe de ~0.54 à **0.316**, et l'odeur forte (> 0.45) ne survient plus que **29,8 %** du temps au lieu d'être quasi permanente : le sens redevient une boussole de proximité. **Contrepartie assumée et documentée** : `MultiRoom` (Doctorat) perd du gradient, l'exponentielle portant moins loin qu'une rampe à 4 cases — cohérent avec le rôle voulu (proximité, pas cartographie longue distance), mais à surveiller via `Sens_Odorat_*` sur un run au Doctorat.
+
+**2. Chantier 2 — l'Exo-Sens : C3 devient le 6ᵉ sens**
+
+`DIM_VECTEUR_BIO` passe de **24 à 32** dims (8 dims d'Exo-Sens **en queue**, contrat append-only). Le pivot conceptuel complet :
+
+| | v28/v29 (C3 = 3ᵉ cerveau) | v30 (C3 = 6ᵉ sens) |
+|---|---|---|
+| Nature | Action apprise (`ACTION_DEMANDER`) | Entrée perceptive continue |
+| Déclenchement | L'agent **décide** d'interroger | L'agent **perçoit**, sans décider |
+| Sortie du plug | `ReponseC3.preferences` (avis sur les actions) | `ReponseC3.perception` (vecteur 8 dims) |
+| Chemin | `tete_motrice` → `env.step` | `bus_sensoriel` → `integrateur_bio` |
+| Attention | — | Émerge de la myélinisation, **aucun `if`** |
+
+C'est l'option « perception continue » retenue par l'utilisateur contre le déclenchement sur erreur JEPA : un seuil codé en dur dans le chemin de décision aurait violé la règle déjà défendue deux fois (v28 pour l'appel à C3, v29 pour le court-circuit C1→C2). Si le plug envoie du bruit, `integrateur_bio` fera tomber ces poids vers 0 ; s'il envoie de l'information utile, il les renforcera.
+
+**Latence — le garde-fou pratique** : un plug HTTP coûte de 100 ms à 30 s par appel. L'interroger à chaque tick rendrait impraticable un run de 120 000 ticks. La perception est donc **rafraîchie tous les `PERIODE_PERCEPTION_EXO = 20` ticks et mise en cache** (mesuré : 20 rafraîchissements pour 400 ticks). C'est une fréquence d'échantillonnage de capteur, pas une règle de décision — le cerveau perçoit bien quelque chose à chaque tick.
+
+**3. La 8ᵉ action : masquée en permanence, jamais amputée**
+
+`ACTION_DEMANDER` n'a plus de rôle (C3 n'est plus interrogé) mais **reste dans le réseau**, masquée à `-inf` quelle que soit la disponibilité du bus. Motif : 4 des `.brain` du dépôt sont déjà à 8 actions, dont `naulthene_cursus.brain` (cerveau actif, bus 48). Revenir à `num_actions = 7` aurait imposé une greffe **inverse** jetant des poids appris — première violation de la règle « greffe par recopie, jamais par exclusion ». La colonne 8 devient dormante, conservée, réactivable sans nouvelle greffe.
+
+**4. Contrat `PlugC3` — perceptif et décisionnel coexistent**
+
+`ReponseC3` porte désormais deux champs optionnels : `perception` (v30, 8 dims) et `preferences` (v28, conservé). `PortC3.agreger` agrège les deux **indépendamment**, en ignorant les plugs qui ne fournissent pas l'un ou l'autre — un bus mélangeant un plug v28 et un plug v30 fonctionne sans qu'aucun ne plante sur le `None` de l'autre. Les 3 plugs existants sont inchangés et continuent de fonctionner.
+
+Nouveau **`PlugMemoireAugmentee`** : le premier plug perceptif, 100 % local et déterministe (résumé de la mémoire épisodique spatiale de l'agent), pour valider que C1/C2 digèrent un signal exogène avant d'introduire la latence d'un vrai service. Le contrat générique reste inchangé, donc un `PlugRAG`/`PlugOllama` se branche par simple configuration de `PlugHTTP`.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/bus_sensoriel.py` | `LAMBDA_ODORAT`/`SEUIL_COUPURE_ODORAT` (atténuation exponentielle) ; `DIM_EXO=8` ; `percevoir_exogene()` (transducteur du 6ᵉ sens, clip défensif, avertissement isolé) ; `interpreter(..., reponse_c3=None)` → 16 dims ; `hierarchie_sensorielle()` étendue à `exo_sens` |
+| `src/naulthene/cerveau/noyau.py` | `DIM_VECTEUR_BIO` 24 → 32 ; `PERIODE_PERCEPTION_EXO` ; `_rafraichir_perception_exogene()` (cache + diffusion `1_X`) ; masquage **permanent** de `ACTION_DEMANDER` ; 4 compteurs journaliers + ligne « Exo-Sens (C3) » au bilan + 4 clés `Sens_Exo_*` |
+| `src/naulthene/exocortex/port_c3.py` | `ReponseC3.perception` (v30) ; `preferences` devient optionnel ; `agreger` réécrite via `_moyenne_ponderee`, tolérante aux champs absents |
+| `src/naulthene/exocortex/plugs/plug_memoire_augmentee.py` | **Nouveau.** Premier plug perceptif + `source_depuis_memoire_spatiale()` (closure d'injection, garde `exocortex/` indépendant de `cerveau/`) |
+| `src/naulthene/cerveau/persistance.py` | Libellé de greffe déduit de la **largeur bio réelle** du checkpoint (et non du nombre de dims ajoutées, ambigu : `DIM_TOUCHER+DIM_CHIMIE` et `DIM_EXO` valent tous deux 8) |
+
+**Validation** (aucun test automatisé dans ce projet — vérifications manuelles) :
+- **Invariance sans plug** : 400 ticks, `ACTION_DEMANDER` jamais jouée, 8 dims d'Exo-Sens nulles, **aucune clé `Sens_Exo_*` loggée**, bilan de nuit identique à la v29.1.
+- **Odorat** : sur run réel, moyenne 0.316 (vs ~0.54), écart-type 0.256, odeur forte 29,8 % des ticks — le signal a changé de nature, pas seulement d'échelle.
+- **Avec `PlugMemoireAugmentee`** : perception continue sur 95 % des ticks, **20 rafraîchissements pour 400 ticks** (le cache tient), ligne « Exo-Sens (C3) » et 4 clés `Sens_Exo_*` présentes.
+- **Robustesse (4 cas)** : plug en panne en vol → aucune exception ; vecteur malformé (2 dims au lieu de 8) → Exo-Sens neutre, **les 5 sens physiques non affectés** ; bus mixte v28+v30 → agrégation correcte des deux canaux ; valeurs à 999 → clippées à 1.0.
+- **Nuit + neurogenèse** : `integrateur_bio` (16,48) → (32,64), segment bio fixe à 32 pendant que `dim_bus` double.
+- **Round-trip** persistance identique ; 30 ticks après résurrection.
+- **`.brain` RÉELS du dépôt** : `naulthene_parole` (pré-v29, 7 actions) greffé 64→80 dims + 7→8 actions, **480 000 ticks et palier vocal 19/19 préservés** ; `naulthene_cursus` (v29, 8 actions) greffé 72→80, 120 000 ticks préservés. 30 ticks OK sur chacun.
+- Chemins `vocal_isole` et MiniGrid+audio ; tous les modules importent.
+
+---
+
 ## [master] - 2026-08-02 — Intégration des v28.0 et v29.0/v29.1
 
 ### Merge de `feat/v28-exocortex-c3` dans `master` + ouverture de la branche v30
