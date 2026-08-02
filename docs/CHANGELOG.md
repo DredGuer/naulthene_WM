@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 | Type | Details |
 |------|---------|
-| **Commit** | N/A — en attente du commit de cette version |
+| **Commit** | `c5d23dc` |
 | **Catégorie** | feat (nouvelle mécanique cognitive majeure, expérimentale) |
 | **Impact** | Critique (architecture du réseau, persistance, contrat des plugs) |
 
@@ -261,7 +261,7 @@ Nouvelle fonction `_greffer_vecteur_bio_etendu`, appelée **en amont** du filtre
 
 | Type | Details |
 |------|---------|
-| **Commit** | N/A — en attente du commit de cette version |
+| **Commit** | `c5d23dc` |
 | **Catégorie** | docs |
 | **Impact** | Documentation |
 
@@ -286,7 +286,7 @@ vers `CHANGELOG.md`/`LANCEMENT.md`/`explications_readme.md` désormais dans le m
 
 | Type | Details |
 |------|---------|
-| **Commit** | N/A — en attente du commit de cette version |
+| **Commit** | `c5d23dc` |
 | **Catégorie** | docs |
 | **Impact** | Documentation |
 
@@ -314,7 +314,7 @@ Nouveau fichier `Parcourt_readme.md`, à la racine du dépôt (comme `readme.md`
 
 | Type | Details |
 |------|---------|
-| **Commit** | N/A — en attente du commit de cette version |
+| **Commit** | `c5d23dc` |
 | **Catégorie** | feat (nouvelle mécanique cognitive majeure, expérimentale) |
 | **Impact** | Critique (architecture du réseau, persistance) |
 
@@ -346,7 +346,7 @@ Nouveau fichier `Parcourt_readme.md`, à la racine du dépôt (comme `readme.md`
 
 | Type | Details |
 |------|---------|
-| **Commit** | N/A — en attente du commit de cette version |
+| **Commit** | `c5d23dc` |
 | **Catégorie** | feat (correctif de conception majeur, mécanique expérimentale) |
 | **Impact** | Critique (apprentissage vocal) |
 
@@ -370,7 +370,7 @@ Nouveau fichier `Parcourt_readme.md`, à la racine du dépôt (comme `readme.md`
 
 | Type | Details |
 |------|---------|
-| **Commit** | N/A — en attente du commit de cette version |
+| **Commit** | `c5d23dc` |
 | **Catégorie** | fix (défaut de conception, mécanique expérimentale) |
 | **Impact** | Critique (réservoir dopaminergique) |
 
@@ -394,7 +394,7 @@ Nouveau fichier `Parcourt_readme.md`, à la racine du dépôt (comme `readme.md`
 
 | Type | Details |
 |------|---------|
-| **Commit** | N/A — en attente du commit de cette version |
+| **Commit** | `c5d23dc` |
 | **Catégorie** | fix (défaut de conception, mécanique expérimentale) |
 | **Impact** | Fonctionnel (mécanisme d'apprentissage vocal, phases 1-2 du Cursus de la Parole) |
 
@@ -415,7 +415,7 @@ Nouveau fichier `Parcourt_readme.md`, à la racine du dépôt (comme `readme.md`
 
 | Type | Details |
 |------|---------|
-| **Commit** | N/A — en attente du commit de cette version |
+| **Commit** | `c5d23dc` |
 | **Catégorie** | fix (mécanique expérimentale) |
 | **Impact** | Fonctionnel (qualité de la démo audio, aucune conséquence sur l'entraînement) |
 
@@ -437,7 +437,7 @@ Nouveau fichier `Parcourt_readme.md`, à la racine du dépôt (comme `readme.md`
 
 | Type | Details |
 |------|---------|
-| **Commit** | N/A — en attente du commit de cette version |
+| **Commit** | `c5d23dc` |
 | **Catégorie** | fix (mécanique expérimentale) |
 | **Impact** | Fonctionnel (qualité de la démo audio, aucune conséquence sur l'entraînement) |
 
@@ -552,7 +552,7 @@ Nouveau fichier `Parcourt_readme.md`, à la racine du dépôt (comme `readme.md`
 
 | Type | Details |
 |------|---------|
-| **Commit** | N/A — en attente du commit de cette version |
+| **Commit** | `c5d23dc` |
 | **Catégorie** | refactor + docs |
 | **Impact** | Fonctionnel (imports, arborescence) + Documentation/Légal |
 
@@ -578,7 +578,7 @@ Nouveau fichier `Parcourt_readme.md`, à la racine du dépôt (comme `readme.md`
 
 | Type | Details |
 |------|---------|
-| **Commit** | N/A — en attente du commit de cette version |
+| **Commit** | `c5d23dc` |
 | **Catégorie** | feat (nouvelle mécanique cognitive majeure) |
 | **Impact** | Fonctionnel (local uniquement) |
 
@@ -931,7 +931,7 @@ Nouveau fichier `Parcourt_readme.md`, à la racine du dépôt (comme `readme.md`
 
 | Type | Details |
 |------|---------|
-| **Commit** | N/A — en attente du commit de cette version |
+| **Commit** | `c5d23dc` |
 | **Catégorie** | feat |
 | **Impact** | Fonctionnel |
 
