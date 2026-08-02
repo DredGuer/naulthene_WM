@@ -684,7 +684,7 @@ gout     | faible   |   2 dims | JEPA=False | vecteur_bio → integrateur_bio
 `JEPA=False` sur les trois sens faibles est **voulu** : ils entrent par `integrateur_bio`, juste
 avant la décision, donc ils n'entrent **jamais** dans ce que le modèle du monde doit prédire. Un
 cerveau déjà entraîné sur des centaines de jours ne voit donc pas sa physique visuelle perturbée
-(voir `docs/EXPLICATIONS_v29_sens.md` §4).
+(voir `docs/Old_Archive_rmd/EXPLICATIONS_v29_sens.md` §4).
 
 ### 9c. Recharger un `.brain` pré-v29.0 — vérifier la greffe automatique
 

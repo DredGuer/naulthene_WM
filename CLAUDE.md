@@ -63,14 +63,15 @@ Le projet est organisé en **package Python** sous `src/naulthene/`, avec un dos
 │   └── old_V30/                    nommé DDMMYYYYHHMM_VXX_NMRTOUR_RMD.brain (voir « Convention de
 │                                   nommage des cerveaux ») ; old_VXX/ archive les générations
 │                                   précédentes, jamais supprimées
-└── docs/                         DOCUMENTS VIVANTS uniquement (5) :
+└── docs/                         DOCUMENTS VIVANTS uniquement (4) :
     │                               CHANGELOG.md — historique version par version, la référence
     │                               factuelle ; LANCEMENT.md — toutes les commandes et le dépannage ;
     │                               Parcourt_readme.md — guide vulgarisé des 4 parcours ;
-    │                               explications_readme.md — détail algorithmique et mathématique ;
-    │                               EXPLICATIONS_v29_sens.md — doc dédiée du Bus Sensoriel & C1/C2
+    │                               explications_readme.md — détail algorithmique et mathématique
+    │                               (dont §15 : Bus Sensoriel, identité C1/C2, Exo-Sens)
     └── Old_Archive_rmd/          documents historiques : conceptions dont la mécanique est livrée
-                                    (CONCEPTION_v22_audio, CONCEPTION_v30_exo_sens, Maj_V29_readme),
+                                    (CONCEPTION_v22_audio, CONCEPTION_v30_exo_sens, Maj_V29_readme,
+                                    EXPLICATIONS_v29_sens),
                                     plans partiellement réalisés (AMELIORATION_V1) et analyses de run.
                                     Précieux car ils gardent la trace des options ÉCARTÉES et de leurs
                                     raisons — mais ne jamais s'y référer pour l'état courant. Voir son

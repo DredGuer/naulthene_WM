@@ -61,7 +61,7 @@ se disputent la décision. C'est **un organisme unique (C1+C2) doté d'une perce
 ## 2. Chantier 1 — l'Odorat Dynamique
 
 **Problème** (diagnostiqué par la télémétrie v29.1, voir
-[EXPLICATIONS_v29_sens.md](../EXPLICATIONS_v29_sens.md) §12) : `PORTEE_ODORAT = 4` couvre 97,6 % de
+[EXPLICATIONS_v29_sens.md](EXPLICATIONS_v29_sens.md) §12) : `PORTEE_ODORAT = 4` couvre 97,6 % de
 `Empty-8x8` et 100 % de `DoorKey-6x6`. L'odorat y est un bruit de fond permanent, donc
 quasi dépourvu d'information.
 
@@ -273,4 +273,4 @@ Repris de CLAUDE.md — ce sont les règles que les v28 et v29 ont établies et 
 
 *Document de cadrage rédigé à l'ouverture de la branche `feat/v30-exo-sens`, à partir de la
 spécification utilisateur et d'une lecture directe du code v29.1. Voir
-[EXPLICATIONS_v29_sens.md](../EXPLICATIONS_v29_sens.md) pour l'état livré dont part cette version.*
+[EXPLICATIONS_v29_sens.md](EXPLICATIONS_v29_sens.md) pour l'état livré dont part cette version.*

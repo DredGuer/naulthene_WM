@@ -1,8 +1,16 @@
 # Naulthène v29.0 — Le Bus Sensoriel Multimodal & l'Identité C1/C2 explicite
 
-> ⚠️ **Statut expérimental** : vit dans `src/naulthene/cerveau/noyau.py` (gitignoré, terrain d'essai local), le nouveau module **versionné** `src/naulthene/cerveau/bus_sensoriel.py` et `src/naulthene/cerveau/persistance.py`. Pas encore porté sur `src/naulthene/cerveau/colab.py` (script de référence, toujours en v17).
+> 📦 **ARCHIVÉ (v31.1)** — ce document décrit l'état de la **v29.0/v29.1**, dépassé depuis :
+> l'odorat suit désormais une atténuation exponentielle (v30.0), le vecteur bio compte 32 dims et
+> non 24 (Exo-Sens, v30.0), et la mémoire spatiale a été revue (v31.0/v31.1). Il reste ici parce
+> qu'il documente en profondeur des choix **toujours en vigueur** : pourquoi les sens faibles
+> restent hors de la cible JEPA (§4), l'identité C1/C2 (§5), la boucle de distillation (§6) et
+> les deux options **écartées** (§9).
+>
+> ➡️ **Pour l'état courant**, voir [explications_readme.md](../explications_readme.md) §15 (résumé
+> algorithmique à jour), [CHANGELOG.md](../CHANGELOG.md) et [LANCEMENT.md](../LANCEMENT.md).
 
-Document explicatif complet de la v29.0, rédigé à partir d'une lecture directe du code livré. Pour l'historique commit par commit voir [CHANGELOG.md](CHANGELOG.md) (entrée `[29.0-experimental]`), pour la narration générale [readme.md](../readme.md), et pour la note de conception d'origine [Maj_V29_readme.md](Old_Archive_rmd/Maj_V29_readme.md).
+Document explicatif complet de la v29.0, rédigé à partir d'une lecture directe du code livré. Pour l'historique commit par commit voir [CHANGELOG.md](../CHANGELOG.md) (entrée `[29.0-experimental]`), pour la narration générale [readme.md](../../readme.md), et pour la note de conception d'origine [Maj_V29_readme.md](Maj_V29_readme.md).
 
 ---
 
@@ -25,7 +33,7 @@ Document explicatif complet de la v29.0, rédigé à partir d'une lecture direct
 
 ## 1. Le problème que cette version résout
 
-Trois constats, issus de [Maj_V29_readme.md](Old_Archive_rmd/Maj_V29_readme.md) :
+Trois constats, issus de [Maj_V29_readme.md](Maj_V29_readme.md) :
 
 **a) Naulthène était un organisme à deux sens.** Jusqu'en v28.0, l'agent percevait le monde par la vue (`porte_visuelle`, 147 dims) et l'ouïe (`porte_auditive`, 130 dims MFCC) — les deux sens les plus gourmands en calcul. Les trois autres (toucher, odorat, goût) n'existaient nulle part, alors qu'ils sont justement **les moins coûteux** et **les plus directement liés à la survie**. Conséquence concrète : l'agent ne savait qu'il tenait la clé que de façon *indirecte*, en la déduisant de son champ visuel — il n'avait littéralement pas de sens du toucher pour la sentir dans sa main.
 
@@ -378,4 +386,4 @@ La télémétrie v29.1 est précisément l'instrument qui permet de trancher **s
 
 ---
 
-*Document rédigé à partir d'une lecture directe du code livré (`src/naulthene/cerveau/bus_sensoriel.py`, `noyau.py` v29, `persistance.py`) — voir [readme.md](../readme.md) pour la documentation narrative complète, [CHANGELOG.md](CHANGELOG.md) pour l'historique commit par commit, et [CLAUDE.md](../CLAUDE.md) pour les règles de maintenance du projet.*
+*Document rédigé à partir d'une lecture directe du code livré (`src/naulthene/cerveau/bus_sensoriel.py`, `noyau.py` v29, `persistance.py`) — voir [readme.md](../../readme.md) pour la documentation narrative complète, [CHANGELOG.md](../CHANGELOG.md) pour l'historique commit par commit, et [CLAUDE.md](../../CLAUDE.md) pour les règles de maintenance du projet.*

@@ -22,6 +22,7 @@ qu'aucun document « à jour » ne raconte. C'est précisément leur valeur : é
 | `CONCEPTION_v22_audio.md` | Conception de l'Hémisphère Auditif & Vocal (oreille, bouche, synthèse par formants, professeur Gemma) + les 3 défauts détectés à la revue v22.1 | ✅ Livrée (v22.0/v22.1), étendue jusqu'en v27.6 |
 | `CONCEPTION_v30_exo_sens.md` | Cadrage de la v30 : pivot de C3 en 6ᵉ sens, odorat dynamique, arbitrages et **options écartées** | ✅ Livrée (v30.0) |
 | `Maj_V29_readme.md` | Note de conception d'origine de la v29 : hiérarchie des 5 sens, dynamique C1/C2, distillation | ✅ Livrée (v29.0/v29.1) |
+| `EXPLICATIONS_v29_sens.md` | Doc explicative détaillée de la v29 (formules du toucher/odorat/goût, pourquoi les sens faibles restent hors JEPA, identité C1/C2, distillation, options écartées) | ✅ Livrée — ⚠️ **chiffres dépassés** (24 dims, odorat linéaire) : voir `explications_readme.md` §15 |
 | `AMELIORATION_V1.md` 🔒 | Plan d'amélioration « Le Parent remplace le Programme » — §A.5 (Cristallisation Souple) réalisé, les autres chantiers restent des propositions | 🟡 Partiellement réalisée |
 | `1440_JOURS_NAULTHENE_V1.md` 🔒 | Analyse d'un run réel de 1440 jours (Cerveau Bébé) | 📊 Analyse de run |
 
@@ -38,8 +39,7 @@ qu'aucun document « à jour » ne raconte. C'est précisément leur valeur : é
 | `CHANGELOG.md` | Historique version par version — **la référence factuelle** |
 | `LANCEMENT.md` | Guide opérationnel : toutes les commandes, options, dépannage |
 | `Parcourt_readme.md` | Guide vulgarisé des 4 parcours d'entraînement |
-| `explications_readme.md` | Détail algorithmique et mathématique complet |
-| `EXPLICATIONS_v29_sens.md` | Doc dédiée du Bus Sensoriel & de l'identité C1/C2 (encore la référence des 5 sens) |
+| `explications_readme.md` | Détail algorithmique et mathématique complet — **§15 est désormais la référence à jour** des sens, de l'identité C1/C2 et de l'Exo-Sens |
 
 ## Convention
 

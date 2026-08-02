@@ -4,6 +4,51 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [31.1-docs] - 2026-08-02
+
+### Archivage d'EXPLICATIONS_v29_sens.md & §15 d'explications_readme.md rendu autoportant
+
+| Type | Details |
+|------|---------|
+| **Commit** | N/A — en attente du commit de cette version |
+| **Catégorie** | docs |
+| **Impact** | Documentation |
+
+**Demande utilisateur : archiver `EXPLICATIONS_v29_sens.md` et mettre à jour `explications_readme.md`.**
+
+Ce document était la référence détaillée des 5 sens, mais ses chiffres avaient été **dépassés par
+les v30/v31** : vecteur bio à 24 dims (il est à 32 depuis l'Exo-Sens), odorat linéaire à portée
+fixe (exponentiel depuis la v30.0), aucune mention de la mémoire proportionnelle. Le laisser dans
+`docs/` en faisait une source de confusion — un lecteur pouvait y prendre des valeurs fausses.
+
+⚠️ **Le risque de l'archivage : perdre ce qu'il documentait seul.** Ce fichier portait des
+explications **toujours en vigueur** (pourquoi les sens faibles restent hors de la cible JEPA, les
+deux options écartées et leurs raisons). `explications_readme.md` §15 a donc été **enrichi pour
+devenir autoportant** avant le déplacement :
+
+- Tableau des sens complété par l'**Exo-Sens** (il s'arrêtait au goût) ;
+- Odorat corrigé : **exponentiel** `exp(-0.8·d)` et non plus « linéaire sur 4 cases » ;
+- `DIM_VECTEUR_BIO` **24 → 32**, avec la composition complète du vecteur bloc par bloc et le
+  rappel que toute insertion **au milieu** décalerait silencieusement les acquis d'un `.brain` ;
+- Nouvelle **§15.6bis « Deux options volontairement ÉCARTÉES »** — le court-circuit conditionnel
+  de C2 et la porte tactile dans `bus_latent`, avec leurs raisons. Ce contenu n'existait que dans
+  le document archivé ; il fait jurisprudence (la v30.0 a écarté un **troisième** seuil sur le
+  même argument).
+
+Le document archivé reçoit un bandeau explicite listant ce qui y est dépassé et renvoyant vers
+`explications_readme.md` §15 pour l'état courant.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `docs/Old_Archive_rmd/EXPLICATIONS_v29_sens.md` | Déplacé (`git mv`), bandeau « ARCHIVÉ », liens sortants recalculés d'un cran |
+| `docs/explications_readme.md` | §15 rendu autoportant (voir ci-dessus) + §15.6bis |
+| `readme.md`, `CLAUDE.md`, `docs/LANCEMENT.md`, `docs/Parcourt_readme.md`, `docs/CHANGELOG.md`, `docs/Old_Archive_rmd/{README,CONCEPTION_v30_exo_sens}.md` | 7 références entrantes corrigées ; `docs/` ne compte plus que **4 documents vivants** |
+
+**Validation** : 100 % des liens markdown du dépôt résolvent (4 vivants + 7 archivés) ; sanity run
+120 ticks + nuit OK (52 clés) ; aucun code touché.
+
+---
+
 ## [31.1-experimental] - 2026-08-02
 
 ### La Déduplication Mnésique & le Cap de Densité Spatiale
@@ -467,7 +512,7 @@ Nouvelle fonction `_greffer_vecteur_bio_etendu`, appelée **en amont** du filtre
 | `src/naulthene/cerveau/bus_sensoriel.py` | **Nouveau.** `BusSensoriel` (toucher, odorat, goût), constantes `DIM_TOUCHER`/`DIM_CHIMIE`/`PORTEE_ODORAT`/`DECROISSANCE_GOUT`, et `hierarchie_sensorielle()` (description déclarative des 5 sens, lecture seule, pour la doc/télémétrie). Pur numpy, aucun import de `noyau`. |
 | `src/naulthene/cerveau/noyau.py` | Version 28 → 29. §2 renommée « LE CERVEAU C1 (RÉFLEXE) & C2 (NÉO-CORTEX) » + note de restructuration. Ajout de `_executer_c1_reflexe()` et `_solliciter_c2_neocortex()` ; `penser()` réduit à l'arbitrage. `DIM_VECTEUR_BIO` 16 → 24. `obtenir_vecteur_bio(..., signaux_sensoriels=None)`. `EtatCognitif.bus_sensoriel`, lecture des sens dans `traiter_tick` avant `penser()`, signal de goût sur consommation FOOD/WATER, reset de la trace de goût aux 2 sites de fin d'épisode. |
 | `src/naulthene/cerveau/persistance.py` | Nouvelle `_greffer_vecteur_bio_etendu()` (recopie partielle de `integrateur_bio`, 16 → 24 dims bio), câblée en amont du filtre d'exclusion existant, qui devient une trappe de secours. Import de `DIM_VECTEUR_BIO`. |
-| `docs/EXPLICATIONS_v29_sens.md` | **Nouveau.** Document explicatif dédié en 11 sections : le problème résolu, la hiérarchie des 5 sens, le détail du Bus Sensoriel (formules du toucher/odorat/goût), pourquoi les sens faibles restent hors de la cible JEPA, l'identité C1/C2, la boucle de distillation (avec table de correspondance note de conception ↔ code existant), JEPA comme Intuition globale, la greffe des `.brain`, les 2 options **volontairement écartées** et pourquoi, la table des 13 validations, le glossaire des constantes. |
+| `docs/Old_Archive_rmd/EXPLICATIONS_v29_sens.md` | **Nouveau.** Document explicatif dédié en 11 sections : le problème résolu, la hiérarchie des 5 sens, le détail du Bus Sensoriel (formules du toucher/odorat/goût), pourquoi les sens faibles restent hors de la cible JEPA, l'identité C1/C2, la boucle de distillation (avec table de correspondance note de conception ↔ code existant), JEPA comme Intuition globale, la greffe des `.brain`, les 2 options **volontairement écartées** et pourquoi, la table des 13 validations, le glossaire des constantes. |
 | `docs/explications_readme.md` | Nouvelle §15 (résumé algorithmique en 5 sous-sections, renvoi vers le document dédié) + entrée dans la table des matières + pied de page mis à jour (v28.0 → v29.0). |
 | `docs/LANCEMENT.md` | En-tête V21-V28 → V21-V29 + encadré « rien à configurer ». Note de greffe `👃` en §1. Nouvelle **§9** (observer les 5 sens en direct, vérifier la hiérarchie, tester la greffe sur une copie de `.brain`, ce que la v29.0 ne change pas). 4 nouvelles lignes de dépannage. |
 | `readme.md` | Section « Nouveautés v29.0 » + entrée `3s.` dans la table des matières + diagramme d'architecture cognitico-biologique refait (les 5 sens en entrée, blocs C1/C2 nommés, flèche de distillation) + 3 nouvelles sous-sections d'architecture (Bus Sensoriel & hiérarchie, JEPA comme Intuition, boucle de distillation). |

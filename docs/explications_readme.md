@@ -708,7 +708,10 @@ Passer de 7 à 8 actions change la **forme** de `tete_motrice` (sortie), `genera
 
 > ⚠️ **Statut expérimental** : vit dans `src/naulthene/cerveau/noyau.py`, le module versionné `src/naulthene/cerveau/bus_sensoriel.py` et `src/naulthene/cerveau/persistance.py`, pas encore porté sur `colab.py`.
 >
-> 📖 **Cette section est un résumé.** Le détail complet (formules, schémas, table des validations, options écartées, glossaire) est dans un document dédié : **[EXPLICATIONS_v29_sens.md](EXPLICATIONS_v29_sens.md)**.
+> 📖 Cette section couvre les v29 à v31. Le document de conception d'origine de la v29
+> (schémas détaillés, table des 13 validations d'époque) est archivé dans
+> **[Old_Archive_rmd/EXPLICATIONS_v29_sens.md](Old_Archive_rmd/EXPLICATIONS_v29_sens.md)** — utile
+> pour le *pourquoi* historique, mais ses chiffres (24 dims, odorat linéaire) sont dépassés.
 
 ### 15.1 Les 5 sens et leur hiérarchie de coût
 
@@ -721,8 +724,9 @@ Jusqu'en v28.0, l'agent n'avait que ses deux sens gourmands : la vue (`porte_vis
 | Toucher | Moyenne | 4 | `vecteur_bio` → `integrateur_bio` | ❌ |
 | Odorat | Faible | 2 | `vecteur_bio` → `integrateur_bio` | ❌ |
 | Goût | Faible | 2 | `vecteur_bio` → `integrateur_bio` | ❌ |
+| **Exo-Sens** (v30.0) | *Externe* | 8 | `PortC3` → `vecteur_bio` → `integrateur_bio` | ❌ |
 
-Le **toucher** donne le contact frontal (via l'API native `can_overlap()`), l'objet en main (`carrying`) et l'orientation encodée sur le cercle $(\cos\theta, \sin\theta)$ avec $\theta = \frac{\pi}{2}\cdot\text{agent\_dir}$ — l'encodage circulaire supprime la fausse discontinuité entre les directions 3 et 0, voisines dans le monde réel mais distantes de 3 unités en entier brut. L'**odorat** décroît linéairement sur `PORTEE_ODORAT=4` cases (distance de Manhattan, comme §11). Le **goût** est une rémanence décroissant à `DECROISSANCE_GOUT=0.85`/tick, seul état inter-tick du bus, remis à zéro par épisode.
+Le **toucher** donne le contact frontal (via l'API native `can_overlap()`), l'objet en main (`carrying`) et l'orientation encodée sur le cercle $(\cos\theta, \sin\theta)$ avec $\theta = \frac{\pi}{2}\cdot\text{agent\_dir}$ — l'encodage circulaire supprime la fausse discontinuité entre les directions 3 et 0, voisines dans le monde réel mais distantes de 3 unités en entier brut. L'**odorat** décroît **exponentiellement** depuis la v30.0 — `exp(-0.8·d)` en distance de Manhattan (1.00 au contact, 0.45 à 1 case, 0.20 à 2), après qu'une rampe linéaire à portée fixe se soit révélée saturante (§15.7). Le **goût** est une rémanence décroissant à `DECROISSANCE_GOUT=0.85`/tick, seul état inter-tick du bus, remis à zéro par épisode.
 
 ### 15.2 Pourquoi les sens faibles n'entrent pas dans `bus_latent`
 
@@ -736,7 +740,23 @@ perte = F.mse_loss(attente, bus_reel_vision)
 
 Sommer le toucher et la chimie dans `bus_latent` les ferait mécaniquement entrer dans ce que le modèle du monde doit prédire — trois canaux bruités venant perturber une physique visuelle apprise sur des centaines de jours, pour un gain nul (prédire l'odeur future n'est pas l'objet du JEPA). En passant par `integrateur_bio` (§ voir `integrer_bio`), ils informent la **décision** sans jamais toucher au **modèle du monde**.
 
-`DIM_VECTEUR_BIO` passe donc de 16 à 24 dims, les 8 nouvelles étant ajoutées **en queue** — un contrat partagé entre `obtenir_vecteur_bio`, `BusSensoriel.interpreter` et `persistance._greffer_vecteur_bio_etendu` (15.4).
+`DIM_VECTEUR_BIO` est ainsi passé de 16 à 24 dims (v29.0, toucher + chimie) puis à **32** (v30.0,
+Exo-Sens), les nouvelles dimensions étant **toujours ajoutées en queue** — un contrat partagé
+entre `obtenir_vecteur_bio`, `BusSensoriel.interpreter` et
+`persistance._greffer_vecteur_bio_etendu` (§15.5). Composition courante :
+
+```
+[0:3]   jauges satiété/hydratation/stimulation      (v18.0)
+[3:6]   quête one-hot FOOD/WATER/STIM               (v18.0)
+[6:8]   rappel spatial (distance + fraîcheur)       (v20.0)
+[8:16]  quête vocale (formants cibles)              (v22.1)
+[16:20] TOUCHER contact/main/orientation cos-sin    (v29.0)
+[20:24] CHIMIE  odorat food-water + goût food-water (v29.0)
+[24:32] EXO-SENS vecteur perceptif exogène          (v30.0)
+```
+
+Une insertion **au milieu** décalerait silencieusement tous les acquis d'un `.brain` existant :
+c'est l'invariant le plus fragile de cette architecture.
 
 ### 15.3 C1 et C2, enfin nommés
 
@@ -767,9 +787,29 @@ Le filtre historique **excluait** la couche, qui renaissait à neuf — c'est le
 
 La v29.0 câblait les sens dans la décision sans les instrumenter — corrigé en v29.1 par 7 clés W&B (`Sens_Bus_Actif`, `Sens_Toucher_Contact_Ratio`, `Sens_Toucher_Portage_Ratio`, `Sens_Odorat_Moyen`/`_Max`/`_Ticks_Actifs_Ratio`, `Sens_Gout_Ticks_Actifs`) et une ligne au bilan de nuit. Purement observationnel : jamais relu par la décision ni le gradient.
 
-Premier diagnostic livré par cette télémétrie : **l'odorat sature sur les petites cartes** (97,6 % de couverture sur `Empty-8x8`, 100 % sur `DoorKey-6x6` avec `PORTEE_ODORAT=4`), donc il y porte peu d'information. Constat documenté, constante **inchangée** — l'arbitrage (portée réduite vs normalisation par taille de carte) appartient à l'auteur. Détail complet en [EXPLICATIONS_v29_sens.md](EXPLICATIONS_v29_sens.md) §12.
+Premier diagnostic livré par cette télémétrie : **l'odorat sature sur les petites cartes** (97,6 % de couverture sur `Empty-8x8`, 100 % sur `DoorKey-6x6` avec `PORTEE_ODORAT=4`), donc il y porte peu d'information. Constat documenté, constante **inchangée** — l'arbitrage (portée réduite vs normalisation par taille de carte) appartient à l'auteur. Détail complet en [EXPLICATIONS_v29_sens.md](Old_Archive_rmd/EXPLICATIONS_v29_sens.md) §12.
 
 C'est devenu le **chantier 1 de la v30.0**, désormais **livrée** — voir §15.7 ci-dessous et [CONCEPTION_v30_exo_sens.md](Old_Archive_rmd/CONCEPTION_v30_exo_sens.md) pour le cadrage et les options écartées.
+
+### 15.6bis Deux options volontairement ÉCARTÉES (et pourquoi)
+
+Les documenter évite qu'elles soient réintroduites plus tard sans connaître l'argument qui les
+avait rejetées — c'est la principale valeur d'un cadrage archivé.
+
+**(a) Le court-circuit conditionnel de C2.** La note de conception v29 disait « C2 s'active
+uniquement sur demande de C1 ». L'implémentation littérale (`if _c1_hesite(...) or erreur_jepa >
+SEUIL: solliciter C2`) a été écartée : c'est un **déclenchement sur seuil codé en dur dans le
+chemin de décision**, exactement ce que le projet s'interdit pour l'appel à C3 (§14.3). Interdire
+le seuil pour C3 et l'accepter pour C2 serait incohérent. Si l'économie de calcul devient un
+objectif réel, la voie cohérente serait d'en faire une **action apprise**, comme
+`ACTION_DEMANDER` — jamais un `if`.
+
+**(b) Une porte tactile sommée dans `bus_latent`.** Plus symétrique avec la vue et l'ouïe, mais
+ferait entrer trois canaux bruités dans la cible JEPA d'un modèle du monde déjà entraîné sur des
+centaines de jours (§15.2). Le gain serait nul : prédire l'odeur future n'est pas l'objet du JEPA.
+
+> Ces deux refus ont depuis fait jurisprudence : la v30.0 a écarté pour la **troisième** fois un
+> seuil de déclenchement, cette fois pour la « boucle d'attention exogène » de l'Exo-Sens (§15.7).
 
 ### 15.7 v30.0 — l'Odorat Dynamique & l'Exo-Sens (le 6ᵉ sens)
 

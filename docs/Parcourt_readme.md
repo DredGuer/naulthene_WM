@@ -526,10 +526,10 @@ Côté W&B, 7 courbes `Sens_*` sont enregistrées chaque nuit.
 > 4 sources générées, presque toute la carte est « à portée de nez » sur `Empty-8x8` (97,6 %) et
 > `DoorKey-6x6` (100 %). L'odorat n'y apporte donc presque aucune information utile — il ne
 > devient vraiment discriminant qu'au Doctorat (`MultiRoom`, ~57 %). Ce n'est pas une panne, mais
-> un réglage encore ouvert (voir [EXPLICATIONS_v29_sens.md](EXPLICATIONS_v29_sens.md) §12) —
+> un réglage encore ouvert (voir [EXPLICATIONS_v29_sens.md](Old_Archive_rmd/EXPLICATIONS_v29_sens.md) §12) —
 > c'est devenu le **chantier 1 de la v30.0** (odorat à portée relative à la taille de la carte,
 > voir [CONCEPTION_v30_exo_sens.md](Old_Archive_rmd/CONCEPTION_v30_exo_sens.md) §2).
 > En revanche, un `Odorat` à **0 %** sur un niveau où des ressources existent mérite un coup d'œil.
 
 📖 Pour le détail complet (formules, pourquoi ces sens n'entrent pas dans le modèle du monde,
-compatibilité des anciens cerveaux) : **[EXPLICATIONS_v29_sens.md](EXPLICATIONS_v29_sens.md)**.
+compatibilité des anciens cerveaux) : **[EXPLICATIONS_v29_sens.md](Old_Archive_rmd/EXPLICATIONS_v29_sens.md)**.
