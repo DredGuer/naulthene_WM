@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 | Type | Details |
 |------|---------|
-| **Commit** | N/A — en attente du commit de cette version |
+| **Commit** | `6368e02` |
 | **Catégorie** | feat (télémétrie, expérimentale) |
 | **Impact** | Fonctionnel (observabilité — aucun impact sur la décision ni le gradient) |
 
