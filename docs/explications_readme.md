@@ -746,6 +746,12 @@ Le filtre historique **excluait** la couche, qui renaissait à neuf — c'est le
 
 **Règle générale du projet** : greffe par **recopie**, jamais par **exclusion**.
 
+### 15.6 Télémétrie des 5 sens (v29.1)
+
+La v29.0 câblait les sens dans la décision sans les instrumenter — corrigé en v29.1 par 7 clés W&B (`Sens_Bus_Actif`, `Sens_Toucher_Contact_Ratio`, `Sens_Toucher_Portage_Ratio`, `Sens_Odorat_Moyen`/`_Max`/`_Ticks_Actifs_Ratio`, `Sens_Gout_Ticks_Actifs`) et une ligne au bilan de nuit. Purement observationnel : jamais relu par la décision ni le gradient.
+
+Premier diagnostic livré par cette télémétrie : **l'odorat sature sur les petites cartes** (97,6 % de couverture sur `Empty-8x8`, 100 % sur `DoorKey-6x6` avec `PORTEE_ODORAT=4`), donc il y porte peu d'information. Constat documenté, constante **inchangée** — l'arbitrage (portée réduite vs normalisation par taille de carte) appartient à l'auteur. Détail complet en [EXPLICATIONS_v29_sens.md](EXPLICATIONS_v29_sens.md) §12.
+
 ---
 
 *Document généré à partir d'une lecture directe du code source (`agi_google_colab.py` v17, `src/naulthene/cerveau/noyau.py` jusqu'à v29.0) — voir [readme.md](../readme.md) pour la documentation narrative complète et [CLAUDE.md](../CLAUDE.md) pour les règles de maintenance du projet.*

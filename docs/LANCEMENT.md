@@ -711,6 +711,38 @@ la résurrection a bien eu lieu et qu'aucun acquis n'a été perdu.
 ⚠️ Ce test **charge en lecture** — il n'écrit rien tant que `sauvegarder()` n'est pas appelé. La
 copie reste néanmoins la bonne pratique.
 
+### 9bis. Suivre les 5 sens jour après jour (v29.1)
+
+Depuis la v29.1, **chaque nuit affiche une ligne dédiée aux sens**, dans tous les modes (Cuve,
+les 3 cursus) — rien à activer :
+
+```
+  ├─ Les 5 Sens     : ✋ Contact 28.5% | 🔑 Portage 20.5% | 👃 Odorat 96.0% des ticks (max 1.50) | 👅 Goût 75 tick(s)
+```
+
+| Champ | Lecture |
+|-------|---------|
+| `Contact` | % de ticks passés au contact d'un obstacle — un chiffre très haut durablement = agent qui se cogne / reste bloqué |
+| `Portage` | % de ticks avec un objet en main. **Sur DoorKey, c'est le temps passé à porter la clé** — monte quand l'agent maîtrise les paliers 3-4 |
+| `Odorat` | % de ticks avec une odeur perçue (voir l'avertissement de saturation ci-dessous) |
+| `Goût` | Nombre de ticks avec une rémanence gustative — à rapprocher des Nourriture(s)/Eau(x) de la ligne Métabolisme |
+
+Le suffixe **`⚠️ BUS DÉSACTIVÉ`** apparaît si le Bus Sensoriel est tombé en vol. C'est l'alerte à
+surveiller : sans elle, la dégradation gracieuse ne laisse qu'un unique message au moment de la
+panne, vite noyé dans les logs d'un run long.
+
+Côté **W&B**, 7 métriques `Sens_*` sont loggées chaque nuit (`Sens_Bus_Actif`,
+`Sens_Toucher_Contact_Ratio`, `Sens_Toucher_Portage_Ratio`, `Sens_Odorat_Moyen`,
+`Sens_Odorat_Max`, `Sens_Odorat_Ticks_Actifs_Ratio`, `Sens_Gout_Ticks_Actifs`). Elles sont
+**absentes** du log en mode `vocal_isole` pur (aucun environnement MiniGrid lu) — c'est normal.
+
+> ⚠️ **`Odorat` proche de 100 % est ATTENDU sur les petits niveaux.** Avec `PORTEE_ODORAT = 4`
+> cases et 4 sources générées, la couverture atteint 97,6 % sur `Empty-8x8` et 100 % sur
+> `DoorKey-6x6` — l'odorat y est quasi constamment saturé et porte donc peu d'information. Il ne
+> redevient discriminant qu'au Doctorat (`MultiRoom`, ~57 %). Ce n'est pas une panne : c'est un
+> réglage à trancher (voir `docs/EXPLICATIONS_v29_sens.md` §12). Un `Odorat` à **0 %** en
+> revanche, sur un niveau où des ressources existent, mérite investigation.
+
 ### 9d. Ce que la v29.0 ne change PAS
 
 - **Aucune régression de comportement** : le découpage C1/C2 (`_executer_c1_reflexe` /
@@ -740,4 +772,7 @@ copie reste néanmoins la bonne pratique.
 | Message `👃 integrateur_bio greffé de N à M dims d'entrée` au chargement (§9c) | Normal et attendu **une seule fois** sur un `.brain` créé avant la v29.0 — le vecteur viscéral passe de 16 à 24 dims (toucher/odorat/goût). La greffe **préserve tous les acquis au bit près**, les 8 nouvelles dimensions naissent vierges. Si le message réapparaît à CHAQUE lancement, vérifie que la sauvegarde qui suit s'est bien effectuée (pas de `kill -9` avant `💾 Cerveau cristallisé avec succès`) |
 | Message `🔄 integrateur_bio exclu du chargement` depuis la v29.0 | **Anormal** pour un simple passage 16→24 dims — ce cas est censé être pris en charge par la greffe (`👃`, ligne ci-dessus). L'exclusion ne subsiste qu'en trappe de secours pour un mismatch qu'on ne sait pas greffer (ex. `dim_bus` incohérent entre le `.brain` et l'agent recréé). Vérifie que le `.brain` n'a pas été produit par une autre architecture/branche |
 | L'odorat reste à 0.00 en permanence (§9a) | Normal si aucune source n'est à portée : `PORTEE_ODORAT=4` cases seulement, et les ressources ne sont générées que par `DetecteurRessourcesBiologiques` (Ball rouge = Nourriture, Ball bleue = Eau). Sur un niveau sans ressource générée, ou avec l'agent à plus de 4 cases, 0.00 est le bon résultat |
-| Le toucher renvoie toujours `0.0` sur les 4 dims | Le bus s'est désactivé — cherche l'avertissement `⚠️ Bus sensoriel (toucher/odorat/goût) désactivé (API minigrid incompatible : ...)` affiché **une seule fois** dans la console. Même dégradation gracieuse que les détecteurs génériques : l'entraînement continue normalement, seuls les 3 sens faibles sont neutres |
+| Le toucher renvoie toujours `0.0` sur les 4 dims | Le bus s'est désactivé — cherche l'avertissement `⚠️ Bus sensoriel (toucher/odorat/goût) désactivé (API minigrid incompatible : ...)` affiché **une seule fois** dans la console. Même dégradation gracieuse que les détecteurs génériques : l'entraînement continue normalement, seuls les 3 sens faibles sont neutres. Depuis la v29.1, le suffixe `⚠️ BUS DÉSACTIVÉ` s'affiche en plus à **chaque** bilan de nuit et `Sens_Bus_Actif` passe à 0 dans W&B |
+| Ligne `Les 5 Sens` absente du bilan de nuit (v29.1) | Normal en mode `vocal_isole` pur (aucun environnement MiniGrid lu ce jour-là) : `ticks_sensoriels_jour = 0`, la ligne est volontairement masquée plutôt que d'afficher des ratios vides. Elle réapparaît dès qu'une journée comporte des ticks MiniGrid |
+| `Odorat` proche de 96-100 % à chaque nuit | **Attendu** sur les 4 premiers niveaux : `PORTEE_ODORAT=4` couvre 97,6 % d'`Empty-8x8` et 100 % de `DoorKey-6x6`. L'odorat n'est vraiment discriminant qu'au Doctorat (`MultiRoom`, ~57 %). Voir `docs/EXPLICATIONS_v29_sens.md` §12 pour l'arbitrage (portée réduite vs normalisation par taille de carte) |
+| `Portage` reste à 0 % sur DoorKey | L'agent n'a jamais ramassé la clé de la journée — cohérent avec un palier DoorKey encore bas (< 3, « Toucher / Prendre »). Cette métrique est un bon indicateur avancé de la maîtrise des paliers 3-4, avant même que la victoire n'arrive |

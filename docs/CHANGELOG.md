@@ -4,6 +4,66 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [29.1-experimental] - 2026-08-02
+
+### Télémétrie des 5 Sens — les rendre observables, et un diagnostic de saturation de l'odorat
+
+| Type | Details |
+|------|---------|
+| **Commit** | N/A — en attente du commit de cette version |
+| **Catégorie** | feat (télémétrie, expérimentale) |
+| **Impact** | Fonctionnel (observabilité — aucun impact sur la décision ni le gradient) |
+
+**Constat utilisateur : « dans les tests tu as implémenté tous les sens et mis dans chaque jour pour suivre entièrement tous les éléments ? » — non. La v29.0 câblait bien les 5 sens dans la décision (l'agent les utilise réellement), mais AUCUN des 3 sens ajoutés n'était instrumenté : zéro clé W&B, zéro ligne au bilan de nuit, zéro compteur journalier. Les validations v29.0 étaient des tests PONCTUELS (lecture des signaux à un instant T), pas du suivi. Conséquence concrète : sur un run de 300 jours, il aurait été impossible de répondre à « l'odorat a-t-il jamais servi ? », et une désactivation silencieuse du bus (dégradation gracieuse) n'aurait laissé qu'un unique avertissement console, noyé dans les logs.**
+
+**Audit préalable** : comparaison systématique des 21 compteurs `*_jour` de `EtatCognitif` avec ce qui est réellement loggé. Résultat — **tous les compteurs pré-v29 sont correctement instrumentés** (y compris la télémétrie C3 de la v28.0). L'écart était strictement limité à la v29.0.
+
+**Les 7 nouvelles clés W&B** (préfixe `Sens_`, absentes du log si aucun tick sensoriel n'a été vécu — même logique conditionnelle que le bloc C3) :
+
+| Clé | Ce qu'elle mesure |
+|-----|-------------------|
+| `Sens_Bus_Actif` | **Métrique de santé** : 0 si le bus s'est désactivé en vol (API minigrid incompatible) |
+| `Sens_Toucher_Contact_Ratio` | Part des ticks au contact d'un obstacle (proxy de blocage) |
+| `Sens_Toucher_Portage_Ratio` | Part des ticks avec un objet en main — très parlant sur DoorKey (la clé) |
+| `Sens_Odorat_Moyen` | Intensité moyenne (nourriture + eau) sur la journée |
+| `Sens_Odorat_Max` | Pic d'intensité de la journée |
+| `Sens_Odorat_Ticks_Actifs_Ratio` | Part des ticks où au moins une odeur est perçue |
+| `Sens_Gout_Ticks_Actifs` | Nombre de ticks avec une trace gustative rémanente |
+
+Plus une ligne au bilan de nuit console, dans le style des lignes existantes, affichée uniquement si des ticks sensoriels ont eu lieu :
+
+```
+  ├─ Les 5 Sens     : ✋ Contact 28.5% | 🔑 Portage 20.5% | 👃 Odorat 96.0% des ticks (max 1.50) | 👅 Goût 75 tick(s)
+```
+
+Le suffixe `⚠️ BUS DÉSACTIVÉ` s'ajoute si le bus est tombé — l'alerte devient visible à chaque nuit au lieu d'un unique message au moment de la panne.
+
+**⚠️ Diagnostic immédiat livré par cette télémétrie : l'odorat sature sur les petites cartes.** Dès le premier jour instrumenté, `Sens_Odorat_Ticks_Actifs_Ratio = 0.96` et `Sens_Odorat_Max = 1.50` (sur un maximum théorique de 2.0). Vérification par calcul de couverture (4 sources, portée de Manhattan) :
+
+| Carte | `PORTEE_ODORAT=4` (actuelle) | portée 2 | portée 1 |
+|-------|------------------------------|----------|----------|
+| `Empty-8x8` (intérieur 6×6) | **97.6 %** | 73.3 % | 41.6 % |
+| `DoorKey-6x6` (intérieur 4×4) | **100.0 %** | 94.9 % | 71.8 % |
+| `MultiRoom-N4-S5` (~13×13) | 56.7 % | 24.5 % | 10.7 % |
+
+Sur les 4 premiers niveaux du `PROGRAMME` (les plus petits), l'odorat est donc **quasi constamment saturé** : un signal presque toujours actif porte très peu d'information, et l'agent ne peut pas s'en servir pour s'orienter. Il ne redevient discriminant qu'au Doctorat (`MultiRoom`).
+
+**Aucune valeur n'a été modifiée** — `PORTEE_ODORAT` reste à 4.0. C'est un constat livré à l'utilisateur, pas un correctif appliqué unilatéralement : le bon réglage dépend de l'intention (un odorat « ambiance de proximité » saturé est un choix valide ; un odorat « boussole vers la ressource » demanderait une portée 1-2, ou une normalisation par la taille de la carte). La télémétrie est désormais en place pour trancher sur données réelles.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | 7 compteurs journaliers dans `_reinitialiser_buffers_journee` ; accumulation dans `traiter_tick` juste après la lecture du bus (indices figés par le contrat de `BusSensoriel.interpreter`) ; ligne « Les 5 Sens » au bilan de nuit ; bloc de 7 clés `Sens_*` dans `log_wandb`. |
+
+**Validation** :
+- **400 ticks + nuit** : compteurs cohérents (400 ticks sensoriels, contact 114, portage 82, goût 75) et 7 clés `Sens_*` présentes dans le dict retourné par `executer_nuit`.
+- **Remise à zéro** confirmée au `demarrer_journee` suivant (pas de cumul depuis la naissance — le piège exact du bug `score_vocal_jour` de la v27.0).
+- **Mode `vocal_isole` pur** (aucun env MiniGrid) : `ticks_sensoriels_jour = 0` et clés `Sens_*` **absentes** du log — pas de ligne trompeuse ni de division par zéro.
+- **Désactivation du bus en vol** : `Sens_Bus_Actif = 0` et `⚠️ BUS DÉSACTIVÉ` affiché au bilan.
+- **Non-régression** : 400 ticks + nuit + neurogenèse + plug C3 + 200 ticks + nuit ; 44 puis 47 clés loggées, les 7 `Sens_*` présentes les deux nuits ; tous les modules importent.
+- Les 4 points d'entrée (`cursus_developpemental`, `cursus_bebe`, `cursus_parole`, `daemon_cerveau`) loggent le dict retourné par `executer_nuit` — **les nouvelles clés y remontent automatiquement**, sans modification de ces scripts.
+
+---
+
 ## [29.0-experimental] - 2026-08-02
 
 ### Le Bus Sensoriel Multimodal & l'Identité C1/C2 explicite — les 5 sens, et une frontière nommée entre le réflexe et le néo-cortex

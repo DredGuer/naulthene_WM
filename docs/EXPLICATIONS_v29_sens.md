@@ -19,6 +19,7 @@ Document explicatif complet de la v29.0, rédigé à partir d'une lecture direct
 9. [Ce qui a été volontairement ÉCARTÉ](#9-ce-qui-a-été-volontairement-écarté)
 10. [Validations exécutées](#10-validations-exécutées)
 11. [Glossaire des constantes v29.0](#11-glossaire-des-constantes-v290)
+12. [Télémétrie des 5 sens (v29.1) & saturation de l'odorat](#12-télémétrie-des-5-sens-v291--saturation-de-lodorat)
 
 ---
 
@@ -313,6 +314,67 @@ Le projet n'a ni linter ni suite de tests automatisés (voir CLAUDE.md) — tout
 | `DECROISSANCE_GOUT` | 0.85 | Facteur de décroissance par tick de la trace gustative (~10 ticks) |
 | `COULEUR_NOURRITURE` | `"red"` | Convention héritée de `DetecteurRessourcesBiologiques` (Ball rouge) |
 | `COULEUR_EAU` | `"blue"` | Convention héritée de `DetecteurRessourcesBiologiques` (Ball bleue) |
+
+---
+
+## 12. Télémétrie des 5 sens (v29.1) & saturation de l'odorat
+
+### 12.1 Le trou de la v29.0
+
+La v29.0 câblait les 5 sens **dans la décision** (l'agent les utilise réellement), mais n'en instrumentait **aucun** : pas de clé W&B, pas de ligne au bilan de nuit, pas de compteur journalier. Les 13 validations du §10 étaient des tests **ponctuels** — lecture des signaux à un instant T — pas du **suivi**.
+
+Distinction importante : ces tests prouvaient que la mécanique fonctionne, pas qu'on pourrait l'**observer** sur la durée. Sur un run de 300 jours, il aurait été impossible de répondre à « l'odorat a-t-il jamais servi à quelque chose ? », et une désactivation silencieuse du bus (§3.4) n'aurait laissé qu'un unique avertissement console, noyé dans des milliers de lignes.
+
+Un audit systématique des 21 compteurs `*_jour` de `EtatCognitif` a confirmé que **tous les compteurs antérieurs étaient correctement loggés**, y compris la télémétrie C3 de la v28.0 : l'écart était strictement limité à la v29.0.
+
+### 12.2 Les 7 métriques ajoutées
+
+| Clé W&B | Mesure |
+|---------|--------|
+| `Sens_Bus_Actif` | **Santé** — 0 si le bus s'est désactivé en vol |
+| `Sens_Toucher_Contact_Ratio` | Part des ticks au contact d'un obstacle |
+| `Sens_Toucher_Portage_Ratio` | Part des ticks avec un objet en main (la clé, sur DoorKey) |
+| `Sens_Odorat_Moyen` | Intensité moyenne (nourriture + eau) |
+| `Sens_Odorat_Max` | Pic d'intensité de la journée |
+| `Sens_Odorat_Ticks_Actifs_Ratio` | Part des ticks avec au moins une odeur perçue |
+| `Sens_Gout_Ticks_Actifs` | Ticks avec une trace gustative rémanente |
+
+Plus une ligne au bilan de nuit :
+
+```
+  ├─ Les 5 Sens     : ✋ Contact 28.5% | 🔑 Portage 20.5% | 👃 Odorat 96.0% des ticks (max 1.50) | 👅 Goût 75 tick(s)
+```
+
+Trois garde-fous de conception :
+
+- **Purement observationnel** — ces compteurs ne sont jamais relus par la décision, le gradient ou la dopamine.
+- **Absents du log si `ticks_sensoriels_jour == 0`** (mode `vocal_isole` pur) : pas de ligne trompeuse, pas de division par zéro. Même logique conditionnelle que le bloc C3 de la v28.0.
+- **Remis à zéro dans `_reinitialiser_buffers_journee`** — le piège exact du bug `score_vocal_jour` de la v27.0, où une « moyenne du jour » était en réalité cumulée depuis la naissance du cerveau.
+
+### 12.3 Le diagnostic immédiat : l'odorat sature
+
+Dès le premier jour instrumenté, la télémétrie a livré un constat que les tests ponctuels ne pouvaient pas donner : `Sens_Odorat_Ticks_Actifs_Ratio = 0.96` et `Sens_Odorat_Max = 1.50` (sur un maximum théorique de 2.0).
+
+Vérification par calcul de couverture (4 sources, distance de Manhattan, moyenne sur 400 placements aléatoires) — **pourcentage des cases de la carte situées à portée d'au moins une source** :
+
+| Carte | `PORTEE_ODORAT = 4` (actuelle) | portée 2 | portée 1 |
+|-------|-------------------------------|----------|----------|
+| `Empty-8x8` (intérieur 6×6) | **97.6 %** | 73.3 % | 41.6 % |
+| `DoorKey-6x6` (intérieur 4×4) | **100.0 %** | 94.9 % | 71.8 % |
+| `MultiRoom-N4-S5` (~13×13) | 56.7 % | 24.5 % | 10.7 % |
+
+Sur les **4 premiers niveaux du `PROGRAMME`** (les plus petits), l'odorat est donc quasi constamment saturé. Or un signal presque toujours actif porte très peu d'information : l'agent ne peut pas s'en servir pour s'orienter, puisqu'il « sent » à peu près partout pareil. Le sens ne redevient discriminant qu'au Doctorat.
+
+C'est un cas d'école du principe rappelé en §2 : ce qui fait émerger la compréhension, ce n'est pas d'*ajouter* un canal, c'est qu'il soit **informatif**.
+
+### 12.4 Pourquoi la constante n'a PAS été changée
+
+`PORTEE_ODORAT` reste à **4.0**. C'est un constat livré, pas un correctif appliqué unilatéralement — le bon réglage dépend de l'intention, et c'est une décision de conception qui appartient à l'auteur du projet :
+
+- **Odorat « ambiance de proximité »** (saturé) : un choix valide si l'intention est un fond permanent signalant « il y a de la ressource dans cette zone ».
+- **Odorat « boussole vers la ressource »** : demanderait une portée de 1-2 cases, ou une normalisation par la taille de la carte (`PORTEE_ODORAT` proportionnelle à `grid.width`), pour rester discriminant à tous les niveaux.
+
+La télémétrie v29.1 est précisément l'instrument qui permet de trancher **sur données réelles** plutôt qu'à l'intuition — et de vérifier après coup que le réglage retenu produit bien l'effet voulu.
 
 ---
 

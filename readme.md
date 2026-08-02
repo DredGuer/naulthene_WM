@@ -118,6 +118,8 @@ Trois chantiers issus de [docs/Maj_V29_readme.md](docs/Maj_V29_readme.md) : donn
 
 * **La rétrocompatibilité des `.brain`**, principal risque technique de cette version. Étendre le vecteur bio change la **forme** de `integrateur_bio` ; le filtre historique traitait ce cas en *excluant* la couche, qui renaissait à neuf — le symptôme exact du bug v24.0-fix4 (bouche silencieuse dans l'Arène). Une greffe par **recopie partielle** (`_greffer_vecteur_bio_etendu`) préserve désormais au bit près toute l'intégration viscérale et vocale déjà apprise, les 8 nouvelles dimensions naissant à une initialisation atténuée. L'agent se réveille avec tous ses acquis et découvre simplement qu'il a désormais un toucher, un odorat et un goût — encore muets.
 
+* **v29.1 — les sens rendus observables.** La v29.0 câblait les 5 sens dans la décision mais n'en instrumentait aucun : impossible, sur un run de 300 jours, de répondre à « l'odorat a-t-il jamais servi ? ». Sept métriques W&B (`Sens_*`) et une ligne au bilan de nuit comblent ce trou — dont `Sens_Bus_Actif`, qui rend visible une désactivation silencieuse du bus. Premier diagnostic livré immédiatement : **l'odorat sature sur les petites cartes** (97,6 % de couverture sur `Empty-8x8`, 100 % sur `DoorKey-6x6`), donc y porte peu d'information. Constat documenté, `PORTEE_ODORAT` **inchangée** — l'arbitrage appartient à l'auteur.
+
 📖 **Documentation dédiée** : **[docs/EXPLICATIONS_v29_sens.md](docs/EXPLICATIONS_v29_sens.md)** — le document explicatif complet de cette version (formules, schémas, table des 13 validations, options écartées et pourquoi, glossaire des constantes). Voir aussi [docs/CHANGELOG.md](docs/CHANGELOG.md) (entrée v29.0-experimental) pour le détail commit par commit, [docs/explications_readme.md](docs/explications_readme.md) §15 pour le résumé algorithmique, et [docs/LANCEMENT.md](docs/LANCEMENT.md) §9 pour observer les 5 sens en direct.
 
 ### Nouveautés v28.0 (expérimental) — La Cascade C1→C2→C3 & le Port Exocortex (2026-07-30)
@@ -789,10 +791,26 @@ Chaque journée d'entraînement émet les télémétries suivantes vers le table
   "Bio_Water_Consommes_Jour": 1,
   "Bio_Quete_Active": "Aucune",
   "Bio_Effort_Metabolique_Moyen": 0.47,
-  "Memoire_Episodique_Taille": 12
+  "Memoire_Episodique_Taille": 12,
+  "Sens_Bus_Actif": 1,
+  "Sens_Toucher_Contact_Ratio": 0.285,
+  "Sens_Toucher_Portage_Ratio": 0.205,
+  "Sens_Odorat_Moyen": 0.914,
+  "Sens_Odorat_Max": 1.50,
+  "Sens_Odorat_Ticks_Actifs_Ratio": 0.96,
+  "Sens_Gout_Ticks_Actifs": 75
 }
 
 ```
+
+**Les métriques `Sens_*` (v29.1)** — les 5 sens rendus observables. Elles sont **absentes du log** si aucun tick sensoriel n'a été vécu (mode `vocal_isole` pur, sans environnement MiniGrid) :
+
+* **`Sens_Bus_Actif`** : métrique de **santé** — passe à 0 si le Bus Sensoriel s'est désactivé en vol (API minigrid incompatible). Sans elle, la dégradation gracieuse ne laisse qu'un unique avertissement console, invisible sur un run long.
+* **`Sens_Toucher_Portage_Ratio`** : part des ticks avec un objet en main. Très parlant sur `DoorKey` — c'est la trace directe du temps passé à porter la clé, un signal que la v28.0 ne rendait visible nulle part.
+* **`Sens_Odorat_Ticks_Actifs_Ratio`** : part des ticks où une odeur est perçue. ⚠️ **Attendu proche de 1.0 sur les petits niveaux** — voir l'encadré de saturation ci-dessous.
+* **`Sens_Gout_Ticks_Actifs`** : nombre de ticks avec une trace gustative rémanente (~10 ticks par bouchée). À rapprocher de `Bio_Food_Consommes_Jour` / `Bio_Water_Consommes_Jour`.
+
+> ⚠️ **Saturation connue de l'odorat sur les petites cartes.** Avec `PORTEE_ODORAT = 4` cases et 4 sources générées, la couverture théorique atteint **97.6 %** sur `Empty-8x8` et **100 %** sur `DoorKey-6x6` — l'odorat y est donc quasi constamment actif, et un signal presque toujours saturé porte peu d'information exploitable. Il ne redevient discriminant qu'au Doctorat (`MultiRoom-N4-S5`, ~57 %). Ce n'est **pas un bug** mais un choix de réglage à trancher sur données réelles : un odorat « ambiance de proximité » saturé est valide ; un odorat « boussole vers la ressource » demanderait une portée de 1-2 cases, ou une normalisation par la taille de la carte. La télémétrie v29.1 est précisément là pour permettre cet arbitrage.
 
 **Effets attendus des métriques v15.0 :**
 
