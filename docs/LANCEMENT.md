@@ -836,6 +836,61 @@ l'**intensité** qui compte désormais, pas la simple présence d'une trace.
 
 ---
 
+## 11. Lire les métriques de calibrage (v30.1) — mémoire & sursaut
+
+Deux constantes du projet sont encore arbitraires : `capacite_max = 200` (mémoire épisodique) et
+`EXTENSION_PATIENCE_SURSAUT = 50` (Sursaut de Volonté). La v30.1 ne les change pas — elle les rend
+**mesurables**, pour pouvoir les rendre adaptatives ensuite **sur données réelles** plutôt qu'à
+l'intuition.
+
+### 11a. La mémoire épisodique est-elle limitée par sa capacité ?
+
+Le bilan de nuit affiche désormais :
+
+```
+├─ Mémoire Épiso. : 🗺️ 200/200 souvenir(s) spatial(aux) ⚠️ SATURÉE — rappel 65% des tentatives (proximité moy 0.27)
+```
+
+| Ce que tu observes | Interprétation |
+|---|---|
+| `⚠️ SATURÉE` **et** proximité qui **baisse** dans le temps | La capacité limite vraiment → une capacité adaptative aurait du sens |
+| `⚠️ SATURÉE` mais proximité **stable/haute** | La FIFO jette des souvenirs **inutiles** → augmenter la capacité ne servirait à rien |
+| Jamais saturée | La question ne se pose pas sur ce parcours |
+| `Memoire_Age_Plus_Vieux_Souvenir` qui **s'effondre** | La mémoire ne remonte plus assez loin dans le temps → vrai signal de sous-capacité |
+
+Courbes W&B : `Memoire_Taux_Saturation`, `Memoire_Taux_Rappel_Reussi`,
+`Memoire_Proximite_Moyenne`, `Memoire_Fraicheur_Moyenne`, `Memoire_Age_Plus_Vieux_Souvenir`.
+
+> À croiser impérativement : `Memoire_Taux_Saturation` **seul** ne prouve rien. Une mémoire pleine
+> dont le rappel reste excellent est une mémoire **bien dimensionnée**, pas une mémoire saturée.
+
+### 11b. Le Sursaut de Volonté sert-il à quelque chose ?
+
+```
+├─ Potentiomètre  : ⏳ Patience ... (2 abandon(s) lucide(s), 10 Sursaut(s) → 30% de victoires, ...)
+```
+
+C'est **la métrique décisive** pour trancher le sens d'une extension adaptative :
+
+| `Sursaut_Taux_Victoire` | Lecture | Direction suggérée |
+|---|---|---|
+| Élevé (> ~40 %) | Le sursaut sauve réellement des épisodes | **« Muscle »** — le renforcer quand il réussit |
+| Faible (< ~15 %) | Il ne fait que retarder un échec | **« Habituation »** — l'atténuer, voire le réserver |
+| Intermédiaire | Dépend du niveau/palier | Croiser avec `Palier_Cible` et `Mode_Libre` |
+
+⚠️ Ces métriques n'apparaissent qu'en **Mode Libre** (palier DoorKey ≥ 5), seul contexte où le
+Sursaut est actif. Sur un run encore en Primaire/paliers bas, elles seront simplement absentes —
+c'est normal, pas une panne.
+
+### 11c. Ce que la v30.1 ne fait PAS
+
+Aucune formule adaptative n'est écrite. `capacite_max` vaut toujours 200, l'extension de sursaut
+toujours 50 ticks. **Le comportement de l'agent est strictement inchangé** — vérifié par empreinte
+de la séquence d'actions à graine fixée, identique avant/après. Cette version ne fait que rendre
+observable ce qui devra être calibré.
+
+---
+
 ## Dépannage rapide
 
 | Symptôme | Cause probable |

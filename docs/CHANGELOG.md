@@ -4,6 +4,56 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [30.1-experimental] - 2026-08-02
+
+### Instrumentation avant calibrage — mémoire épisodique & Sursaut de Volonté
+
+| Type | Details |
+|------|---------|
+| **Commit** | N/A — en attente du commit de cette version |
+| **Catégorie** | feat (télémétrie, expérimentale) |
+| **Impact** | Fonctionnel (observabilité — **aucun** impact sur la décision ni le gradient) |
+
+**Contexte utilisateur : deux constantes arbitraires subsistent dans le projet — `capacite_max = 200` (mémoire épisodique spatiale) et `EXTENSION_PATIENCE_SURSAUT = 50` (Sursaut de Volonté). L'utilisateur souhaite les rendre ADAPTATIVES, indexées sur la capacité réelle du cerveau (`dim_bus`, neurogenèse) et sur les besoins, dans l'esprit du rêve adaptatif (`pourcentage_reve` émerge de la plasticité × richesse, jamais d'un batch fixe). Décision commune : **instrumenter d'abord, calibrer ensuite** — passer directement à une formule adaptative reviendrait à remplacer un chiffre arbitraire par une formule arbitraire, tout aussi peu validée. C'est la leçon explicite de la v29.1 (5 sens livrés sans télémétrie, écart corrigé après coup).**
+
+**Les deux questions auxquelles ces mesures doivent répondre :**
+
+1. **La saturation mémoire coûte-t-elle quelque chose ?** `naulthene_parole` affichait exactement 200 souvenirs après 480 000 ticks — le plafond, donc une FIFO qui jette en continu. Mais un rappel qui reste proche et frais à saturation prouverait que la capacité **n'est pas** le facteur limitant, et qu'une capacité adaptative serait une fausse bonne idée.
+2. **Dans quel sens doit varier une extension de sursaut adaptative ?** Deux lectures opposées, toutes deux défendables : « muscle » (un sursaut qui gagne souvent se renforce — cohérent avec `augmenter_patience_de_base_definitivement`, déjà présent) ou « habituation » (un stimulant répété perd son effet). Le projet comptait déjà **combien** de sursauts (`sursauts_jour`) mais jamais s'ils **servaient** à quelque chose.
+
+**Métriques ajoutées** (toutes conditionnelles, absentes du log quand la mécanique est inactive) :
+
+| Clé W&B | Mesure |
+|---------|--------|
+| `Memoire_Taux_Saturation` | Remplissage rapporté à `capacite_max` — 1.0 = FIFO en train de jeter |
+| `Memoire_Age_Plus_Vieux_Souvenir` | Profondeur temporelle réellement accessible (en ticks) |
+| `Memoire_Taux_Rappel_Reussi` | Part des quêtes de survie trouvant un souvenir du bon type |
+| `Memoire_Proximite_Moyenne` | Qualité spatiale du rappel (1.0 = souvenir sur place) |
+| `Memoire_Fraicheur_Moyenne` | Qualité temporelle du rappel |
+| `Sursaut_Taux_Victoire` | **La métrique décisive** — part des sursauts suivis d'une victoire |
+| `Sursaut_Victoires_Jour` / `Sursaut_Echecs_Jour` | Numérateur et dénominateur bruts |
+
+Plus deux lignes de bilan de nuit enrichies : `Mémoire Épiso.` affiche désormais `N/200` avec un
+suffixe `⚠️ SATURÉE` au plafond et la qualité du rappel ; `Potentiomètre` affiche
+`N Sursaut(s) → X% de victoires` dès qu'un sursaut a été jugé.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | 6 compteurs journaliers dans `_reinitialiser_buffers_journee` ; accumulation du rappel dans `traiter_tick` (au site d'appel de `recuperer_contexte`) et de l'issue du sursaut en fin d'épisode ; 2 lignes de bilan enrichies ; 8 clés W&B |
+
+**Validation** :
+- **Invariance comportementale prouvée** : à graine fixée (42), l'empreinte MD5 de la séquence des 400 actions d'une journée est **identique** avant et après (`e5ce5f49e406`) — la télémétrie ne touche ni la décision, ni le gradient, ni la dopamine.
+- Métriques mémoire vérifiées sur run réel (taux de rappel 65 %, proximité 0.27, fraîcheur 0.96, âge du plus vieux souvenir 229 ticks).
+- Métriques sursaut vérifiées en Mode Libre forcé (3 victoires / 7 échecs → `Sursaut_Taux_Victoire = 0.3`, ligne console `10 Sursaut(s) → 30% de victoires`).
+- Absence correcte des clés quand la mécanique est inactive (aucun sursaut, aucune quête de survie).
+- Non-régression : 200 ticks + nuit + neurogenèse + `vocal_isole` ; tous les modules importent.
+
+⚠️ **Aucune formule adaptative n'est encore écrite.** `capacite_max` reste à 200 et
+`EXTENSION_PATIENCE_SURSAUT` à 50 — la v30.1 ne fait que rendre mesurable ce qui devra être
+calibré. Le passage à l'adaptatif attend les courbes du run de 700 jours en cours.
+
+---
+
 ## [30.0-experimental] - 2026-08-02
 
 ### L'Unification & l'Extensibilité — l'Odorat Dynamique & l'Exo-Sens (C3 devient le 6ᵉ sens)
