@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 | Type | Details |
 |------|---------|
-| **Commit** | N/A — en attente du commit de cette version |
+| **Commit** | `6c9121e` |
 | **Catégorie** | feat (nouvelle mécanique cognitive, expérimentale) |
 | **Impact** | Fonctionnel (capacité mnésique et volume de consolidation nocturne) |
 
