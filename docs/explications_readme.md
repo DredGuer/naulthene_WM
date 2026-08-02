@@ -17,7 +17,7 @@ Ce document explique **comment** et **pourquoi** le cerveau `AGI_Naulthene` fonc
 9. [Le réservoir dopaminergique](#9-le-réservoir-dopaminergique)
 10. [Le rêve nocturne adaptatif](#10-le-rêve-nocturne-adaptatif)
 11. [Le cursus académique et la patience adaptative](#11-le-cursus-académique-et-la-patience-adaptative)
-12. [Évolutions du projet (v7 → v29)](#12-évolutions-du-projet-v7--v29)
+12. [Évolutions du projet (v7 → v30)](#12-évolutions-du-projet-v7--v30)
 13. [Glossaire des constantes](#13-glossaire-des-constantes)
 14. [La Cascade C1 → C2 → C3 & le Port Exocortex (expérimental)](#14-la-cascade-c1--c2--c3--le-port-exocortex-expérimental)
 15. [Le Bus Sensoriel & l'identité C1/C2 explicite (expérimental)](#15-le-bus-sensoriel--lidentité-c1c2-explicite-expérimental)
@@ -549,7 +549,7 @@ Dès `palier_cible >= 5` (Viser la Porte), le **Mode Libre** s'active : le guida
 
 ---
 
-## 12. Évolutions du projet (v7 → v29)
+## 12. Évolutions du projet (v7 → v30)
 
 | Version | Ce qui a changé | Pourquoi |
 |---|---|---|
@@ -566,6 +566,8 @@ Dès `palier_cible >= 5` (Viser la Porte), le **Mode Libre** s'active : le guida
 | v28.0 (expérimental) | La Cascade C1→C2→C3 & le Port Exocortex — 8ème action apprise (`ACTION_DEMANDER`), Port Multiplexeur `PortC3` + Plugs interchangeables, greffe rétrocompatible 7→8 actions | Ouvrir le Cœur Organique à un greffon externe optionnel sans jamais compromettre l'autonomie biologique ni casser un cerveau existant |
 | v29.0 (expérimental) | Le Bus Sensoriel Multimodal & l'identité C1/C2 explicite — toucher/odorat/goût (`DIM_VECTEUR_BIO` 16→24), `_executer_c1_reflexe()`/`_solliciter_c2_neocortex()`, greffe rétrocompatible du vecteur bio | Donner à l'agent les 5 sens plutôt que 2, et nommer la frontière réflexe/néo-cortex qui existait déjà de fait dans le code (§15) |
 | v29.1 (expérimental) | Télémétrie des 5 sens — 7 clés W&B `Sens_*` + ligne au bilan de nuit ; diagnostic de saturation de l'odorat sur les petites cartes | Rendre observable une mécanique jusque-là invisible : sans télémétrie, impossible de démontrer qu'un sens sert réellement à quelque chose sur un run long (§15.6) |
+| v30.0 (expérimental) | L'Odorat Dynamique (atténuation exponentielle `exp(-0.8·d)`) & l'Exo-Sens — C3 devient le 6ème sens, `DIM_VECTEUR_BIO` 24→32, `ACTION_DEMANDER` masquée en permanence | Corriger la saturation diagnostiquée en v29.1 (le gradient, pas la couverture, est ce qui oriente) ; faire de l'Exocortex une perception continue plutôt qu'un cerveau concurrent, sans aucun seuil de déclenchement |
+| v30.1 (expérimental) | Instrumentation avant calibrage — 8 clés `Memoire_*`/`Sursaut_*`, invariance comportementale prouvée par empreinte à graine fixée | Mesurer avant de rendre adaptatives deux constantes arbitraires (`capacite_max=200`, `EXTENSION_PATIENCE_SURSAUT=50`) : remplacer un chiffre arbitraire par une formule arbitraire ne vaut pas mieux |
 
 Voir [CHANGELOG.md](CHANGELOG.md) pour le détail commit par commit et [readme.md](../readme.md) pour la description narrative complète de chaque version.
 
@@ -610,7 +612,11 @@ Voir [CHANGELOG.md](CHANGELOG.md) pour le détail commit par commit et [readme.m
 | `COOLDOWN_PLUG_ECHEC` (v28.0, expérimental) | 200 | Ticks de quarantaine d'un plug après une exception, avant d'être retenté (`naulthene.exocortex.port_c3`) |
 | `DIM_TOUCHER` (v29.0, expérimental) | 4 | Contact frontal, objet en main, orientation cos/sin — en queue du `vecteur_bio` (§15.1) |
 | `DIM_CHIMIE` (v29.0, expérimental) | 4 | Odorat (nourriture, eau) + goût (nourriture, eau) — en queue du `vecteur_bio` (§15.1) |
-| `PORTEE_ODORAT` (v29.0, expérimental) | 4.0 | Portée de l'odorat en cases (Manhattan), 0 au-delà — ⚠️ sature sur les petites cartes, voir §15.6 |
+| `PORTEE_ODORAT` (v29.0) | 4.0 | Ancienne portée linéaire — **conservée pour trace, plus utilisée** par le calcul depuis la v30.0 |
+| `LAMBDA_ODORAT` (v30.0, expérimental) | 0.8 | Décroissance exponentielle de l'odorat `exp(-λ·d)` : 1.00 au contact, 0.45 à 1 case, 0.20 à 2 |
+| `SEUIL_COUPURE_ODORAT` (v30.0, expérimental) | 0.02 | Sous ce seuil le signal est coupé net à 0, plutôt que de traîner une valeur inexploitable |
+| `DIM_EXO` (v30.0, expérimental) | 8 | Largeur du vecteur perceptif exogène (l'Exo-Sens), en queue du `vecteur_bio` |
+| `PERIODE_PERCEPTION_EXO` (v30.0, expérimental) | 20 | Ticks entre deux interrogations réelles du Port C3 (cache entre-temps) — un plug HTTP coûte 100 ms à 30 s |
 | `DECROISSANCE_GOUT` (v29.0, expérimental) | 0.85 | Décroissance par tick de la trace gustative (~10 ticks de rémanence) |
 
 ---
@@ -684,7 +690,7 @@ $$
 w_{evenement} = 1 - \big(1 - W_{visuel} \cdot w_{visuel}\big)\big(1 - W_{vocal} \cdot w_{vocal}\big)\big(1 - W_{C3} \cdot w_{C3}\big), \qquad W_{C3} = \text{POIDS\_DOPAMINE\_C3} = 0.5
 $$
 
-Toujours bornée dans $[0,1]$ par construction, toujours rétrocompatible à l'identique si $w_{C3}=0$. Le choc dopaminergique qui en résulte appelle déjà `fortifier_synapses` (LTP par tick, §8.3) et majore `micro_boost_ancrage`, donc l'importance du souvenir dans `memoire_moyen_terme` — ce souvenir sera rejoué en priorité la nuit par l'échantillonnage pondéré de `rever()` (§10.2). Aucune perte supervisée dédiée n'est ajoutée : l'assimilation passe entièrement par les mécaniques homéostatiques déjà existantes, jamais par un nouveau canal de gradient — cohérent avec la contrainte "pas de Transformer, pas de signal supervisé externe dans la politique" du plan v26.0 (`docs/AMELIORATION_V1.md`).
+Toujours bornée dans $[0,1]$ par construction, toujours rétrocompatible à l'identique si $w_{C3}=0$. Le choc dopaminergique qui en résulte appelle déjà `fortifier_synapses` (LTP par tick, §8.3) et majore `micro_boost_ancrage`, donc l'importance du souvenir dans `memoire_moyen_terme` — ce souvenir sera rejoué en priorité la nuit par l'échantillonnage pondéré de `rever()` (§10.2). Aucune perte supervisée dédiée n'est ajoutée : l'assimilation passe entièrement par les mécaniques homéostatiques déjà existantes, jamais par un nouveau canal de gradient — cohérent avec la contrainte "pas de Transformer, pas de signal supervisé externe dans la politique" du plan v26.0 (`docs/Old_Archive_rmd/AMELIORATION_V1.md`).
 
 ### 14.6 Rétrocompatibilité des `.brain` — la greffe par recopie
 
@@ -759,8 +765,26 @@ La v29.0 câblait les sens dans la décision sans les instrumenter — corrigé 
 
 Premier diagnostic livré par cette télémétrie : **l'odorat sature sur les petites cartes** (97,6 % de couverture sur `Empty-8x8`, 100 % sur `DoorKey-6x6` avec `PORTEE_ODORAT=4`), donc il y porte peu d'information. Constat documenté, constante **inchangée** — l'arbitrage (portée réduite vs normalisation par taille de carte) appartient à l'auteur. Détail complet en [EXPLICATIONS_v29_sens.md](EXPLICATIONS_v29_sens.md) §12.
 
-C'est devenu le **chantier 1 de la v30.0** (« l'Exo-Sens »), en cours de conception sur la branche `feat/v30-exo-sens` — voir [CONCEPTION_v30_exo_sens.md](CONCEPTION_v30_exo_sens.md). Cette version prévoit aussi le pivot de C3 d'un « 3ᵉ cerveau » vers un **6ᵉ sens exogène** (`DIM_VECTEUR_BIO` 24 → 32). **Rien n'en est encore implémenté.**
+C'est devenu le **chantier 1 de la v30.0**, désormais **livrée** — voir §15.7 ci-dessous et [CONCEPTION_v30_exo_sens.md](Old_Archive_rmd/CONCEPTION_v30_exo_sens.md) pour le cadrage et les options écartées.
+
+### 15.7 v30.0 — l'Odorat Dynamique & l'Exo-Sens (le 6ᵉ sens)
+
+**L'odorat change de FORME, pas de portée.** La rampe linéaire à portée fixe est remplacée par une **atténuation exponentielle**, un gradient de diffusion chimique plutôt qu'un cercle à bord net :
+
+$$S(d) = e^{-\lambda d}, \qquad \lambda = \text{LAMBDA\_ODORAT} = 0.8$$
+
+Une portée relative à la géométrie (`min(W,H)/3`) avait été envisagée puis **écartée** : elle ne corrigeait pas les cartes 4×4 et *aggravait* le Doctorat. Le critère de jugement retenu n'est pas la couverture mais le **gradient** — l'écart de signal entre deux cases voisines, seule information exploitable pour s'orienter. Mesuré sur 600 placements de 4 sources, `DoorKey-6x6` (la carte où le problème avait été diagnostiqué) passe de 0.196 à **0.305** (+56 %). Contrepartie assumée : `MultiRoom` perd du gradient, l'exponentielle portant moins loin qu'une rampe à 4 cases.
+
+**C3 devient un sens, plus un cerveau.** `DIM_VECTEUR_BIO` passe de 24 à 32 dims. L'agent ne « demande » plus rien à l'Exocortex : il le **perçoit en continu**, comme le toucher. L'attention accordée à ces 8 dimensions émerge de la myélinisation de `integrateur_bio` — du bruit verra ses poids tomber vers 0, une information utile les verra se renforcer. **Aucun seuil, aucun `if`** dans le chemin de décision : c'est ce que le projet a refusé trois fois (v28 pour l'appel à C3, v29 pour le court-circuit C1→C2, v30 pour cette boucle d'attention).
+
+`ACTION_DEMANDER` n'a plus de rôle mais **reste dans le réseau**, masquée en permanence : 4 `.brain` du dépôt sont déjà à 8 actions, et revenir à 7 aurait imposé une greffe *inverse* jetant des poids appris. La colonne est dormante, jamais amputée.
+
+**Latence** : un plug HTTP coûte 100 ms à 30 s. Le bus n'est donc interrogé qu'un tick sur `PERIODE_PERCEPTION_EXO=20`, la perception étant mise en cache — une fréquence d'échantillonnage de capteur, pas une règle cognitive.
+
+### 15.8 v30.1 — instrumentation avant calibrage
+
+Deux constantes arbitraires restent à rendre adaptatives : `capacite_max=200` (mémoire épisodique) et `EXTENSION_PATIENCE_SURSAUT=50`. La v30.1 ne les change pas — elle ajoute 8 métriques (`Memoire_*`, `Sursaut_*`) pour pouvoir les calibrer **sur données réelles**. Remplacer un chiffre arbitraire par une formule arbitraire ne vaut pas mieux : c'est juste plus difficile à remettre en cause. Invariance comportementale prouvée par empreinte de la séquence d'actions à graine fixée, identique avant/après.
 
 ---
 
-*Document généré à partir d'une lecture directe du code source (`src/naulthene/cerveau/colab.py` v17, `src/naulthene/cerveau/noyau.py` jusqu'à v29.1) — voir [readme.md](../readme.md) pour la documentation narrative complète et [CLAUDE.md](../CLAUDE.md) pour les règles de maintenance du projet.*
+*Document généré à partir d'une lecture directe du code source (`src/naulthene/cerveau/colab.py` v17, `src/naulthene/cerveau/noyau.py` jusqu'à v30.1) — voir [readme.md](../readme.md) pour la documentation narrative complète et [CLAUDE.md](../CLAUDE.md) pour les règles de maintenance du projet.*

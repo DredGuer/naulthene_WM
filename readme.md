@@ -19,6 +19,7 @@ Il intègre la structure de table des matières globale (avec le contexte applic
 2. [Journal des Mises à Jour (Changelog)](https://www.google.com/search?q=%23journal-des-mises-%C3%A0-jour)
 3. [Plan d'Action](https://www.google.com/search?q=%23plan-daction)
 3t. **[Parcourt_readme.md — Guide Complet du Système de Cursus](docs/Parcourt_readme.md)** (commandes de lancement, jours/ticks par parcours, détail des paliers, FAQ)
+3p. [Nouveautés v30.1 (expérimental) — Instrumentation avant calibrage : mémoire & Sursaut](#nouveautés-v301-expérimental--instrumentation-avant-calibrage--mémoire--sursaut-2026-08-02)
 3q. [Nouveautés v30.0 (expérimental) — L'Unification & l'Extensibilité : l'Odorat Dynamique & l'Exo-Sens](#nouveautés-v300-expérimental--lunification--lextensibilité--lodorat-dynamique--lexo-sens-2026-08-02)
 3r. [Nouveautés v29.1 (expérimental) — Télémétrie des 5 Sens](#nouveautés-v291-expérimental--télémétrie-des-5-sens-2026-08-02)
 3s. [Nouveautés v29.0 (expérimental) — Le Bus Sensoriel Multimodal & l'Identité C1/C2](#nouveautés-v290-expérimental--le-bus-sensoriel-multimodal--lidentité-c1c2-explicite-2026-08-02)
@@ -94,14 +95,43 @@ Pour un historique complet commit par commit, consultez [docs/CHANGELOG.md](docs
 
 > 📍 **État du dépôt (2026-08-02)** — la branche `master` intègre les versions **v28.0** (Port
 > Exocortex C3), **v29.0** (Bus Sensoriel & identité C1/C2) et **v29.1** (télémétrie des 5 sens).
-> La **v30.0** (« l'Exo-Sens ») est **implémentée et validée** sur la branche
-> `feat/v30-exo-sens`, en attente de merge — voir
-> [docs/CONCEPTION_v30_exo_sens.md](docs/CONCEPTION_v30_exo_sens.md) pour le cadrage et les
+> Les **v30.0** (« l'Exo-Sens ») et **v30.1** (instrumentation avant calibrage) sont
+> **implémentées et validées** sur la branche `feat/v30-exo-sens`, en attente de merge — voir
+> [docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md](docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md) pour le cadrage et les
 > arbitrages.
+
+### Nouveautés v30.1 (expérimental) — Instrumentation avant calibrage : mémoire & Sursaut (2026-08-02)
+
+> ⚠️ **Statut expérimental** : vit dans `src/naulthene/cerveau/noyau.py` (gitignored), pas encore porté sur `src/naulthene/cerveau/colab.py`.
+
+Deux constantes arbitraires subsistent dans le projet — `capacite_max = 200` (mémoire épisodique
+spatiale) et `EXTENSION_PATIENCE_SURSAUT = 50` (Sursaut de Volonté). L'objectif est de les rendre
+**adaptatives**, indexées sur la capacité réelle du cerveau et sur ses besoins, dans l'esprit du
+rêve adaptatif (qui n'a jamais de batch fixe). Décision de méthode : **instrumenter d'abord,
+calibrer ensuite**.
+
+* **Pourquoi ne pas écrire la formule tout de suite.** Remplacer un chiffre arbitraire par une
+  *formule* arbitraire ne vaut pas mieux — c'est juste plus élégant, et plus difficile à remettre
+  en cause ensuite. C'est la leçon explicite de la v29.1, où les 5 sens avaient été livrés sans
+  aucune télémétrie, écart qu'il a fallu corriger après coup.
+* **Deux questions que ces mesures doivent trancher.** (a) *La saturation mémoire coûte-t-elle
+  quelque chose ?* `naulthene_parole` affichait exactement 200 souvenirs après 480 000 ticks — le
+  plafond. Mais un rappel qui reste proche et frais à saturation prouverait que la capacité n'est
+  **pas** le facteur limitant. (b) *Dans quel sens doit varier une extension de sursaut ?*
+  « Muscle » (un sursaut qui gagne souvent se renforce) ou « habituation » (un stimulant répété
+  perd son effet) — les deux lectures sont biologiquement défendables, seules les données peuvent
+  départager.
+* **8 métriques ajoutées**, dont `Sursaut_Taux_Victoire` — la métrique décisive, car le projet
+  comptait déjà *combien* de sursauts se déclenchaient, jamais s'ils **servaient** à quelque chose.
+* **Invariance prouvée** : à graine fixée, l'empreinte de la séquence des 400 actions d'une
+  journée est **identique** avant et après. La télémétrie ne touche ni la décision, ni le gradient,
+  ni la dopamine.
+
+📖 Comment lire ces courbes et quoi en conclure : [docs/LANCEMENT.md](docs/LANCEMENT.md) §11.
 
 ### Nouveautés v30.0 (expérimental) — L'Unification & l'Extensibilité : l'Odorat Dynamique & l'Exo-Sens (2026-08-02)
 
-> ⚠️ **Statut expérimental** : vit dans `src/naulthene/cerveau/noyau.py` (gitignored, terrain d'essai local), `bus_sensoriel.py`, `persistance.py` et `src/naulthene/exocortex/`, pas encore porté sur `src/naulthene/cerveau/colab.py`. Cadrage complet et décisions dans [docs/CONCEPTION_v30_exo_sens.md](docs/CONCEPTION_v30_exo_sens.md).
+> ⚠️ **Statut expérimental** : vit dans `src/naulthene/cerveau/noyau.py` (gitignored, terrain d'essai local), `bus_sensoriel.py`, `persistance.py` et `src/naulthene/exocortex/`, pas encore porté sur `src/naulthene/cerveau/colab.py`. Cadrage complet et décisions dans [docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md](docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md).
 
 Concrétise le pivot amorcé par la v29 : l'Exocortex **C3** cesse d'être un « 3ᵉ cerveau » pour
 devenir un **6ᵉ sens exogène**, et l'odorat retrouve son rôle de boussole de proximité.
@@ -170,7 +200,7 @@ laissé qu'un unique avertissement console, noyé dans les logs.
 
 > ⚠️ **Statut expérimental** : vit dans `src/naulthene/cerveau/noyau.py` (gitignored, terrain d'essai local), le nouveau module **versionné** `src/naulthene/cerveau/bus_sensoriel.py` et `src/naulthene/cerveau/persistance.py`, pas encore porté sur `src/naulthene/cerveau/colab.py`.
 
-Trois chantiers issus de [docs/Maj_V29_readme.md](docs/Maj_V29_readme.md) : donner à Naulthène **les cinq sens** au lieu de deux, **nommer explicitement** la frontière C1/C2 déjà présente dans le code, et **auditer** la boucle de distillation C2 → C1 — qui, elle, n'avait pas besoin d'être écrite.
+Trois chantiers issus de [docs/Old_Archive_rmd/Maj_V29_readme.md](docs/Old_Archive_rmd/Maj_V29_readme.md) : donner à Naulthène **les cinq sens** au lieu de deux, **nommer explicitement** la frontière C1/C2 déjà présente dans le code, et **auditer** la boucle de distillation C2 → C1 — qui, elle, n'avait pas besoin d'être écrite.
 
 * **La hiérarchie des 5 sens, et son coût.** Tous les sens ne se valent pas en gourmandise énergétique, mais c'est la **combinaison de leur diversité** qui fait émerger une compréhension du monde. Jusqu'en v28.0, l'agent n'avait que ses deux sens gourmands — la vue (`porte_visuelle`, 147 dims) et l'ouïe (`porte_auditive`, 130 dims MFCC), chacun avec sa porte synaptique dédiée. Le nouveau module `bus_sensoriel.py` ajoute les trois sens manquants, qui sont justement les moins coûteux à calculer et les plus directement liés à la survie :
 
@@ -241,7 +271,7 @@ Garantie de non-altération inchangée : tout ajout reste de la lecture pure (`t
 
 ### Nouveautés v26.0 (expérimental, §A.5 seul) — Cristallisation Souple (2026-07-27)
 
-> ⚠️ **Statut expérimental** : vit uniquement dans `agi_local_test.py` (`NaultheneLinearSynaptique`), pas encore porté sur `agi_google_colab.py`. Premier chantier implémenté du plan v26.0 « Le Parent remplace le Programme » ([docs/AMELIORATION_V1.md](docs/AMELIORATION_V1.md)) — les autres chantiers (§A.1-A.4 durcissement JEPA, §B Parent Universel, §C rappel hippocampique, §D voix humaine) restent à l'état de proposition.
+> ⚠️ **Statut expérimental** : vit uniquement dans `agi_local_test.py` (`NaultheneLinearSynaptique`), pas encore porté sur `agi_google_colab.py`. Premier chantier implémenté du plan v26.0 « Le Parent remplace le Programme » ([docs/Old_Archive_rmd/AMELIORATION_V1.md](docs/Old_Archive_rmd/AMELIORATION_V1.md)) — les autres chantiers (§A.1-A.4 durcissement JEPA, §B Parent Universel, §C rappel hippocampique, §D voix humaine) restent à l'état de proposition.
 
 Protège de l'érosion nocturne les synapses matures — sollicitées fortement et régulièrement sur plusieurs nuits — sans jamais geler leur apprentissage diurne. Une seconde trace `myeline_cumul` accumule la myélinisation nuit après nuit (même patron de relaxation exponentielle que partout dans le projet, `ALPHA_CRISTAL = 0.95`) ; au-delà de `SEUIL_CRISTAL = 0.80`, la synapse devient `cristallisee` (cliquet à sens unique, jamais réversible).
 
@@ -407,7 +437,7 @@ Trois défauts détectés à la revue de la v22.0 (dont un critique) et corrigé
 
 Le plan de développement se lit aujourd'hui à travers trois documents complémentaires :
 [docs/Parcourt_readme.md](docs/Parcourt_readme.md) (guide pratique des 4 parcours d'entraînement),
-[docs/AMELIORATION_V1.md](docs/AMELIORATION_V1.md) (pistes d'évolution de l'architecture) et
+[docs/Old_Archive_rmd/AMELIORATION_V1.md](docs/Old_Archive_rmd/AMELIORATION_V1.md) (pistes d'évolution de l'architecture) et
 [docs/CHANGELOG.md](docs/CHANGELOG.md) (ce qui a déjà été livré, version par version).
 
 > *Note : ce paragraphe renvoyait auparavant à un fichier `plan_creat.md` qui n'a jamais existé
@@ -822,7 +852,7 @@ Un `.brain` antérieur à la v22.0 n'a pas `porte_auditive`/`tete_vocale`/`gener
 
 ### 8. v27.0-27.6 : de la table théorique à une voix réelle sur 8 dimensions, et une dopamine unifiée
 
-Plusieurs évolutions successives ferment les plus gros écarts entre cet hémisphère et une vraie acquisition du langage. **La cible n'est plus théorique, et couvre les 8 paramètres, pas seulement 2** : la table statique `VOYELLES_CIBLES` a été entièrement retirée (v27.6) — la cible vient TOUJOURS d'une analyse acoustique dynamique d'un enregistrement réel, soit la banque vocale de l'utilisateur (`voix/<mot>/*.wav`, voir [§ Démarrage Rapide](#-démarrage-rapide)) si elle existe, soit la référence `say` elle-même sinon. À l'origine (v27.0), seuls F1/F2 étaient extraits (analyse LPC) et appris ; un diagnostic sur un cerveau de 300 jours a montré que les 6 autres paramètres (f0, F3, durée, amplitude, largeurs de bande) restaient figés à leur valeur de naissance quel que soit le temps d'entraînement — la perte MSE de `tete_vocale` ne portait jamais que sur F1/F2. v27.6 étend l'extraction (pitch-tracking par autocorrélation pour f0, mesure directe pour durée/amplitude, F3 récupéré du même calcul LPC) et la perte contraint désormais dynamiquement toutes les dimensions effectivement fournies par la cible. La récompense se mélange en plus d'une distance spectrale MFCC↔MFCC entre le son réellement synthétisé et les prises de référence — l'agent est enfin noté et entraîné sur ce qu'il entend réellement, pas sur une abstraction à 2 nombres. **Le mot vient de ce que l'agent voit, de façon stabilisée** : `LecteurCaseFrontale` lit la case devant l'agent (mur/porte/clé/but/vide, puis des syntagmes couleur+objet) pour désigner la cible vocale — la fusion vision+audio du tronc cérébral (§1) devient une vraie association sémantique. Depuis v27.4, la cible ne change qu'après ~20 ticks consécutifs devant le même objet, pour éviter qu'elle ne change aussi vite que le regard de l'agent. **La dopamine des deux hémisphères s'unifie, et décroît avec la maîtrise** : le canal visuel et le canal vocal ne s'écrasent plus mutuellement (`max()`) mais se renforcent via une agrégation probabiliste bornée. Depuis v27.5, la contribution dopaminergique du canal vocal décroît linéairement avec le palier déjà atteint — un mot déjà maîtrisé ne shoote plus la dopamine au même niveau qu'un mot neuf. Voir [Nouveautés v27.6](#nouveautés-v276-expérimental--lécole-de-la-parole--synesthésie-2026-07-2728) et [docs/CONCEPTION_v22_audio.md §8](docs/CONCEPTION_v22_audio.md) pour le détail complet.
+Plusieurs évolutions successives ferment les plus gros écarts entre cet hémisphère et une vraie acquisition du langage. **La cible n'est plus théorique, et couvre les 8 paramètres, pas seulement 2** : la table statique `VOYELLES_CIBLES` a été entièrement retirée (v27.6) — la cible vient TOUJOURS d'une analyse acoustique dynamique d'un enregistrement réel, soit la banque vocale de l'utilisateur (`voix/<mot>/*.wav`, voir [§ Démarrage Rapide](#-démarrage-rapide)) si elle existe, soit la référence `say` elle-même sinon. À l'origine (v27.0), seuls F1/F2 étaient extraits (analyse LPC) et appris ; un diagnostic sur un cerveau de 300 jours a montré que les 6 autres paramètres (f0, F3, durée, amplitude, largeurs de bande) restaient figés à leur valeur de naissance quel que soit le temps d'entraînement — la perte MSE de `tete_vocale` ne portait jamais que sur F1/F2. v27.6 étend l'extraction (pitch-tracking par autocorrélation pour f0, mesure directe pour durée/amplitude, F3 récupéré du même calcul LPC) et la perte contraint désormais dynamiquement toutes les dimensions effectivement fournies par la cible. La récompense se mélange en plus d'une distance spectrale MFCC↔MFCC entre le son réellement synthétisé et les prises de référence — l'agent est enfin noté et entraîné sur ce qu'il entend réellement, pas sur une abstraction à 2 nombres. **Le mot vient de ce que l'agent voit, de façon stabilisée** : `LecteurCaseFrontale` lit la case devant l'agent (mur/porte/clé/but/vide, puis des syntagmes couleur+objet) pour désigner la cible vocale — la fusion vision+audio du tronc cérébral (§1) devient une vraie association sémantique. Depuis v27.4, la cible ne change qu'après ~20 ticks consécutifs devant le même objet, pour éviter qu'elle ne change aussi vite que le regard de l'agent. **La dopamine des deux hémisphères s'unifie, et décroît avec la maîtrise** : le canal visuel et le canal vocal ne s'écrasent plus mutuellement (`max()`) mais se renforcent via une agrégation probabiliste bornée. Depuis v27.5, la contribution dopaminergique du canal vocal décroît linéairement avec le palier déjà atteint — un mot déjà maîtrisé ne shoote plus la dopamine au même niveau qu'un mot neuf. Voir [Nouveautés v27.6](#nouveautés-v276-expérimental--lécole-de-la-parole--synesthésie-2026-07-2728) et [docs/Old_Archive_rmd/CONCEPTION_v22_audio.md §8](docs/Old_Archive_rmd/CONCEPTION_v22_audio.md) pour le détail complet.
 
 ---
 

@@ -4,6 +4,62 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [30.1-docs] - 2026-08-02
+
+### Archivage documentaire (`docs/Old_Archive_rmd/`) & harmonisation de toute la doc sur la v30
+
+| Type | Details |
+|------|---------|
+| **Commit** | N/A — en attente du commit de cette version |
+| **Catégorie** | docs |
+| **Impact** | Documentation |
+
+**Demande utilisateur : ranger les documents « plus à jour » dans un dossier d'archive
+`docs/Old_Archive_rmd/`, et mettre à jour toute la documentation restante.**
+
+`docs/` ne contient désormais que **5 documents vivants** : `CHANGELOG.md` (la référence
+factuelle), `LANCEMENT.md` (commandes et dépannage), `Parcourt_readme.md` (guide vulgarisé),
+`explications_readme.md` (détail algorithmique) et `EXPLICATIONS_v29_sens.md` (toujours la
+référence des 5 sens).
+
+**Critère d'archivage retenu** : un document rejoint l'archive quand sa mécanique est **livrée et
+documentée ailleurs**, jamais parce qu'il est simplement « vieux ». Ces documents restent
+précieux — ils gardent la trace des options **écartées** et de leurs raisons, ce qu'aucun document
+à jour ne raconte, et c'est ce qui évite qu'une idée déjà évaluée soit réintroduite plus tard sans
+connaître l'argument qui l'avait rejetée.
+
+| Archivé | Statut de la mécanique |
+|---|---|
+| `CONCEPTION_v22_audio.md` | ✅ Livrée (v22.0/v22.1, étendue jusqu'en v27.6) |
+| `CONCEPTION_v30_exo_sens.md` | ✅ Livrée (v30.0) |
+| `Maj_V29_readme.md` | ✅ Livrée (v29.0/v29.1) |
+| `AMELIORATION_V1.md` | 🟡 Partiellement réalisée (§A.5 Cristallisation Souple seule) |
+| `1440_JOURS_NAULTHENE_V1.md` | 📊 Analyse de run |
+
+⚠️ **Piège traité** : ces documents étaient référencés depuis `readme.md`, `CLAUDE.md`, les autres
+docs **et sept modules du code source** (docstrings de `bus_sensoriel.py`, `hemisphere_audio.py`,
+`professeur_gemma.py`, `lecons_vocales.py`, `client_professeur.py`, `daemon_cerveau.py`,
+`irm_cerveau.py`). Déplacement par `git mv` (historique préservé, visible en `R` dans le statut),
+puis correction des liens **entrants** (11 fichiers) **et sortants** (les documents archivés
+pointaient vers `docs/`, désormais un cran au-dessus). Vérification finale : **100 % des liens
+markdown internes du dépôt résolvent**.
+
+**Mises à jour de fond** (au-delà de l'archivage) :
+
+| Fichier | Changement |
+|-----------------|------------|
+| `docs/Old_Archive_rmd/README.md` | **Nouveau.** Explique le critère d'archivage, liste le contenu avec le statut de chaque mécanique, rappelle où trouver l'état courant, et documente la procédure (`git mv` + correction des liens, y compris dans le code) |
+| `docs/LANCEMENT.md` | En-tête V21-V29 → **V21-V30** (l'Exo-Sens §10 et les métriques de calibrage §11 manquaient) ; §9a : la légende de l'odorat décrivait encore la rampe linéaire à 4 cases, remplacée par l'atténuation exponentielle ; **2 lignes de dépannage** citaient `PORTEE_ODORAT=4` comme comportement actuel — corrigées |
+| `readme.md` | Nouvelle section **v30.1** (elle manquait alors que la version est livrée) + entrée de table des matières ; encadré « État du dépôt » étendu à la v30.1 |
+| `docs/explications_readme.md` | §12 « v7 → v29 » → **« v7 → v30 »** (le titre était déjà en retard sur sa propre table) + 2 lignes d'évolutions (v30.0, v30.1) ; **§15.7** (Odorat Dynamique & Exo-Sens) et **§15.8** (instrumentation) ; glossaire : `PORTEE_ODORAT` marquée « plus utilisée », ajout de `LAMBDA_ODORAT`, `SEUIL_COUPURE_ODORAT`, `DIM_EXO`, `PERIODE_PERCEPTION_EXO` |
+| `CLAUDE.md` | Arborescence `docs/` refaite (vivants vs archive) ; nouvelle section **« Archivage documentaire »** dans *Maintenance du Changelog*, avec l'avertissement que le code source référence ces documents |
+
+**Validation** : 100 % des liens markdown résolvent (vérifié sur les 4 fichiers racine/docs **et**
+les 6 documents archivés) ; aucune référence obsolète `docs/<archive>.md` restante ; régression
+150 ticks + nuit OK (46 clés, `DIM_VECTEUR_BIO=32`) ; tous les modules importent.
+
+---
+
 ## [30.1-experimental] - 2026-08-02
 
 ### Instrumentation avant calibrage — mémoire épisodique & Sursaut de Volonté
@@ -64,7 +120,7 @@ calibré. Le passage à l'adaptatif attend les courbes du run de 700 jours en co
 | **Catégorie** | feat (nouvelle mécanique cognitive majeure, expérimentale) |
 | **Impact** | Critique (architecture du réseau, persistance, contrat des plugs) |
 
-**Arbitrages utilisateur, tranchés avant implémentation (voir `docs/CONCEPTION_v30_exo_sens.md`) : (1) l'odorat passe d'une rampe linéaire à une atténuation exponentielle `exp(-0.8·d)`, un gradient de diffusion chimique plutôt qu'un cercle à bord net ; (2) C3 cesse d'être un « 3ᵉ cerveau » interrogé par une action apprise pour devenir un 6ᵉ sens perçu en continu, SANS aucun seuil de déclenchement — l'attention à ce canal doit émerger de la myélinisation de `integrateur_bio`, pas d'un `if` ; (3) `num_actions` reste à 8 avec `ACTION_DEMANDER` masquée en permanence, pour ne jamais amputer les `.brain` existants.**
+**Arbitrages utilisateur, tranchés avant implémentation (voir `docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md`) : (1) l'odorat passe d'une rampe linéaire à une atténuation exponentielle `exp(-0.8·d)`, un gradient de diffusion chimique plutôt qu'un cercle à bord net ; (2) C3 cesse d'être un « 3ᵉ cerveau » interrogé par une action apprise pour devenir un 6ᵉ sens perçu en continu, SANS aucun seuil de déclenchement — l'attention à ce canal doit émerger de la myélinisation de `integrateur_bio`, pas d'un `if` ; (3) `num_actions` reste à 8 avec `ACTION_DEMANDER` masquée en permanence, pour ne jamais amputer les `.brain` existants.**
 
 **1. Chantier 1 — l'Odorat Dynamique (atténuation exponentielle)**
 
@@ -156,12 +212,12 @@ l'intégration dans l'historique.
 | **v29.1** | Télémétrie des 5 sens — 7 clés W&B `Sens_*`, ligne au bilan de nuit, diagnostic de saturation de l'odorat |
 
 La branche `feat/v30-exo-sens` a été **rebasée sur ce `master`** — elle ne contient pour l'instant
-que le document de cadrage `docs/CONCEPTION_v30_exo_sens.md` (aucun code livré).
+que le document de cadrage `docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md` (aucun code livré).
 
 | Fichier modifié | Changement |
 |-----------------|------------|
 | `readme.md` | Encadré « État du dépôt » ; nouvelle section v29.1 (absente jusqu'ici) ; section v30.0 explicitement marquée **en cours de conception** ; 2 entrées de table des matières |
-| `CLAUDE.md` | Nouvelle sous-section « État des branches » dans *Git Workflow* ; `CONCEPTION_v30_exo_sens.md` ajouté à l'arborescence |
+| `CLAUDE.md` | Nouvelle sous-section « État des branches » dans *Git Workflow* ; `docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md` ajouté à l'arborescence |
 | `docs/CHANGELOG.md` | Cette entrée |
 | `docs/LANCEMENT.md`, `docs/Parcourt_readme.md`, `docs/explications_readme.md` | Références de version harmonisées (v29.1) et renvoi vers le cadrage v30 |
 
@@ -242,7 +298,7 @@ Sur les 4 premiers niveaux du `PROGRAMME` (les plus petits), l'odorat est donc *
 | **Catégorie** | feat (nouvelle mécanique cognitive majeure, expérimentale) |
 | **Impact** | Critique (architecture du réseau, persistance) |
 
-**Contexte utilisateur (voir `docs/Maj_V29_readme.md`) : trois idées à intégrer au dépôt existant sans casser ce qui fonctionne. (1) La hiérarchie des 5 sens — tous les sens ne coûtent pas le même prix en calcul, mais c'est la combinaison de leur diversité qui fait émerger une compréhension du monde ; jusqu'en v28.0 Naulthène n'avait que ses deux sens gourmands (vue, ouïe), les trois sens faibles à moyens n'existaient nulle part. (2) L'identité C1/C2 explicite — la distinction réflexe/néo-cortex existait déjà dans le code (`tete_motrice` d'un côté, `simuler_futur_et_planifier` de l'autre) mais restait implicite, entrelacée dans le corps de `penser()`. (3) La boucle de distillation C2 → C1 — qui, contrairement au reste, n'avait PAS besoin d'être écrite : elle est déjà réalisée par le cycle jour/nuit existant (`annexe_weight` → `base_weight` → Cristallisation Souple v26.0), et l'audit de cette version l'a confirmée plutôt que de la réimplémenter en double.**
+**Contexte utilisateur (voir `docs/Old_Archive_rmd/Maj_V29_readme.md`) : trois idées à intégrer au dépôt existant sans casser ce qui fonctionne. (1) La hiérarchie des 5 sens — tous les sens ne coûtent pas le même prix en calcul, mais c'est la combinaison de leur diversité qui fait émerger une compréhension du monde ; jusqu'en v28.0 Naulthène n'avait que ses deux sens gourmands (vue, ouïe), les trois sens faibles à moyens n'existaient nulle part. (2) L'identité C1/C2 explicite — la distinction réflexe/néo-cortex existait déjà dans le code (`tete_motrice` d'un côté, `simuler_futur_et_planifier` de l'autre) mais restait implicite, entrelacée dans le corps de `penser()`. (3) La boucle de distillation C2 → C1 — qui, contrairement au reste, n'avait PAS besoin d'être écrite : elle est déjà réalisée par le cycle jour/nuit existant (`annexe_weight` → `base_weight` → Cristallisation Souple v26.0), et l'audit de cette version l'a confirmée plutôt que de la réimplémenter en double.**
 
 **Deux décisions structurantes prises par l'utilisateur à la conception :**
 - **Câblage des nouveaux sens** : `DIM_VECTEUR_BIO` passe de 16 à 24 dims — le toucher et la chimie entrent par la **queue du vecteur bio** (donc par `integrateur_bio`, juste avant la décision), **pas** par une nouvelle porte synaptique sommée dans le bus latent. Conséquence voulue : les sens faibles ne polluent jamais la cible JEPA (`perte_jepa` compare toujours le bus prédit au bus réel de la **vision seule**), et un cerveau entraîné sur 300+ jours ne voit pas son modèle du monde perturbé.
@@ -270,7 +326,7 @@ Module **pur numpy**, qui n'importe jamais `noyau.py` (même discipline que `exo
 La section 2 devient « LE CERVEAU C1 (RÉFLEXE) & C2 (NÉO-CORTEX) ». Le corps de `penser()` est désormais l'**arbitrage seul**, et la frontière est encapsulée dans deux méthodes nommées :
 
 - **`_executer_c1_reflexe()`** — tout ce qui coûte quasi rien : compression du flux des 5 sens (`_tronc_cerebral` pour les deux sens gourmands, queue du `vecteur_bio` pour les trois autres), contexte épisodique, intégration viscérale, et le réflexe moteur immédiat (`tete_motrice`) en latence zéro.
-- **`_solliciter_c2_neocortex()`** — le moteur analytique lourd (`simuler_futur_et_planifier` + JEPA). Il ne reçoit **que** `pensee_bio`, l'état déjà compressé par C1 : jamais les pixels, jamais le MFCC brut, jamais l'environnement — exactement le schéma de `Maj_V29_readme.md`.
+- **`_solliciter_c2_neocortex()`** — le moteur analytique lourd (`simuler_futur_et_planifier` + JEPA). Il ne reçoit **que** `pensee_bio`, l'état déjà compressé par C1 : jamais les pixels, jamais le MFCC brut, jamais l'environnement — exactement le schéma de `docs/Old_Archive_rmd/Maj_V29_readme.md`.
 
 La fusion `logits_instinct + valeurs_simulees * force_planification` reste **strictement inchangée** depuis la v13.0.
 
@@ -376,7 +432,7 @@ Nouveau fichier `Parcourt_readme.md`, à la racine du dépôt (comme `readme.md`
 
 **Chantier 3 — La trappe de secours.** Purement structurelle, aucun code nouveau : sans plug, le masquage rend l'action inexistante ; un plug qui échoue en vol part en cooldown et la curiosité intrinsèque (`DetecteurCuriositeJEPA`) et le Sursaut de Volonté restent actifs en permanence, jamais conditionnés à C3.
 
-**Chantier 4 — Registre d'Assimilation.** Une réponse C3 est mise en attente (`reponse_c3_en_attente`) et appliquée au tick SUIVANT (le bus répond après coup, jamais dans le même pas que l'émission) : sous `SEUIL_OVERRIDE_C3=0.85` de confiance, elle biaise les logits (`+= FORCE_C3 * préférences`, même forme que l'arbitrage C2) ; au-dessus, elle impose l'action (le `log_prob` reste alors celui de l'action réellement jouée sous la distribution courante, pour ne pas invalider REINFORCE). Un conseil C3 suivi d'un succès devient un 3ème canal du "OU doux" v27.0 (`POIDS_DOPAMINE_C3=0.5`, formule étendue à 3 facteurs, toujours bornée dans [0,1] et rétrocompatible à l'identique si `poids_c3=0`) — le LTP (`fortifier_synapses`) et l'importance majorée du souvenir (`micro_boost_ancrage`, déjà existant) font le reste : la trace est rejouée en priorité la nuit, sans réintroduire de distillation supervisée dans la politique (hors du chemin de gradient, cohérent avec la contrainte "pas de Transformer" de `docs/AMELIORATION_V1.md`).
+**Chantier 4 — Registre d'Assimilation.** Une réponse C3 est mise en attente (`reponse_c3_en_attente`) et appliquée au tick SUIVANT (le bus répond après coup, jamais dans le même pas que l'émission) : sous `SEUIL_OVERRIDE_C3=0.85` de confiance, elle biaise les logits (`+= FORCE_C3 * préférences`, même forme que l'arbitrage C2) ; au-dessus, elle impose l'action (le `log_prob` reste alors celui de l'action réellement jouée sous la distribution courante, pour ne pas invalider REINFORCE). Un conseil C3 suivi d'un succès devient un 3ème canal du "OU doux" v27.0 (`POIDS_DOPAMINE_C3=0.5`, formule étendue à 3 facteurs, toujours bornée dans [0,1] et rétrocompatible à l'identique si `poids_c3=0`) — le LTP (`fortifier_synapses`) et l'importance majorée du souvenir (`micro_boost_ancrage`, déjà existant) font le reste : la trace est rejouée en priorité la nuit, sans réintroduire de distillation supervisée dans la politique (hors du chemin de gradient, cohérent avec la contrainte "pas de Transformer" de `docs/Old_Archive_rmd/AMELIORATION_V1.md`).
 
 **Le risque n°1 : rétrocompatibilité des `.brain` existants.** `load_state_dict(strict=False)` gère les clés absentes mais PAS un mismatch de forme sur une clé présente des deux côtés — passer à 8 actions change la forme de `tete_motrice`/`generateur_attente`/`generateur_attente_audio`/`actions_eye`. Nouvelle fonction `_greffer_action_supplementaire` (généralise le patron du filtre `integrateur_bio` déjà existant, mais par RECOPIE plutôt que par exclusion) : chaque bloc `[:7]` existant est recopié dans le nouveau tenseur `[:8]`, la 8ème ligne/colonne restant à son initialisation Xavier atténuée — même sémantique que `NaultheneLinearSynaptique.agrandir()`.
 
@@ -583,12 +639,12 @@ Nouveau fichier `Parcourt_readme.md`, à la racine du dépôt (comme `readme.md`
 | **Catégorie** | feat (mécanique expérimentale) |
 | **Impact** | Fonctionnel (plasticité structurelle) — `agi_local_test.py`/`noyau.py` uniquement |
 
-**Implémente le chantier §A.5 du plan v26.0 « Le Parent remplace le Programme » ([docs/AMELIORATION_V1.md](AMELIORATION_V1.md)) : les synapses `NaultheneLinearSynaptique` sollicitées fortement et régulièrement sur plusieurs nuits deviennent quasi indestructibles à l'érosion nocturne, sans jamais geler leur apprentissage diurne. Une seconde trace `myeline_cumul` accumule la myélinisation consolidée nuit après nuit (même patron de relaxation exponentielle que partout dans le projet, `ALPHA_CRISTAL = 0.95`) ; au-delà de `SEUIL_CRISTAL = 0.80`, la synapse devient `cristallisee` — un cliquet à sens unique, jamais réversible. Correctif appliqué en cours d'implémentation : le plancher d'érosion initialement prévu comme une constante rigide (`MYELINE_MIN_CRISTAL = 0.50`, tout-ou-rien) a été remplacé par une falaise continue — une sigmoïde de `myeline_cumul` centrée sur le seuil (`K_RAIDEUR_CRISTAL = 10.0`) — plus fidèle au principe du projet de régulation dynamique sans règle en dur : une synapse cristallisée voit son érosion tendre vers zéro à mesure qu'elle s'éloigne du seuil, tandis qu'une synapse jamais cristallisée s'érode normalement et finit élaguée en temps fini (zéro synapse fantôme).**
+**Implémente le chantier §A.5 du plan v26.0 « Le Parent remplace le Programme » ([docs/Old_Archive_rmd/AMELIORATION_V1.md](Old_Archive_rmd/AMELIORATION_V1.md)) : les synapses `NaultheneLinearSynaptique` sollicitées fortement et régulièrement sur plusieurs nuits deviennent quasi indestructibles à l'érosion nocturne, sans jamais geler leur apprentissage diurne. Une seconde trace `myeline_cumul` accumule la myélinisation consolidée nuit après nuit (même patron de relaxation exponentielle que partout dans le projet, `ALPHA_CRISTAL = 0.95`) ; au-delà de `SEUIL_CRISTAL = 0.80`, la synapse devient `cristallisee` — un cliquet à sens unique, jamais réversible. Correctif appliqué en cours d'implémentation : le plancher d'érosion initialement prévu comme une constante rigide (`MYELINE_MIN_CRISTAL = 0.50`, tout-ou-rien) a été remplacé par une falaise continue — une sigmoïde de `myeline_cumul` centrée sur le seuil (`K_RAIDEUR_CRISTAL = 10.0`) — plus fidèle au principe du projet de régulation dynamique sans règle en dur : une synapse cristallisée voit son érosion tendre vers zéro à mesure qu'elle s'éloigne du seuil, tandis qu'une synapse jamais cristallisée s'érode normalement et finit élaguée en temps fini (zéro synapse fantôme).**
 
 | Fichier modifié | Changement |
 |-----------------|------------|
 | `src/naulthene/cerveau/noyau.py` | `NaultheneLinearSynaptique.__init__` : 2 nouveaux buffers (`myeline_cumul`, `cristallisee`). `cycle_sommeil()` : nouvelle Étape 3.5 (accumulation inter-nuits + cliquet de cristallisation) et érosion (Étape 3) plancher-protégée par une falaise sigmoïde plutôt qu'un plancher rigide. `agrandir()` : les 2 nouveaux buffers suivent le même triptyque resize/copie-par-segment que `myeline_M`/`trace_activation` (nouvelles dimensions nées à `0`/`False`). 3 nouvelles constantes module (`ALPHA_CRISTAL`, `SEUIL_CRISTAL`, `K_RAIDEUR_CRISTAL`). `forward()` et `fortification_dopaminergique()` inchangées — garantit par construction la règle dissymétrique (le gradient diurne sur `annexe_weight` reste identique, cristallisée ou non). |
-| `docs/AMELIORATION_V1.md` | §A.5 mis à jour pour refléter la falaise sigmoïde implémentée (remplace le plancher rigide de la proposition initiale) ; glossaire §G : `MYELINE_MIN_CRISTAL` remplacé par `K_RAIDEUR_CRISTAL = 10.0` |
+| `docs/Old_Archive_rmd/AMELIORATION_V1.md` | §A.5 mis à jour pour refléter la falaise sigmoïde implémentée (remplace le plancher rigide de la proposition initiale) ; glossaire §G : `MYELINE_MIN_CRISTAL` remplacé par `K_RAIDEUR_CRISTAL = 10.0` |
 | `docs/explications_readme.md` | Nouvelle section §8.5 « Cristallisation Souple » (formules exactes, extrait de code, règle dissymétrique) ; table §12 et glossaire §13 mis à jour (v26.0, `ALPHA_CRISTAL`/`SEUIL_CRISTAL`/`K_RAIDEUR_CRISTAL`) |
 | `readme.md` | Nouvelle entrée « Nouveautés v26.0 (expérimental, §A.5 seul) » en tête du Journal des Mises à Jour + entrée table des matières `3x` |
 
@@ -613,7 +669,7 @@ Nouveau fichier `Parcourt_readme.md`, à la racine du dépôt (comme `readme.md`
 | `src/naulthene/**/*.py` (tous) | Déplacement en package (`git mv`), réécriture de tous les imports locaux en chemins de package absolus, chemins `.brain` par défaut pointant vers `brains/` |
 | `.gitignore` | Chemins mis à jour vers `brains/*.brain` et `src/naulthene/cerveau/noyau.py` |
 | `readme.md` | Reste à la racine du dépôt ; formulation d'attribution durcie en tête de document |
-| `docs/CHANGELOG.md`, `docs/explications_readme.md`, `docs/LANCEMENT.md`, `docs/AMELIORATION_V1.md` | Liens relatifs corrigés vers la nouvelle arborescence (`../readme.md`, `../CLAUDE.md`, `../LICENSE`, `../NOTICE`) |
+| `docs/CHANGELOG.md`, `docs/explications_readme.md`, `docs/LANCEMENT.md`, `docs/Old_Archive_rmd/AMELIORATION_V1.md` | Liens relatifs corrigés vers la nouvelle arborescence (`../readme.md`, `../CLAUDE.md`, `../LICENSE`, `../NOTICE`) |
 | `CLAUDE.md` | Section Architecture réécrite pour décrire le package ; commandes de lancement mises à jour (`PYTHONPATH=src python -m naulthene....`) |
 | `NOTICE` | Attribution renforcée : exigence explicite de citer Adrien Nault comme auteur du concept/architecture original, dans tout usage public (pas seulement redistribution de code), avec référence à la Section 4(d) de la licence |
 | `LICENSE` | Texte légal Apache 2.0 inchangé (Sections 1-9) ; ajout d'un renvoi explicite vers `NOTICE` en fin de fichier |

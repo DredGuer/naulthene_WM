@@ -12,7 +12,7 @@ scripts de `src/naulthene/salles_de_classe/`.
 
 > 📍 Une **v30.0** (« l'Exo-Sens ») est en cours de conception sur la branche
 > `feat/v30-exo-sens` — elle n'est **pas encore utilisable** et ne change rien aux commandes de
-> ce guide. Voir [CONCEPTION_v30_exo_sens.md](CONCEPTION_v30_exo_sens.md).
+> ce guide. Voir [CONCEPTION_v30_exo_sens.md](Old_Archive_rmd/CONCEPTION_v30_exo_sens.md).
 
 ---
 
@@ -528,7 +528,7 @@ Côté W&B, 7 courbes `Sens_*` sont enregistrées chaque nuit.
 > devient vraiment discriminant qu'au Doctorat (`MultiRoom`, ~57 %). Ce n'est pas une panne, mais
 > un réglage encore ouvert (voir [EXPLICATIONS_v29_sens.md](EXPLICATIONS_v29_sens.md) §12) —
 > c'est devenu le **chantier 1 de la v30.0** (odorat à portée relative à la taille de la carte,
-> voir [CONCEPTION_v30_exo_sens.md](CONCEPTION_v30_exo_sens.md) §2).
+> voir [CONCEPTION_v30_exo_sens.md](Old_Archive_rmd/CONCEPTION_v30_exo_sens.md) §2).
 > En revanche, un `Odorat` à **0 %** sur un niveau où des ressources existent mérite un coup d'œil.
 
 📖 Pour le détail complet (formules, pourquoi ces sens n'entrent pas dans le modèle du monde,

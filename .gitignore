@@ -24,6 +24,10 @@ src/naulthene/cerveau/noyau.py
 # projet, restent locaux.
 docs/1440_JOURS_NAULTHENE_V1.md
 docs/AMELIORATION_V1.md
+# ... y compris après leur archivage dans docs/Old_Archive_rmd/ (v30.1-docs) : le
+# déplacement ne change pas leur nature de note personnelle.
+docs/Old_Archive_rmd/1440_JOURS_NAULTHENE_V1.md
+docs/Old_Archive_rmd/AMELIORATION_V1.md
 
 # Banque vocale de l'utilisateur (v27.0, "École de la Parole & Synesthésie") —
 # enregistrements .wav de la voix de l'utilisateur nommant les concepts du curriculum

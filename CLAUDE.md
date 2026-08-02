@@ -63,13 +63,18 @@ Le projet est organisé en **package Python** sous `src/naulthene/`, avec un dos
 │   └── old_V30/                    nommé DDMMYYYYHHMM_VXX_NMRTOUR_RMD.brain (voir « Convention de
 │                                   nommage des cerveaux ») ; old_VXX/ archive les générations
 │                                   précédentes, jamais supprimées
-└── docs/                         documentation complémentaire (CHANGELOG.md, explications_readme.md,
-                                    LANCEMENT.md, Parcourt_readme.md — guide pratique vulgarisé du
-                                    système de cursus, commandes de lancement, jours/ticks par parcours,
-                                    détail des paliers, FAQ — CONCEPTION_v22_audio.md,
-                                    EXPLICATIONS_v29_sens.md — doc dédiée du Bus Sensoriel & de
-                                    l'identité C1/C2 — CONCEPTION_v30_exo_sens.md — cadrage et
-                                    arbitrages de la v30 (Exo-Sens) — et les analyses de run)
+└── docs/                         DOCUMENTS VIVANTS uniquement (5) :
+    │                               CHANGELOG.md — historique version par version, la référence
+    │                               factuelle ; LANCEMENT.md — toutes les commandes et le dépannage ;
+    │                               Parcourt_readme.md — guide vulgarisé des 4 parcours ;
+    │                               explications_readme.md — détail algorithmique et mathématique ;
+    │                               EXPLICATIONS_v29_sens.md — doc dédiée du Bus Sensoriel & C1/C2
+    └── Old_Archive_rmd/          documents historiques : conceptions dont la mécanique est livrée
+                                    (CONCEPTION_v22_audio, CONCEPTION_v30_exo_sens, Maj_V29_readme),
+                                    plans partiellement réalisés (AMELIORATION_V1) et analyses de run.
+                                    Précieux car ils gardent la trace des options ÉCARTÉES et de leurs
+                                    raisons — mais ne jamais s'y référer pour l'état courant. Voir son
+                                    README.md pour la convention d'archivage
 ```
 
 Le cœur de référence est `src/naulthene/cerveau/colab.py` (ex-`agi_google_colab.py`, pensé pour tourner sur Google Colab). Structure interne (sections numérotées par des commentaires `# --- N. ... ---`) :
@@ -186,7 +191,7 @@ Il n'y a ni linter ni suite de tests automatisés configurés. Toute vérificati
 | Branche | Contenu | État |
 |---|---|---|
 | `master` | v28.0 (Port Exocortex C3) + v29.0 (Bus Sensoriel & identité C1/C2) + v29.1 (télémétrie des 5 sens) | intégrée, poussée |
-| `feat/v30-exo-sens` | v30.0 — l'Exo-Sens (C3 en 6ᵉ sens, odorat dynamique exponentiel) | **implémentée et validée**, en attente de merge — voir `docs/CONCEPTION_v30_exo_sens.md` |
+| `feat/v30-exo-sens` | v30.0 — l'Exo-Sens (C3 en 6ᵉ sens, odorat dynamique exponentiel) | **implémentée et validée**, en attente de merge — voir `docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md` |
 | `feat/v28-exocortex-c3` | branche d'origine des v28/v29, désormais mergée dans `master` | conservée pour l'historique |
 
 Le travail en cours se fait sur `feat/v30-exo-sens`, rebasée sur `master`. Décisions structurantes
@@ -229,6 +234,20 @@ Ajouter une entrée **en haut du fichier** (juste après l'introduction) avec ce
 ```
 
 Utiliser le hash court réel du commit (`git rev-parse --short HEAD`) une fois le commit créé. Si l'entrée est rédigée avant le commit correspondant, renseigner temporairement `N/A — en attente du commit de cette version` puis la corriger après coup.
+
+### 3. Archivage documentaire (`docs/Old_Archive_rmd/`, depuis v30.1)
+
+`docs/` ne contient que des **documents vivants** (5 aujourd'hui). Un document rejoint
+`docs/Old_Archive_rmd/` quand sa mécanique est **livrée et documentée ailleurs** — jamais parce
+qu'il est simplement « vieux ». Un cadrage archivé reste précieux : il garde la trace des options
+**écartées** et de leurs raisons, ce qu'aucun document à jour ne raconte, et c'est ce qui évite
+qu'une idée déjà évaluée soit réintroduite sans connaître l'argument qui l'avait rejetée.
+
+Procédure : `git mv` (jamais `mv` seul — l'historique du fichier est précieux), puis **corriger
+tous les liens entrants**. Attention : ces documents sont référencés depuis `readme.md`,
+`CLAUDE.md`, les autres docs **et les docstrings du code source** (`bus_sensoriel.py`,
+`hemisphere_audio.py`, `professeur_gemma.py`, `lecons_vocales.py`, `client_professeur.py`,
+`daemon_cerveau.py`, `irm_cerveau.py`). Vérifier ensuite qu'aucun lien ne pointe dans le vide.
 
 ### 2. `readme.md`
 

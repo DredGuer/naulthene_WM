@@ -1,15 +1,17 @@
 # Guide de Lancement — Naulthène AGI (Cuve Persistante + Hémisphère Audio + Cursus par Ères + Cerveau Bébé + Cursus de la Parole + Port Exocortex C3 + Bus Sensoriel)
 
-Ce guide couvre le lancement local (Mac) de l'écosystème V21-V29 : le cerveau persistant
+Ce guide couvre le lancement local (Mac) de l'écosystème V21-V30 : le cerveau persistant
 (`daemon_cerveau.py`, dans `src/naulthene/cuve/`) et ses deux clients (`client_corps.py` pour
 MiniGrid, `client_professeur.py` pour les leçons de parole ponctuelles), trois cursus
 développementaux autonomes (`src/naulthene/salles_de_classe/`) : le Cursus par Ères
 (`cursus_developpemental.py`, 1000 jours, voir §6), le Cerveau Bébé (`cursus_bebe.py`, 1440
 jours, voir §6bis) et le Cursus de la Parole (`cursus_parole.py`, 900 jours, v27.0-expérimental,
 voir §6ter), le Port Exocortex C3 (`src/naulthene/exocortex/`, v28.0-expérimental, voir §8),
-ainsi que le Bus Sensoriel des 5 sens (`src/naulthene/cerveau/bus_sensoriel.py`,
-v29.0-expérimental, voir §9). Voir `readme.md` pour l'architecture complète, `CHANGELOG.md`
-pour l'historique des versions.
+le Bus Sensoriel des 5 sens (`src/naulthene/cerveau/bus_sensoriel.py`, v29.0-expérimental, voir
+§9), l'Exo-Sens — le 6ᵉ sens (v30.0-expérimental, voir §10) et les métriques de calibrage
+(v30.1, voir §11). Voir `readme.md` pour l'architecture complète, `CHANGELOG.md` pour
+l'historique des versions, et [Old_Archive_rmd/](Old_Archive_rmd/) pour les documents de
+conception historiques.
 
 > 🆕 **v29.0/v29.1 — rien à configurer.** Le Bus Sensoriel (toucher, odorat, goût) est **actif
 > automatiquement** dans tous les modes ci-dessous : aucune option de ligne de commande, aucun
@@ -98,7 +100,7 @@ PYTHONPATH=src python -m naulthene.cuve.daemon_cerveau --port 9999 --brain brain
 - Ressuscite ton cerveau existant (tick_absolu, dopamine, curriculum, souvenirs intacts).
 - Si c'est la première connexion depuis la V22, tu verras des messages de greffe :
   `🌱 Hémisphères nouvellement greffés` et `🔄 integrateur_bio exclu du chargement` —
-  normal, une fois seulement (voir `CONCEPTION_v22_audio.md` §11 pour le détail).
+  normal, une fois seulement (voir `docs/Old_Archive_rmd/CONCEPTION_v22_audio.md` §11 pour le détail).
 - **Depuis la v29.0**, un `.brain` antérieur affiche en plus, une seule fois,
   `👃 integrateur_bio greffé de N à M dims d'entrée (+8 : toucher/odorat/goût)` — la couche
   n'est **plus jamais exclue** dans ce cas, elle est greffée par recopie et **tous les acquis
@@ -655,7 +657,7 @@ Comment lire la sortie :
 | `contact` | 1 = l'agent est au contact d'un mur ou d'une porte fermée devant lui, 0 = la voie est libre |
 | `main` | 1 = l'agent porte un objet (la clé, typiquement), 0 = mains vides |
 | `orient` | Orientation encodée sur le cercle (cos, sin) — évite la fausse discontinuité entre les directions 3 et 0 |
-| `odorat` | 1.00 = l'agent est SUR la ressource, 0.25 = elle est à 3 cases, 0.00 = hors de portée (> `PORTEE_ODORAT`, soit 4 cases en v29 — une portée relative à la taille de la carte est à l'étude pour la v30) |
+| `odorat` | Depuis la v30.0, **atténuation exponentielle** `exp(-0.8 × distance)` : 1.00 au contact, 0.45 à 1 case, 0.20 à 2 cases, coupé à 0.00 au-delà de ~5 cases (voir §10d) |
 | `gout` | 1.00 juste après une bouchée, puis décroît (~10 ticks) jusqu'à 0 |
 
 ### 9b. Vérifier la hiérarchie des 5 sens
@@ -908,8 +910,8 @@ observable ce qui devra être calibré.
 | `ACTION_DEMANDER` (action 7) n'est jamais jouée même avec un plug enregistré | Comportement normal sur un cerveau jamais entraîné à ce choix — voir §8c, il faut soit biaiser artificiellement `tete_motrice` pour un test, soit laisser un vrai run apprendre ce choix par lui-même (REINFORCE, pas un seuil codé en dur) |
 | Message `👃 integrateur_bio greffé de N à M dims d'entrée` au chargement (§9c) | Normal et attendu **une seule fois** sur un `.brain` créé avant la v29.0 — le vecteur viscéral passe de 16 à 24 dims (toucher/odorat/goût). La greffe **préserve tous les acquis au bit près**, les 8 nouvelles dimensions naissent vierges. Si le message réapparaît à CHAQUE lancement, vérifie que la sauvegarde qui suit s'est bien effectuée (pas de `kill -9` avant `💾 Cerveau cristallisé avec succès`) |
 | Message `🔄 integrateur_bio exclu du chargement` depuis la v29.0 | **Anormal** pour un simple passage 16→24 dims — ce cas est censé être pris en charge par la greffe (`👃`, ligne ci-dessus). L'exclusion ne subsiste qu'en trappe de secours pour un mismatch qu'on ne sait pas greffer (ex. `dim_bus` incohérent entre le `.brain` et l'agent recréé). Vérifie que le `.brain` n'a pas été produit par une autre architecture/branche |
-| L'odorat reste à 0.00 en permanence (§9a) | Normal si aucune source n'est à portée : `PORTEE_ODORAT=4` cases seulement, et les ressources ne sont générées que par `DetecteurRessourcesBiologiques` (Ball rouge = Nourriture, Ball bleue = Eau). Sur un niveau sans ressource générée, ou avec l'agent à plus de 4 cases, 0.00 est le bon résultat |
+| L'odorat reste à 0.00 en permanence (§9a) | Normal si aucune source n'est proche : depuis la v30.0 le signal suit `exp(-0.8 × distance)` et tombe sous le seuil de coupure au-delà de ~5 cases. Les ressources ne sont générées que par `DetecteurRessourcesBiologiques` (Ball rouge = Nourriture, Ball bleue = Eau) — sur un niveau sans ressource générée, 0.00 est le bon résultat |
 | Le toucher renvoie toujours `0.0` sur les 4 dims | Le bus s'est désactivé — cherche l'avertissement `⚠️ Bus sensoriel (toucher/odorat/goût) désactivé (API minigrid incompatible : ...)` affiché **une seule fois** dans la console. Même dégradation gracieuse que les détecteurs génériques : l'entraînement continue normalement, seuls les 3 sens faibles sont neutres. Depuis la v29.1, le suffixe `⚠️ BUS DÉSACTIVÉ` s'affiche en plus à **chaque** bilan de nuit et `Sens_Bus_Actif` passe à 0 dans W&B |
 | Ligne `Les 5 Sens` absente du bilan de nuit (v29.1) | Normal en mode `vocal_isole` pur (aucun environnement MiniGrid lu ce jour-là) : `ticks_sensoriels_jour = 0`, la ligne est volontairement masquée plutôt que d'afficher des ratios vides. Elle réapparaît dès qu'une journée comporte des ticks MiniGrid |
-| `Odorat` proche de 96-100 % à chaque nuit | **Attendu** sur les 4 premiers niveaux : `PORTEE_ODORAT=4` couvre 97,6 % d'`Empty-8x8` et 100 % de `DoorKey-6x6`. L'odorat n'est vraiment discriminant qu'au Doctorat (`MultiRoom`, ~57 %). Voir `docs/EXPLICATIONS_v29_sens.md` §12 pour l'arbitrage (portée réduite vs normalisation par taille de carte) |
+| `Odorat` proche de 96-100 % à chaque nuit | **Ce pourcentage compte la PRÉSENCE d'une trace, pas son intensité** — il peut rester haut alors que le signal est devenu discriminant (le seuil de coupure est bas). Depuis la v30.0, regarder `Sens_Odorat_Moyen` : ~0.32 sur `Empty-8x8` contre ~0.54 en v29, avec l'odeur forte (> 0.45) réduite à ~30 % des ticks. Voir §10d |
 | `Portage` reste à 0 % sur DoorKey | L'agent n'a jamais ramassé la clé de la journée — cohérent avec un palier DoorKey encore bas (< 3, « Toucher / Prendre »). Cette métrique est un bon indicateur avancé de la maîtrise des paliers 3-4, avant même que la victoire n'arrive |

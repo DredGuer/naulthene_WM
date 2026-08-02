@@ -2,7 +2,7 @@
 
 > ⚠️ **Statut expérimental** : vit dans `src/naulthene/cerveau/noyau.py` (gitignoré, terrain d'essai local), le nouveau module **versionné** `src/naulthene/cerveau/bus_sensoriel.py` et `src/naulthene/cerveau/persistance.py`. Pas encore porté sur `src/naulthene/cerveau/colab.py` (script de référence, toujours en v17).
 
-Document explicatif complet de la v29.0, rédigé à partir d'une lecture directe du code livré. Pour l'historique commit par commit voir [CHANGELOG.md](CHANGELOG.md) (entrée `[29.0-experimental]`), pour la narration générale [readme.md](../readme.md), et pour la note de conception d'origine [Maj_V29_readme.md](Maj_V29_readme.md).
+Document explicatif complet de la v29.0, rédigé à partir d'une lecture directe du code livré. Pour l'historique commit par commit voir [CHANGELOG.md](CHANGELOG.md) (entrée `[29.0-experimental]`), pour la narration générale [readme.md](../readme.md), et pour la note de conception d'origine [Maj_V29_readme.md](Old_Archive_rmd/Maj_V29_readme.md).
 
 ---
 
@@ -25,7 +25,7 @@ Document explicatif complet de la v29.0, rédigé à partir d'une lecture direct
 
 ## 1. Le problème que cette version résout
 
-Trois constats, issus de [Maj_V29_readme.md](Maj_V29_readme.md) :
+Trois constats, issus de [Maj_V29_readme.md](Old_Archive_rmd/Maj_V29_readme.md) :
 
 **a) Naulthène était un organisme à deux sens.** Jusqu'en v28.0, l'agent percevait le monde par la vue (`porte_visuelle`, 147 dims) et l'ouïe (`porte_auditive`, 130 dims MFCC) — les deux sens les plus gourmands en calcul. Les trois autres (toucher, odorat, goût) n'existaient nulle part, alors qu'ils sont justement **les moins coûteux** et **les plus directement liés à la survie**. Conséquence concrète : l'agent ne savait qu'il tenait la clé que de façon *indirecte*, en la déduisant de son champ visuel — il n'avait littéralement pas de sens du toucher pour la sentir dans sa main.
 
