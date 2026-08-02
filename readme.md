@@ -92,7 +92,7 @@ Pour un historique complet commit par commit, consultez [docs/CHANGELOG.md](docs
 
 ### Nouveautés v29.0 (expérimental) — Le Bus Sensoriel Multimodal & l'Identité C1/C2 explicite (2026-08-02)
 
-> ⚠️ **Statut expérimental** : vit dans `src/naulthene/cerveau/noyau.py` (gitignored, terrain d'essai local), le nouveau module **versionné** `src/naulthene/cerveau/bus_sensoriel.py` et `src/naulthene/cerveau/persistance.py`, pas encore porté sur `agi_google_colab.py`.
+> ⚠️ **Statut expérimental** : vit dans `src/naulthene/cerveau/noyau.py` (gitignored, terrain d'essai local), le nouveau module **versionné** `src/naulthene/cerveau/bus_sensoriel.py` et `src/naulthene/cerveau/persistance.py`, pas encore porté sur `src/naulthene/cerveau/colab.py`.
 
 Trois chantiers issus de [docs/Maj_V29_readme.md](docs/Maj_V29_readme.md) : donner à Naulthène **les cinq sens** au lieu de deux, **nommer explicitement** la frontière C1/C2 déjà présente dans le code, et **auditer** la boucle de distillation C2 → C1 — qui, elle, n'avait pas besoin d'être écrite.
 
@@ -124,7 +124,7 @@ Trois chantiers issus de [docs/Maj_V29_readme.md](docs/Maj_V29_readme.md) : donn
 
 ### Nouveautés v28.0 (expérimental) — La Cascade C1→C2→C3 & le Port Exocortex (2026-07-30)
 
-> ⚠️ **Statut expérimental** : vit dans `src/naulthene/cerveau/noyau.py` (gitignored, terrain d'essai local) et le nouveau sous-package **versionné** `src/naulthene/exocortex/`, pas encore porté sur `agi_google_colab.py`.
+> ⚠️ **Statut expérimental** : vit dans `src/naulthene/cerveau/noyau.py` (gitignored, terrain d'essai local) et le nouveau sous-package **versionné** `src/naulthene/exocortex/`, pas encore porté sur `src/naulthene/cerveau/colab.py`.
 
 Ouvre le Cœur Organique fermé [C1 (réflexe/instinct) + C2 (raison/JEPA)], 100% autonome depuis l'origine du projet, à un **troisième canal optionnel** : un Exocortex (C3) conçu comme un **Port Multiplexeur** plutôt qu'un appel figé vers un service unique — un bus sur lequel des "Plugs" interchangeables s'enregistrent (`PlugNul`, `PlugSimule`, `PlugHTTP` livrés ; `Plug_Ollama`/`Plug_VectorDB`/`Plug_Web`/`Plug_BrainToBrain` pourront se brancher plus tard sans toucher au noyau). **Principe non négociable, posé par l'utilisateur** : couper le courant de C3 ne doit ni planter, ni changer le comportement d'un cerveau existant — sans plug branché, l'agent se comporte au bit près comme en v27.6.
 

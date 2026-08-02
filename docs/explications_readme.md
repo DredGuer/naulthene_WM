@@ -1,6 +1,6 @@
 # Naulthène AGI — Comprendre l'algorithme en profondeur
 
-Ce document explique **comment** et **pourquoi** le cerveau `AGI_Naulthene` fonctionne, avec les vraies formules mathématiques et les vrais noms de variables du code (référence : `agi_google_colab.py` v17 ; les mécaniques expérimentales additionnelles de `agi_local_test.py` sont signalées explicitement). Il complète le [readme.md](../readme.md) narratif par un niveau de détail algorithmique et mathématique complet.
+Ce document explique **comment** et **pourquoi** le cerveau `AGI_Naulthene` fonctionne, avec les vraies formules mathématiques et les vrais noms de variables du code (référence : `src/naulthene/cerveau/colab.py` v17 ; les mécaniques expérimentales additionnelles de `src/naulthene/cerveau/noyau.py`, jusqu'à la v29.1, sont signalées explicitement). Il complète le [readme.md](../readme.md) narratif par un niveau de détail algorithmique et mathématique complet.
 
 ---
 
@@ -17,7 +17,7 @@ Ce document explique **comment** et **pourquoi** le cerveau `AGI_Naulthene` fonc
 9. [Le réservoir dopaminergique](#9-le-réservoir-dopaminergique)
 10. [Le rêve nocturne adaptatif](#10-le-rêve-nocturne-adaptatif)
 11. [Le cursus académique et la patience adaptative](#11-le-cursus-académique-et-la-patience-adaptative)
-12. [Évolutions du projet (v7 → v26)](#12-évolutions-du-projet-v7--v26)
+12. [Évolutions du projet (v7 → v29)](#12-évolutions-du-projet-v7--v29)
 13. [Glossaire des constantes](#13-glossaire-des-constantes)
 14. [La Cascade C1 → C2 → C3 & le Port Exocortex (expérimental)](#14-la-cascade-c1--c2--c3--le-port-exocortex-expérimental)
 15. [Le Bus Sensoriel & l'identité C1/C2 explicite (expérimental)](#15-le-bus-sensoriel--lidentité-c1c2-explicite-expérimental)
@@ -549,7 +549,7 @@ Dès `palier_cible >= 5` (Viser la Porte), le **Mode Libre** s'active : le guida
 
 ---
 
-## 12. Évolutions du projet (v7 → v26)
+## 12. Évolutions du projet (v7 → v29)
 
 | Version | Ce qui a changé | Pourquoi |
 |---|---|---|
@@ -564,6 +564,8 @@ Dès `palier_cible >= 5` (Viser la Porte), le **Mode Libre** s'active : le guida
 | v26.0 (expérimental, §A.5 seul) | Cristallisation Souple — protection ciblée des synapses matures contre l'érosion nocturne (falaise sigmoïde) | Protéger les fondamentaux acquis sans jamais geler l'apprentissage diurne |
 | v27.0-27.1 (expérimental) | L'École de la Parole & Synesthésie — voix réelle (LPC), synesthésie ancrée (`LecteurCaseFrontale`), dopamine unifiée vue/ouïe, rêve audio, tirage aléatoire d'une prise par tick | Sortir de la table théorique et du curriculum déconnecté de la vision ; unifier le réservoir dopaminergique entre les deux hémisphères |
 | v28.0 (expérimental) | La Cascade C1→C2→C3 & le Port Exocortex — 8ème action apprise (`ACTION_DEMANDER`), Port Multiplexeur `PortC3` + Plugs interchangeables, greffe rétrocompatible 7→8 actions | Ouvrir le Cœur Organique à un greffon externe optionnel sans jamais compromettre l'autonomie biologique ni casser un cerveau existant |
+| v29.0 (expérimental) | Le Bus Sensoriel Multimodal & l'identité C1/C2 explicite — toucher/odorat/goût (`DIM_VECTEUR_BIO` 16→24), `_executer_c1_reflexe()`/`_solliciter_c2_neocortex()`, greffe rétrocompatible du vecteur bio | Donner à l'agent les 5 sens plutôt que 2, et nommer la frontière réflexe/néo-cortex qui existait déjà de fait dans le code (§15) |
+| v29.1 (expérimental) | Télémétrie des 5 sens — 7 clés W&B `Sens_*` + ligne au bilan de nuit ; diagnostic de saturation de l'odorat sur les petites cartes | Rendre observable une mécanique jusque-là invisible : sans télémétrie, impossible de démontrer qu'un sens sert réellement à quelque chose sur un run long (§15.6) |
 
 Voir [CHANGELOG.md](CHANGELOG.md) pour le détail commit par commit et [readme.md](../readme.md) pour la description narrative complète de chaque version.
 
@@ -575,7 +577,8 @@ Voir [CHANGELOG.md](CHANGELOG.md) pour le détail commit par commit et [readme.m
 |---|---|---|
 | `DIM_VISUELLE` | 147 | Dimension de l'observation MiniGrid aplatie |
 | `dim_bus` | 16 → 96 (`DIM_BUS_MAX`) | Espace latent partagé, +16 par neurogenèse |
-| `num_actions` | 7 | Actions MiniGrid |
+| `num_actions` | 7 → **8** (v28.0) | Actions MiniGrid ; la 8ème est `ACTION_DEMANDER` (§14), masquée à `-inf` tant qu'aucun plug C3 n'est branché |
+| `DIM_VECTEUR_BIO` | 16 → **24** (v29.0) | Vecteur viscéral consommé par `integrateur_bio` : jauges + quêtes + rappel spatial + quête vocale, puis toucher (4) et chimie (4) en queue (§15) |
 | `HORIZONS_PLANIFICATION` | (1, 3, 7) | Horizons du rollout Système 2 |
 | `GAMMA_PLANIFICATION` | 0.9 | Actualisation du rollout mental |
 | `gamma` (RL) | 0.95 | Actualisation du retour Monte-Carlo réel |
@@ -605,6 +608,10 @@ Voir [CHANGELOG.md](CHANGELOG.md) pour le détail commit par commit et [readme.m
 | `SEUIL_OVERRIDE_C3` (v28.0, expérimental) | 0.85 | Confiance à partir de laquelle une `ReponseC3` impose l'action plutôt que de biaiser les logits |
 | `FORCE_C3` (v28.0, expérimental) | 0.5 | Poids du biais logits appliqué sous `SEUIL_OVERRIDE_C3` — même ordre de grandeur que `FORCE_PLANIFICATION_GUIDE` |
 | `COOLDOWN_PLUG_ECHEC` (v28.0, expérimental) | 200 | Ticks de quarantaine d'un plug après une exception, avant d'être retenté (`naulthene.exocortex.port_c3`) |
+| `DIM_TOUCHER` (v29.0, expérimental) | 4 | Contact frontal, objet en main, orientation cos/sin — en queue du `vecteur_bio` (§15.1) |
+| `DIM_CHIMIE` (v29.0, expérimental) | 4 | Odorat (nourriture, eau) + goût (nourriture, eau) — en queue du `vecteur_bio` (§15.1) |
+| `PORTEE_ODORAT` (v29.0, expérimental) | 4.0 | Portée de l'odorat en cases (Manhattan), 0 au-delà — ⚠️ sature sur les petites cartes, voir §15.6 |
+| `DECROISSANCE_GOUT` (v29.0, expérimental) | 0.85 | Décroissance par tick de la trace gustative (~10 ticks de rémanence) |
 
 ---
 
@@ -754,4 +761,4 @@ Premier diagnostic livré par cette télémétrie : **l'odorat sature sur les pe
 
 ---
 
-*Document généré à partir d'une lecture directe du code source (`agi_google_colab.py` v17, `src/naulthene/cerveau/noyau.py` jusqu'à v29.0) — voir [readme.md](../readme.md) pour la documentation narrative complète et [CLAUDE.md](../CLAUDE.md) pour les règles de maintenance du projet.*
+*Document généré à partir d'une lecture directe du code source (`src/naulthene/cerveau/colab.py` v17, `src/naulthene/cerveau/noyau.py` jusqu'à v29.1) — voir [readme.md](../readme.md) pour la documentation narrative complète et [CLAUDE.md](../CLAUDE.md) pour les règles de maintenance du projet.*

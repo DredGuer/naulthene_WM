@@ -7,7 +7,7 @@ pratique de [readme.md](../readme.md) (vision d'ensemble et formules) et
 [docs/explications_readme.md](explications_readme.md) (détail algorithmique) — ici, l'angle
 est **"je veux lancer un run et comprendre ce qui se passe"**.
 
-Référence code : `src/naulthene/cerveau/noyau.py` (v28.0) et les trois scripts de
+Référence code : `src/naulthene/cerveau/noyau.py` (v29.1) et les trois scripts de
 `src/naulthene/salles_de_classe/`.
 
 ---
@@ -28,6 +28,7 @@ Référence code : `src/naulthene/cerveau/noyau.py` (v28.0) et les trois scripts
 12. [Où trouver chaque cerveau (`brains/*.brain`)](#12-où-trouver-chaque-cerveau-brainsbrain)
 13. [Lire un bilan de nuit — exemple annoté](#13-lire-un-bilan-de-nuit--exemple-annoté)
 14. [Foire aux questions](#14-foire-aux-questions)
+15. [Les 5 sens de l'agent (v29)](#15-les-5-sens-de-lagent-v29)
 
 ---
 
@@ -44,9 +45,9 @@ ce que tu veux observer.
 | **Cursus de la Parole** | `cursus_parole.py` | `brains/naulthene_parole.brain` | 900 jours | **800** | Voix réelle de l'utilisateur, synesthésie (mot ancré sur l'objet regardé) |
 | **La Cuve** | `daemon_cerveau.py` + clients | `brains/naulthene_v21.brain` | illimité, manuel | pas de notion de "jour" fixe | Contrôle manuel tick par tick, alterner MiniGrid/vocal à la demande |
 
-**Tous les 4 lancent le même cerveau (`AGI_Naulthene`)** avec la même architecture (v28.0 : 8
-actions, dont l'action C3 optionnelle — voir [docs/CHANGELOG.md](CHANGELOG.md), entrée v28.0) —
-seule la boucle qui pilote les journées change.
+**Tous les 4 lancent le même cerveau (`AGI_Naulthene`)** avec la même architecture (v29.1 : 8
+actions dont l'action C3 optionnelle, et les **5 sens** — voir [docs/CHANGELOG.md](CHANGELOG.md),
+entrées v28.0 et v29.0/v29.1) — seule la boucle qui pilote les journées change.
 
 **Convention commune aux 3 cursus autonomes** (par Ères, Bébé, Parole) :
 - Chacun **sauvegarde après chaque nuit** — interrompre avec `Ctrl+C` ne perd au pire que la
@@ -419,6 +420,7 @@ Chaque nuit (tous cursus confondus) affiche un bilan de ce type :
   ├─ Consolidations : 💤 117 souvenirs rejoués (58.746% de la journée, perte rêves: 0.1631)
   ├─ Potentiomètre  : ⏳ Patience de base du jour: 200 ticks/épisode (1 abandon(s) lucide(s), 0 Sursaut(s) de Volonté)
   ├─ État Viscéral  : 🍎 Satiété 0.00 | 💧 Hydratation 0.40 | ✨ Stimulation 1.00
+  ├─ Les 5 Sens     : ✋ Contact 28.5% | 🔑 Portage 20.5% | 👃 Odorat 96.0% des ticks (max 1.50) | 👅 Goût 75 tick(s)
   ├─ Métabolisme    : r_bio cumulé -1.756 — 0 Nourriture(s), 1 Eau(x) consommée(s)
   ├─ Mémoire Épiso. : 🗺️ 1 souvenir(s) spatial(aux) actif(s)
   └─ Erreur JEPA moy: 0.1400 | Réc. moyenne: 0.000 | Thermostat: Stable
@@ -432,6 +434,7 @@ Chaque nuit (tous cursus confondus) affiche un bilan de ce type :
 | **Consolidations** | Le "rêve" nocturne — combien de souvenirs ont été rejoués pour consolider l'apprentissage |
 | **Potentiomètre** | La patience du jour (combien de ticks avant d'abandonner un épisode qui dérape) |
 | **État Viscéral** | Faim/soif/stimulation — motivations biologiques internes |
+| **Les 5 Sens** (v29.1) | Ce que l'agent a *senti* dans la journée — voir §15 pour la lecture détaillée |
 | **Erreur JEPA / Thermostat** | À quel point le modèle du monde se trompe encore ; `MUTATION !` = le cerveau vient de grandir (+16 dimensions) |
 
 Sur le niveau "Collège" (DoorKey actif), une ligne supplémentaire apparaît :
@@ -467,3 +470,60 @@ Non, par défaut. Les 3 cursus autonomes n'enregistrent aucun plug C3 — l'acti
 `ACTION_DEMANDER` reste masquée et le comportement est identique à avant la v28.0. Voir
 [docs/CHANGELOG.md](CHANGELOG.md) (entrée v28.0-experimental) et [docs/LANCEMENT.md](LANCEMENT.md) §8 pour tester ce canal
 séparément.
+
+**Et les 5 sens (v29) — il y a quelque chose à activer ?**
+Non, rien. Le Bus Sensoriel est actif automatiquement dans les 4 parcours, sans option ni flag.
+La seule chose à savoir : au premier chargement d'un `.brain` créé avant la v29, un message
+`👃 integrateur_bio greffé de N à M dims d'entrée` s'affiche **une seule fois** — c'est normal,
+tous les acquis sont conservés. Voir §15 ci-dessous.
+
+---
+
+## 15. Les 5 sens de l'agent (v29)
+
+Jusqu'à la v28, Naulthène ne percevait le monde que par **deux** sens : la vue et l'ouïe. Depuis
+la v29, il en a **cinq** — les trois nouveaux étant justement les moins coûteux à calculer et les
+plus directement liés à la survie.
+
+| Sens | Ce que l'agent perçoit | Coût de calcul |
+|---|---|---|
+| 👁 **Vue** | La grille MiniGrid (147 valeurs) | Très élevé |
+| 👂 **Ouïe** | Le son brut (130 coefficients MFCC) | Élevé |
+| ✋ **Toucher** | Un obstacle devant lui, un objet dans sa main, son orientation | Moyen |
+| 👃 **Odorat** | Une source de nourriture/eau proche (jusqu'à 4 cases) | Faible |
+| 👅 **Goût** | Ce qu'il vient d'avaler (persiste ~10 ticks) | Faible |
+
+**Ce que ça change concrètement** : avant, l'agent ne savait qu'il tenait la clé que de façon
+*indirecte*, en le déduisant de son champ visuel. Maintenant il la « sent » dans sa main. De même,
+il peut détecter une ressource proche **avant même de la voir**.
+
+### Suivre les sens jour après jour
+
+Chaque nuit, une ligne dédiée s'affiche (voir §13) :
+
+```
+├─ Les 5 Sens : ✋ Contact 28.5% | 🔑 Portage 20.5% | 👃 Odorat 96.0% des ticks (max 1.50) | 👅 Goût 75 tick(s)
+```
+
+| Champ | Comment le lire |
+|---|---|
+| **Contact** | % du temps passé au contact d'un mur/porte. Très haut durablement = l'agent se cogne ou reste bloqué |
+| **Portage** | % du temps avec un objet en main. **Sur DoorKey, c'est le temps passé à porter la clé** — c'est le meilleur indicateur *avancé* : il monte quand l'agent commence à maîtriser les paliers 3-4, souvent avant que les victoires n'arrivent |
+| **Odorat** | % de ticks où il sent quelque chose (voir l'avertissement ci-dessous) |
+| **Goût** | Nombre de ticks avec un goût rémanent — à rapprocher des Nourriture(s)/Eau(x) de la ligne Métabolisme |
+
+Si le suffixe **`⚠️ BUS DÉSACTIVÉ`** apparaît, les 3 sens faibles ne fonctionnent plus (API
+MiniGrid incompatible). L'entraînement continue normalement, mais l'agent est « anesthésié » —
+c'est l'alerte à surveiller.
+
+Côté W&B, 7 courbes `Sens_*` sont enregistrées chaque nuit.
+
+> ⚠️ **Un `Odorat` à 96-100 % est NORMAL sur les petits niveaux.** Avec une portée de 4 cases et
+> 4 sources générées, presque toute la carte est « à portée de nez » sur `Empty-8x8` (97,6 %) et
+> `DoorKey-6x6` (100 %). L'odorat n'y apporte donc presque aucune information utile — il ne
+> devient vraiment discriminant qu'au Doctorat (`MultiRoom`, ~57 %). Ce n'est pas une panne, mais
+> un réglage encore ouvert (voir [EXPLICATIONS_v29_sens.md](EXPLICATIONS_v29_sens.md) §12).
+> En revanche, un `Odorat` à **0 %** sur un niveau où des ressources existent mérite un coup d'œil.
+
+📖 Pour le détail complet (formules, pourquoi ces sens n'entrent pas dans le modèle du monde,
+compatibilité des anciens cerveaux) : **[EXPLICATIONS_v29_sens.md](EXPLICATIONS_v29_sens.md)**.
