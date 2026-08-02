@@ -264,6 +264,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Le Cursus de la Parole — Naulthène AGI (v27.0)")
     parser.add_argument("--jours", type=int, default=JOURS_TOTAUX_PAROLE, help="Nombre de jours subjectifs du cursus")
     parser.add_argument("--no-wandb", action="store_true", help="Désactive le logging Weights & Biases")
+    # v30.0 — voir cursus_developpemental.py : expose en CLI le `fichier_brain` déjà
+    # accepté par la fonction, pour la convention de nommage horodatée (CLAUDE.md).
+    parser.add_argument("--brain", type=str, default=FICHIER_BRAIN_PAROLE,
+                        help=f"Fichier .brain à charger/sauvegarder (défaut : {FICHIER_BRAIN_PAROLE})")
     args = parser.parse_args()
 
-    lancer_cursus_parole(jours_totaux=args.jours, activer_wandb=not args.no_wandb)
+    lancer_cursus_parole(jours_totaux=args.jours, activer_wandb=not args.no_wandb,
+                         fichier_brain=args.brain)

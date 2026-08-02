@@ -255,6 +255,15 @@ class PersistanceAnatomique:
             'tick_absolu': etat.tick_absolu,
             'jour': etat.jour,
         }
+        # v30.0 — crée le dossier parent s'il n'existe pas. Depuis l'ajout du flag
+        # `--brain` aux cursus (convention de nommage horodatée, voir CLAUDE.md), le
+        # chemin peut pointer vers un sous-dossier absent (ex. brains/old_V30/...) :
+        # sans ce mkdir, torch.save échouerait par FileNotFoundError APRÈS une journée
+        # entière de calcul — le pire moment possible pour découvrir le problème.
+        dossier = os.path.dirname(self.fichier)
+        if dossier:
+            os.makedirs(dossier, exist_ok=True)
+
         # Écriture atomique : on écrit dans un fichier temporaire puis on renomme,
         # pour ne jamais laisser un .brain à moitié écrit si le process est tué en
         # plein torch.save (ex: kill -9 pendant une sauvegarde d'urgence).

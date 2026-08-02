@@ -59,7 +59,10 @@ Le projet est organisé en **package Python** sous `src/naulthene/`, avec un dos
 │       ├── lancer_arene.py       lance l'Arène (pygame + audio)
 │       └── irm_cerveau.py        scanner d'activations internes, ne modifie jamais le .brain
 │
-├── brains/                       cerveaux cristallisés (*.brain, gitignorés)
+├── brains/                       cerveaux cristallisés (*.brain, gitignorés) — un fichier par run,
+│   └── old_V30/                    nommé DDMMYYYYHHMM_VXX_NMRTOUR_RMD.brain (voir « Convention de
+│                                   nommage des cerveaux ») ; old_VXX/ archive les générations
+│                                   précédentes, jamais supprimées
 └── docs/                         documentation complémentaire (CHANGELOG.md, explications_readme.md,
                                     LANCEMENT.md, Parcourt_readme.md — guide pratique vulgarisé du
                                     système de cursus, commandes de lancement, jours/ticks par parcours,
@@ -129,6 +132,46 @@ PYTHONPATH=src python -m naulthene.cuve.daemon_cerveau --port 9999            # 
 PYTHONPATH=src python -m naulthene.cuve.client_corps --port 9999              # client MiniGrid
 PYTHONPATH=src python -m naulthene.salles_de_classe.cursus_developpemental    # Cursus par Ères (1000 jours, standalone)
 PYTHONPATH=src python -m naulthene.instruments.lancer_arene                   # observer un cerveau entraîné
+```
+
+### Convention de nommage des cerveaux (`brains/*.brain`, depuis v30.0)
+
+Tout nouveau cerveau produit par un run suit ce format — **un fichier par run**, jamais un chemin
+générique réutilisé d'un run à l'autre :
+
+```
+DDMMYYYYHHMM_VXX_NMRTOUR_RMD.brain
+└──────┬───┘ └┬┘ └───┬──┘ └┬┘
+       │      │      │     └── RMD : initiales / identifiant du run
+       │      │      └──────── nombre de jours (tours) demandé au lancement
+       │      └─────────────── version de l'architecture au moment du run
+       └────────────────────── date+heure de lancement (jour mois année heure minute)
+```
+
+Exemple : `020820261304_V30_700_RMD.brain` — run lancé le 2 août 2026 à 13h04, architecture
+v30.0, 700 jours demandés.
+
+- **L'horodatage est celui du LANCEMENT**, jamais mis à jour ensuite : le fichier est écrasé à
+  chaque nuit par `PersistanceAnatomique.sauvegarder()`, mais son nom garde la trace du départ du
+  run. Générer la date avec `date "+%d%m%Y%H%M"`.
+- **`VXX` est la version de l'architecture**, pas celle du fichier : un `.brain` v29 rechargé par
+  un binaire v30 est greffé automatiquement (voir `_greffer_vecteur_bio_etendu`) mais **garde son
+  nom d'origine** — c'est la trace de sa naissance, pas de son état courant.
+- Les cerveaux d'une génération antérieure sont rangés dans un sous-dossier
+  `brains/old_VXX/` (ex. `brains/old_V30/` contient tout ce qui précède la v30.0). **Toujours
+  archiver, jamais supprimer** : un `.brain` représente des centaines de jours de run.
+- `brains/**/*.brain` est gitignoré, sous-dossiers d'archive compris — vérifier avec
+  `git check-ignore -v <chemin>` après avoir créé un nouveau sous-dossier.
+- Les trois cursus acceptent `--brain <chemin>` (ajouté en v30.0) ; le dossier parent est créé
+  automatiquement s'il n'existe pas. Sans ce flag, ils retombent sur leur chemin historique
+  (`brains/naulthene_cursus.brain`, `naulthene_bb.brain`, `naulthene_parole.brain`) — utile pour
+  reprendre un ancien run, mais **ne pas s'en servir pour un nouveau run** : deux runs partageant
+  le même fichier s'écrasent mutuellement.
+
+```bash
+# Nouveau cerveau, 700 jours, convention de nommage complète
+WANDB_MODE=offline PYTHONPATH=src python -m naulthene.salles_de_classe.cursus_developpemental \
+    --jours 700 --brain "brains/$(date +%d%m%Y%H%M)_V30_700_RMD.brain"
 ```
 
 `wandb.init(project="Naulthene-AGI", ...)` demande une session W&B active (login `wandb login` au préalable, ou variable d'environnement `WANDB_API_KEY`) — sans clé configurée, W&B tombe en mode anonyme ou local selon la config de l'environnement.

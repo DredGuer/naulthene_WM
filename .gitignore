@@ -8,6 +8,10 @@ venv/
 # daemon_cerveau.py/persistance.py/client_corps.py (src/naulthene/cuve, cerveau)
 # reste tracké, les fichiers .brain générés à l'exécution sont ignorés.
 brains/*.brain
+# ... y compris dans les sous-dossiers d'archive (ex. brains/old_V30/, voir la
+# convention de nommage dans CLAUDE.md) : `brains/*.brain` seul ne couvre PAS les
+# sous-répertoires, et un cerveau archivé pèse de 0,5 à 3 Mo.
+brains/**/*.brain
 
 # Copie de travail locale (Mac, terrain d'essai des mécaniques expérimentales avant
 # portage éventuel sur src/naulthene/cerveau/colab.py — voir CLAUDE.md, section

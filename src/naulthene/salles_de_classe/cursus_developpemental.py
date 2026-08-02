@@ -271,6 +271,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Cursus Développemental par Ères — Naulthène AGI (v23.0)")
     parser.add_argument("--jours", type=int, default=DUREE_ERE, help="Nombre de jours subjectifs du cursus")
     parser.add_argument("--no-wandb", action="store_true", help="Désactive le logging Weights & Biases")
+    # v30.0 — `--brain` expose en CLI le paramètre `fichier_brain` que `lancer_cursus`
+    # acceptait déjà : indispensable pour la convention de nommage des cerveaux
+    # (voir CLAUDE.md, « Convention de nommage des cerveaux »), qui demande un fichier
+    # horodaté par run plutôt qu'un chemin unique réutilisé. Sans ce flag, il fallait
+    # renommer/archiver le fichier à la main entre deux runs.
+    parser.add_argument("--brain", type=str, default=FICHIER_BRAIN_CURSUS,
+                        help=f"Fichier .brain à charger/sauvegarder (défaut : {FICHIER_BRAIN_CURSUS})")
     args = parser.parse_args()
 
-    lancer_cursus(jours_totaux=args.jours, activer_wandb=not args.no_wandb)
+    lancer_cursus(jours_totaux=args.jours, activer_wandb=not args.no_wandb,
+                  fichier_brain=args.brain)
