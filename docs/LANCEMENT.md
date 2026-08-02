@@ -1,14 +1,21 @@
-# Guide de Lancement — Naulthène AGI (Cuve Persistante + Hémisphère Audio + Cursus par Ères + Cerveau Bébé + Cursus de la Parole + Port Exocortex C3)
+# Guide de Lancement — Naulthène AGI (Cuve Persistante + Hémisphère Audio + Cursus par Ères + Cerveau Bébé + Cursus de la Parole + Port Exocortex C3 + Bus Sensoriel)
 
-Ce guide couvre le lancement local (Mac) de l'écosystème V21-V28 : le cerveau persistant
+Ce guide couvre le lancement local (Mac) de l'écosystème V21-V29 : le cerveau persistant
 (`daemon_cerveau.py`, dans `src/naulthene/cuve/`) et ses deux clients (`client_corps.py` pour
 MiniGrid, `client_professeur.py` pour les leçons de parole ponctuelles), trois cursus
 développementaux autonomes (`src/naulthene/salles_de_classe/`) : le Cursus par Ères
 (`cursus_developpemental.py`, 1000 jours, voir §6), le Cerveau Bébé (`cursus_bebe.py`, 1440
 jours, voir §6bis) et le Cursus de la Parole (`cursus_parole.py`, 900 jours, v27.0-expérimental,
-voir §6ter), ainsi que le Port Exocortex C3 (`src/naulthene/exocortex/`, v28.0-expérimental,
-voir §8). Voir `readme.md` pour l'architecture complète, `CHANGELOG.md` pour l'historique
-des versions.
+voir §6ter), le Port Exocortex C3 (`src/naulthene/exocortex/`, v28.0-expérimental, voir §8),
+ainsi que le Bus Sensoriel des 5 sens (`src/naulthene/cerveau/bus_sensoriel.py`,
+v29.0-expérimental, voir §9). Voir `readme.md` pour l'architecture complète, `CHANGELOG.md`
+pour l'historique des versions.
+
+> 🆕 **v29.0 — rien à configurer.** Le Bus Sensoriel (toucher, odorat, goût) est **actif
+> automatiquement** dans tous les modes ci-dessous : aucune option de ligne de commande, aucun
+> flag. Le seul point à connaître est le message de greffe `👃 integrateur_bio greffé de N à M
+> dims d'entrée` au premier chargement d'un `.brain` antérieur — normal, une seule fois, les
+> acquis sont préservés (voir §9 et le tableau de dépannage).
 
 Depuis le passage en package Python (voir `CLAUDE.md`, section « Architecture »), tous les
 scripts se lancent depuis la racine du dépôt avec `PYTHONPATH=src` et l'option `-m` (module),
@@ -86,6 +93,10 @@ PYTHONPATH=src python -m naulthene.cuve.daemon_cerveau --port 9999 --brain brain
 - Si c'est la première connexion depuis la V22, tu verras des messages de greffe :
   `🌱 Hémisphères nouvellement greffés` et `🔄 integrateur_bio exclu du chargement` —
   normal, une fois seulement (voir `CONCEPTION_v22_audio.md` §11 pour le détail).
+- **Depuis la v29.0**, un `.brain` antérieur affiche en plus, une seule fois,
+  `👃 integrateur_bio greffé de N à M dims d'entrée (+8 : toucher/odorat/goût)` — la couche
+  n'est **plus jamais exclue** dans ce cas, elle est greffée par recopie et **tous les acquis
+  sont préservés au bit près** (voir §9).
 - Reste en **cryostase** (CPU ~0%) tant qu'aucun client n'est connecté.
 - `Ctrl+C` pour arrêter proprement (sauvegarde d'urgence automatique).
 
@@ -598,6 +609,119 @@ par erreur.
 
 ---
 
+## 9. Le Bus Sensoriel — les 5 sens (v29.0-expérimental)
+
+Le Bus Sensoriel (`src/naulthene/cerveau/bus_sensoriel.py`) donne à l'agent les **trois sens qui
+lui manquaient** — toucher, odorat, goût — en plus de la vue et de l'ouïe qu'il avait déjà.
+
+✅ **Aucune action requise de ta part.** Contrairement au Port Exocortex (§8, qui demande
+d'enregistrer un plug à la main), le Bus Sensoriel est **actif automatiquement** dans tous les
+modes des sections 1-7 : la Cuve, les trois cursus et l'Arène en bénéficient sans aucun flag ni
+réglage. Cette section sert uniquement à **observer** ce que l'agent sent, et à comprendre le
+message de greffe au premier chargement d'un ancien `.brain`.
+
+### 9a. Voir ce que l'agent sent, en direct
+
+```bash
+cd "/Users/dredguer/Documents/1. Dossier personnel important/1. Adrien/21. AGI"
+source venv/bin/activate
+PYTHONPATH=src WANDB_MODE=disabled python3 -c "
+import naulthene.cerveau.noyau as noyau
+
+etat = noyau.initialiser_etat_cognitif()
+noyau.demarrer_journee(etat)
+
+for t in range(200):
+    noyau.traiter_tick(etat)
+    if t % 50 == 0:
+        s = etat.bus_sensoriel.interpreter(etat.env)
+        print(f'tick {t:3d} | contact={s[0]:.0f} main={s[1]:.0f} '
+              f'orient=({s[2]:+.2f},{s[3]:+.2f}) | '
+              f'odorat food={s[4]:.2f} eau={s[5]:.2f} | '
+              f'gout food={s[6]:.2f} eau={s[7]:.2f}')
+"
+```
+
+Comment lire la sortie :
+
+| Champ | Signification |
+|-------|---------------|
+| `contact` | 1 = l'agent est au contact d'un mur ou d'une porte fermée devant lui, 0 = la voie est libre |
+| `main` | 1 = l'agent porte un objet (la clé, typiquement), 0 = mains vides |
+| `orient` | Orientation encodée sur le cercle (cos, sin) — évite la fausse discontinuité entre les directions 3 et 0 |
+| `odorat` | 1.00 = l'agent est SUR la ressource, 0.25 = elle est à 3 cases, 0.00 = hors de portée (> 4 cases) |
+| `gout` | 1.00 juste après une bouchée, puis décroît (~10 ticks) jusqu'à 0 |
+
+### 9b. Vérifier la hiérarchie des 5 sens
+
+```bash
+PYTHONPATH=src python3 -c "
+from naulthene.cerveau.bus_sensoriel import BusSensoriel
+for sens, info in BusSensoriel.hierarchie_sensorielle().items():
+    print(f\"{sens:8s} | {info['gourmandise']:8s} | {info['dims']:3d} dims | \"
+          f\"JEPA={info['jepa']} | {info['chemin']}\")
+"
+```
+
+Attendu :
+
+```
+vue      | extreme  | 147 dims | JEPA=True  | porte_visuelle → bus_latent
+ouie     | elevee   | 130 dims | JEPA=True  | porte_auditive → bus_latent
+toucher  | moyenne  |   4 dims | JEPA=False | vecteur_bio → integrateur_bio
+odorat   | faible   |   2 dims | JEPA=False | vecteur_bio → integrateur_bio
+gout     | faible   |   2 dims | JEPA=False | vecteur_bio → integrateur_bio
+```
+
+`JEPA=False` sur les trois sens faibles est **voulu** : ils entrent par `integrateur_bio`, juste
+avant la décision, donc ils n'entrent **jamais** dans ce que le modèle du monde doit prédire. Un
+cerveau déjà entraîné sur des centaines de jours ne voit donc pas sa physique visuelle perturbée
+(voir `docs/EXPLICATIONS_v29_sens.md` §4).
+
+### 9c. Recharger un `.brain` pré-v29.0 — vérifier la greffe automatique
+
+Le vecteur viscéral passe de 16 à 24 dims, ce qui change la forme de `integrateur_bio`. La
+greffe est **automatique** (`_greffer_vecteur_bio_etendu`) et **préserve tous les acquis** —
+contrairement à l'ancien comportement, qui excluait la couche et la faisait renaître à neuf. Pour
+vérifier sur une **copie** (ne jamais tester sur l'original) :
+
+```bash
+cd "/Users/dredguer/Documents/1. Dossier personnel important/1. Adrien/21. AGI"
+cp brains/naulthene_parole.brain /tmp/naulthene_v29_test.brain
+source venv/bin/activate
+PYTHONPATH=src WANDB_MODE=disabled python3 -c "
+from naulthene.cerveau.persistance import PersistanceAnatomique
+from naulthene.cerveau.noyau import DIM_VECTEUR_BIO
+
+p = PersistanceAnatomique(fichier='/tmp/naulthene_v29_test.brain')
+etat = p.charger_ou_naitre()
+forme = tuple(etat.agent.integrateur_bio.base_weight.shape)
+print('DIM_VECTEUR_BIO :', DIM_VECTEUR_BIO)
+print('integrateur_bio :', forme, '| attendu :', (etat.agent.dim_bus, etat.agent.dim_bus + DIM_VECTEUR_BIO))
+print('dim_bus:', etat.agent.dim_bus, '| tick_absolu:', etat.tick_absolu)
+"
+rm /tmp/naulthene_v29_test.brain
+```
+
+Attendu : le message `👃 integrateur_bio greffé de N à M dims d'entrée (+8 :
+toucher/odorat/goût, Bus Sensoriel v29.0) — acquis existants préservés.`, puis une forme égale à
+`(dim_bus, dim_bus + 24)`. Le `tick_absolu` doit être **celui de l'ancien cerveau**, preuve que
+la résurrection a bien eu lieu et qu'aucun acquis n'a été perdu.
+
+⚠️ Ce test **charge en lecture** — il n'écrit rien tant que `sauvegarder()` n'est pas appelé. La
+copie reste néanmoins la bonne pratique.
+
+### 9d. Ce que la v29.0 ne change PAS
+
+- **Aucune régression de comportement** : le découpage C1/C2 (`_executer_c1_reflexe` /
+  `_solliciter_c2_neocortex`) est une **restructuration pure** — C2 est toujours sollicité à
+  chaque tick, l'arbitrage est inchangé depuis la v13.0.
+- **L'invariant du Port Exocortex (§8) reste intact** : sans plug enregistré, `ACTION_DEMANDER`
+  est toujours masquée à `-inf` et n'est jamais jouée.
+- **Aucune nouvelle dépendance** à installer (le Bus Sensoriel est du numpy pur).
+
+---
+
 ## Dépannage rapide
 
 | Symptôme | Cause probable |
@@ -613,3 +737,7 @@ par erreur.
 | La cible F1/F2 reste théorique malgré des prises enregistrées (§0bis) | Vérifie le chemin `voix/<mot>/<mot>_NN.wav` (le mot doit correspondre EXACTEMENT à une cible de `professeur_gemma.CURRICULUM_VOCAL`, accents compris) — au préchauffage, `resume_banque()` affiche "N mot(s) depuis la banque" ; si N=0, aucune prise n'a été trouvée pour aucun mot du curriculum |
 | Message `🖐️ <couche> greffé(e) de 7 à 8 actions` au chargement (§8e) | Normal et attendu **une seule fois** sur un `.brain` créé avant la v28.0 — la greffe préserve les 7 actions déjà apprises, la 8ème (`ACTION_DEMANDER`) naît vierge. Si le message réapparaît à CHAQUE lancement, vérifie que la sauvegarde qui suit s'est bien effectuée (pas de `kill -9` avant `💾 Cerveau cristallisé avec succès`) |
 | `ACTION_DEMANDER` (action 7) n'est jamais jouée même avec un plug enregistré | Comportement normal sur un cerveau jamais entraîné à ce choix — voir §8c, il faut soit biaiser artificiellement `tete_motrice` pour un test, soit laisser un vrai run apprendre ce choix par lui-même (REINFORCE, pas un seuil codé en dur) |
+| Message `👃 integrateur_bio greffé de N à M dims d'entrée` au chargement (§9c) | Normal et attendu **une seule fois** sur un `.brain` créé avant la v29.0 — le vecteur viscéral passe de 16 à 24 dims (toucher/odorat/goût). La greffe **préserve tous les acquis au bit près**, les 8 nouvelles dimensions naissent vierges. Si le message réapparaît à CHAQUE lancement, vérifie que la sauvegarde qui suit s'est bien effectuée (pas de `kill -9` avant `💾 Cerveau cristallisé avec succès`) |
+| Message `🔄 integrateur_bio exclu du chargement` depuis la v29.0 | **Anormal** pour un simple passage 16→24 dims — ce cas est censé être pris en charge par la greffe (`👃`, ligne ci-dessus). L'exclusion ne subsiste qu'en trappe de secours pour un mismatch qu'on ne sait pas greffer (ex. `dim_bus` incohérent entre le `.brain` et l'agent recréé). Vérifie que le `.brain` n'a pas été produit par une autre architecture/branche |
+| L'odorat reste à 0.00 en permanence (§9a) | Normal si aucune source n'est à portée : `PORTEE_ODORAT=4` cases seulement, et les ressources ne sont générées que par `DetecteurRessourcesBiologiques` (Ball rouge = Nourriture, Ball bleue = Eau). Sur un niveau sans ressource générée, ou avec l'agent à plus de 4 cases, 0.00 est le bon résultat |
+| Le toucher renvoie toujours `0.0` sur les 4 dims | Le bus s'est désactivé — cherche l'avertissement `⚠️ Bus sensoriel (toucher/odorat/goût) désactivé (API minigrid incompatible : ...)` affiché **une seule fois** dans la console. Même dégradation gracieuse que les détecteurs génériques : l'entraînement continue normalement, seuls les 3 sens faibles sont neutres |

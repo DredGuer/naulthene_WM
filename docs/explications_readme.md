@@ -20,6 +20,7 @@ Ce document explique **comment** et **pourquoi** le cerveau `AGI_Naulthene` fonc
 12. [Évolutions du projet (v7 → v26)](#12-évolutions-du-projet-v7--v26)
 13. [Glossaire des constantes](#13-glossaire-des-constantes)
 14. [La Cascade C1 → C2 → C3 & le Port Exocortex (expérimental)](#14-la-cascade-c1--c2--c3--le-port-exocortex-expérimental)
+15. [Le Bus Sensoriel & l'identité C1/C2 explicite (expérimental)](#15-le-bus-sensoriel--lidentité-c1c2-explicite-expérimental)
 
 ---
 
@@ -686,4 +687,65 @@ Passer de 7 à 8 actions change la **forme** de `tete_motrice` (sortie), `genera
 
 ---
 
-*Document généré à partir d'une lecture directe du code source (`agi_google_colab.py` v17, `src/naulthene/cerveau/noyau.py` jusqu'à v28.0) — voir [readme.md](../readme.md) pour la documentation narrative complète et [CLAUDE.md](../CLAUDE.md) pour les règles de maintenance du projet.*
+## 15. Le Bus Sensoriel & l'identité C1/C2 explicite (expérimental)
+
+> ⚠️ **Statut expérimental** : vit dans `src/naulthene/cerveau/noyau.py`, le module versionné `src/naulthene/cerveau/bus_sensoriel.py` et `src/naulthene/cerveau/persistance.py`, pas encore porté sur `colab.py`.
+>
+> 📖 **Cette section est un résumé.** Le détail complet (formules, schémas, table des validations, options écartées, glossaire) est dans un document dédié : **[EXPLICATIONS_v29_sens.md](EXPLICATIONS_v29_sens.md)**.
+
+### 15.1 Les 5 sens et leur hiérarchie de coût
+
+Jusqu'en v28.0, l'agent n'avait que ses deux sens gourmands : la vue (`porte_visuelle`, 147 dims) et l'ouïe (`porte_auditive`, 130 dims MFCC), chacun avec sa porte synaptique sommée dans `bus_latent` (§4) et sa place dans la cible JEPA (§2). La v29.0 ajoute les trois manquants — justement les moins coûteux et les plus liés à la survie — via un module dédié, `bus_sensoriel.py`, **pur numpy et qui n'importe jamais `noyau.py`** (même discipline que `exocortex/port_c3.py`, §14) :
+
+| Sens | Gourmandise | Dims | Chemin | Cible JEPA |
+|------|-------------|------|--------|------------|
+| Vue | Extrême | 147 | `porte_visuelle` → `bus_latent` | ✅ |
+| Ouïe | Élevée | 130 | `porte_auditive` → `bus_latent` | ✅ |
+| Toucher | Moyenne | 4 | `vecteur_bio` → `integrateur_bio` | ❌ |
+| Odorat | Faible | 2 | `vecteur_bio` → `integrateur_bio` | ❌ |
+| Goût | Faible | 2 | `vecteur_bio` → `integrateur_bio` | ❌ |
+
+Le **toucher** donne le contact frontal (via l'API native `can_overlap()`), l'objet en main (`carrying`) et l'orientation encodée sur le cercle $(\cos\theta, \sin\theta)$ avec $\theta = \frac{\pi}{2}\cdot\text{agent\_dir}$ — l'encodage circulaire supprime la fausse discontinuité entre les directions 3 et 0, voisines dans le monde réel mais distantes de 3 unités en entier brut. L'**odorat** décroît linéairement sur `PORTEE_ODORAT=4` cases (distance de Manhattan, comme §11). Le **goût** est une rémanence décroissant à `DECROISSANCE_GOUT=0.85`/tick, seul état inter-tick du bus, remis à zéro par épisode.
+
+### 15.2 Pourquoi les sens faibles n'entrent pas dans `bus_latent`
+
+Décision structurante. `perte_jepa` (§2) compare toujours l'attente au bus réel de la **vision seule** :
+
+```python
+with torch.no_grad():
+    bus_reel_vision = F.relu(self.porte_visuelle(obs_suivante))
+perte = F.mse_loss(attente, bus_reel_vision)
+```
+
+Sommer le toucher et la chimie dans `bus_latent` les ferait mécaniquement entrer dans ce que le modèle du monde doit prédire — trois canaux bruités venant perturber une physique visuelle apprise sur des centaines de jours, pour un gain nul (prédire l'odeur future n'est pas l'objet du JEPA). En passant par `integrateur_bio` (§ voir `integrer_bio`), ils informent la **décision** sans jamais toucher au **modèle du monde**.
+
+`DIM_VECTEUR_BIO` passe donc de 16 à 24 dims, les 8 nouvelles étant ajoutées **en queue** — un contrat partagé entre `obtenir_vecteur_bio`, `BusSensoriel.interpreter` et `persistance._greffer_vecteur_bio_etendu` (15.4).
+
+### 15.3 C1 et C2, enfin nommés
+
+La distinction existait dans le code depuis la v7.0 (`tete_motrice` d'un côté, `simuler_futur_et_planifier` de l'autre, §5-7) mais restait entrelacée dans le corps de `penser()`. Elle est désormais encapsulée :
+
+- **`_executer_c1_reflexe()`** — compression des 5 sens, lecture épisodique, intégration viscérale, réflexe moteur en latence zéro.
+- **`_solliciter_c2_neocortex()`** — JEPA + rollout mental multi-échelle. Ne reçoit **que** `pensee_bio`, l'état déjà compressé par C1 : jamais les pixels, jamais le MFCC brut.
+
+`penser()` se réduit à l'arbitrage, dont la ligne est **inchangée depuis la v13.0** (§7). C'est une **restructuration pure** : C2 reste sollicité à chaque tick, le comportement d'un cerveau existant est bit-identique à la v28.0.
+
+> ⚠️ Le court-circuit conditionnel (« C1 saute C2 s'il est confiant ») a été **volontairement écarté** : ce serait un déclenchement sur seuil codé en dur dans le chemin de décision, exactement de la nature de ce que §14.3 s'interdit déjà pour C3. La voie cohérente, si l'économie devient un objectif, serait d'en faire une **action apprise** comme `ACTION_DEMANDER`.
+
+### 15.4 La distillation C2 → C1 : déjà là
+
+Résultat le plus important de l'audit v29.0 : la « boucle de distillation » de la note de conception **était déjà entièrement implémentée** par le cycle de vie de `NaultheneLinearSynaptique` (§8), et le bon geste a été de ne rien réécrire.
+
+`annexe_weight` accumule le gradient diurne (C2 guide l'expérience) → `cycle_sommeil()` le consolide dans `base_weight` (C2 → C1) → la Cristallisation Souple (§8.5) fige définitivement les synapses les plus myélinisées, libérant C2. C'est le mécanisme d'apprendre à conduire : C2 consomme une énergie monstre au début, C1 conduit tout seul quelques mois plus tard.
+
+### 15.5 Rétrocompatibilité — la greffe du vecteur bio
+
+Même problème qu'en §14.6 : `DIM_VECTEUR_BIO` 16 → 24 change la **forme** de `integrateur_bio` (entrée `dim_bus+16` → `dim_bus+24`), et `load_state_dict(strict=False)` lève une `RuntimeError` sur un mismatch de forme d'une clé présente des deux côtés.
+
+Le filtre historique **excluait** la couche, qui renaissait à neuf — c'est le symptôme exact du bug v24.0-fix4 (bouche silencieuse dans l'Arène, `integrateur_bio` étant la couche qui réinjecte la quête vocale vers `tete_vocale`). `_greffer_vecteur_bio_etendu`, appelée en amont, recopie chaque buffer sur ses colonnes existantes (y compris le booléen `cristallisee`), remet `annexe_weight` à zéro et laisse les 8 nouvelles colonnes à leur initialisation Xavier atténuée — la sémantique de `agrandir()` (§8.4). Le filtre d'exclusion reste en trappe de secours pour les mismatchs qu'on ne sait pas greffer.
+
+**Règle générale du projet** : greffe par **recopie**, jamais par **exclusion**.
+
+---
+
+*Document généré à partir d'une lecture directe du code source (`agi_google_colab.py` v17, `src/naulthene/cerveau/noyau.py` jusqu'à v29.0) — voir [readme.md](../readme.md) pour la documentation narrative complète et [CLAUDE.md](../CLAUDE.md) pour les règles de maintenance du projet.*

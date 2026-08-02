@@ -4,6 +4,79 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [29.0-experimental] - 2026-08-02
+
+### Le Bus Sensoriel Multimodal & l'Identité C1/C2 explicite — les 5 sens, et une frontière nommée entre le réflexe et le néo-cortex
+
+| Type | Details |
+|------|---------|
+| **Commit** | N/A — en attente du commit de cette version |
+| **Catégorie** | feat (nouvelle mécanique cognitive majeure, expérimentale) |
+| **Impact** | Critique (architecture du réseau, persistance) |
+
+**Contexte utilisateur (voir `docs/Maj_V29_readme.md`) : trois idées à intégrer au dépôt existant sans casser ce qui fonctionne. (1) La hiérarchie des 5 sens — tous les sens ne coûtent pas le même prix en calcul, mais c'est la combinaison de leur diversité qui fait émerger une compréhension du monde ; jusqu'en v28.0 Naulthène n'avait que ses deux sens gourmands (vue, ouïe), les trois sens faibles à moyens n'existaient nulle part. (2) L'identité C1/C2 explicite — la distinction réflexe/néo-cortex existait déjà dans le code (`tete_motrice` d'un côté, `simuler_futur_et_planifier` de l'autre) mais restait implicite, entrelacée dans le corps de `penser()`. (3) La boucle de distillation C2 → C1 — qui, contrairement au reste, n'avait PAS besoin d'être écrite : elle est déjà réalisée par le cycle jour/nuit existant (`annexe_weight` → `base_weight` → Cristallisation Souple v26.0), et l'audit de cette version l'a confirmée plutôt que de la réimplémenter en double.**
+
+**Deux décisions structurantes prises par l'utilisateur à la conception :**
+- **Câblage des nouveaux sens** : `DIM_VECTEUR_BIO` passe de 16 à 24 dims — le toucher et la chimie entrent par la **queue du vecteur bio** (donc par `integrateur_bio`, juste avant la décision), **pas** par une nouvelle porte synaptique sommée dans le bus latent. Conséquence voulue : les sens faibles ne polluent jamais la cible JEPA (`perte_jepa` compare toujours le bus prédit au bus réel de la **vision seule**), et un cerveau entraîné sur 300+ jours ne voit pas son modèle du monde perturbé.
+- **Portée du refactor C1/C2** : **restructuration pure, zéro changement de comportement**. C2 continue d'être sollicité à chaque tick. L'alternative (C1 court-circuite C2 quand il est confiant) a été explicitement écartée : elle aurait introduit un déclenchement sur seuil codé en dur dans le chemin de décision — exactement de la même nature que ce que `CLAUDE.md` interdit déjà pour l'appel à C3.
+
+**1. Le Bus Sensoriel — l'Interpréteur des 5 Sens (`bus_sensoriel.py`, nouveau)**
+
+Module **pur numpy**, qui n'importe jamais `noyau.py` (même discipline que `exocortex/port_c3.py` : aucun cycle d'import, aucune dépendance au réseau). Il ne fait que traduire l'environnement en signaux normalisés. La hiérarchie de gourmandise énergétique implémentée suit exactement le document de conception :
+
+| Sens | Gourmandise | Dims | Chemin dans le cerveau | Dans la cible JEPA ? |
+|------|-------------|------|------------------------|----------------------|
+| **Vue** | Extrême | 147 | `porte_visuelle` → `bus_latent` | ✅ oui |
+| **Ouïe** | Élevée | 130 | `porte_auditive` → `bus_latent` | ✅ oui (tête séparée) |
+| **Toucher** | Moyenne | 4 | `vecteur_bio` → `integrateur_bio` | ❌ non |
+| **Odorat** | Faible | 2 | `vecteur_bio` → `integrateur_bio` | ❌ non |
+| **Goût** | Faible | 2 | `vecteur_bio` → `integrateur_bio` | ❌ non |
+
+- **Le toucher (`DIM_TOUCHER=4`)** : contact frontal (via l'API native `can_overlap()`, plus fiable qu'une liste de types codée en dur), objet en main (`carrying` — en v28.0 l'agent ne savait qu'il tenait la clé qu'indirectement, par la vue), et orientation encodée **sur le cercle** (cos, sin) plutôt qu'en entier 0-3, pour éviter la discontinuité artificielle entre les directions 3 et 0 qui sont voisines dans le monde réel.
+- **L'odorat (2 dims)** : intensité de la source de Nourriture/Eau la plus proche, décroissant linéairement sur `PORTEE_ODORAT=4` cases (distance de Manhattan, cohérente avec `DetecteurJalonsDoorKey._distance`). Réutilise la convention déjà posée par `DetecteurRessourcesBiologiques` (Ball rouge = Nourriture, Ball bleue = Eau). Portée volontairement courte : c'est un signal de survie grossier qui oriente, pas une carte — la cartographie précise reste le travail de la vue et de `MemoireEpisodiqueSpatiale`.
+- **Le goût (2 dims)** : trace **rémanente** de la dernière ressource réellement consommée, décroissant à `DECROISSANCE_GOUT=0.85`/tick (~10 ticks de persistance). C'est le seul état inter-tick du bus, remis à zéro à chaque épisode — un goût est une sensation immédiate liée à une bouchée, pas un état vital continu comme les jauges du `BiologicalHomeostasisEngine`.
+- **Dégradation** : identique aux détecteurs génériques §3b — `_MINIGRID_OK` faux ou toute exception d'API désactive le bus définitivement après **un** avertissement et renvoie des zéros. Jamais de crash, jamais de changement du chemin de gradient.
+
+**2. L'identité C1/C2 explicite (`noyau.py` §2, renommée)**
+
+La section 2 devient « LE CERVEAU C1 (RÉFLEXE) & C2 (NÉO-CORTEX) ». Le corps de `penser()` est désormais l'**arbitrage seul**, et la frontière est encapsulée dans deux méthodes nommées :
+
+- **`_executer_c1_reflexe()`** — tout ce qui coûte quasi rien : compression du flux des 5 sens (`_tronc_cerebral` pour les deux sens gourmands, queue du `vecteur_bio` pour les trois autres), contexte épisodique, intégration viscérale, et le réflexe moteur immédiat (`tete_motrice`) en latence zéro.
+- **`_solliciter_c2_neocortex()`** — le moteur analytique lourd (`simuler_futur_et_planifier` + JEPA). Il ne reçoit **que** `pensee_bio`, l'état déjà compressé par C1 : jamais les pixels, jamais le MFCC brut, jamais l'environnement — exactement le schéma de `Maj_V29_readme.md`.
+
+La fusion `logits_instinct + valeurs_simulees * force_planification` reste **strictement inchangée** depuis la v13.0.
+
+**3. La distillation C2 → C1 : auditée, pas réimplémentée**
+
+Le document de conception présente la distillation comme « la pièce maîtresse ». L'audit de cette version confirme qu'elle est **déjà entièrement réalisée** par le cycle de vie existant de `NaultheneLinearSynaptique` : `annexe_weight` accumule le gradient diurne (C2 guide l'expérience) → `cycle_sommeil()` le consolide dans `base_weight` (C2 → C1) → la Cristallisation Souple (v26.0) fige définitivement les synapses les plus myélinisées. Aucun code ajouté ; la boucle est documentée dans `readme.md` plutôt que dupliquée.
+
+**4. Rétrocompatibilité des `.brain` — greffe par recopie, jamais par exclusion**
+
+`DIM_VECTEUR_BIO` 16 → 24 change la **forme** de `integrateur_bio` (entrée `dim_bus + 16` → `dim_bus + 24`). Le filtre historique de `charger_ou_naitre` traitait ce cas en **excluant** la couche, qui renaissait à neuf — c'est le symptôme exact du bug v24.0-fix4 (bouche silencieuse dans l'Arène). Inacceptable sur un `.brain` portant 1000 jours de vécu.
+
+Nouvelle fonction `_greffer_vecteur_bio_etendu`, appelée **en amont** du filtre : les `dim_bus + 16` premières colonnes gardent leurs poids appris, les 8 dernières conservent leur initialisation Xavier atténuée (même sémantique que `NaultheneLinearSynaptique.agrandir()`). L'agent se réveille avec tous ses acquis et découvre simplement qu'il a désormais un toucher, un odorat et un goût, encore muets. Le filtre d'exclusion reste en place derrière, comme trappe de secours pour tout autre mismatch qu'on ne sait pas greffer.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/bus_sensoriel.py` | **Nouveau.** `BusSensoriel` (toucher, odorat, goût), constantes `DIM_TOUCHER`/`DIM_CHIMIE`/`PORTEE_ODORAT`/`DECROISSANCE_GOUT`, et `hierarchie_sensorielle()` (description déclarative des 5 sens, lecture seule, pour la doc/télémétrie). Pur numpy, aucun import de `noyau`. |
+| `src/naulthene/cerveau/noyau.py` | Version 28 → 29. §2 renommée « LE CERVEAU C1 (RÉFLEXE) & C2 (NÉO-CORTEX) » + note de restructuration. Ajout de `_executer_c1_reflexe()` et `_solliciter_c2_neocortex()` ; `penser()` réduit à l'arbitrage. `DIM_VECTEUR_BIO` 16 → 24. `obtenir_vecteur_bio(..., signaux_sensoriels=None)`. `EtatCognitif.bus_sensoriel`, lecture des sens dans `traiter_tick` avant `penser()`, signal de goût sur consommation FOOD/WATER, reset de la trace de goût aux 2 sites de fin d'épisode. |
+| `src/naulthene/cerveau/persistance.py` | Nouvelle `_greffer_vecteur_bio_etendu()` (recopie partielle de `integrateur_bio`, 16 → 24 dims bio), câblée en amont du filtre d'exclusion existant, qui devient une trappe de secours. Import de `DIM_VECTEUR_BIO`. |
+| `docs/EXPLICATIONS_v29_sens.md` | **Nouveau.** Document explicatif dédié en 11 sections : le problème résolu, la hiérarchie des 5 sens, le détail du Bus Sensoriel (formules du toucher/odorat/goût), pourquoi les sens faibles restent hors de la cible JEPA, l'identité C1/C2, la boucle de distillation (avec table de correspondance note de conception ↔ code existant), JEPA comme Intuition globale, la greffe des `.brain`, les 2 options **volontairement écartées** et pourquoi, la table des 13 validations, le glossaire des constantes. |
+| `docs/explications_readme.md` | Nouvelle §15 (résumé algorithmique en 5 sous-sections, renvoi vers le document dédié) + entrée dans la table des matières + pied de page mis à jour (v28.0 → v29.0). |
+| `docs/LANCEMENT.md` | En-tête V21-V28 → V21-V29 + encadré « rien à configurer ». Note de greffe `👃` en §1. Nouvelle **§9** (observer les 5 sens en direct, vérifier la hiérarchie, tester la greffe sur une copie de `.brain`, ce que la v29.0 ne change pas). 4 nouvelles lignes de dépannage. |
+| `readme.md` | Section « Nouveautés v29.0 » + entrée `3s.` dans la table des matières + diagramme d'architecture cognitico-biologique refait (les 5 sens en entrée, blocs C1/C2 nommés, flèche de distillation) + 3 nouvelles sous-sections d'architecture (Bus Sensoriel & hiérarchie, JEPA comme Intuition, boucle de distillation). |
+| `CLAUDE.md` | `bus_sensoriel.py` et `EXPLICATIONS_v29_sens.md` ajoutés à l'arborescence ; §2 renommée « C1 (Réflexe) & C2 (Néo-Cortex) » ; 2 puces d'aperçu (C1/C2 nommés, Bus Sensoriel) ; **3 nouveaux garde-fous** dans *Before Modifying Code* (invariants du Bus Sensoriel/vecteur bio, frontière C1/C2 sans court-circuit, greffe par recopie jamais par exclusion) ; version expérimentale de référence 28.0 → 29.0. |
+
+**Validation** (aucun test automatisé dans ce projet — vérifications manuelles exécutées avant livraison) :
+- `DIM_VECTEUR_BIO = 24`, `integrateur_bio` en `(16, 40)` sur un cerveau neuf ; `penser()` renvoie 8 logits, `ACTION_DEMANDER` toujours masquée à `-inf` sans plug (**invariant v28.0 préservé**).
+- **Greffe d'un `.brain` simulé pré-v29.0** : les 32 premières colonnes recopiées **bit à bit** (`torch.equal` = True) sur tous les buffers (y compris `cristallisee`, booléen), `annexe_weight` remis à zéro, 8 nouvelles colonnes non nulles ; `load_state_dict` sans clé manquante ni inattendue. Un `.brain` déjà v29.0 traverse la fonction **sans modification**.
+- **400 ticks** consécutifs sur `MiniGrid-DoorKey-5x5-v0` : signaux sensoriels cohérents (contact frontal = 1.0 face à un mur, odorat = 0.25 pour une source d'eau à 3 cases, goût décroissant de 1.0 → 0.142 en 12 ticks).
+- **Nuit complète** puis **neurogenèse** : `integrateur_bio` passe de `(16, 40)` à `(32, 56)` — le segment bio reste fixe à 24 dims pendant que `dim_bus` double (**invariant `segments_in` respecté**) ; 60 ticks post-neurogenèse OK.
+- **Round-trip complet** `PersistanceAnatomique.sauvegarder()` → `charger_ou_naitre()` : `integrateur_bio` identique (`torch.equal` = True), 30 ticks après résurrection OK.
+- Chemins **`mode_perception="vocal_isole"`** (sans env MiniGrid, 8 nouvelles dims neutres) et **MiniGrid + audio** testés ; tous les modules de la Cuve, des salles de classe et des instruments importent sans erreur.
+
+---
+
 ## [28.0-docs2] - 2026-07-30
 
 ### Parcourt_readme.md déplacé de la racine vers docs/

@@ -30,7 +30,7 @@ import torch
 from naulthene.cerveau.noyau import (
     AGI_Naulthene, EtatCognitif, DIM_VISUELLE, BUS_REFERENCE_INITIAL,
     PROGRAMME, DEVICE, creer_env, DetecteurJalonsDoorKey, GestionnaireCursusAbnegation,
-    NUM_ACTIONS_BASE, NUM_ACTIONS_AVEC_C3,
+    NUM_ACTIONS_BASE, NUM_ACTIONS_AVEC_C3, DIM_VECTEUR_BIO,
 )
 
 
@@ -108,6 +108,73 @@ def _greffer_action_supplementaire(state_dict, agent):
         del resultat['actions_eye']
 
     return resultat
+
+
+def _greffer_vecteur_bio_etendu(state_dict, agent):
+    """v29.0 (expérimental) — Greffe des 3 sens faibles à moyens (toucher, odorat, goût)
+    sur `integrateur_bio`, par RECOPIE PARTIELLE plutôt que par exclusion.
+
+    `DIM_VECTEUR_BIO` passe de 16 à 24 dims (voir noyau.py) : l'entrée de `integrateur_bio`
+    passe donc de `dim_bus + 16` à `dim_bus + 24` colonnes. Le filtre historique de
+    `charger_ou_naitre` traitait ce cas en EXCLUANT la couche — elle renaissait à neuf,
+    perdant tout l'apprentissage de l'intégration viscérale et vocale accumulé (le même
+    symptôme exact que le bug v24.0-fix4 documenté plus bas : bouche silencieuse dans
+    l'Arène). Inacceptable ici, où un `.brain` peut porter 1000 jours de vécu.
+
+    La concaténation d'entrée est `[pensee(dim_bus), vecteur_bio(DIM_VECTEUR_BIO)]` (voir
+    `AGI_Naulthene.integrer_bio`), et les 8 nouvelles dims sont ajoutées EN QUEUE du
+    vecteur bio (contrat posé par `BiologicalHomeostasisEngine.obtenir_vecteur_bio` et
+    `bus_sensoriel.BusSensoriel.interpreter`). La recopie est donc directe : les
+    `dim_bus + 16` premières colonnes gardent leurs poids appris, les 8 dernières
+    conservent leur initialisation Xavier atténuée — exactement la sémantique de
+    `NaultheneLinearSynaptique.agrandir()`. L'agent se réveille avec tous ses acquis et
+    découvre simplement qu'il a désormais un toucher, un odorat et un goût, encore muets.
+
+    Un `.brain` déjà à 24 dims (sauvegardé depuis la v29.0) traverse cette fonction sans
+    aucune modification. Un `.brain` dont la largeur est INFÉRIEURE à celle attendue mais
+    incohérente avec `dim_bus + 16` (cas jamais produit par une version réelle du projet)
+    est laissé tel quel, pour retomber sur le filtre d'exclusion existant plutôt que de
+    recopier des poids à un offset faux."""
+    prefixe = "integrateur_bio."
+    ancien_base = state_dict.get(f"{prefixe}base_weight")
+    if ancien_base is None:
+        return state_dict, False
+
+    forme_attendue = agent.integrateur_bio.base_weight.shape
+    if tuple(ancien_base.shape) == tuple(forme_attendue):
+        return state_dict, False  # déjà à la bonne taille, rien à faire
+
+    # Largeur d'entrée réellement portée par le checkpoint, et celle attendue. On ne
+    # greffe QUE le cas "même dim_bus, vecteur bio plus court" — tout autre écart
+    # (dim_bus différent, largeur incohérente) reste géré par le filtre d'exclusion.
+    largeur_checkpoint = int(ancien_base.shape[1])
+    largeur_attendue = int(forme_attendue[1])
+    dim_bus_attendue = largeur_attendue - DIM_VECTEUR_BIO
+    if ancien_base.shape[0] != forme_attendue[0] or largeur_checkpoint >= largeur_attendue:
+        return state_dict, False
+    if largeur_checkpoint <= dim_bus_attendue:
+        return state_dict, False  # pas de segment bio identifiable, on ne devine pas
+
+    resultat = dict(state_dict)
+    couche_agent = agent.integrateur_bio
+    for nom_buffer in _BUFFERS_NAULTHENE_LINEAR:
+        cle = f"{prefixe}{nom_buffer}"
+        ancien = state_dict.get(cle)
+        if ancien is None:
+            continue
+        nouveau = getattr(couche_agent, nom_buffer).detach().clone()
+        if nom_buffer == 'annexe_weight':
+            # Même raison que dans _greffer_action_supplementaire : l'annexe n'a de sens
+            # que pour la journée en cours, cycle_sommeil la remet à zéro chaque nuit.
+            nouveau.zero_()
+        else:
+            nouveau[:, :largeur_checkpoint] = ancien
+        resultat[cle] = nouveau
+
+    nb_nouvelles = largeur_attendue - largeur_checkpoint
+    print(f"   👃 integrateur_bio greffé de {largeur_checkpoint} à {largeur_attendue} dims d'entrée "
+          f"(+{nb_nouvelles} : toucher/odorat/goût, Bus Sensoriel v29.0) — acquis existants préservés.")
+    return resultat, True
 
 
 class PersistanceAnatomique:
@@ -242,19 +309,29 @@ class PersistanceAnatomique:
         # Correctif : ne filtrer QUE si la forme réelle du checkpoint diffère de la
         # forme attendue par l'agent fraîchement recréé (dim_bus+DIM_VECTEUR_BIO en
         # entrée) — un .brain déjà à la bonne taille charge intégralement, sans perte.
-        forme_integrateur_checkpoint = checkpoint['state_dict'].get('integrateur_bio.base_weight')
+        #
+        # v29.0 (expérimental) — DIM_VECTEUR_BIO passe de 16 à 24 (ajout du toucher, de
+        # l'odorat et du goût, voir bus_sensoriel.py). Ce cas est désormais traité EN
+        # AMONT du filtre d'exclusion ci-dessous, par recopie partielle
+        # (_greffer_vecteur_bio_etendu) : un .brain pré-v29.0 conserve intégralement son
+        # intégration viscérale/vocale apprise, au lieu de la perdre comme le ferait
+        # l'exclusion. Le filtre reste en place derrière, comme trappe de secours pour
+        # tout autre mismatch de forme (ex. dim_bus incohérent) qu'on ne sait pas greffer.
+        state_dict_prepare, bio_greffe = _greffer_vecteur_bio_etendu(checkpoint['state_dict'], agent)
+
+        forme_integrateur_checkpoint = state_dict_prepare.get('integrateur_bio.base_weight')
         forme_integrateur_attendue = agent.integrateur_bio.base_weight.shape
         integrateur_bio_incompatible = (
             forme_integrateur_checkpoint is not None
             and forme_integrateur_checkpoint.shape != forme_integrateur_attendue
         )
         if integrateur_bio_incompatible:
-            cles_a_exclure = {k for k in checkpoint['state_dict'] if k.startswith('integrateur_bio.')}
-            state_dict_filtre = {k: v for k, v in checkpoint['state_dict'].items() if k not in cles_a_exclure}
+            cles_a_exclure = {k for k in state_dict_prepare if k.startswith('integrateur_bio.')}
+            state_dict_filtre = {k: v for k, v in state_dict_prepare.items() if k not in cles_a_exclure}
             print(f"   🔄 integrateur_bio exclu du chargement (forme {tuple(forme_integrateur_checkpoint.shape)} "
                   f"incompatible avec {tuple(forme_integrateur_attendue)} attendu) — cette couche renaît à neuf.")
         else:
-            state_dict_filtre = checkpoint['state_dict']
+            state_dict_filtre = state_dict_prepare
 
         # v28.0 (expérimental) — Greffe de la 8ème action (ACTION_DEMANDER, Port
         # Exocortex C3) par RECOPIE PARTIELLE, PAS par exclusion. Contrairement au

@@ -19,6 +19,7 @@ Il intègre la structure de table des matières globale (avec le contexte applic
 2. [Journal des Mises à Jour (Changelog)](https://www.google.com/search?q=%23journal-des-mises-%C3%A0-jour)
 3. [Plan d'Action](https://www.google.com/search?q=%23plan-daction)
 3t. **[Parcourt_readme.md — Guide Complet du Système de Cursus](docs/Parcourt_readme.md)** (commandes de lancement, jours/ticks par parcours, détail des paliers, FAQ)
+3s. [Nouveautés v29.0 (expérimental) — Le Bus Sensoriel Multimodal & l'Identité C1/C2](#nouveautés-v290-expérimental--le-bus-sensoriel-multimodal--lidentité-c1c2-explicite-2026-08-02)
 3u. [Nouveautés v28.0 (expérimental) — La Cascade C1→C2→C3 & le Port Exocortex](#nouveautés-v280-expérimental--la-cascade-c1c2c3--le-port-exocortex-2026-07-30)
 3v. [Nouveautés v27.6 (expérimental) — L'École de la Parole & Synesthésie](#nouveautés-v276-expérimental--lécole-de-la-parole--synesthésie-2026-07-2728)
 3w. [Nouveautés v26.0 (expérimental) — L'Arène augmentée (mini-IRM + télémétrie complète)](#nouveautés-v260-expérimental--larène-augmentée-mini-irm--télémétrie-complète-2026-07-27)
@@ -88,6 +89,36 @@ la Parole, la Cuve).
 ## 📜 Journal des Mises à Jour
 
 Pour un historique complet commit par commit, consultez [CHANGELOG.md](https://www.google.com/search?q=CHANGELOG.md).
+
+### Nouveautés v29.0 (expérimental) — Le Bus Sensoriel Multimodal & l'Identité C1/C2 explicite (2026-08-02)
+
+> ⚠️ **Statut expérimental** : vit dans `src/naulthene/cerveau/noyau.py` (gitignored, terrain d'essai local), le nouveau module **versionné** `src/naulthene/cerveau/bus_sensoriel.py` et `src/naulthene/cerveau/persistance.py`, pas encore porté sur `agi_google_colab.py`.
+
+Trois chantiers issus de [docs/Maj_V29_readme.md](docs/Maj_V29_readme.md) : donner à Naulthène **les cinq sens** au lieu de deux, **nommer explicitement** la frontière C1/C2 déjà présente dans le code, et **auditer** la boucle de distillation C2 → C1 — qui, elle, n'avait pas besoin d'être écrite.
+
+* **La hiérarchie des 5 sens, et son coût.** Tous les sens ne se valent pas en gourmandise énergétique, mais c'est la **combinaison de leur diversité** qui fait émerger une compréhension du monde. Jusqu'en v28.0, l'agent n'avait que ses deux sens gourmands — la vue (`porte_visuelle`, 147 dims) et l'ouïe (`porte_auditive`, 130 dims MFCC), chacun avec sa porte synaptique dédiée. Le nouveau module `bus_sensoriel.py` ajoute les trois sens manquants, qui sont justement les moins coûteux à calculer et les plus directement liés à la survie :
+
+  | Sens | Gourmandise | Dims | Chemin dans le cerveau | Dans la cible JEPA ? |
+  |------|-------------|------|------------------------|----------------------|
+  | **Vue** | Extrême | 147 | `porte_visuelle` → `bus_latent` | ✅ oui |
+  | **Ouïe** | Élevée | 130 | `porte_auditive` → `bus_latent` | ✅ oui (tête séparée) |
+  | **Toucher** | Moyenne | 4 | `vecteur_bio` → `integrateur_bio` | ❌ non |
+  | **Odorat** | Faible | 2 | `vecteur_bio` → `integrateur_bio` | ❌ non |
+  | **Goût** | Faible | 2 | `vecteur_bio` → `integrateur_bio` | ❌ non |
+
+* **Le toucher, l'odorat, le goût.** Le **toucher** donne le contact frontal (via l'API MiniGrid native `can_overlap()`), l'objet en main (`carrying` — en v28.0 l'agent ne savait qu'il tenait la clé qu'indirectement, par la vue) et l'orientation encodée **sur le cercle** (cos/sin) plutôt qu'en entier 0-3, pour supprimer la discontinuité artificielle entre les directions 3 et 0, voisines dans le monde réel. L'**odorat** perçoit la source de Nourriture/Eau la plus proche, décroissant sur 4 cases — un signal de survie grossier qui *oriente* avant même de voir, pas une carte : la cartographie précise reste le travail de la vue et de la mémoire spatiale. Le **goût** est une trace **rémanente** (~10 ticks) de la dernière ressource réellement ingérée, remise à zéro à chaque épisode.
+
+* **Décision structurante : les sens faibles n'entrent pas dans le bus latent.** Le toucher et la chimie passent par la **queue du `vecteur_bio`** (`DIM_VECTEUR_BIO` 16 → 24), donc par `integrateur_bio`, juste avant la décision — et **jamais** par une porte sommée dans `bus_latent`. Conséquence voulue : ils ne polluent jamais la cible JEPA (`perte_jepa` compare toujours le bus prédit au bus réel de la **vision seule**), et un cerveau entraîné sur des centaines de jours ne voit pas son modèle du monde perturbé par trois nouveaux canaux bruités.
+
+* **L'identité C1/C2, enfin nommée.** La distinction existait déjà (`tete_motrice` d'un côté, `simuler_futur_et_planifier` de l'autre) mais restait implicite, entrelacée dans le corps de `penser()`. Elle est désormais encapsulée dans deux méthodes explicites : **`_executer_c1_reflexe()`** (compression des 5 sens, contexte épisodique, intégration viscérale, réflexe moteur en latence zéro) et **`_solliciter_c2_neocortex()`** (le moteur analytique lourd, JEPA + simulation mentale), qui ne reçoit **que** l'état déjà compressé par C1 — jamais les pixels, jamais le MFCC brut. `penser()` se réduit à l'arbitrage.
+
+* **Restructuration pure, zéro changement de comportement** (décision utilisateur explicite). C2 continue d'être sollicité à chaque tick. L'alternative — C1 court-circuite C2 quand il est confiant, pour une vraie économie d'énergie — a été **écartée volontairement** : elle aurait introduit un déclenchement sur seuil codé en dur dans le chemin de décision, exactement de la même nature que ce que le projet s'interdit déjà pour l'appel à C3.
+
+* **La distillation C2 → C1 : auditée, pas réimplémentée.** Le document de conception la présente comme la pièce maîtresse. L'audit confirme qu'elle est **déjà entièrement réalisée** par le cycle jour/nuit existant : `annexe_weight` accumule le gradient diurne (C2 guide l'expérience) → `cycle_sommeil()` le consolide dans `base_weight` (C2 → C1) → la Cristallisation Souple (v26.0) fige définitivement les synapses les plus myélinisées, libérant C2 pour de futurs apprentissages. Aucun code ajouté — la boucle est documentée plutôt que dupliquée.
+
+* **La rétrocompatibilité des `.brain`**, principal risque technique de cette version. Étendre le vecteur bio change la **forme** de `integrateur_bio` ; le filtre historique traitait ce cas en *excluant* la couche, qui renaissait à neuf — le symptôme exact du bug v24.0-fix4 (bouche silencieuse dans l'Arène). Une greffe par **recopie partielle** (`_greffer_vecteur_bio_etendu`) préserve désormais au bit près toute l'intégration viscérale et vocale déjà apprise, les 8 nouvelles dimensions naissant à une initialisation atténuée. L'agent se réveille avec tous ses acquis et découvre simplement qu'il a désormais un toucher, un odorat et un goût — encore muets.
+
+📖 **Documentation dédiée** : **[docs/EXPLICATIONS_v29_sens.md](docs/EXPLICATIONS_v29_sens.md)** — le document explicatif complet de cette version (formules, schémas, table des 13 validations, options écartées et pourquoi, glossaire des constantes). Voir aussi [docs/CHANGELOG.md](docs/CHANGELOG.md) (entrée v29.0-experimental) pour le détail commit par commit, [docs/explications_readme.md](docs/explications_readme.md) §15 pour le résumé algorithmique, et [docs/LANCEMENT.md](docs/LANCEMENT.md) §9 pour observer les 5 sens en direct.
 
 ### Nouveautés v28.0 (expérimental) — La Cascade C1→C2→C3 & le Port Exocortex (2026-07-30)
 
@@ -302,26 +333,42 @@ Retrouvez le plan de développement stratégique complet dans [plan_creat.md](ht
 
 ## 🧠 Architecture Cognitico-Biologique Complète
 
-L'agent **Naulthène** repose sur deux systèmes interconnectés, orchestrés par une régulation neurobiologique.
+L'agent **Naulthène** repose sur deux systèmes interconnectés — **C1** (le cerveau automatique et réflexe) et **C2** (le néo-cortex analytique) — orchestrés par une régulation neurobiologique, et alimentés depuis la v29.0 par les **cinq sens**.
 
 ```
-                  +-----------------------------------+
-                  |  Perception (Grille / MiniGrid)   |
-                  +-----------------+-----------------+
-                                    |
-                                    v
-                     +--------------+--------------+
-                     |   JEPA (World Model)        |
-                     | Representation & Prediction |
-                     +--------------+--------------+
-                                    |
+   LES 5 SENS (v29.0)          gourmandise      entrée dans le cerveau
+   ┌───────────────────────────────────────────────────────────────┐
+   │ 👁  Vue      (147 dims)     extrême    →  porte_visuelle   ┐   │
+   │ 👂 Ouïe     (130 MFCC)     élevée     →  porte_auditive   ├─► bus_latent
+   │ ✋ Toucher  (4 dims)       moyenne    →  vecteur_bio  ┐   ┘   │
+   │ 👃 Odorat   (2 dims)       faible     →  vecteur_bio  ├─► integrateur_bio
+   │ 👅 Goût     (2 dims)       faible     →  vecteur_bio  ┘       │
+   └───────────────────────────────┬───────────────────────────────┘
+                                   v
+        ┌──────────────────────────────────────────────────────────┐
+        │ C1 — LE CERVEAU AUTOMATIQUE & RÉFLEXE   (léger, ~0 coût)  │
+        │  • Compresse les 5 sens en un latent compact (bus_latent) │
+        │  • Chimie & émotions : dopamine, homéostasie biologique   │
+        │  • Réflexe moteur immédiat (tete_motrice), latence zéro   │
+        │  • Mémoire distillée : base_weight de chaque synapse      │
+        └───────────┬──────────────────────────────────▲───────────┘
+                    │ état DÉJÀ COMPRESSÉ              │ distillation
+                    │ (jamais les pixels bruts)        │ C2 ──► C1
+                    v                                  │ (chaque nuit)
+        ┌───────────┴──────────────────────────────────┴───────────┐
+        │ C2 — LE NÉO-CORTEX                     (lourd, coûteux)   │
+        │  • JEPA / modèle du monde : prédit Z(t+1) — l'Intuition   │
+        │  • Simulation mentale multi-échelle (sauts t+1, t+3, t+7) │
+        │  • Mémoire épisodique spatiale (où / quand / quoi)        │
+        └───────────────────────────┬──────────────────────────────┘
+                                    │
             +-----------------------+-----------------------+
             |                                               |
             v                                               v
 +-----------+-----------+                       +-----------+-----------+
 |   SYSTÈME 1 (Instinct)|                       |   SYSTÈME 2 (Raison)  |
 |  Policy Network (RL)  |                       | Rollout Multi-Échelle |
-|                       |                       |   (Sauts t+1,t+3,t+7) |
+|   = la tête de C1     |                       |   (Sauts t+1,t+3,t+7) |
 +-----------+-----------+                       +-----------+-----------+
             |                                               |
             +-----------------------+-----------------------+
@@ -356,6 +403,47 @@ Plutôt qu'une chaîne stricte pas-à-pas $t+1 \to t+2 \to t+3$, l'agent simule 
 * **Horizon $t+1$** : Branching sur l'ensemble des 7 actions réelles — c'est la décision évaluée maintenant.
 * **Horizons suivants ($t+3$, $t+7$)** : Le rollout comble l'écart de ticks avec l'horizon précédent en suivant le propre réflexe du réseau (argmax de la tête motrice, sans ré-instancier de nouvelles branches à chaque niveau), maintenant une complexité algorithmique linéaire $O(7 \times \sum \text{écarts})$ — jamais l'explosion combinatoire $7^N$ d'un rollout pas-à-pas branché à chaque étage.
 * **Évaluation** : La valeur du futur imaginé est une somme actualisée ($\gamma^{\text{horizon}}$) des prédictions de récompenses du JEPA évaluées à *chaque* horizon — un chemin qui traverse un bon état à $t+3$ compte, même si $t+7$ reste incertain. Cela donne au Système 2 une vision de tendance à moyen terme (utile sur les longs couloirs de MultiRoom/Doctorat) sans calculer chaque micro-état intermédiaire.
+
+### 3. Le Bus Sensoriel & la hiérarchie des 5 sens (depuis v29.0, expérimental)
+
+Chaque sens est capté puis traduit en signal électrique unifié par un **interpréteur** (`src/naulthene/cerveau/bus_sensoriel.py`), mais tous ne coûtent pas le même prix — et c'est la **combinaison de leur diversité** qui fait émerger une compréhension du monde plutôt qu'une simple co-occurrence de signaux :
+
+| Sens | Gourmandise | Rôle cognitif & vital | Chemin dans le cerveau |
+| --- | --- | --- | --- |
+| **Vue** (147 dims) | **Extrême** (bande passante massive) | Cartographie spatiale, géométrie, prédiction d'objets | `porte_visuelle` → `bus_latent`, moteur principal du JEPA |
+| **Ouïe** (130 MFCC) | **Élevée** (traitement temporel & séquentiel) | Analyse du danger, langage, communication | `porte_auditive` → `bus_latent`, JEPA audio à tête séparée |
+| **Toucher** (4 dims) | **Moyenne** (retour de force) | Proprioception, contact immédiat, objet en main | queue du `vecteur_bio` → `integrateur_bio` |
+| **Odorat** (2 dims) | **Faible** (analyse chimique à distance) | Détection de ressource avant même de la voir | queue du `vecteur_bio` → `integrateur_bio` |
+| **Goût** (2 dims) | **Faible** (analyse chimique de contact) | Validation des ressources ingérées (rémanence ~10 ticks) | queue du `vecteur_bio` → `integrateur_bio` |
+
+> **Pourquoi les sens faibles n'entrent pas dans le bus latent** : seuls la vue et l'ouïe ont une porte synaptique sommée dans `bus_latent`, donc une place dans la **cible JEPA**. Le toucher et la chimie arrivent par la queue du `vecteur_bio`, juste avant la décision. C'est ce qui garantit qu'ajouter trois canaux bruités ne perturbe jamais le modèle du monde d'un cerveau déjà entraîné sur des centaines de jours — `perte_jepa` continue de comparer le bus prédit au bus réel de la **vision seule**.
+
+### 4. JEPA : de l'outil visuel à l'Intuition globale
+
+JEPA n'est pas seulement un filtre pour la vue, c'est **l'architecture de l'Intuition**. Pour la vue, il prédit à quoi ressemblera l'espace latent de la scène suivante sans calculer chaque pixel — c'est la physique de l'environnement. Au niveau global, c'est la capacité du système à anticiper *« ce qui devrait arriver »* dans l'espace compressé où tous les sens se rejoignent. Et quand la perception ne correspond pas à la prédiction, le système ressent une **surprise** (erreur JEPA) : elle nourrit la stimulation du moteur homéostatique, déclenche une sous-quête de curiosité (`DetecteurCuriositeJEPA`) et alimente le thermostat de neurogenèse.
+
+### 5. La boucle de distillation $C2 \to C1$ (l'apprentissage par le sommeil)
+
+C'est la pièce maîtresse du système — et elle **n'a pas eu besoin d'être ajoutée en v29.0** : elle était déjà entièrement réalisée par le cycle de vie de `NaultheneLinearSynaptique`. C'est exactement le mécanisme d'apprendre à conduire : au début C2 consomme une énergie monstre à chaque geste ; quelques mois plus tard C1 conduit sans qu'on ait à y penser.
+
+```
+          [ EXPÉRIENCE DIURNE — C2 aux commandes ]
+          • Actions complexes guidées par la planification / JEPA
+          • Le gradient du jour s'accumule dans annexe_weight
+                                 │
+                                 ▼
+          [ CONSOLIDATION NOCTURNE — le Rêve ]
+          1. Rejeu des souvenirs à haute importance (rêve adaptatif)
+          2. Transfert : base_weight += annexe_weight    (C2 ──► C1)
+          3. Érosion sélective + Cristallisation Souple (v26.0)
+                                 │
+                                 ▼
+          [ RÉFLEXE ANCRÉ DANS C1 ]
+          • La fois suivante, C1 exécute via base_weight, quasi gratuitement
+          • C2 est libéré pour de NOUVEAUX apprentissages
+```
+
+Les synapses sollicitées de façon répétée par C2 voient leur trace de myéline se consolider jusqu'à être **définitivement figées** dans `base_weight` par la Cristallisation Souple — le geste devient un réflexe, et le néo-cortex n'a plus à être dérangé pour lui.
 
 ---
 
