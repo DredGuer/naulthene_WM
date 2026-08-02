@@ -840,25 +840,26 @@ l'**intensité** qui compte désormais, pas la simple présence d'une trace.
 
 ## 11. Lire les métriques de calibrage (v30.1) — mémoire & sursaut
 
-Deux constantes du projet sont encore arbitraires : `capacite_max = 200` (mémoire épisodique) et
-`EXTENSION_PATIENCE_SURSAUT = 50` (Sursaut de Volonté). La v30.1 ne les change pas — elle les rend
-**mesurables**, pour pouvoir les rendre adaptatives ensuite **sur données réelles** plutôt qu'à
-l'intuition.
+La v30.1 a rendu **mesurables** deux constantes arbitraires. La **v31.0 en a corrigé une** :
+`capacite_max` est désormais proportionnelle (`dim_bus × 12 × (1 + déficit_bio)`, voir §12).
+`EXTENSION_PATIENCE_SURSAUT = 50` reste fixe, en attente des courbes `Sursaut_*`.
 
 ### 11a. La mémoire épisodique est-elle limitée par sa capacité ?
 
 Le bilan de nuit affiche désormais :
 
 ```
-├─ Mémoire Épiso. : 🗺️ 200/200 souvenir(s) spatial(aux) ⚠️ SATURÉE — rappel 65% des tentatives (proximité moy 0.27)
+├─ Mémoire Épiso. : 🗺️ 200/1152 souvenir(s) spatial(aux) — rappel 65% des tentatives (proximité moy 0.27) [cap. 96×12 adaptée]
 ```
+
+Depuis la v31.0, le dénominateur **bouge d'une nuit à l'autre** (il suit `dim_bus` et le déficit
+bio) — d'où le suffixe `[cap. N×12 adaptée]` qui rappelle son origine.
 
 | Ce que tu observes | Interprétation |
 |---|---|
-| `⚠️ SATURÉE` **et** proximité qui **baisse** dans le temps | La capacité limite vraiment → une capacité adaptative aurait du sens |
-| `⚠️ SATURÉE` mais proximité **stable/haute** | La FIFO jette des souvenirs **inutiles** → augmenter la capacité ne servirait à rien |
-| Jamais saturée | La question ne se pose pas sur ce parcours |
-| `Memoire_Age_Plus_Vieux_Souvenir` qui **s'effondre** | La mémoire ne remonte plus assez loin dans le temps → vrai signal de sous-capacité |
+| `⚠️ SATURÉE` malgré la capacité adaptative | Anormal depuis la v31.0 sauf débit d'événements très élevé — vérifier `Memoire_Capacite_Courante` |
+| Proximité qui **baisse** dans le temps | La mémoire se remplit de souvenirs lointains → surveiller, mais la capacité n'est plus le facteur limitant |
+| `Memoire_Age_Plus_Vieux_Souvenir` qui **s'effondre** | La mémoire ne remonte plus assez loin → avec la capacité adaptative, signalerait un débit anormal plutôt qu'un manque de place |
 
 Courbes W&B : `Memoire_Taux_Saturation`, `Memoire_Taux_Rappel_Reussi`,
 `Memoire_Proximite_Moyenne`, `Memoire_Fraicheur_Moyenne`, `Memoire_Age_Plus_Vieux_Souvenir`.
@@ -890,6 +891,55 @@ Aucune formule adaptative n'est écrite. `capacite_max` vaut toujours 200, l'ext
 toujours 50 ticks. **Le comportement de l'agent est strictement inchangé** — vérifié par empreinte
 de la séquence d'actions à graine fixée, identique avant/après. Cette version ne fait que rendre
 observable ce qui devra être calibré.
+
+---
+
+## 12. La Mémoire Proportionnelle & le Rêve (v31.0-expérimental)
+
+✅ **Rien à configurer** — les deux mécaniques s'appliquent automatiquement, une fois par nuit.
+
+### 12a. Une capacité mnésique qui suit le cerveau
+
+`capacite_max = 200` était une constante arbitraire. Elle est désormais **proportionnelle** :
+
+```
+capacité = dim_bus × 12 × (1 + déficit_bio)      (plancher : 200)
+```
+
+| `dim_bus` | agent repu | agent épuisé |
+|---|---|---|
+| 16 (naissance) | **200** | 384 |
+| 48 | 576 | 1152 |
+| 96 | 1152 | 2304 |
+
+Deux facteurs : le **substrat neural** (un cerveau qui a grandi par neurogenèse retient plus) et
+le **besoin** (un agent affamé a un usage réel du souvenir des ressources). À la naissance, la
+valeur est exactement 200 — aucune rupture avec les runs antérieurs.
+
+La ligne de bilan affiche l'origine de la capacité :
+
+```
+├─ Mémoire Épiso. : 🗺️ 200/1152 souvenir(s) spatial(aux) — rappel 65% ... [cap. 96×12 adaptée]
+```
+
+Courbe W&B : `Memoire_Capacite_Courante` (le dénominateur bouge d'une nuit à l'autre — en tenir
+compte pour relire `Memoire_Taux_Saturation`).
+
+### 12b. Pourquoi le rêve s'effondrait sur un cerveau mature
+
+L'importance d'un souvenir est multipliée par `empreinte_enfance = 16/dim_bus`, mais était
+comparée à une référence **constante**. Un cerveau plus grand rêvait donc mécaniquement de moins
+en moins : **60 % à `dim_bus=16`, 15 % à `dim_bus=96`**. La référence suit désormais la même
+échelle, et le pourcentage redevient invariant à la taille du cerveau.
+
+Courbes W&B : `Reve_Facteur_Richesse` et `Reve_Empreinte_Enfance` (à croiser avec
+`Pourcentage_Reve`).
+
+> ⚠️ **Un rêve modeste n'est pas forcément un problème.** Une part de la baisse sur un cerveau
+> mature est **saine** : l'erreur JEPA moyenne chute de 0,227 (`dim_bus=16`) à 0,019
+> (`dim_bus=96`) parce que l'agent **comprend mieux son monde** — il a objectivement moins à
+> consolider. La v31.0 retire le biais d'échelle, jamais ce signal réel. Pour distinguer les
+> deux, regarder `Erreur_JEPA` : si elle est basse ET le rêve bas, c'est normal.
 
 ---
 

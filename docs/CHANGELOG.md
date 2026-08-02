@@ -4,6 +4,73 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [31.0-experimental] - 2026-08-02
+
+### La Mémoire Proportionnelle & le Rêve Invariant d'Échelle
+
+| Type | Details |
+|------|---------|
+| **Commit** | N/A — en attente du commit de cette version |
+| **Catégorie** | feat (nouvelle mécanique cognitive, expérimentale) |
+| **Impact** | Fonctionnel (capacité mnésique et volume de consolidation nocturne) |
+
+**Constat utilisateur : « la mémoire spatiale est saturée à 200/200, le rêve rejoue moins de 2 % de la journée et ne libère pas d'espace ». Les DEUX symptômes sont réels — mais l'enquête montre qu'ils sont INDÉPENDANTS, et que le lien de cause à effet supposé n'existe pas.**
+
+**Diagnostic — deux mémoires distinctes, souvent confondues**
+
+| Mémoire | Rôle | Saturation ? |
+|---|---|---|
+| `memoire_moyen_terme` | Ce que le rêve rejoue — **vidée chaque nuit** (`clear()`) | ❌ jamais |
+| `memoire_episodique_spatiale` | Le « où/quand/quoi » des ressources — FIFO à 200 | ✅ oui |
+
+Le rêve n'a donc **jamais** géré la mémoire spatiale : il ne peut pas « libérer » un espace qu'il ne touche pas. Corriger le rêve n'aurait rien changé à la saturation, et augmenter la capacité n'aurait rien changé au volume de rêve. Deux correctifs distincts étaient nécessaires.
+
+**1. La cause réelle des 2 % de rêve — un biais d'échelle**
+
+`importance` est multipliée par `empreinte_enfance = BUS_REFERENCE_INITIAL / dim_bus` : à `dim_bus=96`, tout souvenir vaut **6× moins** qu'à la naissance. Or `facteur_richesse` comparait cette importance à une référence **constante** (`IMPORTANCE_REFERENCE_REVE = 0.5`). Le pourcentage de rêve s'effondrait donc mécaniquement à mesure que le cerveau grandissait :
+
+| `dim_bus` | % de rêve AVANT | % de rêve APRÈS |
+|---|---|---|
+| 16 | 60,0 % | 60,0 % |
+| 32 | 46,2 % | **60,0 %** |
+| 48 | 30,8 % | **60,0 %** |
+| 96 | 15,4 % | **60,0 %** |
+
+*(à erreur JEPA constante, pour isoler l'effet du correctif)*
+
+**Un cerveau plus grand rêvait de moins en moins** — exactement l'inverse de ce que la consolidation nocturne devrait faire. Correctif : la référence suit la même échelle que ce qu'elle mesure (`IMPORTANCE_REFERENCE_REVE × empreinte_enfance`). Le rapport redevient invariant à la taille du cerveau ; `%_reve` continue d'émerger de la plasticité × richesse **réelle**, on retire seulement un biais parasite.
+
+> ⚠️ **Nuance importante, mesurée et assumée** : une part du « peu de rêve » sur un cerveau mature est **saine** et n'est PAS corrigée. L'erreur JEPA moyenne chute de 0,227 (dim_bus=16) à 0,019 (dim_bus=96) — le cerveau **comprend mieux son monde**, donc a objectivement moins à consolider. `importance = (|r| + 2·JEPA + ε) × boost × empreinte` : la composante JEPA baisse pour une bonne raison. Ce correctif ne retire que le biais d'échelle, jamais le signal réel.
+
+**2. La capacité mnésique devient proportionnelle**
+
+`capacite_max = 200` était une constante arbitraire, jamais calibrée. Elle émerge désormais de deux facteurs biologiquement défendables :
+
+$$\text{capacité} = \underbrace{\text{dim\_bus}}_{\text{substrat neural}} \times \underbrace{12}_{\text{densité}} \times \underbrace{(1 + \text{déficit\_bio})}_{\text{le BESOIN}}$$
+
+| `dim_bus` | repu | déficit moyen | épuisé |
+|---|---|---|---|
+| 16 (naissance) | **200** | 288 | 384 |
+| 48 | 576 | 864 | 1152 |
+| 96 | 1152 | 1728 | 2304 |
+
+`SOUVENIRS_PAR_DIM = 12` est calibré pour que la naissance donne 192 → ramené à **200 par le plancher**, soit exactement la valeur historique : aucune rupture au démarrage, la capacité cesse seulement d'être un plafond dur quand le cerveau grandit. Le `deficit_bio` (déjà calculé par `BiologicalHomeostasisEngine`) est le facteur « besoins » : un agent affamé a un usage réel du souvenir des ressources, un agent repu non. Il est **borné à 1.0** — un agent épuisé double sa capacité, jamais plus.
+
+Recalculée **une fois par nuit** (jamais par tick : une capacité fluctuante rendrait la FIFO illisible), au moment où le cerveau grandit déjà. Ne descend jamais sous le plancher de 200 ; si elle rétrécit, la troncature se fait **par l'avant** (les plus anciens partent), jamais par la fin qui jetterait les souvenirs les plus frais.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `MemoireEpisodiqueSpatiale.SOUVENIRS_PAR_DIM` + `ajuster_capacite(dim_bus, deficit_bio)` + `capacite_plancher` ; appel dans `executer_nuit` ; `reference_richesse` normalisée par `empreinte_enfance` ; 3 clés W&B (`Memoire_Capacite_Courante`, `Reve_Facteur_Richesse`, `Reve_Empreinte_Enfance`) ; ligne de bilan enrichie de l'origine de la capacité |
+
+**Validation** :
+- **Effet sur un `.brain` RÉEL** : `naulthene_parole` (480 000 ticks, `dim_bus=48`) passe de **200/200 saturé** à **200/1152 (17 %)** — la FIFO cesse de jeter. Acquis intégralement préservés (greffes v28/v29/v30 appliquées au chargement).
+- **Correctif du rêve** vérifié à erreur JEPA constante : 15,4 % → 60,0 % à `dim_bus=96` (tableau ci-dessus).
+- **Non-régression diurne prouvée** : empreinte MD5 de la séquence des 400 actions à graine fixée **identique** à la v30.1 (`e5ce5f49e406`) — les deux mécaniques n'agissent que la nuit.
+- Plancher (200 mini), croissance avec `dim_bus`, modulation par le déficit, et **troncature FIFO par l'avant** vérifiés unitairement (500 souvenirs → 200, le plus ancien conservé est bien le n°300).
+- Nuit + neurogenèse + `vocal_isole` ; les deux `.brain` réels du dépôt ; tous les modules importent.
+
+---
+
 ## [30.1-docs] - 2026-08-02
 
 ### Archivage documentaire (`docs/Old_Archive_rmd/`) & harmonisation de toute la doc sur la v30

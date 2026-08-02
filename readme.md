@@ -19,6 +19,7 @@ Il intègre la structure de table des matières globale (avec le contexte applic
 2. [Journal des Mises à Jour (Changelog)](https://www.google.com/search?q=%23journal-des-mises-%C3%A0-jour)
 3. [Plan d'Action](https://www.google.com/search?q=%23plan-daction)
 3t. **[Parcourt_readme.md — Guide Complet du Système de Cursus](docs/Parcourt_readme.md)** (commandes de lancement, jours/ticks par parcours, détail des paliers, FAQ)
+3o. [Nouveautés v31.0 (expérimental) — La Mémoire Proportionnelle & le Rêve Invariant d'Échelle](#nouveautés-v310-expérimental--la-mémoire-proportionnelle--le-rêve-invariant-déchelle-2026-08-02)
 3p. [Nouveautés v30.1 (expérimental) — Instrumentation avant calibrage : mémoire & Sursaut](#nouveautés-v301-expérimental--instrumentation-avant-calibrage--mémoire--sursaut-2026-08-02)
 3q. [Nouveautés v30.0 (expérimental) — L'Unification & l'Extensibilité : l'Odorat Dynamique & l'Exo-Sens](#nouveautés-v300-expérimental--lunification--lextensibilité--lodorat-dynamique--lexo-sens-2026-08-02)
 3r. [Nouveautés v29.1 (expérimental) — Télémétrie des 5 Sens](#nouveautés-v291-expérimental--télémétrie-des-5-sens-2026-08-02)
@@ -95,10 +96,40 @@ Pour un historique complet commit par commit, consultez [docs/CHANGELOG.md](docs
 
 > 📍 **État du dépôt (2026-08-02)** — la branche `master` intègre les versions **v28.0** (Port
 > Exocortex C3), **v29.0** (Bus Sensoriel & identité C1/C2) et **v29.1** (télémétrie des 5 sens).
-> Les **v30.0** (« l'Exo-Sens ») et **v30.1** (instrumentation avant calibrage) sont
-> **implémentées et validées** sur la branche `feat/v30-exo-sens`, en attente de merge — voir
+> Les **v30.0** (« l'Exo-Sens »), **v30.1** (instrumentation) et **v31.0** (Mémoire
+> Proportionnelle) sont **implémentées et validées** sur la branche `feat/v30-exo-sens`, en attente de merge — voir
 > [docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md](docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md) pour le cadrage et les
 > arbitrages.
+
+### Nouveautés v31.0 (expérimental) — La Mémoire Proportionnelle & le Rêve Invariant d'Échelle (2026-08-02)
+
+> ⚠️ **Statut expérimental** : vit dans `src/naulthene/cerveau/noyau.py` (gitignored), pas encore porté sur `src/naulthene/cerveau/colab.py`.
+
+Deux symptômes observés sur un cerveau mature — mémoire spatiale **saturée à 200/200** et rêve
+rejouant **moins de 2 %** de la journée — se sont révélés **indépendants** après enquête, et le
+lien de cause à effet supposé entre eux n'existe pas.
+
+* **Deux mémoires, souvent confondues.** Le rêve rejoue `memoire_moyen_terme`, **vidée chaque
+  nuit** : elle ne sature jamais. La mémoire à 200 est `memoire_episodique_spatiale`, que le rêve
+  **ne touche pas**. Il ne pouvait donc pas « libérer » un espace qu'il ne gère pas — deux
+  correctifs distincts étaient nécessaires.
+* **La vraie cause des 2 % : un biais d'échelle.** L'importance d'un souvenir est multipliée par
+  `empreinte_enfance = 16/dim_bus`, mais était comparée à une référence **constante**. Résultat :
+  60 % de rêve à `dim_bus=16`, **15 % à `dim_bus=96`** — un cerveau plus grand rêvait de moins en
+  moins, l'inverse de ce que la consolidation devrait faire. La référence suit désormais la même
+  échelle que ce qu'elle mesure ; le rapport redevient invariant à la taille du cerveau.
+* **La capacité mnésique devient proportionnelle.** Fin du plafond arbitraire :
+  `capacité = dim_bus × 12 × (1 + déficit_bio)` — le **substrat neural** (un cerveau qui a grandi
+  retient plus) et le **besoin** (un agent affamé a un usage réel du souvenir des ressources ; un
+  agent repu non). Calibrée pour donner exactement 200 à la naissance : aucune rupture, la
+  capacité cesse seulement d'être un mur quand le cerveau grandit.
+* **Effet mesuré sur un cerveau réel** : `naulthene_parole` (480 000 ticks) passe de **200/200
+  saturé** à **200/1152** — la FIFO cesse de jeter, sans perdre un seul acquis.
+
+> ⚠️ **Nuance assumée, mesurée** : une part du « peu de rêve » sur un cerveau mature est **saine**
+> et n'est pas corrigée. L'erreur JEPA moyenne chute de 0,227 à 0,019 entre `dim_bus=16` et 96 —
+> le cerveau **comprend mieux son monde**, donc a objectivement moins à consolider. Ce correctif
+> retire le biais d'échelle, jamais le signal réel.
 
 ### Nouveautés v30.1 (expérimental) — Instrumentation avant calibrage : mémoire & Sursaut (2026-08-02)
 
