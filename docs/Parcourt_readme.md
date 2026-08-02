@@ -7,8 +7,12 @@ pratique de [readme.md](../readme.md) (vision d'ensemble et formules) et
 [docs/explications_readme.md](explications_readme.md) (détail algorithmique) — ici, l'angle
 est **"je veux lancer un run et comprendre ce qui se passe"**.
 
-Référence code : `src/naulthene/cerveau/noyau.py` (v29.1) et les trois scripts de
-`src/naulthene/salles_de_classe/`.
+Référence code : `src/naulthene/cerveau/noyau.py` (v29.1, intégrée dans `master`) et les trois
+scripts de `src/naulthene/salles_de_classe/`.
+
+> 📍 Une **v30.0** (« l'Exo-Sens ») est en cours de conception sur la branche
+> `feat/v30-exo-sens` — elle n'est **pas encore utilisable** et ne change rien aux commandes de
+> ce guide. Voir [CONCEPTION_v30_exo_sens.md](CONCEPTION_v30_exo_sens.md).
 
 ---
 
@@ -490,7 +494,7 @@ plus directement liés à la survie.
 | 👁 **Vue** | La grille MiniGrid (147 valeurs) | Très élevé |
 | 👂 **Ouïe** | Le son brut (130 coefficients MFCC) | Élevé |
 | ✋ **Toucher** | Un obstacle devant lui, un objet dans sa main, son orientation | Moyen |
-| 👃 **Odorat** | Une source de nourriture/eau proche (jusqu'à 4 cases) | Faible |
+| 👃 **Odorat** | Une source de nourriture/eau proche (jusqu'à 4 cases en v29) | Faible |
 | 👅 **Goût** | Ce qu'il vient d'avaler (persiste ~10 ticks) | Faible |
 
 **Ce que ça change concrètement** : avant, l'agent ne savait qu'il tenait la clé que de façon
@@ -522,7 +526,9 @@ Côté W&B, 7 courbes `Sens_*` sont enregistrées chaque nuit.
 > 4 sources générées, presque toute la carte est « à portée de nez » sur `Empty-8x8` (97,6 %) et
 > `DoorKey-6x6` (100 %). L'odorat n'y apporte donc presque aucune information utile — il ne
 > devient vraiment discriminant qu'au Doctorat (`MultiRoom`, ~57 %). Ce n'est pas une panne, mais
-> un réglage encore ouvert (voir [EXPLICATIONS_v29_sens.md](EXPLICATIONS_v29_sens.md) §12).
+> un réglage encore ouvert (voir [EXPLICATIONS_v29_sens.md](EXPLICATIONS_v29_sens.md) §12) —
+> c'est devenu le **chantier 1 de la v30.0** (odorat à portée relative à la taille de la carte,
+> voir [CONCEPTION_v30_exo_sens.md](CONCEPTION_v30_exo_sens.md) §2).
 > En revanche, un `Odorat` à **0 %** sur un niveau où des ressources existent mérite un coup d'œil.
 
 📖 Pour le détail complet (formules, pourquoi ces sens n'entrent pas dans le modèle du monde,

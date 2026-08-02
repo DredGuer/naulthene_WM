@@ -759,6 +759,8 @@ La v29.0 câblait les sens dans la décision sans les instrumenter — corrigé 
 
 Premier diagnostic livré par cette télémétrie : **l'odorat sature sur les petites cartes** (97,6 % de couverture sur `Empty-8x8`, 100 % sur `DoorKey-6x6` avec `PORTEE_ODORAT=4`), donc il y porte peu d'information. Constat documenté, constante **inchangée** — l'arbitrage (portée réduite vs normalisation par taille de carte) appartient à l'auteur. Détail complet en [EXPLICATIONS_v29_sens.md](EXPLICATIONS_v29_sens.md) §12.
 
+C'est devenu le **chantier 1 de la v30.0** (« l'Exo-Sens »), en cours de conception sur la branche `feat/v30-exo-sens` — voir [CONCEPTION_v30_exo_sens.md](CONCEPTION_v30_exo_sens.md). Cette version prévoit aussi le pivot de C3 d'un « 3ᵉ cerveau » vers un **6ᵉ sens exogène** (`DIM_VECTEUR_BIO` 24 → 32). **Rien n'en est encore implémenté.**
+
 ---
 
 *Document généré à partir d'une lecture directe du code source (`src/naulthene/cerveau/colab.py` v17, `src/naulthene/cerveau/noyau.py` jusqu'à v29.1) — voir [readme.md](../readme.md) pour la documentation narrative complète et [CLAUDE.md](../CLAUDE.md) pour les règles de maintenance du projet.*

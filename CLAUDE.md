@@ -65,7 +65,8 @@ Le projet est organisé en **package Python** sous `src/naulthene/`, avec un dos
                                     système de cursus, commandes de lancement, jours/ticks par parcours,
                                     détail des paliers, FAQ — CONCEPTION_v22_audio.md,
                                     EXPLICATIONS_v29_sens.md — doc dédiée du Bus Sensoriel & de
-                                    l'identité C1/C2 — et les analyses de run)
+                                    l'identité C1/C2 — CONCEPTION_v30_exo_sens.md — cadrage de la
+                                    v30 en cours, PAS un état livré — et les analyses de run)
 ```
 
 Le cœur de référence est `src/naulthene/cerveau/colab.py` (ex-`agi_google_colab.py`, pensé pour tourner sur Google Colab). Structure interne (sections numérotées par des commentaires `# --- N. ... ---`) :
@@ -134,6 +135,19 @@ PYTHONPATH=src python -m naulthene.instruments.lancer_arene                   # 
 Il n'y a ni linter ni suite de tests automatisés configurés. Toute vérification passe par l'observation des logs console (progression de palier, teneur en dopamine, thermostat de neurogenèse) et des courbes du tableau de bord W&B (voir [Modèle de Données & Métriques W&B](readme.md#modèle-de-données--métriques-wb) dans le README).
 
 ## Git Workflow
+
+### État des branches (2026-08-02)
+
+| Branche | Contenu | État |
+|---|---|---|
+| `master` | v28.0 (Port Exocortex C3) + v29.0 (Bus Sensoriel & identité C1/C2) + v29.1 (télémétrie des 5 sens) | intégrée, poussée |
+| `feat/v30-exo-sens` | v30.0 — l'Exo-Sens (C3 en 6ᵉ sens, odorat dynamique) | **cadrage seul**, aucun code livré — voir `docs/CONCEPTION_v30_exo_sens.md` |
+| `feat/v28-exocortex-c3` | branche d'origine des v28/v29, désormais mergée dans `master` | conservée pour l'historique |
+
+Le travail en cours se fait sur `feat/v30-exo-sens`, rebasée sur `master`. Deux décisions déjà
+prises pour la v30 (voir le document de cadrage) : `num_actions` **reste à 8** avec
+`ACTION_DEMANDER` masquée en permanence (ne jamais amputer un `.brain` — 4 des cerveaux du dépôt
+sont déjà à 8 actions), et le vecteur bio passerait de 24 à 32 dims **en queue**.
 
 - Ne créer un commit que si l'utilisateur le demande explicitement
 - Toujours créer un nouveau commit plutôt qu'un `--amend`, sauf demande contraire

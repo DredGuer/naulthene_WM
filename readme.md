@@ -19,6 +19,8 @@ Il intègre la structure de table des matières globale (avec le contexte applic
 2. [Journal des Mises à Jour (Changelog)](https://www.google.com/search?q=%23journal-des-mises-%C3%A0-jour)
 3. [Plan d'Action](https://www.google.com/search?q=%23plan-daction)
 3t. **[Parcourt_readme.md — Guide Complet du Système de Cursus](docs/Parcourt_readme.md)** (commandes de lancement, jours/ticks par parcours, détail des paliers, FAQ)
+3q. 🚧 [v30.0 (en cours de conception) — L'Unification & l'Extensibilité (l'Exo-Sens)](#-v300-en-cours-de-conception--lunification--lextensibilité-lexo-sens)
+3r. [Nouveautés v29.1 (expérimental) — Télémétrie des 5 Sens](#nouveautés-v291-expérimental--télémétrie-des-5-sens-2026-08-02)
 3s. [Nouveautés v29.0 (expérimental) — Le Bus Sensoriel Multimodal & l'Identité C1/C2](#nouveautés-v290-expérimental--le-bus-sensoriel-multimodal--lidentité-c1c2-explicite-2026-08-02)
 3u. [Nouveautés v28.0 (expérimental) — La Cascade C1→C2→C3 & le Port Exocortex](#nouveautés-v280-expérimental--la-cascade-c1c2c3--le-port-exocortex-2026-07-30)
 3v. [Nouveautés v27.6 (expérimental) — L'École de la Parole & Synesthésie](#nouveautés-v276-expérimental--lécole-de-la-parole--synesthésie-2026-07-2728)
@@ -89,6 +91,59 @@ la Parole, la Cuve).
 ## 📜 Journal des Mises à Jour
 
 Pour un historique complet commit par commit, consultez [docs/CHANGELOG.md](docs/CHANGELOG.md).
+
+> 📍 **État du dépôt (2026-08-02)** — la branche `master` intègre désormais les versions
+> **v28.0** (Port Exocortex C3), **v29.0** (Bus Sensoriel & identité C1/C2) et **v29.1**
+> (télémétrie des 5 sens). La **v30.0** (« l'Exo-Sens ») est **en cours de conception** sur la
+> branche `feat/v30-exo-sens` — rien n'en est encore livré, voir
+> [docs/CONCEPTION_v30_exo_sens.md](docs/CONCEPTION_v30_exo_sens.md) pour le cadrage.
+
+### 🚧 v30.0 (en cours de conception) — L'Unification & l'Extensibilité (l'Exo-Sens)
+
+> ⚠️ **Rien n'est encore implémenté.** Cette section décrit une cible, pas un état livré. Le
+> document de cadrage complet (décisions tranchées, points ouverts, invariants) est dans
+> [docs/CONCEPTION_v30_exo_sens.md](docs/CONCEPTION_v30_exo_sens.md).
+
+La v30.0 doit concrétiser le pivot conceptuel amorcé par la v29 : transformer l'Exocortex **C3**
+d'un « 3ᵉ cerveau » en un **6ᵉ sens exogène** (l'*Exo-Sens*), et corriger la physique de l'odorat
+local. Trois chantiers :
+
+1. **L'Odorat Dynamique** — portée relative à la géométrie de la carte, pour corriger la
+   saturation diagnostiquée en v29.1.
+2. **Le pivot de C3** — l'Exocortex cesse d'être un canal de *décision* (une action jouée) pour
+   devenir un canal de *perception* : `DIM_VECTEUR_BIO` passerait de 24 à 32 dims, l'agent
+   « percevant » le monde numérique (LLM/RAG, bases vectorielles, APIs, IoT) au lieu de
+   l'interroger. Le contrat `PlugC3` (v28.0) est déjà générique et n'a pas à être réinventé.
+3. **La Boucle d'Attention Exogène** — comment l'agent module son attention à ce 6ᵉ sens.
+
+**Deux points restent ouverts et sont documentés comme tels** : la formule d'odorat proposée ne
+corrige pas les cartes 4×4 (et aggrave le Doctorat), et le déclenchement d'attention envisagé
+réintroduirait un seuil codé en dur — exactement ce que les v28 et v29 ont refusé deux fois.
+
+### Nouveautés v29.1 (expérimental) — Télémétrie des 5 Sens (2026-08-02)
+
+> ⚠️ **Statut expérimental** : vit dans `src/naulthene/cerveau/noyau.py` (gitignored, terrain d'essai local), pas encore porté sur `src/naulthene/cerveau/colab.py`.
+
+La v29.0 câblait les 5 sens **dans la décision** — l'agent les utilisait réellement — mais n'en
+instrumentait **aucun** : sur un run de 300 jours, il aurait été impossible de répondre à
+« l'odorat a-t-il jamais servi ? », et une désactivation silencieuse du Bus Sensoriel n'aurait
+laissé qu'un unique avertissement console, noyé dans les logs.
+
+* **Sept métriques W&B** (`Sens_*`) et une ligne au bilan de nuit, absentes du log si aucun tick
+  sensoriel n'a été vécu. La plus utile au quotidien : **`Sens_Toucher_Portage_Ratio`**, le temps
+  passé à porter la clé sur DoorKey — un indicateur *avancé* de la maîtrise des paliers 3-4, qui
+  monte souvent avant que les victoires n'arrivent. La plus critique : **`Sens_Bus_Actif`**, qui
+  rend visible une panne du bus à chaque nuit plutôt qu'une seule fois.
+* **Un audit systématique** des 21 compteurs journaliers de `EtatCognitif` a confirmé que tout le
+  reste du projet était correctement instrumenté (y compris la télémétrie C3 de la v28.0) —
+  l'écart était strictement limité à la v29.0.
+* **Diagnostic livré immédiatement par cette télémétrie** : l'odorat **sature sur les petites
+  cartes** (97,6 % de couverture sur `Empty-8x8`, 100 % sur `DoorKey-6x6`), donc y porte très peu
+  d'information. `PORTEE_ODORAT` a été laissée **inchangée** — le constat est documenté, mais
+  l'arbitrage (portée réduite, moins de sources, ou normalisation par taille de carte) appartient
+  à l'auteur du projet. C'est devenu le chantier 1 de la v30.0.
+* **Leçon retenue en règle de projet** (`CLAUDE.md`) : toute mécanique observable doit être
+  instrumentée **dans le même commit** que son implémentation.
 
 ### Nouveautés v29.0 (expérimental) — Le Bus Sensoriel Multimodal & l'Identité C1/C2 explicite (2026-08-02)
 

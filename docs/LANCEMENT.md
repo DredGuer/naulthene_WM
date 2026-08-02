@@ -11,11 +11,17 @@ ainsi que le Bus Sensoriel des 5 sens (`src/naulthene/cerveau/bus_sensoriel.py`,
 v29.0-expérimental, voir §9). Voir `readme.md` pour l'architecture complète, `CHANGELOG.md`
 pour l'historique des versions.
 
-> 🆕 **v29.0 — rien à configurer.** Le Bus Sensoriel (toucher, odorat, goût) est **actif
+> 🆕 **v29.0/v29.1 — rien à configurer.** Le Bus Sensoriel (toucher, odorat, goût) est **actif
 > automatiquement** dans tous les modes ci-dessous : aucune option de ligne de commande, aucun
 > flag. Le seul point à connaître est le message de greffe `👃 integrateur_bio greffé de N à M
 > dims d'entrée` au premier chargement d'un `.brain` antérieur — normal, une seule fois, les
-> acquis sont préservés (voir §9 et le tableau de dépannage).
+> acquis sont préservés (voir §9 et le tableau de dépannage). Depuis la v29.1, chaque bilan de
+> nuit affiche en plus une ligne « Les 5 Sens » (voir §9bis).
+>
+> 📍 **État du dépôt** : `master` intègre les v28.0, v29.0 et v29.1 — c'est ce que décrit ce
+> guide. La **v30.0** (« l'Exo-Sens ») est en cours de conception sur `feat/v30-exo-sens` et
+> **n'est pas encore utilisable** ; aucune commande de ce guide ne la concerne. Voir
+> [CONCEPTION_v30_exo_sens.md](CONCEPTION_v30_exo_sens.md).
 
 Depuis le passage en package Python (voir `CLAUDE.md`, section « Architecture »), tous les
 scripts se lancent depuis la racine du dépôt avec `PYTHONPATH=src` et l'option `-m` (module),
@@ -649,7 +655,7 @@ Comment lire la sortie :
 | `contact` | 1 = l'agent est au contact d'un mur ou d'une porte fermée devant lui, 0 = la voie est libre |
 | `main` | 1 = l'agent porte un objet (la clé, typiquement), 0 = mains vides |
 | `orient` | Orientation encodée sur le cercle (cos, sin) — évite la fausse discontinuité entre les directions 3 et 0 |
-| `odorat` | 1.00 = l'agent est SUR la ressource, 0.25 = elle est à 3 cases, 0.00 = hors de portée (> 4 cases) |
+| `odorat` | 1.00 = l'agent est SUR la ressource, 0.25 = elle est à 3 cases, 0.00 = hors de portée (> `PORTEE_ODORAT`, soit 4 cases en v29 — une portée relative à la taille de la carte est à l'étude pour la v30) |
 | `gout` | 1.00 juste après une bouchée, puis décroît (~10 ticks) jusqu'à 0 |
 
 ### 9b. Vérifier la hiérarchie des 5 sens

@@ -4,6 +4,45 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [master] - 2026-08-02 — Intégration des v28.0 et v29.0/v29.1
+
+### Merge de `feat/v28-exocortex-c3` dans `master` + ouverture de la branche v30
+
+| Type | Details |
+|------|---------|
+| **Commit** | `3582ade` (merge `--no-ff`) |
+| **Catégorie** | chore (intégration) |
+| **Impact** | Organisation du dépôt — aucun changement de code |
+
+**`master` portait encore la v27.6.** Les trois versions suivantes vivaient sur la branche
+`feat/v28-exocortex-c3`. Merge `--no-ff` (et non fast-forward) pour garder une trace lisible de
+l'intégration dans l'historique.
+
+`master` contient désormais :
+
+| Version | Apport |
+|---------|--------|
+| **v28.0** | La Cascade C1→C2→C3 & le Port Exocortex — 8ᵉ action apprise, `PortC3` multiplexeur, plugs interchangeables, greffe 7→8 actions |
+| **v29.0** | Le Bus Sensoriel Multimodal & l'identité C1/C2 explicite — les 5 sens, `DIM_VECTEUR_BIO` 16→24, greffe du vecteur bio |
+| **v29.1** | Télémétrie des 5 sens — 7 clés W&B `Sens_*`, ligne au bilan de nuit, diagnostic de saturation de l'odorat |
+
+La branche `feat/v30-exo-sens` a été **rebasée sur ce `master`** — elle ne contient pour l'instant
+que le document de cadrage `docs/CONCEPTION_v30_exo_sens.md` (aucun code livré).
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `readme.md` | Encadré « État du dépôt » ; nouvelle section v29.1 (absente jusqu'ici) ; section v30.0 explicitement marquée **en cours de conception** ; 2 entrées de table des matières |
+| `CLAUDE.md` | Nouvelle sous-section « État des branches » dans *Git Workflow* ; `CONCEPTION_v30_exo_sens.md` ajouté à l'arborescence |
+| `docs/CHANGELOG.md` | Cette entrée |
+| `docs/LANCEMENT.md`, `docs/Parcourt_readme.md`, `docs/explications_readme.md` | Références de version harmonisées (v29.1) et renvoi vers le cadrage v30 |
+
+⚠️ **La v30.0 n'existe pas encore.** Toute la documentation la présente comme une cible, jamais
+comme un état livré — deux points de sa spécification restent d'ailleurs ouverts (voir le document
+de cadrage) : la formule d'odorat dynamique ne corrige pas les cartes 4×4 et aggrave le Doctorat,
+et la boucle d'attention exogène réintroduirait un seuil codé en dur dans le chemin de décision.
+
+---
+
 ## [29.1-experimental] - 2026-08-02
 
 ### Télémétrie des 5 Sens — les rendre observables, et un diagnostic de saturation de l'odorat
