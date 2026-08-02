@@ -19,6 +19,7 @@ Il intègre la structure de table des matières globale (avec le contexte applic
 2. [Journal des Mises à Jour (Changelog)](https://www.google.com/search?q=%23journal-des-mises-%C3%A0-jour)
 3. [Plan d'Action](https://www.google.com/search?q=%23plan-daction)
 3t. **[Parcourt_readme.md — Guide Complet du Système de Cursus](docs/Parcourt_readme.md)** (commandes de lancement, jours/ticks par parcours, détail des paliers, FAQ)
+3n. [Nouveautés v31.1 (expérimental) — La Déduplication Mnésique & le Cap de Densité](#nouveautés-v311-expérimental--la-déduplication-mnésique--le-cap-de-densité-spatiale-2026-08-02)
 3o. [Nouveautés v31.0 (expérimental) — La Mémoire Proportionnelle & le Rêve Invariant d'Échelle](#nouveautés-v310-expérimental--la-mémoire-proportionnelle--le-rêve-invariant-déchelle-2026-08-02)
 3p. [Nouveautés v30.1 (expérimental) — Instrumentation avant calibrage : mémoire & Sursaut](#nouveautés-v301-expérimental--instrumentation-avant-calibrage--mémoire--sursaut-2026-08-02)
 3q. [Nouveautés v30.0 (expérimental) — L'Unification & l'Extensibilité : l'Odorat Dynamique & l'Exo-Sens](#nouveautés-v300-expérimental--lunification--lextensibilité--lodorat-dynamique--lexo-sens-2026-08-02)
@@ -96,10 +97,37 @@ Pour un historique complet commit par commit, consultez [docs/CHANGELOG.md](docs
 
 > 📍 **État du dépôt (2026-08-02)** — la branche `master` intègre les versions **v28.0** (Port
 > Exocortex C3), **v29.0** (Bus Sensoriel & identité C1/C2) et **v29.1** (télémétrie des 5 sens).
-> Les **v30.0** (« l'Exo-Sens »), **v30.1** (instrumentation) et **v31.0** (Mémoire
-> Proportionnelle) sont **implémentées et validées** sur la branche `feat/v30-exo-sens`, en attente de merge — voir
+> Les **v30.0** (« l'Exo-Sens »), **v30.1** (instrumentation) **v31.0** (Mémoire
+> Proportionnelle) et **v31.1** (Déduplication Mnésique) sont **implémentées et validées** sur la branche `feat/v30-exo-sens`, en attente de merge — voir
 > [docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md](docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md) pour le cadrage et les
 > arbitrages.
+
+### Nouveautés v31.1 (expérimental) — La Déduplication Mnésique & le Cap de Densité Spatiale (2026-08-02)
+
+> ⚠️ **Statut expérimental** : vit dans `src/naulthene/cerveau/noyau.py` (gitignored) et `persistance.py`, pas encore porté sur `src/naulthene/cerveau/colab.py`.
+
+L'analyse d'un run de 700 jours sous v31.0 a révélé un effet de bord — et, en creusant, un fait
+bien plus déterminant sur ce que contenait réellement la mémoire.
+
+* **91 % de la mémoire était de la redondance.** Sur un `.brain` réel de 480 000 ticks :
+  **200 souvenirs pour seulement 18 repères distincts**. La « saturation à 200/200 » n'était donc
+  **pas un manque de place** — c'était le même lieu enregistré des dizaines de fois. Un souvenir
+  n'est pas un journal d'événements, c'est un **repère** : « il y a de la nourriture ici ».
+* **Un biais de rappel corrigé au passage.** `recuperer_contexte` sélectionne par
+  `min(distance)` et ne lit la fraîcheur qu'**après** : avec des doublons, un souvenir périmé
+  pouvait battre un souvenir récent situé à la même distance. Le rappel devenait donc **moins
+  fiable à mesure que la mémoire grossissait**.
+* **Trois correctifs** : déduplication à l'écriture (rafraîchir un repère au lieu d'empiler),
+  compactage automatique des doublons historiques au chargement d'un `.brain`, et un **cap de
+  densité** bornant la capacité par la taille du monde (`cases × 3`) — 36 souvenirs par case sur
+  `DoorKey-6x6` n'avait aucun sens.
+* **Résultat mesuré** : `naulthene_parole` passe de **200/200 saturé** à **18/200**, avec un
+  rappel qui reste à **100 %** — la preuve que ces 182 doublons ne servaient à rien.
+
+> 📌 **Une hypothèse écartée par la lecture du code** : le rêve ne « cristallise » pas de réflexes
+> d'échec. `rever()` ne calcule que `perte_jepa` — aucune perte acteur ni critique. Rejouer une
+> trajectoire non gagnante apprend *comment le monde évolue*, jamais *que ce choix était bon*.
+> C'est le comportement documenté depuis la v8.0.
 
 ### Nouveautés v31.0 (expérimental) — La Mémoire Proportionnelle & le Rêve Invariant d'Échelle (2026-08-02)
 

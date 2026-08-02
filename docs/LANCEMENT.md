@@ -925,6 +925,33 @@ La ligne de bilan affiche l'origine de la capacité :
 Courbe W&B : `Memoire_Capacite_Courante` (le dénominateur bouge d'une nuit à l'autre — en tenir
 compte pour relire `Memoire_Taux_Saturation`).
 
+### 12bis. La déduplication mnésique (v31.1)
+
+Au premier chargement d'un `.brain` antérieur à la v31.1, tu verras :
+
+```
+🧹 Mémoire spatiale compactée : 182 doublon(s) fusionné(s) → 18 repère(s) distinct(s)
+```
+
+**Normal, une seule fois, et aucune information n'est perdue** : seul le tick le plus récent de
+chaque repère est conservé. Un `.brain` réel contenait 200 souvenirs pour seulement 18 lieux
+distincts — 91 % de redondance. Depuis la v31.1, revisiter un lieu déjà connu **rafraîchit** son
+repère au lieu d'en empiler un nouveau.
+
+La ligne de bilan indique le travail effectué et l'origine de la capacité :
+
+```
+├─ Mémoire Épiso. : 🗺️ 18/200 souvenir(s) — rappel 100% ... [cap. bornée par la carte : ×3/case] — 12 doublon(s) évité(s)
+```
+
+| Ce que tu vois | Signification |
+|---|---|
+| `[cap. bornée par la carte : ×3/case]` | La capacité est bridée par la **taille du monde**, pas par le cerveau — normal sur les petites cartes |
+| `[cap. 48×12 adaptée]` | La capacité suit `dim_bus` (grandes cartes type `MultiRoom`) |
+| `N doublon(s) évité(s)` | La déduplication travaille : autant de repères rafraîchis au lieu d'être empilés |
+
+Courbes W&B : `Memoire_Doublons_Evites`, `Memoire_Cap_Densite_Actif`, `Memoire_Densite_Par_Case`.
+
 ### 12b. Pourquoi le rêve s'effondrait sur un cerveau mature
 
 L'importance d'un souvenir est multipliée par `empreinte_enfance = 16/dim_bus`, mais était

@@ -567,6 +567,7 @@ Dès `palier_cible >= 5` (Viser la Porte), le **Mode Libre** s'active : le guida
 | v29.0 (expérimental) | Le Bus Sensoriel Multimodal & l'identité C1/C2 explicite — toucher/odorat/goût (`DIM_VECTEUR_BIO` 16→24), `_executer_c1_reflexe()`/`_solliciter_c2_neocortex()`, greffe rétrocompatible du vecteur bio | Donner à l'agent les 5 sens plutôt que 2, et nommer la frontière réflexe/néo-cortex qui existait déjà de fait dans le code (§15) |
 | v29.1 (expérimental) | Télémétrie des 5 sens — 7 clés W&B `Sens_*` + ligne au bilan de nuit ; diagnostic de saturation de l'odorat sur les petites cartes | Rendre observable une mécanique jusque-là invisible : sans télémétrie, impossible de démontrer qu'un sens sert réellement à quelque chose sur un run long (§15.6) |
 | v30.0 (expérimental) | L'Odorat Dynamique (atténuation exponentielle `exp(-0.8·d)`) & l'Exo-Sens — C3 devient le 6ème sens, `DIM_VECTEUR_BIO` 24→32, `ACTION_DEMANDER` masquée en permanence | Corriger la saturation diagnostiquée en v29.1 (le gradient, pas la couverture, est ce qui oriente) ; faire de l'Exocortex une perception continue plutôt qu'un cerveau concurrent, sans aucun seuil de déclenchement |
+| v31.1 (expérimental) | La Déduplication Mnésique (un repère par `(pos,type)`, compactage des `.brain` antérieurs) & le Cap de Densité Spatiale (`cases × 3`) | Un `.brain` réel contenait 200 souvenirs pour 18 repères distincts (91 % de redondance) ; la « saturation » n'était pas un manque de place. Corrige aussi un biais de rappel : `min(distance)` pouvait retenir un souvenir périmé |
 | v31.0 (expérimental) | La Mémoire Proportionnelle (`capacite = dim_bus × 12 × (1+déficit)`) & le Rêve Invariant d'Échelle (référence de richesse normalisée par `empreinte_enfance`) | Supprimer deux biais : un plafond mnésique arbitraire qui saturait, et un `%_reve` qui s'effondrait mécaniquement quand le cerveau grandissait (60 % → 15 %) |
 | v30.1 (expérimental) | Instrumentation avant calibrage — 8 clés `Memoire_*`/`Sursaut_*`, invariance comportementale prouvée par empreinte à graine fixée | Mesurer avant de rendre adaptatives deux constantes arbitraires (`capacite_max=200`, `EXTENSION_PATIENCE_SURSAUT=50`) : remplacer un chiffre arbitraire par une formule arbitraire ne vaut pas mieux |
 
@@ -592,6 +593,7 @@ Voir [CHANGELOG.md](CHANGELOG.md) pour le détail commit par commit et [readme.m
 | `PLAFOND_ERREUR_DOPAMINE` | 2.0 | Plafond de l'erreur JEPA dans le calcul de curiosité |
 | `POURCENTAGE_REVE_MIN / PLAGE_REVE_MAX` | 0.0001 / 0.60 | Bornes du pourcentage de rêve nocturne |
 | `IMPORTANCE_REFERENCE_REVE` | 0.5 | Échelle de normalisation de la richesse journalière — **multipliée par `empreinte_enfance` depuis la v31.0** (§15.9) |
+| `DENSITE_MAX_PAR_CASE` (v31.1, expérimental) | 3 | Plafond de repères par case de la grille : `capacite = min(dim_bus × 12 × (1+déficit), cases × 3)` |
 | `SOUVENIRS_PAR_DIM` (v31.0, expérimental) | 12 | Densité mnésique par dimension du bus : `capacite = dim_bus × 12 × (1 + déficit_bio)`, plancher 200 |
 | `PATIENCE_MIN / MAX` | 50 / 350 | Bornes de patience adaptative |
 | `COEFF_ABNEGATION_SOUS_SEUIL_2` | 1.6 | Étirement de patience au Sous-Seuil 2 |
@@ -789,4 +791,4 @@ Deux constantes arbitraires restent à rendre adaptatives : `capacite_max=200` (
 
 ---
 
-*Document généré à partir d'une lecture directe du code source (`src/naulthene/cerveau/colab.py` v17, `src/naulthene/cerveau/noyau.py` jusqu'à v31.0) — voir [readme.md](../readme.md) pour la documentation narrative complète et [CLAUDE.md](../CLAUDE.md) pour les règles de maintenance du projet.*
+*Document généré à partir d'une lecture directe du code source (`src/naulthene/cerveau/colab.py` v17, `src/naulthene/cerveau/noyau.py` jusqu'à v31.1) — voir [readme.md](../readme.md) pour la documentation narrative complète et [CLAUDE.md](../CLAUDE.md) pour les règles de maintenance du projet.*

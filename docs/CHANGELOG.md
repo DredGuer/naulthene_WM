@@ -4,6 +4,61 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [31.1-experimental] - 2026-08-02
+
+### La Déduplication Mnésique & le Cap de Densité Spatiale
+
+| Type | Details |
+|------|---------|
+| **Commit** | N/A — en attente du commit de cette version |
+| **Catégorie** | fix (correctif d'un effet de bord de la v31.0) |
+| **Impact** | Fonctionnel (contenu réel de la mémoire spatiale) |
+
+**Analyse utilisateur d'un run de 700 jours sous v31.0. Quatre observations, dont une confirmée par la mesure et une infirmée par la lecture du code.**
+
+**✅ Confirmé — la dilution spatiale (observation n°4).** La capacité proportionnelle de la v31.0 supprimait la saturation, mais ignorait une contrainte évidente : la taille du **monde**. À `dim_bus=48` (capacité 576) :
+
+| Carte | cases | souvenirs/case |
+|---|---|---|
+| `DoorKey-6x6` | 16 intérieures | **36** |
+| `Empty-8x8` | 36 | 16 |
+| `MultiRoom-N4-S5` | 169 | 3,4 |
+
+Retenir 36 repères pour une seule case n'a aucun sens. Pire, un effet de bord non anticipé : `recuperer_contexte` sélectionne par `min(distance)` et ne lit la fraîcheur **qu'après** — avec des doublons, un souvenir périmé pouvait être retenu à la place d'un souvenir récent situé à la même distance. **Le rappel devenait moins fiable à mesure que la mémoire grossissait.**
+
+**❌ Infirmé — « le rêve cristallise des réflexes d'échec ».** Vérification faite dans `rever()` : il ne calcule **que `perte_jepa`**. Aucune perte acteur, aucune perte critique — c'est le comportement documenté depuis la v8.0 (`explications_readme.md` §10.2 : *« le rêve consolide le modèle du monde, la politique motrice en bénéficie seulement indirectement via le tronc partagé »*). Rejouer une trajectoire non gagnante apprend « voilà comment le monde évolue si je vais à gauche », **jamais** « aller à gauche était bien ». Il n'y a donc pas d'ancrage de choix moteurs d'échec à corriger, et le Prioritized Experience Replay envisagé supposerait une `Erreur_TD_RL` qui n'existe pas dans le rêve (le critique n'y est jamais évalué). ⚠️ Le « 0 % de victoires » du Sursaut est par ailleurs une métrique **introduite en v30.1** : sans point de comparaison antérieur, rien ne permet de l'attribuer à la v31.0.
+
+**LA DÉCOUVERTE — 91 % de la mémoire était de la redondance**
+
+En instrumentant, un fait bien plus déterminant est apparu sur un `.brain` réel :
+
+```
+naulthene_parole (480 000 ticks) : 200 souvenirs pour 18 repères DISTINCTS
+                                   → 182 doublons (91 %)
+```
+
+La « saturation à 200/200 » n'était donc **pas un manque de place** : c'était le même lieu enregistré des dizaines de fois. Un souvenir n'est pas un journal d'événements, c'est un **repère** — « il y a de la nourriture ici ». Deux repères identiques n'apportent rien.
+
+**Les trois correctifs**
+
+1. **Déduplication à l'écriture** — `enregistrer_evenement` rafraîchit le tick d'un repère existant `(pos, type)` au lieu d'empiler, et le remet en fin de liste (la FIFO évince donc les lieux les plus anciennement **confirmés**, jamais un lieu encore visité). Corrige au passage le biais de sélection ci-dessus : un lieu connu reste toujours à sa fraîcheur la plus récente.
+2. **Compactage au chargement** — `dedupliquer()`, appelée par `charger_ou_naitre`, fusionne les doublons **historiques** d'un `.brain` antérieur (la déduplication ne vaut que pour les nouveaux souvenirs). Conserve le tick le plus récent de chaque repère : **aucune information perdue**, seules les répétitions disparaissent.
+3. **Cap de densité spatiale** — `capacite = min(dim_bus × 12 × (1+déficit), cases_grille × DENSITE_MAX)` avec `DENSITE_MAX = 3`. La mémoire cesse d'être absurdement plus grande que son monde. Le plancher (200) reste prioritaire ; `cases_grille=None` (mode vocal isolé, API absente) désactive le cap — comportement v31.0 inchangé.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | Déduplication dans `enregistrer_evenement` ; nouvelle `dedupliquer()` ; `DENSITE_MAX_PAR_CASE` + paramètre `cases_grille` dans `ajuster_capacite` ; lecture défensive de la grille dans `executer_nuit` ; 3 clés W&B (`Memoire_Doublons_Evites`, `Memoire_Cap_Densite_Actif`, `Memoire_Densite_Par_Case`) ; ligne de bilan enrichie |
+| `src/naulthene/cerveau/persistance.py` | Appel de `dedupliquer()` au chargement + message `🧹 Mémoire spatiale compactée` |
+
+**Validation** :
+- **Effet sur les `.brain` RÉELS** : `naulthene_parole` passe de **200/200 saturé (rappel 100 %)** à **18/200 (9 %, rappel toujours 100 %)** — 182 doublons fusionnés sans aucune perte de qualité de rappel, ce qui **prouve** que ces doublons ne servaient à rien. `naulthene_cursus` : 73 doublons fusionnés → 16 repères.
+- **Déduplication unitaire** : 100 événements au même endroit → **1 souvenir**, tick conservé = le plus récent (99). 50 événements sur 15 positions → 15 souvenirs.
+- **Cap de densité** : `DoorKey-6x6` 576 → 200 (plancher), `MultiRoom` inchangé à 576 (le cap ne bride que là où c'est absurde).
+- **Non-régression diurne prouvée** : empreinte MD5 des 400 actions à graine fixée **identique** (`e5ce5f49e406`) depuis la v30.1.
+- Nuit + neurogenèse + `vocal_isole` ; tous les modules importent.
+
+---
+
 ## [31.0-experimental] - 2026-08-02
 
 ### La Mémoire Proportionnelle & le Rêve Invariant d'Échelle

@@ -407,6 +407,18 @@ class PersistanceAnatomique:
 
         # --- Souvenirs ---
         etat.memoire_episodique_spatiale.souvenirs = checkpoint['souvenirs_spatiaux']
+        # v31.1 — compactage des doublons historiques. La déduplication d'
+        # `enregistrer_evenement` ne vaut que pour les nouveaux souvenirs ; un `.brain`
+        # antérieur porte encore tous les siens. Mesuré sur naulthene_parole (480 000
+        # ticks) : 200 souvenirs pour 18 repères distincts, soit 91 % de redondance — la
+        # « saturation » observée n'était pas un manque de place. Le tick le plus récent
+        # de chaque repère est conservé, donc aucune information n'est perdue : seules
+        # les répétitions disparaissent.
+        supprimes = etat.memoire_episodique_spatiale.dedupliquer()
+        if supprimes:
+            restants = len(etat.memoire_episodique_spatiale.souvenirs)
+            print(f"   🧹 Mémoire spatiale compactée : {supprimes} doublon(s) fusionné(s) "
+                  f"→ {restants} repère(s) distinct(s) (v31.1, aucune information perdue).")
 
         # --- Curriculum & progression ---
         etat.niveau_actuel = checkpoint['niveau_actuel']
