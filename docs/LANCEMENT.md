@@ -1,6 +1,6 @@
 # Guide de Lancement — Naulthène AGI (Cuve Persistante + Hémisphère Audio + Cursus par Ères + Cerveau Bébé + Cursus de la Parole + Port Exocortex C3 + Bus Sensoriel)
 
-Ce guide couvre le lancement local (Mac) de l'écosystème V21-V30 : le cerveau persistant
+Ce guide couvre le lancement local (Mac) de l'écosystème V21-V32 : le cerveau persistant
 (`daemon_cerveau.py`, dans `src/naulthene/cuve/`) et ses deux clients (`client_corps.py` pour
 MiniGrid, `client_professeur.py` pour les leçons de parole ponctuelles), trois cursus
 développementaux autonomes (`src/naulthene/salles_de_classe/`) : le Cursus par Ères
@@ -9,7 +9,8 @@ jours, voir §6bis) et le Cursus de la Parole (`cursus_parole.py`, 900 jours, v2
 voir §6ter), le Port Exocortex C3 (`src/naulthene/exocortex/`, v28.0-expérimental, voir §8),
 le Bus Sensoriel des 5 sens (`src/naulthene/cerveau/bus_sensoriel.py`, v29.0-expérimental, voir
 §9), l'Exo-Sens — le 6ᵉ sens (v30.0-expérimental, voir §10) et les métriques de calibrage
-(v30.1, voir §11). Voir `readme.md` pour l'architecture complète, `CHANGELOG.md` pour
+(v30.1, voir §11), et l'Odorat Topologique & la Clinotaxie (v32.0-expérimental, voir §13).
+Voir `readme.md` pour l'architecture complète, `CHANGELOG.md` pour
 l'historique des versions, et [Old_Archive_rmd/](Old_Archive_rmd/) pour les documents de
 conception historiques.
 
@@ -24,6 +25,13 @@ conception historiques.
 > discriminant en proximité) et l'agent gagne un **6ᵉ sens exogène** (l'Exo-Sens) — mais celui-ci
 > reste **totalement neutre tant qu'aucun plug C3 n'est branché**, ce qui est le cas par défaut de
 > tous les modes ci-dessous. Voir §10 pour brancher un plug et observer ce 6ᵉ sens.
+>
+> 🆕 **v32.0 — rien à configurer non plus.** L'odeur cesse de traverser les murs (distance de
+> cheminement par BFS, porte fermée « qui fuit » à +4 cases) et l'agent gagne la **clinotaxie** :
+> 2 dimensions de variation ΔS qui lui disent enfin s'il se **rapproche** ou s'**éloigne** d'une
+> ressource. Un `.brain` antérieur affiche une fois `👃 integrateur_bio greffé de 80 à 82 dims`,
+> suivi de `🔄 Optimiseur réinitialisé` — les deux sont **normaux**, les acquis sont préservés au
+> bit près. Voir §13.
 
 Depuis le passage en package Python (voir `CLAUDE.md`, section « Architecture »), tous les
 scripts se lancent depuis la racine du dépôt avec `PYTHONPATH=src` et l'option `-m` (module),
@@ -657,8 +665,9 @@ Comment lire la sortie :
 | `contact` | 1 = l'agent est au contact d'un mur ou d'une porte fermée devant lui, 0 = la voie est libre |
 | `main` | 1 = l'agent porte un objet (la clé, typiquement), 0 = mains vides |
 | `orient` | Orientation encodée sur le cercle (cos, sin) — évite la fausse discontinuité entre les directions 3 et 0 |
-| `odorat` | Depuis la v30.0, **atténuation exponentielle** `exp(-0.8 × distance)` : 1.00 au contact, 0.45 à 1 case, 0.20 à 2 cases, coupé à 0.00 au-delà de ~5 cases (voir §10d) |
+| `odorat` | **Atténuation exponentielle** `exp(-0.8 × distance)` : 1.00 au contact, 0.45 à 1 case, 0.20 à 2 cases, coupé à 0.00 au-delà de ~5 cases (v30.0, §10d). Depuis la v32.0, `distance` est la **distance de cheminement** (BFS), pas le vol d'oiseau : une source derrière un mur est **inodore**, derrière une porte fermée elle coûte +4 cases (§13) |
 | `gout` | 1.00 juste après une bouchée, puis décroît (~10 ticks) jusqu'à 0 |
+| `ΔS` (v32.0) | `s[16]`, `s[17]` — la **clinotaxie**, en toute fin de vecteur (après l'Exo-Sens) : **0.5 = neutre**, > 0.5 « je me rapproche », < 0.5 « je m'éloigne ». Vaut exactement 0.5 au premier tick d'un épisode (rien à quoi se comparer) |
 
 ### 9b. Vérifier la hiérarchie des 5 sens
 
@@ -970,6 +979,89 @@ Courbes W&B : `Reve_Facteur_Richesse` et `Reve_Empreinte_Enfance` (à croiser av
 
 ---
 
+## 13. L'Odorat Topologique & la Clinotaxie (v32.0-expérimental)
+
+Rien à activer : les deux mécaniques sont automatiques dans les 4 parcours.
+
+### 13a. Vérifier que l'odeur ne traverse plus les murs
+
+```bash
+WANDB_MODE=offline PYTHONPATH=src python -c "
+from naulthene.cerveau.bus_sensoriel import BusSensoriel, SURCOUT_PORTE_FERMEE
+
+class Obj:
+    def __init__(self, t, c=None, is_open=None):
+        self.type, self.color = t, c
+        if is_open is not None: self.is_open = is_open
+class Grille:
+    def __init__(s, w, h): s.width, s.height, s._d = w, h, {}
+    def set(s, x, y, o): s._d[(x, y)] = o
+    def get(s, x, y): return s._d.get((x, y))
+
+bus = BusSensoriel()
+g = Grille(7, 3)
+for y in range(3): g.set(3, y, Obj('wall'))   # cloison verticale
+g.set(6, 1, Obj('ball', 'red'))               # nourriture derrière
+print('mur plein      :', bus._distances_topologiques(g, (0,1))['red'], '(attendu None = inodore)')
+g.set(3, 1, Obj('door', 'yellow', is_open=False))
+print('porte fermée   :', bus._distances_topologiques(g, (0,1))['red'], '(attendu 6 +', SURCOUT_PORTE_FERMEE, ')')
+g.set(3, 1, Obj('door', 'yellow', is_open=True))
+print('porte ouverte  :', bus._distances_topologiques(g, (0,1))['red'], '(attendu 6)')
+"
+```
+
+Une source derrière un mur devient **littéralement inodore** (`None`). C'est voulu : jusqu'en
+v31.1, l'odeur traversait la cloison et l'agent s'engluait contre la paroi en suivant un gradient
+qu'il ne pouvait pas atteindre — un gradient **faux** est pire que pas de gradient.
+
+La **porte fermée « fuit »** (+4 cases virtuelles) au lieu de bloquer : la rendre opaque priverait
+l'agent du guidage olfactif *précisément* pendant qu'il cherche la clé de cette porte.
+
+### 13b. Lire la ligne « Clinotaxie » du bilan de nuit
+
+```
+├─ Clinotaxie     : 🧭 Approche 70.4% des ticks de variation (|ΔS| moyen 0.124 sur 27 tick(s))
+```
+
+| Champ | Comment le lire |
+|-------|-----------------|
+| `Approche X%` | Part des ticks où l'odeur **monte** (l'agent se rapproche d'une ressource). **≈ 50 % = l'agent monte et descend le gradient au hasard** : la clinotaxie ne l'oriente pas. Nettement > 50 % = elle fait son travail |
+| `\|ΔS\| moyen` | Amplitude typique de la variation — proche de 0 signifie que l'agent bouge peu, ou reste loin de toute source |
+| `sur N tick(s)` | **Le dénominateur, à regarder en premier.** Un N faible rend le pourcentage ininterprétable |
+
+La ligne est **absente** si l'odeur n'a jamais varié de la journée (plutôt qu'un « 0 % » trompeur).
+
+> ⚠️ **Ne pas conclure sur un run court.** Sur la journée de validation, `Approche` valait 70,4 %
+> mais sur **27 ticks seulement** : un agent nouveau-né ne change de case que 23 fois en 400 ticks
+> (il tourne sur lui-même et se cogne — `Contact 53 %`). La clinotaxie est un **apprentissage** de
+> `integrateur_bio`, pas un câblage : seul un run long, sur un agent qui se déplace vraiment, peut
+> trancher. Croiser avec `Sens_Odorat_Ticks_Variation_Ratio` (le dénominateur, en W&B).
+
+### 13c. Les 5 métriques W&B ajoutées
+
+| Clé | Mesure |
+|-----|--------|
+| `Sens_Odorat_Taux_Approche` | **La métrique décisive** — part des variations où l'agent se rapproche |
+| `Sens_Odorat_Delta_Moyen` | Amplitude moyenne \|ΔS\| |
+| `Sens_Odorat_Ticks_Variation_Ratio` | Le dénominateur : part des ticks où l'odeur a bougé |
+| `Sens_Odorat_Ticks_Inodores_Ratio` | Ticks où une source existait sans être sentie — ce que la topologie a cessé de laisser traverser |
+
+### 13d. Le message de greffe (`.brain` antérieur à la v32.0)
+
+```
+👃 integrateur_bio greffé de 80 à 82 dims d'entrée (+2 : clinotaxie olfactive (v32.0)) — acquis existants préservés.
+🔄 Optimiseur réinitialisé (largeur du vecteur bio étendue par greffe) — les poids/acquis existants sont intacts, seule la dynamique Adam repart à neuf.
+```
+
+Les **deux** lignes sont normales, une seule fois. La seconde est le correctif d'un bug latent
+depuis la v29.0 : les moments Adam restaient chargés à l'ancienne largeur, et la **première nuit**
+du cerveau greffé plantait sur `The size of tensor a (80) must match the size of tensor b (82)`.
+Le crash ne survenait ni au chargement ni pendant la journée, ce qui le rendait invisible aux
+vérifications courtes. Seule la dynamique d'apprentissage repart à neuf — **aucun poids appris
+n'est perdu**.
+
+---
+
 ## Dépannage rapide
 
 | Symptôme | Cause probable |
@@ -991,4 +1083,8 @@ Courbes W&B : `Reve_Facteur_Richesse` et `Reve_Empreinte_Enfance` (à croiser av
 | Le toucher renvoie toujours `0.0` sur les 4 dims | Le bus s'est désactivé — cherche l'avertissement `⚠️ Bus sensoriel (toucher/odorat/goût) désactivé (API minigrid incompatible : ...)` affiché **une seule fois** dans la console. Même dégradation gracieuse que les détecteurs génériques : l'entraînement continue normalement, seuls les 3 sens faibles sont neutres. Depuis la v29.1, le suffixe `⚠️ BUS DÉSACTIVÉ` s'affiche en plus à **chaque** bilan de nuit et `Sens_Bus_Actif` passe à 0 dans W&B |
 | Ligne `Les 5 Sens` absente du bilan de nuit (v29.1) | Normal en mode `vocal_isole` pur (aucun environnement MiniGrid lu ce jour-là) : `ticks_sensoriels_jour = 0`, la ligne est volontairement masquée plutôt que d'afficher des ratios vides. Elle réapparaît dès qu'une journée comporte des ticks MiniGrid |
 | `Odorat` proche de 96-100 % à chaque nuit | **Ce pourcentage compte la PRÉSENCE d'une trace, pas son intensité** — il peut rester haut alors que le signal est devenu discriminant (le seuil de coupure est bas). Depuis la v30.0, regarder `Sens_Odorat_Moyen` : ~0.32 sur `Empty-8x8` contre ~0.54 en v29, avec l'odeur forte (> 0.45) réduite à ~30 % des ticks. Voir §10d |
+| L'odorat tombe à 0.00 alors qu'une ressource est visible à 2 cases (v32.0) | **Normal si un mur ou une porte fermée sépare l'agent de la source** : depuis la v32.0 la distance est topologique (BFS), pas à vol d'oiseau. Un mur rend la source inodore, une porte fermée ajoute +4 cases (donc `exp(-0.8×6) ≈ 0.008`, sous le seuil de coupure). Vérifie avec le script de §13a. C'est le comportement voulu — l'ancien signal traversant les murs était un gradient trompeur |
+| Ligne `Clinotaxie` absente du bilan (v32.0) | Normal quand l'odeur n'a **jamais varié** de la journée : agent immobile, ou aucune source à portée. La ligne est masquée plutôt que d'afficher un « 0 % » trompeur. Vérifie `Sens_Odorat_Ticks_Variation_Ratio` en W&B |
+| `Sens_Odorat_Taux_Approche` proche de 50 % | À **ne pas interpréter sur un run court** (voir l'avertissement de §13b) : sur peu de ticks de variation, le chiffre est du bruit. Sur un run long avec un agent mobile, ≈ 50 % durable signifierait que la clinotaxie n'oriente rien — ce serait le signal qu'il faut remettre ces 2 dims en cause |
+| `RuntimeError: The size of tensor a (80) must match ... (82)` à la première nuit | Corrigé en v32.0 (voir §13d). Si le message réapparaît, c'est que `greffe_detectee` ne capte pas la greffe : vérifie que `persistance.py` est bien à jour sur ta branche (le correctif s'appuie sur le drapeau `bio_greffe`, pas sur `missing_keys`) |
 | `Portage` reste à 0 % sur DoorKey | L'agent n'a jamais ramassé la clé de la journée — cohérent avec un palier DoorKey encore bas (< 3, « Toucher / Prendre »). Cette métrique est un bon indicateur avancé de la maîtrise des paliers 3-4, avant même que la victoire n'arrive |

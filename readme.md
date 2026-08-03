@@ -19,6 +19,7 @@ Il intègre la structure de table des matières globale (avec le contexte applic
 2. [Journal des Mises à Jour (Changelog)](https://www.google.com/search?q=%23journal-des-mises-%C3%A0-jour)
 3. [Plan d'Action](https://www.google.com/search?q=%23plan-daction)
 3t. **[Parcourt_readme.md — Guide Complet du Système de Cursus](docs/Parcourt_readme.md)** (commandes de lancement, jours/ticks par parcours, détail des paliers, FAQ)
+3m. [Nouveautés v32.0 (expérimental) — L'Odorat Topologique & la Clinotaxie](#nouveautés-v320-expérimental--lodorat-topologique--la-clinotaxie-2026-08-03)
 3n. [Nouveautés v31.1 (expérimental) — La Déduplication Mnésique & le Cap de Densité](#nouveautés-v311-expérimental--la-déduplication-mnésique--le-cap-de-densité-spatiale-2026-08-02)
 3o. [Nouveautés v31.0 (expérimental) — La Mémoire Proportionnelle & le Rêve Invariant d'Échelle](#nouveautés-v310-expérimental--la-mémoire-proportionnelle--le-rêve-invariant-déchelle-2026-08-02)
 3p. [Nouveautés v30.1 (expérimental) — Instrumentation avant calibrage : mémoire & Sursaut](#nouveautés-v301-expérimental--instrumentation-avant-calibrage--mémoire--sursaut-2026-08-02)
@@ -101,6 +102,53 @@ Pour un historique complet commit par commit, consultez [docs/CHANGELOG.md](docs
 > Proportionnelle) et **v31.1** (Déduplication Mnésique) sont **implémentées et validées** sur la branche `feat/v30-exo-sens`, en attente de merge — voir
 > [docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md](docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md) pour le cadrage et les
 > arbitrages.
+
+### Nouveautés v32.0 (expérimental) — L'Odorat Topologique & la Clinotaxie (2026-08-03)
+
+> ⚠️ **Statut expérimental** : vit dans `src/naulthene/cerveau/noyau.py` (gitignoré), `bus_sensoriel.py` et `persistance.py`, pas encore porté sur `src/naulthene/cerveau/colab.py`.
+
+La v30.0 avait donné à l'odorat la bonne **forme** (atténuation exponentielle). Cette version lui
+donne la bonne **géométrie**, et surtout apprend au cerveau à le *lire*.
+
+* **L'odeur cesse de traverser les murs.** La distance était calculée à vol d'oiseau, sans jamais
+  consulter la grille. Ce n'était pas une imprécision mais un **gradient trompeur** : l'agent qui
+  suit une odeur à travers une cloison s'englue contre la paroi. Un gradient faux est pire que pas
+  de gradient — `integrateur_bio` ne peut pas apprendre à ignorer un signal qui n'est faux qu'une
+  partie du temps. La distance devient celle d'un **BFS multi-sources**, pour un coût *inférieur* à
+  la double boucle de scan qu'il remplace.
+* **La porte fermée « fuit ».** Choix assumé contre l'option « bloquante comme un mur » : une porte
+  close arrête l'air, pas les molécules — et surtout, la bloquer rendrait l'odorat inutile
+  précisément quand l'agent cherche la clé de cette porte. Elle ajoute un **surcoût de +4 cases** :
+  l'odeur passe dessous, atténuée, et le gradient se renforce brutalement dès l'ouverture.
+* **La clinotaxie — le cerveau n'était pas aveugle, il était aveugle *au mouvement*.**
+  `integrateur_bio` recevait `S_t` sans aucun état interne : il ne pouvait pas savoir si son dernier
+  pas l'avait rapproché d'une ressource. `DIM_VECTEUR_BIO` passe de 32 à 34 dims (**en queue**) pour
+  porter `ΔS = S_t − S_{t−1}`, normalisé avec **0.5 = neutre**. C'est ce qui débloque les petites
+  cartes : sur `DoorKey-6x6`, `S_t` varie peu d'une case à l'autre, mais le **signe** de ΔS bascule
+  proprement à chaque pas.
+* **🐛 Un bug de persistance latent depuis la v29.0, découvert et corrigé.** La première **nuit**
+  d'un cerveau greffé plantait (`tensor a (80) must match tensor b (82)`) : les moments Adam
+  restaient chargés à l'ancienne largeur, parce que la détection de greffe ne regardait que les
+  couches *entièrement absentes* — or une greffe par recopie n'en produit aucune. Le crash
+  n'apparaissait ni au chargement ni pendant la journée, donc **invisible** au protocole de
+  validation « 30 ticks post-résurrection » des v29/v30.
+* **Validé sur un `.brain` réel de 280 000 ticks** : greffé 80 → 82 dims, 80 colonnes historiques
+  recopiées **au bit près**, palier vocal 19/19 préservé, cycle complet journée → nuit → sauvegarde
+  → rechargement → 2ᵉ nuit.
+
+> ⚠️ **Ce que cette version ne prouve pas.** `Sens_Odorat_Taux_Approche` affiche 70,4 % sur le run
+> de validation, mais sur **27 ticks de variation seulement** (un nouveau-né ne change de case que
+> 23 fois en 400 ticks). Ce n'est pas un résultat, seulement la preuve que la métrique fonctionne.
+> La clinotaxie est un apprentissage, pas un câblage : seul un run long dira si l'agent **suit** le
+> gradient (≫ 50 %) ou le parcourt au hasard (≈ 50 %) — auquel cas ces 2 dims seraient à remettre
+> en cause, comme l'ont été les 182 doublons de la v31.1.
+
+> ⚠️ **`λ` reste à 0.8**, conformément à la méthode « instrumenter d'abord » de la v30.1. Le BFS
+> augmentant mécaniquement les distances dans les labyrinthes, l'hypothèse est qu'il corrige à lui
+> seul l'extinction trop rapide au Doctorat — à vérifier sur un run `MultiRoom` **avant** de rendre
+> λ adaptatif. L'habituation au capteur a été **écartée** : un filtre `max(0, S − α·S_lissé)` est
+> une dérivée en moins lisible, qui détruirait la moitié du signal (tout l'éloignement) que la
+> clinotaxie vient précisément d'apporter.
 
 ### Nouveautés v31.1 (expérimental) — La Déduplication Mnésique & le Cap de Densité Spatiale (2026-08-02)
 

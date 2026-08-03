@@ -4,6 +4,74 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [32.0-experimental] - 2026-08-03
+
+### L'Odorat Topologique & la Clinotaxie
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | feat (nouvelle mécanique cognitive, expérimentale) + fix (persistance) |
+| **Impact** | Critique (architecture du réseau, persistance, signal olfactif) |
+
+**Arbitrages utilisateur, tranchés avant implémentation : (1) le BFS plutôt que la pénalité `d_géo + p × N_obstacles`, dont le `N_obstacles` est mal défini dans un labyrinthe ; (2) porte fermée « qui fuit » (surcoût de +4 cases) plutôt que bloquante, pour que l'odorat garde son rôle de guidage AVANT que la porte ne soit ouverte ; (3) λ adaptatif DIFFÉRÉ et habituation au capteur ÉCARTÉE.**
+
+**1. L'odorat cesse de traverser les murs**
+
+`lire_chimie` calculait une distance de Manhattan pure, sans jamais consulter la grille entre l'agent et la source. Le problème n'était pas une imprécision mais un **gradient TROMPEUR** : l'agent qui suit une odeur à travers une cloison s'englue contre la paroi. Un gradient faux est pire que pas de gradient, puisque `integrateur_bio` ne peut pas apprendre à ignorer un signal qui n'est faux qu'une partie du temps.
+
+La distance devient celle d'un parcours en largeur **multi-sources** (`_distances_topologiques` + `_bfs_vers_agent`), propagé depuis toutes les sources d'un type à la fois. Coût en O(V+E) sur 36 à 169 cases — **moins** que la double boucle de scan qu'il remplace. Murs et lave infranchissables ; porte fermée franchissable avec `SURCOUT_PORTE_FERMEE = 4`.
+
+| Cas testé | Distance obtenue | Attendu |
+|---|---|---|
+| Mur plein entre agent et source | `None` (inodore) | `None` |
+| Porte **fermée** sur le chemin | 10 | 6 + 4 |
+| Porte **ouverte** | 6 | 6 |
+| Aucun obstacle | 6 | 6 = Manhattan |
+
+Le dernier cas garantit l'absence de régression sur carte ouverte : sans obstacle, le BFS retombe exactement sur l'ancien calcul.
+
+**2. La clinotaxie — `DIM_VECTEUR_BIO` 32 → 34**
+
+`integrateur_bio` ne recevait que l'intensité instantanée `S_t`, **sans aucun état interne** lui permettant d'en dériver quoi que ce soit : le réseau était structurellement **aveugle au mouvement**, incapable de savoir si son dernier pas l'avait rapproché d'une ressource. Deux dims de variation `ΔS = S_t − S_{t−1}` sont ajoutées **en queue** (contrat append-only), normalisées par `(ΔS+1)/2` — **neutre = 0.5**, au-dessus « je me rapproche », en dessous « je m'éloigne ».
+
+C'est décisif là où le diagnostic v29.1 avait montré que l'odorat ne servait à rien : sur `DoorKey-6x6`, `S_t` varie peu d'une case à l'autre, mais le **signe** de ΔS bascule proprement à chaque pas. Le gradient existe dans le monde depuis la v30.0 ; ces 2 dims le rendent enfin **lisible**.
+
+⚠️ **Le piège du respawn**, traité : au `reset()`, l'agent est téléporté et les sources régénérées ailleurs. Comparer la première odeur du nouvel épisode à la dernière de l'ancien produirait un ΔS énorme et **fictif**, lu par C1 comme un violent rapprochement. `reinitialiser_episode` efface donc la mémoire olfactive — le premier tick d'un épisode n'a rien à quoi se comparer (vérifié : 0.5 exact après un reset près d'une source).
+
+**3. 🐛 Bug de persistance découvert et corrigé — la première nuit d'un cerveau greffé plantait**
+
+Découvert en validant la greffe sur un `.brain` réel de 280 000 ticks. `greffe_detectee` ne se basait que sur `missing_keys`, qui ne signale que les couches **entièrement absentes**. Or une greffe **par recopie** — la règle même du projet — n'en produit aucune : la couche existe, seule sa forme change. Les moments Adam restaient donc chargés à l'ancienne largeur :
+
+```
+RuntimeError: The size of tensor a (80) must match the size of tensor b (82)
+```
+
+Ce crash ne survenait **ni au chargement, ni pendant la journée, mais à la première `executer_nuit`** — invisible à toute vérification courte de type « 30 ticks post-résurrection », qui était le protocole des v29/v30. Le bug était **latent depuis la v29.0** ; il ne s'était jamais manifesté parce que ces versions changeaient `dim_bus` en parallèle, ce qui déclenchait `missing_keys` par un autre chemin. Correctif : se fier au drapeau `bio_greffe` retourné par la greffe elle-même.
+
+Le libellé de greffe est par ailleurs rendu **cumulatif** (`_greffer_vecteur_bio_etendu` annonçait « Exo-Sens (v30.0) » pour une greffe de clinotaxie) : un `.brain` pré-v29 chargé par un binaire v32 annonce désormais les trois blocs acquis.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/bus_sensoriel.py` | `SURCOUT_PORTE_FERMEE`, `TYPES_BLOQUANTS_ODORAT`, `DIM_ODORAT_DELTA=2` ; `_distances_topologiques()` + `_bfs_vers_agent()` (BFS à seaux) ; `_calculer_deltas_odorat()` ; `_odeurs_precedentes` remis à zéro dans `reinitialiser_episode` ; `interpreter()` → 18 dims (deltas en queue, après l'Exo-Sens) ; `hierarchie_sensorielle` enrichie |
+| `src/naulthene/cerveau/noyau.py` | `DIM_VECTEUR_BIO` 32 → 34 ; neutre **0.5** (et non 0.0) pour la clinotaxie hors MiniGrid dans `obtenir_vecteur_bio` ; **borne haute** sur `vecteur_exo` (sans elle les 2 deltas auraient faussé `Sens_Exo_*`) ; 4 compteurs journaliers ; ligne « Clinotaxie » au bilan ; 5 clés W&B |
+| `src/naulthene/cerveau/persistance.py` | **Fix** : `greffe_detectee` s'appuie sur `bio_greffe` et non sur `missing_keys` seul ; libellé de greffe cumulatif |
+
+**Validation** :
+- **BFS** : 4 cas ci-dessus, dont le repli exact sur Manhattan sans obstacle.
+- **Clinotaxie** : approche progressive vers une source → ΔS > 0.5 sur 4 ticks consécutifs (0.5204 → 0.6237) ; demi-tour → ΔS < 0.5 sur 3 ticks (0.3763 → 0.4750). Signe correct dans les deux sens.
+- **Respawn** : 0.5 exact au premier tick après `reinitialiser_episode`, malgré une téléportation à 1 case de la source.
+- **`.brain` RÉEL** (`020820262137_V31_700_RMD`, 280 000 ticks) : greffé 80 → 82, **80 colonnes historiques recopiées au bit près** (`torch.allclose`), palier vocal 19 et 280 000 ticks préservés. Cycle complet vérifié : greffe → journée → **nuit** → sauvegarde → rechargement (sans greffe) → **2ᵉ nuit**.
+- **Neurogenèse** : `integrateur_bio` (16,50) → (32,66), segment bio **fixe à 34** pendant que `dim_bus` double.
+- **Vocal isolé** : vecteur bio à 34 dims, 2 dernières à `[0.5, 0.5]` (neutre, pas une fuite olfactive fictive).
+- Run 400 ticks + nuit (56 clés) ; 12/12 modules importent.
+
+⚠️ **Ce que cette version ne prouve PAS.** `Sens_Odorat_Taux_Approche` vaut 70,4 % sur le run de validation, mais sur **27 ticks de variation seulement** — un nouveau-né ne change de case que 23 fois en 400 ticks (`Contact 53 %` : il tourne sur lui-même et se cogne). Ce chiffre n'est **pas** un résultat : il dit seulement que la métrique fonctionne. La clinotaxie est un apprentissage de `integrateur_bio`, pas un câblage — seul un run long, sur un cerveau qui se déplace vraiment, dira si l'agent **suit** le gradient (≫ 50 %) ou le monte et le descend au hasard (≈ 50 %, auquel cas ces 2 dims seraient à remettre en cause comme l'ont été les 182 doublons de la v31.1).
+
+⚠️ **`λ` reste à 0.8 et aucune formule adaptative n'est écrite** — conformément à la méthode posée en v30.1. Le BFS augmentant mécaniquement les distances dans les labyrinthes, l'hypothèse est qu'il corrige à lui seul l'extinction trop rapide au Doctorat ; à vérifier sur `Sens_Odorat_Moyen` lors d'un run `MultiRoom` **avant** de toucher à λ.
+
+---
+
 ## [31.1-docs] - 2026-08-02
 
 ### Archivage d'EXPLICATIONS_v29_sens.md & §15 d'explications_readme.md rendu autoportant
