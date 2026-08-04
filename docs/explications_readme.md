@@ -17,7 +17,7 @@ Ce document explique **comment** et **pourquoi** le cerveau `AGI_Naulthene` fonc
 9. [Le réservoir dopaminergique](#9-le-réservoir-dopaminergique)
 10. [Le rêve nocturne adaptatif](#10-le-rêve-nocturne-adaptatif)
 11. [Le cursus académique et la patience adaptative](#11-le-cursus-académique-et-la-patience-adaptative)
-12. [Évolutions du projet (v7 → v31)](#12-évolutions-du-projet-v7--v31)
+12. [Évolutions du projet (v7 → v33)](#12-évolutions-du-projet-v7--v33)
 13. [Glossaire des constantes](#13-glossaire-des-constantes)
 14. [La Cascade C1 → C2 → C3 & le Port Exocortex (expérimental)](#14-la-cascade-c1--c2--c3--le-port-exocortex-expérimental)
 15. [Le Bus Sensoriel & l'identité C1/C2 explicite (expérimental)](#15-le-bus-sensoriel--lidentité-c1c2-explicite-expérimental)
@@ -549,7 +549,7 @@ Dès `palier_cible >= 5` (Viser la Porte), le **Mode Libre** s'active : le guida
 
 ---
 
-## 12. Évolutions du projet (v7 → v31)
+## 12. Évolutions du projet (v7 → v33)
 
 | Version | Ce qui a changé | Pourquoi |
 |---|---|---|
@@ -567,6 +567,7 @@ Dès `palier_cible >= 5` (Viser la Porte), le **Mode Libre** s'active : le guida
 | v29.0 (expérimental) | Le Bus Sensoriel Multimodal & l'identité C1/C2 explicite — toucher/odorat/goût (`DIM_VECTEUR_BIO` 16→24), `_executer_c1_reflexe()`/`_solliciter_c2_neocortex()`, greffe rétrocompatible du vecteur bio | Donner à l'agent les 5 sens plutôt que 2, et nommer la frontière réflexe/néo-cortex qui existait déjà de fait dans le code (§15) |
 | v29.1 (expérimental) | Télémétrie des 5 sens — 7 clés W&B `Sens_*` + ligne au bilan de nuit ; diagnostic de saturation de l'odorat sur les petites cartes | Rendre observable une mécanique jusque-là invisible : sans télémétrie, impossible de démontrer qu'un sens sert réellement à quelque chose sur un run long (§15.6) |
 | v30.0 (expérimental) | L'Odorat Dynamique (atténuation exponentielle `exp(-0.8·d)`) & l'Exo-Sens — C3 devient le 6ème sens, `DIM_VECTEUR_BIO` 24→32, `ACTION_DEMANDER` masquée en permanence | Corriger la saturation diagnostiquée en v29.1 (le gradient, pas la couverture, est ce qui oriente) ; faire de l'Exocortex une perception continue plutôt qu'un cerveau concurrent, sans aucun seuil de déclenchement |
+| v33.0 étapes 0 & 0.5 (expérimental) | La Chronométrie des Jalons (`ChronometreJalonsDoorKey`, Δt1/Δt2/Δt3 + conflit viscéral, 7 clés `Jalon_*`) & le Test d'Ablation Inversée (`QUETE_AUTO_EN_MODE_LIBRE`, **inactif par défaut**) | Trancher par la mesure, avant toute refonte de la mémoire, *où* se situe le blocage du Palier 7. Le run de 700 jours a répondu : l'agent franchit la porte 42 fois pour **zéro** sortie, et sa seule victoire est le jour où le guidage était encore actif — le dernier segment est un désert de signal, l'hypothèse du conflit viscéral est infirmée (1,4 ressource/jour) |
 | v32.0 (expérimental) | L'Odorat Topologique (BFS multi-sources, porte fermée à surcoût) & la Clinotaxie (`DIM_VECTEUR_BIO` 32→34) ; fix de la détection de greffe dans `persistance.py` | L'odeur traversait les murs, produisant un gradient *trompeur* ; et `integrateur_bio`, sans état interne, était aveugle au mouvement — incapable de savoir si son dernier pas l'avait rapproché d'une ressource (§15.9) |
 | v31.1 (expérimental) | La Déduplication Mnésique (un repère par `(pos,type)`, compactage des `.brain` antérieurs) & le Cap de Densité Spatiale (`cases × 3`) | Un `.brain` réel contenait 200 souvenirs pour 18 repères distincts (91 % de redondance) ; la « saturation » n'était pas un manque de place. Corrige aussi un biais de rappel : `min(distance)` pouvait retenir un souvenir périmé |
 | v31.0 (expérimental) | La Mémoire Proportionnelle (`capacite = dim_bus × 12 × (1+déficit)`) & le Rêve Invariant d'Échelle (référence de richesse normalisée par `empreinte_enfance`) | Supprimer deux biais : un plafond mnésique arbitraire qui saturait, et un `%_reve` qui s'effondrait mécaniquement quand le cerveau grandissait (60 % → 15 %) |
@@ -626,6 +627,7 @@ Voir [CHANGELOG.md](CHANGELOG.md) pour le détail commit par commit et [readme.m
 | `TYPES_BLOQUANTS_ODORAT` (v32.0, expérimental) | `("wall","lava")` | Objets qui arrêtent totalement la diffusion : une source derrière eux est **inodore** |
 | `PERIODE_PERCEPTION_EXO` (v30.0, expérimental) | 20 | Ticks entre deux interrogations réelles du Port C3 (cache entre-temps) — un plug HTTP coûte 100 ms à 30 s |
 | `DECROISSANCE_GOUT` (v29.0, expérimental) | 0.85 | Décroissance par tick de la trace gustative (~10 ticks de rémanence) |
+| `QUETE_AUTO_EN_MODE_LIBRE` (v33.0-etape0.5, expérimental) | **`False`** | Test d'ablation inversée : à `True`, `DetecteurProgresPersonnel` s'active sur DoorKey **en Mode Libre seulement** (l'exclusion historique visait un double guidage avec `RECOMPENSE_APPROCHE_BUT`, déjà coupée dans ce mode). **Instrument de diagnostic, jamais une mécanique** — à remettre à `False` après mesure. `False` ⇒ comportement bit-identique à la v32.0 |
 
 ---
 

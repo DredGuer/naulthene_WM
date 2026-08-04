@@ -1062,6 +1062,84 @@ n'est perdu**.
 
 ---
 
+## 14. Diagnostiquer le blocage au Palier 7 (v33.0-étapes 0 & 0.5, expérimental)
+
+Deux instruments, livrés ensemble, pour répondre à une seule question : **pourquoi l'agent
+n'atteint-il jamais le Palier 7 ?** Aucune mécanique cognitive n'est ajoutée — c'est
+l'application de la méthode « mesurer avant de refondre » (§11).
+
+### 14a. Lire les jalons dans le bilan de nuit
+
+Rien à activer : dès qu'une journée comporte des épisodes DoorKey, une ligne apparaît.
+
+```
+├─ Jalons DoorKey : ⏱️  Δt1 clé 16.0 ticks (n=1) | Δt2 porte JAMAIS ATTEINT (n=0) | Δt3 sortie JAMAIS ATTEINT (n=0) | 🍎 0 ressource(s) mangée(s) clé en main
+```
+
+| Segment | Ce qu'il mesure | Ce que sa lenteur/absence signifie |
+|---|---|---|
+| **Δt1** | reset → prise de la clé | le problème est en amont, bien avant le Palier 7 |
+| **Δt2** | clé → déverrouillage | le goulot est le **transport** de la clé |
+| **Δt3** | déverrouillage → sortie | le **désert de récompense** du dernier segment |
+| 🍎 | ressources mangées **clé en main** | le **conflit viscéral** (l'agent s'arrête manger au lieu de finir) |
+
+⚠️ **`JAMAIS ATTEINT (n=0)` n'est pas un zéro** : c'est l'information la plus importante de la
+ligne. Un segment jamais atteint est exclu des moyennes, sinon « lent » et « jamais atteint »
+— deux diagnostics opposés — se confondraient. Le `(n=…)` est donc à lire en même temps que la
+durée : `Δt3 12 ticks (n=1)` et `Δt3 12 ticks (n=200)` racontent l'inverse l'un de l'autre.
+
+Côté W&B, 7 clés `Jalon_*` (absentes hors DoorKey, jamais des zéros trompeurs) :
+`Jalon_Delta1_Vers_Cle`, `Jalon_Delta2_Cle_Vers_Porte`, `Jalon_Delta3_Porte_Vers_Sortie`,
+les trois `Jalon_Taux_Atteinte_*` et `Jalon_Ressources_Post_Cle_Par_Episode`.
+
+### 14b. Lancer le test d'ablation inversée
+
+Le drapeau est à `False` par défaut. Pour lancer le test, éditer dans
+`src/naulthene/cerveau/noyau.py` (section 4) :
+
+```python
+QUETE_AUTO_EN_MODE_LIBRE = True   # instrument de diagnostic — À REMETTRE À False
+```
+
+Puis relancer un cursus **sur un cerveau déjà arrivé au Palier 7** (un cerveau neuf mettrait
+~90 jours à y parvenir) :
+
+```bash
+WANDB_MODE=offline PYTHONPATH=src venv/bin/python -m naulthene.salles_de_classe.cursus_developpemental \
+    --jours 50 --brain "brains/<ton_cerveau_au_palier_7>.brain"
+```
+
+La ligne de bilan porte alors un suffixe explicite, pour que les logs restent lisibles a
+posteriori :
+
+```
+├─ Quête Auto     : 🧭 5 nouveaux records de proximité au But [ABLATION INVERSÉE — Mode Libre DoorKey]
+```
+
+⚠️ **Remettre `QUETE_AUTO_EN_MODE_LIBRE = False` après la mesure.** Ce drapeau rétablit
+artificiellement le gradient manquant vers le But : s'il débloque le Palier 7, il **prouve** la
+nature du blocage, il ne le **résout** pas. La vraie solution doit émerger de la mémoire —
+voir [CONCEPTION_v33_memoire_emotionnelle.md](CONCEPTION_v33_memoire_emotionnelle.md).
+
+### 14c. Ce que le run de 700 jours a déjà établi
+
+Analyse du run `50ac6kz0` (cerveau neuf, v32.0, 700 jours), **avant** toute modification :
+
+| Fait | Valeur |
+|---|---|
+| Arrivée au Palier 7 / jours passés dessus | jour **94** / **607** |
+| Réussites | **1** — le jour 94 lui-même |
+| Portage (clé en main) | **51,4 %** des ticks |
+| Portes franchies / **sorties** | **42 jours** / **0** |
+| Ressources consommées | 1,4 / jour |
+
+L'agent **prend la clé, la transporte, déverrouille et franchit** — puis ne sort jamais. Sa
+seule victoire est le jour de la promotion, c'est-à-dire le dernier jour où
+`RECOMPENSE_APPROCHE_BUT` était encore active. L'hypothèse « il erre en cherchant à manger » est
+**infirmée** par les 1,4 ressource/jour.
+
+---
+
 ## Dépannage rapide
 
 | Symptôme | Cause probable |
@@ -1087,4 +1165,9 @@ n'est perdu**.
 | Ligne `Clinotaxie` absente du bilan (v32.0) | Normal quand l'odeur n'a **jamais varié** de la journée : agent immobile, ou aucune source à portée. La ligne est masquée plutôt que d'afficher un « 0 % » trompeur. Vérifie `Sens_Odorat_Ticks_Variation_Ratio` en W&B |
 | `Sens_Odorat_Taux_Approche` proche de 50 % | À **ne pas interpréter sur un run court** (voir l'avertissement de §13b) : sur peu de ticks de variation, le chiffre est du bruit. Sur un run long avec un agent mobile, ≈ 50 % durable signifierait que la clinotaxie n'oriente rien — ce serait le signal qu'il faut remettre ces 2 dims en cause |
 | `RuntimeError: The size of tensor a (80) must match ... (82)` à la première nuit | Corrigé en v32.0 (voir §13d). Si le message réapparaît, c'est que `greffe_detectee` ne capte pas la greffe : vérifie que `persistance.py` est bien à jour sur ta branche (le correctif s'appuie sur le drapeau `bio_greffe`, pas sur `missing_keys`) |
+| Ligne `Jalons DoorKey` absente du bilan (v33.0) | Normal hors DoorKey (`Empty`, `MultiRoom`, `MemoryS7`) et en mode `vocal_isole` : la mécanique clé/porte/but n'y a aucun sens, la ligne et les 7 clés `Jalon_*` sont volontairement masquées plutôt que de logger des zéros trompeurs |
+| `Δt3 sortie JAMAIS ATTEINT (n=0)` nuit après nuit | **Ce n'est pas un bug, c'est LE résultat** — l'agent déverrouille la porte mais ne rejoint jamais le But. Mesuré sur 607 jours (§14c). Comparer avec `Jalon_Taux_Atteinte_Porte` : s'il est > 0 alors que `Jalon_Taux_Atteinte_Sortie` reste à 0, le blocage est bien le désert de récompense du dernier segment |
+| `Δt1` renseigné mais `Δt2` toujours `n=0` | L'agent prend la clé sans jamais déverrouiller : le goulot est le **transport**, pas le segment final — le plan de la v33 devrait alors être réexaminé (le cadrage suppose l'inverse) |
+| Suffixe `[ABLATION INVERSÉE]` sur la ligne `Quête Auto` | `QUETE_AUTO_EN_MODE_LIBRE = True` est encore actif (§14b). Attendu **pendant** le test de diagnostic uniquement — à remettre à `False` ensuite, sinon l'agent conserve une béquille de guidage permanente vers le But |
+| Aucun record de proximité malgré `QUETE_AUTO_EN_MODE_LIBRE = True` | Le Mode Libre n'est pas actif : il exige `palier_cible >= 5` (`SEUIL_PALIER_MODE_LIBRE`). En Mode **Guidé**, la quête auto reste volontairement désactivée sur DoorKey — c'est là que le double guidage avec `RECOMPENSE_APPROCHE_BUT` existerait réellement |
 | `Portage` reste à 0 % sur DoorKey | L'agent n'a jamais ramassé la clé de la journée — cohérent avec un palier DoorKey encore bas (< 3, « Toucher / Prendre »). Cette métrique est un bon indicateur avancé de la maîtrise des paliers 3-4, avant même que la victoire n'arrive |

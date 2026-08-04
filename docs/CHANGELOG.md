@@ -4,6 +4,197 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [33.0-etape0.5-experimental] - 2026-08-04
+
+### Le Test d'Ablation Inversée — la quête auto en Mode Libre + LECTURE DU RUN DE 700 JOURS
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | feat (instrument de diagnostic, expérimental) |
+| **Impact** | Fonctionnel (**inactif par défaut** — `QUETE_AUTO_EN_MODE_LIBRE = False` ⇒ comportement bit-identique à la v32.0) |
+
+**🔬 LA MESURE D'ABORD — ce que le run de 700 jours a révélé**
+
+Un run complet (`50ac6kz0`, cerveau neuf, v32.0, 700 jours) a été analysé **avant** d'écrire
+cette version. Il tranche le débat ouvert par la v33.0-etape0 :
+
+| Fait mesuré | Valeur |
+|---|---|
+| Arrivée au Palier 7 | **jour 94** |
+| Jours passés au Palier 7 | **607** |
+| Réussites du Palier 7 | **1** — le jour 94 lui-même |
+| Jours avec récompense terminale > 0 | **0** |
+| Portage (clé en main) après J94 | **51,4 %** des ticks |
+| Portes franchies après J94 | **42 jours sur 607** |
+| Sorties après J94 | **0** |
+| Sursauts de Volonté | 101, dont **0 % de victoires** |
+| Ressources consommées | **1,4 / jour** |
+
+**Trois conclusions, dont une qui INFIRME une hypothèse de travail :**
+
+1. **Δt1 et Δt2 fonctionnent.** 51,4 % de portage et 42 franchissements de porte : l'agent
+   prend la clé, la transporte, déverrouille et franchit. Ce n'est pas un agent perdu.
+2. **Δt3 est un mur absolu.** 42 franchissements pour **zéro** sortie. Pas « lent » :
+   **jamais** — exactement la distinction que `extraire_deltas` encode avec `None` plutôt
+   qu'avec `0`.
+3. **❌ L'hypothèse du conflit viscéral est INFIRMÉE.** 1,4 ressource par jour : l'agent
+   ne « broute » pas en portant la clé. Cette piste, envisagée dans le cadrage v33, est
+   donc écartée par la mesure — comme la v31.1 avait écarté « le rêve cristallise des
+   réflexes d'échec ».
+
+**🎯 Le détail qui établit la causalité** : la **seule** victoire est le **jour 94**, celui
+de la promotion — donc le dernier jour où l'agent travaillait encore sous guidage. Dès le
+décrochage de `RECOMPENSE_APPROCHE_BUT`, plus jamais aucune sortie en 606 jours. La victoire
+s'est produite précisément quand la béquille était là.
+
+*(Note : les franchissements de porte s'accélèrent nettement en fin de run — jours 600-697.
+L'agent **apprenait encore** à atteindre la porte ; ce progrès ne pouvait simplement
+déboucher sur rien.)*
+
+**L'instrument — rendre au dernier segment le gradient qui lui manque**
+
+`DetecteurProgresPersonnel` (3b, « ai-je battu mon record de proximité au But ? ») est
+historiquement **inactif sur DoorKey**, pour éviter un double guidage avec
+`RECOMPENSE_APPROCHE_BUT`. **Cette exclusion est caduque en Mode Libre** :
+`recompense_continue` n'est ajoutée à `recompense_interne` que si `not etat.mode_libre`.
+Dès le Palier 5, la béquille DoorKey est déjà coupée — il n'y a plus de double guidage à
+craindre, seulement un segment porte→but dépourvu de tout signal.
+
+Nouveau drapeau `QUETE_AUTO_EN_MODE_LIBRE` (**`False` par défaut**). À `True`, la quête auto
+s'active sur DoorKey **en Mode Libre uniquement** — jamais en Mode Guidé, où les deux
+guidages coexisteraient réellement.
+
+⚠️ **C'est un INSTRUMENT DE DIAGNOSTIC, pas une mécanique cognitive.** S'il débloque le
+Palier 7, la nature du blocage est prouvée (rareté du signal) et il doit être **remis à
+`False`** : la vraie solution doit émerger de la mémoire (valence + replay orienté), jamais
+d'une béquille permanente.
+
+**Une décision de conception : une seule source de vérité**
+
+Cinq sites lisaient `not etat.doorkey_actif` en parallèle (init d'épisode ×2, évaluation du
+tick, bilan de nuit). `_quete_auto_active(etat)` les centralise. Motif : les laisser diverger
+produirait ici le pire bug possible — un détecteur qui **évalue sans avoir été
+réinitialisé** compare la distance courante au record d'un épisode précédent, donc sur une
+carte régénérée dont le But a bougé.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | Constante `QUETE_AUTO_EN_MODE_LIBRE` (section 4) documentée par la mesure ci-dessus ; helper `_quete_auto_active()` ; 4 sites de lecture unifiés (2 × `reinitialiser_episode`, `evaluer_tick`, bilan de nuit) ; suffixe `[ABLATION INVERSÉE]` sur la ligne « Quête Auto » ; clé W&B `Jalon_Quete_Auto_Ablation` |
+
+**Validation** :
+- **Non-régression PROUVÉE** : à `False`, l'empreinte MD5 des 400 actions à graine fixée est
+  **identique** (`6573f2fd045d`) à la v33.0-etape0 — le drapeau au repos ne change rien.
+- **Table de vérité complète, 6/6 cas** : hors DoorKey → toujours actif (historique) ;
+  DoorKey **Guidé** → jamais actif, quel que soit le drapeau (le double guidage reste
+  interdit) ; DoorKey **Libre** → actif si et seulement si le drapeau est levé.
+- **Effet réel vérifié sur DoorKey-6x6 en Mode Libre** (800 ticks + nuit) : drapeau `False`
+  → **0** record de proximité et clé W&B à 0 ; drapeau `True` → **5** micro-récompenses de
+  proximité et clé W&B à 1. Le gradient manquant est bien rétabli, et le détecteur est
+  **réinitialisé** (pas seulement évalué).
+- Ligne de bilan vérifiée : `🧭 5 nouveaux records de proximité au But [ABLATION INVERSÉE — Mode Libre DoorKey]`.
+
+⚠️ **Ce que cette version ne prouve PAS.** Elle livre l'instrument, elle ne rend aucun
+verdict : le test doit tourner sur un cerveau **déjà au Palier 7**. Et même si l'ablation
+débloque la sortie, les 42 franchissements ne représentent que **7 %** des jours — le désert
+Δt3 est le blocage **principal**, pas nécessairement le seul.
+
+---
+
+## [33.0-etape0-experimental] - 2026-08-04
+
+### Chronométrie des Jalons DoorKey — mesurer AVANT de refondre la mémoire
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | feat (télémétrie, expérimentale) |
+| **Impact** | Fonctionnel (observabilité — **aucun** impact sur la décision, le gradient ou la dopamine) |
+
+**Arbitrage utilisateur : viser la mémoire humaine, mais utiliser le Palier 7 comme juge de paix. Séquencement strict imposé — Étape 0 (télémétrie) « non négociable » AVANT tout chantier de Mémoire Émotionnelle. Voir [CONCEPTION_v33_memoire_emotionnelle.md](CONCEPTION_v33_memoire_emotionnelle.md) pour le cadrage complet et les options écartées.**
+
+**Le problème : un diagnostic non mesuré.**
+
+Trois analyses successives ont conclu que l'agent bloque au Palier 7 parce que le segment
+**porte déverrouillée → sortie** est un « désert de signal » : ni récompense intermédiaire
+(`RECOMPENSE_APPROCHE_BUT` est coupée en Mode Libre), ni gradient olfactif (l'odorat ne
+porte que sur FOOD/WATER), ni repère spatial (seuls FOOD/WATER sont enregistrés).
+
+**Mais ce diagnostic est une DÉDUCTION DE LECTURE DE CODE, jamais une mesure.** La v31.1
+a déjà démontré qu'une intuition forte peut être infirmée par l'instrumentation (« le rêve
+cristallise des réflexes d'échec » : faux, `rever()` ne calcule que `perte_jepa`). Refonder
+la mémoire sur une hypothèse non chiffrée reproduirait exactement l'erreur que la méthode
+v30.1 interdit.
+
+**La mesure — trois deltas et un conflit**
+
+`ChronometreJalonsDoorKey` (nouvelle section **3h**) découpe chaque épisode :
+
+| Delta | Segment | Ce que sa domination signifierait |
+|---|---|---|
+| **Δt1** | reset → prise de la clé | le problème est en amont, bien avant le Palier 7 |
+| **Δt2** | clé → déverrouillage | le goulot est le **transport** (conflit viscéral) → la priorité de la v33 change |
+| **Δt3** | déverrouillage → sortie | le **désert de récompense** est confirmé → la conception v33 s'applique telle quelle |
+
+Plus une mesure directe du **conflit viscéral** : `ressources_post_cle` compte les
+consommations FOOD/WATER survenues **clé en main**. Si « l'agent erre avec la clé en
+cherchant à manger » est vrai, ce compteur le prouve en une courbe.
+
+**La décision de conception qui fonde la métrique : `None` n'est pas `0`.**
+
+Un segment jamais atteint retourne `None`, jamais `0`, et n'entre **ni au numérateur ni au
+dénominateur**. Chaque delta porte donc son propre effectif. Sans cette séparation,
+« le segment est lent » et « le segment n'est jamais atteint » — deux diagnostics
+**opposés** — deviendraient indiscernables dans une moyenne commune. C'est aussi pourquoi
+trois **taux d'atteinte** sont loggés à part : un Δt3 rapide sur n=1 et sur n=200 racontent
+l'inverse l'un de l'autre.
+
+Le bilan console affiche explicitement `JAMAIS ATTEINT (n=0)` plutôt qu'un `0.0` trompeur.
+
+**Contrat de l'étape 0 — observation pure**
+
+Contrairement à tous les détecteurs de 3a/3b, cette classe ne retourne **aucune récompense
+et aucun poids de choc** : elle n'entre ni dans `recompense_interne`, ni dans
+`poids_evenement`, ni dans le gradient. Un jalon n'est daté qu'**une fois par épisode**
+(sinon un aller-retour devant la porte réécrirait la mesure), et le déverrouillage se lit
+sur la **transition** verrouillée→ouverte, jamais sur l'état courant seul (une porte déjà
+ouverte au reset ne doit pas être datée au tick 0).
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | Nouvelle section **3h** `ChronometreJalonsDoorKey` ; instanciation dans `EtatCognitif` ; 8 compteurs journaliers dans `_reinitialiser_buffers_journee` ; appels dans `traiter_tick` (observation + 2 sites de consommation) ; récolte des deltas avant le `reset()` de fin d'épisode ; réinitialisation dans `demarrer_journee` et en fin d'épisode ; ligne de bilan « Jalons DoorKey » ; **6 clés W&B conditionnelles** |
+| `docs/CONCEPTION_v33_memoire_emotionnelle.md` | **Nouveau.** Cadrage complet de la v33 : valence, replay orienté, liage multimodal — avec les options **écartées** et leurs raisons |
+
+**Validation** :
+- **Invariance comportementale PROUVÉE par différentiel** : l'empreinte MD5 des 400 actions
+  à graine fixée est **identique** (`6573f2fd045d`) avec et sans les appels du chronomètre
+  (vérifié en neutralisant les 3 sites d'appel puis en comparant) — la télémétrie ne touche
+  ni la décision, ni le gradient, ni la dopamine. Test lui-même vérifié déterministe
+  (2 exécutions identiques).
+- **Ordre et unicité des jalons** (test unitaire) : épisode vierge → 3 `None` ; clé au
+  tick 12 → Δt1=12, Δt2/Δt3 restent `None` ; porte au tick 40 → Δt2=28 ; sortie au tick 55
+  → Δt3=15. `None` jamais confondu avec 0.
+- **Conflit viscéral** : une consommation avant la prise de clé est **ignorée**, deux
+  consommations clé en main sont **comptées**, une consommation après la sortie est
+  **ignorée**.
+- **Run réel DoorKey-6x6 (600 ticks) + NUIT COMPLÈTE** (leçon v32.0 : une mécanique ne se
+  valide jamais sur des ticks seuls) — 74 clés W&B dont 6 de jalons ; bilan console correct,
+  affichant `Δt2 porte JAMAIS ATTEINT (n=0)` sur un cerveau neuf.
+- **Remise à zéro vérifiée** après `demarrer_journee` (piège `score_vocal_jour` v27.0 : un
+  compteur journalier jamais vidé cumule depuis la naissance).
+
+⚠️ **Ce que cette version ne prouve PAS.** Les chiffres du run de validation (Δt1 = 28 ticks
+sur n=1, Δt2/Δt3 jamais atteints) proviennent d'un **cerveau neuf de 600 ticks au Palier 1** :
+ils démontrent que la métrique **fonctionne**, ils ne disent rien du blocage au Palier 7.
+Seul un run de diagnostic sur un cerveau **déjà arrivé au Palier 7** peut trancher entre Δt2
+et Δt3 — et c'est cette lecture, et elle seule, qui doit décider du plan de la v33.
+
+⚠️ **Aucune mécanique de la Mémoire Émotionnelle n'est écrite** : ni valence, ni replay
+orienté, ni liage multimodal. La v33.0-etape0 ne fait que rendre mesurable ce qui devra
+être décidé. `abs(recompense_interne)` reste en place dans le calcul d'`importance`.
+
+---
+
 ## [32.0-experimental] - 2026-08-03
 
 ### L'Odorat Topologique & la Clinotaxie

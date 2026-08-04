@@ -19,6 +19,7 @@ Il intègre la structure de table des matières globale (avec le contexte applic
 2. [Journal des Mises à Jour (Changelog)](https://www.google.com/search?q=%23journal-des-mises-%C3%A0-jour)
 3. [Plan d'Action](https://www.google.com/search?q=%23plan-daction)
 3t. **[Parcourt_readme.md — Guide Complet du Système de Cursus](docs/Parcourt_readme.md)** (commandes de lancement, jours/ticks par parcours, détail des paliers, FAQ)
+3l. [Nouveautés v33.0 étapes 0 & 0.5 (expérimental) — Chronométrie des Jalons & Ablation Inversée](#nouveautés-v330-étapes-0--05-expérimental--la-chronométrie-des-jalons--le-test-dablation-inversée-2026-08-04)
 3m. [Nouveautés v32.0 (expérimental) — L'Odorat Topologique & la Clinotaxie](#nouveautés-v320-expérimental--lodorat-topologique--la-clinotaxie-2026-08-03)
 3n. [Nouveautés v31.1 (expérimental) — La Déduplication Mnésique & le Cap de Densité](#nouveautés-v311-expérimental--la-déduplication-mnésique--le-cap-de-densité-spatiale-2026-08-02)
 3o. [Nouveautés v31.0 (expérimental) — La Mémoire Proportionnelle & le Rêve Invariant d'Échelle](#nouveautés-v310-expérimental--la-mémoire-proportionnelle--le-rêve-invariant-déchelle-2026-08-02)
@@ -102,6 +103,59 @@ Pour un historique complet commit par commit, consultez [docs/CHANGELOG.md](docs
 > Proportionnelle) et **v31.1** (Déduplication Mnésique) sont **implémentées et validées** sur la branche `feat/v30-exo-sens`, en attente de merge — voir
 > [docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md](docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md) pour le cadrage et les
 > arbitrages.
+
+### Nouveautés v33.0 étapes 0 & 0.5 (expérimental) — La Chronométrie des Jalons & le Test d'Ablation Inversée (2026-08-04)
+
+> ⚠️ **Statut expérimental** : vit uniquement dans `src/naulthene/cerveau/noyau.py` (gitignoré), pas encore porté sur `src/naulthene/cerveau/colab.py`.
+
+Cette version ne livre **aucune mécanique cognitive** : elle livre les deux instruments qui
+doivent décider de la suivante. C'est l'application stricte de la méthode posée en v30.1 —
+*mesurer avant de refondre* — sur la question ouverte depuis des centaines de jours : **pourquoi
+l'agent n'atteint-il jamais le Palier 7 ?**
+
+**🔬 Ce que le run de 700 jours a révélé (run `50ac6kz0`, cerveau neuf)**
+
+| Fait mesuré | Valeur |
+|---|---|
+| Arrivée au Palier 7 | jour **94** |
+| Jours passés au Palier 7 | **607** |
+| Réussites | **1** — le jour 94 lui-même |
+| Portage (clé en main) | **51,4 %** des ticks |
+| Portes franchies / sorties | **42 jours** / **0** |
+
+L'agent **prend la clé, la transporte, déverrouille et franchit la porte** — puis ne sort
+jamais. Le segment final n'est pas *lent*, il est *jamais franchi*. Et la seule victoire du run
+est le **jour de la promotion**, c'est-à-dire le dernier jour où le guidage
+(`RECOMPENSE_APPROCHE_BUT`) était encore actif : dès son retrait, plus rien en 606 jours.
+
+❌ **Une hypothèse infirmée par la mesure** : « l'agent erre avec la clé en cherchant à manger »
+est faux — il ne consomme que **1,4 ressource par jour**. Comme la v31.1 avait écarté « le rêve
+cristallise des réflexes d'échec », la donnée corrige l'intuition.
+
+**Étape 0 — le Chronomètre de Jalons** (`ChronometreJalonsDoorKey`, section 3h)
+
+Découpe chaque épisode en trois deltas : **Δt1** (vers la clé), **Δt2** (clé → porte), **Δt3**
+(porte → sortie), plus un compteur de **conflit viscéral** (ressources mangées clé en main).
+
+Décision de conception centrale : un segment jamais atteint retourne **`None`, jamais `0`**, et
+n'entre ni au numérateur ni au dénominateur. Sans cette séparation, « le segment est lent » et
+« le segment n'est jamais atteint » — deux diagnostics **opposés** — se confondraient. Le bilan
+console affiche explicitement `JAMAIS ATTEINT (n=0)`.
+
+**Étape 0.5 — le Test d'Ablation Inversée** (`QUETE_AUTO_EN_MODE_LIBRE`, **`False` par défaut**)
+
+`DetecteurProgresPersonnel` était exclu de DoorKey pour éviter un double guidage — **mais cette
+exclusion est caduque en Mode Libre**, où `RECOMPENSE_APPROCHE_BUT` est déjà coupée. Le drapeau
+rétablit donc le gradient manquant sur le dernier segment, pour établir la causalité.
+
+⚠️ C'est un **instrument de diagnostic, pas une mécanique** : s'il débloque le Palier 7, il doit
+être remis à `False`. La vraie solution doit émerger de la mémoire (valence + replay orienté),
+jamais d'une béquille permanente — voir
+[docs/CONCEPTION_v33_memoire_emotionnelle.md](docs/CONCEPTION_v33_memoire_emotionnelle.md).
+
+**Garantie de non-régression** : les deux étapes sont purement observationnelles. L'empreinte MD5
+des 400 actions à graine fixée est **identique** avec et sans elles (`6573f2fd045d`, vérifié par
+neutralisation différentielle) — ni la décision, ni le gradient, ni la dopamine ne sont touchés.
 
 ### Nouveautés v32.0 (expérimental) — L'Odorat Topologique & la Clinotaxie (2026-08-03)
 
