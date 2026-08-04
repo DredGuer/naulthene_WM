@@ -107,7 +107,7 @@ débloque la sortie, les 42 franchissements ne représentent que **7 %** des jou
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `26e1e50` |
 | **Catégorie** | feat (télémétrie, expérimentale) |
 | **Impact** | Fonctionnel (observabilité — **aucun** impact sur la décision, le gradient ou la dopamine) |
 
