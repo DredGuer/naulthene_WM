@@ -244,6 +244,12 @@ class PersistanceAnatomique:
             'jours_depuis_victoire': etat.jours_depuis_victoire,
             'intervalles_victoires': etat.intervalles_victoires,
             'victoires_totales': etat.victoires_totales,
+            # v33.0-etape0.6-fix1 : le contexte (niveau, palier) de la série courante.
+            # Sans lui, une reprise de run reprendrait les intervalles d'un contexte
+            # sans savoir duquel — et la première nuit les jetterait de toute façon,
+            # `contexte_victoires=None` étant réinitialisé au contexte du moment.
+            'contexte_victoires': etat.contexte_victoires,
+            'intervalles_contexte_prec': etat.intervalles_contexte_prec,
             'env_id': etat.env_id,
             'nom_classe': etat.nom_classe,
             'palier_cible': etat.palier_cible,
@@ -466,6 +472,8 @@ class PersistanceAnatomique:
         etat.jours_depuis_victoire = checkpoint.get('jours_depuis_victoire', 0)
         etat.intervalles_victoires = checkpoint.get('intervalles_victoires', [])
         etat.victoires_totales = checkpoint.get('victoires_totales', 0)
+        etat.contexte_victoires = checkpoint.get('contexte_victoires')
+        etat.intervalles_contexte_prec = checkpoint.get('intervalles_contexte_prec', [])
         etat.palier_cible = checkpoint['palier_cible']
         if checkpoint.get('doorkey_actif_a_la_sauvegarde'):
             # Recrée le détecteur DoorKey s'il était actif à la sauvegarde, pour que

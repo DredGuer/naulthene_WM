@@ -1098,9 +1098,17 @@ Les jalons disent *où* l'agent bloque dans un épisode ; cette ligne dit si, **
 centaines de jours**, il progresse :
 
 ```
-  ├─ Chrono Victoire: 🏆 7 victoire(s) en 700 jour(s) | dernière il y a 76 j
-                        | intervalle moyen 85 j — tendance 2.15 ↗️ s'espacent
+  ├─ Chrono Victoire: 🏆 9 victoire(s) en 700 jour(s) | dernière il y a 5 j
+                        | [P7] intervalle moyen 157 j (n=4) — tendance 0.22 ↘️ se rapprochent
 ```
+
+⚠️ **`[P7]` et `(n=4)` ne sont pas décoratifs** (v33.0-etape0.6-fix1). La série d'intervalles
+est **segmentée par contexte** `(niveau, palier)` : elle repart à zéro à chaque changement de
+difficulté, car un intervalle « Primaire » et un intervalle « Palier 7 » ne sont pas
+comparables. Sans cette segmentation, le run `78859bgs` affichait `34.89 ↗️ s'espacent` alors
+que l'agent **s'améliorait** — le ratio mesurait l'écart de difficulté entre deux niveaux du
+cursus, pas la progression de l'agent. Le `(n=…)` dit combien de victoires soutiennent la
+tendance affichée ; `🏆 9 victoire(s)`, lui, reste le total d'une **vie entière**.
 
 | Ratio | Lecture | Ce que ça implique |
 |---|---|---|

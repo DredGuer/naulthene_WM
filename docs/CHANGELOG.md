@@ -101,6 +101,94 @@ débloque la sortie, les 42 franchissements ne représentent que **7 %** des jou
 
 ---
 
+## [33.0-etape0.6-fix1-experimental] - 2026-08-04
+
+### La tendance était fausse — segmentation des intervalles par contexte
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | fix (correctif d'un défaut de conception de la v33.0-etape0.6) |
+| **Impact** | Fonctionnel (lisibilité d'une métrique de diagnostic — aucun impact sur la décision) |
+
+**Bug diagnostiqué sur le run `78859bgs` (700 jours) : la métrique affichait l'INVERSE de la réalité.**
+
+Le bilan annonçait `tendance 34.89 ↗️ s'espacent` — donc un agent qui **régresse** — alors
+que la lecture manuelle des logs montrait qu'il **s'améliorait** en fin de run.
+
+**La cause : un ratio calculé sur des tâches sans commune mesure.**
+
+Les 9 victoires du run n'étaient pas de même nature :
+
+| Jours | Contexte | Nature |
+|---|---|---|
+| 49, 52, 64, 66 | Primaire (`Empty-8x8`) | victoires **faciles**, avant que le Palier 7 existe |
+| 67 | bascule Collège | transition |
+| 115, 583, 623, 695 | Collège, **Palier 7** | les seules victoires qui nous intéressent |
+
+Le ratio comparait donc la première moitié (« Primaire », intervalles de 1 à 12 jours) à la
+seconde (« Palier 7 », intervalles de 40 à 468 jours). Le `34.89` ne mesurait pas une
+régression de l'agent : il mesurait **l'écart de difficulté entre deux niveaux du cursus**.
+
+C'est un défaut de conception de la v33.0-etape0.6, pas un défaut du cerveau — et il aurait
+conduit à trancher le chantier v33 sur un chiffre faux.
+
+**Le correctif : un intervalle n'a de sens qu'à difficulté constante**
+
+La série d'intervalles est désormais **segmentée par contexte** `(niveau_actuel, palier_cible)`.
+Dès que le contexte change, la série est archivée (`intervalles_contexte_prec`, lisible en
+télémétrie) et repart à zéro — exactement comme
+`memoire_episodique_spatiale.reinitialiser_niveau()` efface des coordonnées qui n'ont plus
+de sens sur une autre carte.
+
+Trois points de conception :
+
+1. **`victoires_totales` et `jour_derniere_victoire` ne sont JAMAIS remis à zéro** : ils
+   comptent une vie entière. Seule la série d'intervalles — le support du ratio — est
+   contextuelle.
+2. **`jour_derniere_victoire` est délibérément CONSERVÉ** au changement de contexte : le
+   premier intervalle de la nouvelle série mesure ainsi le temps qu'il a fallu pour
+   **regagner à la nouvelle difficulté**, ce qui est une information utile, pas un artefact.
+3. **Le contexte est affiché avec le chiffre** (`[P7] intervalle moyen 81 j (n=4)`). Sans
+   lui, un « intervalle moyen » ne dit pas s'il parle de Primaire ou du Palier 7 — c'est
+   précisément l'ambiguïté qui a produit le bug. Le `(n=…)` rappelle en outre combien de
+   victoires soutiennent réellement la tendance.
+
+**Effet mesuré sur le run réel** (calendrier `78859bgs` rejoué) :
+
+| | Intervalles | Verdict |
+|---|---|---|
+| **Avant** | `[3, 12, 2, 1, 48, 468, 40, 72]` | `34.89 ↗️ s'espacent` ❌ |
+| **Après** | `[48, 468, 40, 72]` (Palier 7 seul) | `0.22 ↘️ se rapprochent` ✅ |
+
+**Le verdict est inversé**, et le nouveau est conforme à la lecture manuelle : après un trou
+de 468 jours, les victoires reviennent tous les 40-72 jours.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `contexte_victoires` + `intervalles_contexte_prec` dans `EtatCognitif` ; détection du changement de contexte dans `executer_nuit` (lue chaque nuit, pas seulement les jours de victoire) ; contexte et effectif affichés au bilan ; clé `Victoire_Serie_Contexte_N` |
+| `src/naulthene/cerveau/persistance.py` | 2 clés supplémentaires, rechargement défensif par `.get` |
+
+**Validation** :
+- **Calendrier RÉEL rejoué** : `34.89 ↗️` → `0.22 ↘️`, verdict inversé et conforme à la
+  lecture manuelle des logs.
+- **Coupure de contexte** vérifiée en intégration (bascule `Empty` → `DoorKey`) : série
+  remise à zéro, ancienne série archivée, `victoires_totales` et `jour_derniere_victoire`
+  **conservés**.
+- **Non-régression de la détection** : sur une série homogène à contexte unique, un vrai
+  apprentissage reste détecté (`0.23 ↘️`).
+- **Persistance** des 2 nouveaux champs vérifiée (sauvegarde + rechargement).
+- **Invariance comportementale** : empreinte MD5 des 400 actions inchangée (`6573f2fd045d`).
+
+⚠️ **Conséquence sur le diagnostic v33.** Le run `78859bgs`, correctement lu, suggère un
+**apprentissage réel mais très lent** au Palier 7 (468 → 40 → 72 jours), et non le processus
+purement stationnaire supposé jusqu'ici. Cela **affaiblit** l'argument « l'agent ne retient
+rien » qui justifiait le Replay Orienté. À confirmer : la série ne compte que 4 intervalles,
+et le trou de 468 jours pèse lourd dans le ratio. Un run long sur cette métrique corrigée
+doit trancher **avant** d'ouvrir le chantier Valence & Replay.
+
+---
+
 ## [33.0-etape0.6-experimental] - 2026-08-04
 
 ### Chronologie des Victoires — hasard stationnaire ou apprentissage lent ?
