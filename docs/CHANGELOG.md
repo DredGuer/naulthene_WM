@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `4ccdffc` |
 | **Catégorie** | feat (instrument de diagnostic, expérimental) |
 | **Impact** | Fonctionnel (**inactif par défaut** — `QUETE_AUTO_EN_MODE_LIBRE = False` ⇒ comportement bit-identique à la v32.0) |
 
@@ -107,7 +107,7 @@ débloque la sortie, les 42 franchissements ne représentent que **7 %** des jou
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `4ccdffc` |
 | **Catégorie** | feat (télémétrie, expérimentale) |
 | **Impact** | Fonctionnel (observabilité — **aucun** impact sur la décision, le gradient ou la dopamine) |
 
@@ -201,7 +201,7 @@ orienté, ni liage multimodal. La v33.0-etape0 ne fait que rendre mesurable ce q
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `1291323` |
 | **Catégorie** | feat (nouvelle mécanique cognitive, expérimentale) + fix (persistance) |
 | **Impact** | Critique (architecture du réseau, persistance, signal olfactif) |
 
