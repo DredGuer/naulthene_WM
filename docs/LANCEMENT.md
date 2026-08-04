@@ -1092,6 +1092,31 @@ Côté W&B, 7 clés `Jalon_*` (absentes hors DoorKey, jamais des zéros trompeur
 `Jalon_Delta1_Vers_Cle`, `Jalon_Delta2_Cle_Vers_Porte`, `Jalon_Delta3_Porte_Vers_Sortie`,
 les trois `Jalon_Taux_Atteinte_*` et `Jalon_Ressources_Post_Cle_Par_Episode`.
 
+### 14a-bis. Lire la chronologie des victoires (v33.0-etape0.6)
+
+Les jalons disent *où* l'agent bloque dans un épisode ; cette ligne dit si, **sur des
+centaines de jours**, il progresse :
+
+```
+  ├─ Chrono Victoire: 🏆 7 victoire(s) en 700 jour(s) | dernière il y a 76 j
+                        | intervalle moyen 85 j — tendance 2.15 ↗️ s'espacent
+```
+
+| Ratio | Lecture | Ce que ça implique |
+|---|---|---|
+| **< 0.8** | ↘️ les victoires se rapprochent | l'agent **apprend** déjà — traiter la vitesse, pas la mémoire |
+| **≈ 1.0** | ➡️ stationnaire | il gagne **au hasard**, ne retient rien → le Replay Orienté est le bon chantier |
+| **> 1.25** | ↗️ elles s'espacent | régression — chercher ce qui s'est dégradé |
+
+⚠️ **Aucun ratio n'est affiché sous 4 intervalles** (donc avant 5 victoires) : en dessous,
+une seule victoire chanceuse ferait basculer le chiffre du simple au double. Une absence de
+ratio est voulue, ce n'est pas un bug.
+
+Six clés W&B : `Victoire_Jours_Depuis_Derniere`, `Victoire_Total_Vie`, `Victoire_Taux_Vie`,
+`Victoire_Intervalle_Dernier`, `Victoire_Intervalle_Moyen` et `Victoire_Tendance_Ratio`.
+Toutes sont **persistées dans le `.brain`** : la chronologie survit à une reprise de run
+(les `.brain` antérieurs repartent d'une chronologie vierge, sans erreur).
+
 ### 14b. Lancer le test d'ablation inversée
 
 Le drapeau est à `False` par défaut. Pour lancer le test, éditer dans
@@ -1166,6 +1191,9 @@ seule victoire est le jour de la promotion, c'est-à-dire le dernier jour où
 | `Sens_Odorat_Taux_Approche` proche de 50 % | À **ne pas interpréter sur un run court** (voir l'avertissement de §13b) : sur peu de ticks de variation, le chiffre est du bruit. Sur un run long avec un agent mobile, ≈ 50 % durable signifierait que la clinotaxie n'oriente rien — ce serait le signal qu'il faut remettre ces 2 dims en cause |
 | `RuntimeError: The size of tensor a (80) must match ... (82)` à la première nuit | Corrigé en v32.0 (voir §13d). Si le message réapparaît, c'est que `greffe_detectee` ne capte pas la greffe : vérifie que `persistance.py` est bien à jour sur ta branche (le correctif s'appuie sur le drapeau `bio_greffe`, pas sur `missing_keys`) |
 | Ligne `Jalons DoorKey` absente du bilan (v33.0) | Normal hors DoorKey (`Empty`, `MultiRoom`, `MemoryS7`) et en mode `vocal_isole` : la mécanique clé/porte/but n'y a aucun sens, la ligne et les 7 clés `Jalon_*` sont volontairement masquées plutôt que de logger des zéros trompeurs |
+| Ligne `Chrono Victoire` absente (v33.0-etape0.6) | Normal tant que l'agent n'a **jamais** gagné : elle n'apparaît qu'à partir de la 1ʳᵉ victoire, sinon elle répéterait « jamais » pendant des centaines de jours. Suivre `Victoire_Jours_Depuis_Derniere` sur W&B, qui vaut alors l'âge de l'agent |
+| `Victoire_Tendance_Ratio` absent alors que l'agent gagne | Normal sous **4 intervalles** (donc moins de 5 victoires) : en dessous, une seule victoire chanceuse ferait basculer le ratio du simple au double. Absence volontaire plutôt que chiffre trompeur |
+| Chronologie des victoires repartie à zéro après reprise d'un ancien `.brain` | Attendu : les `.brain` antérieurs à la v33.0-etape0.6 ne portent pas ces clés, la lecture est défensive (`.get`) et repart d'une chronologie vierge. Les runs suivants la reconstruisent — aucun acquis n'est perdu par ailleurs |
 | `Δt3 sortie JAMAIS ATTEINT (n=0)` nuit après nuit | **Ce n'est pas un bug, c'est LE résultat** — l'agent déverrouille la porte mais ne rejoint jamais le But. Mesuré sur 607 jours (§14c). Comparer avec `Jalon_Taux_Atteinte_Porte` : s'il est > 0 alors que `Jalon_Taux_Atteinte_Sortie` reste à 0, le blocage est bien le désert de récompense du dernier segment |
 | `Δt1` renseigné mais `Δt2` toujours `n=0` | L'agent prend la clé sans jamais déverrouiller : le goulot est le **transport**, pas le segment final — le plan de la v33 devrait alors être réexaminé (le cadrage suppose l'inverse) |
 | Suffixe `[ABLATION INVERSÉE]` sur la ligne `Quête Auto` | `QUETE_AUTO_EN_MODE_LIBRE = True` est encore actif (§14b). Attendu **pendant** le test de diagnostic uniquement — à remettre à `False` ensuite, sinon l'agent conserve une béquille de guidage permanente vers le But |

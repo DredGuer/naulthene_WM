@@ -235,6 +235,15 @@ class PersistanceAnatomique:
             # --- 5. Curriculum & progression ---
             'niveau_actuel': etat.niveau_actuel,
             'victoires_consecutives': etat.victoires_consecutives,
+            # v33.0-etape0.6 — chronologie des victoires. DOIT être persistée : c'est une
+            # mesure de VIE (intervalles entre victoires sur des centaines de jours), pas
+            # de journée. Sans ça, toute reprise de run remettrait les intervalles à zéro
+            # et la question « hasard ou apprentissage ? » resterait sans réponse sur les
+            # cerveaux qui ont justement le plus de vécu.
+            'jour_derniere_victoire': etat.jour_derniere_victoire,
+            'jours_depuis_victoire': etat.jours_depuis_victoire,
+            'intervalles_victoires': etat.intervalles_victoires,
+            'victoires_totales': etat.victoires_totales,
             'env_id': etat.env_id,
             'nom_classe': etat.nom_classe,
             'palier_cible': etat.palier_cible,
@@ -447,6 +456,16 @@ class PersistanceAnatomique:
         # --- Curriculum & progression ---
         etat.niveau_actuel = checkpoint['niveau_actuel']
         etat.victoires_consecutives = checkpoint['victoires_consecutives']
+        # v33.0-etape0.6 — lecture DÉFENSIVE (`.get`) : les `.brain` antérieurs à cette
+        # version n'ont aucune de ces clés. Un cerveau ancien repart donc d'une
+        # chronologie vierge (aucune victoire connue) plutôt que de faire planter le
+        # chargement — même principe que les autres champs ajoutés après coup, et
+        # cohérent avec la règle « greffe par recopie, jamais par exclusion » : on
+        # n'ampute rien, on complète ce qui manque.
+        etat.jour_derniere_victoire = checkpoint.get('jour_derniere_victoire')
+        etat.jours_depuis_victoire = checkpoint.get('jours_depuis_victoire', 0)
+        etat.intervalles_victoires = checkpoint.get('intervalles_victoires', [])
+        etat.victoires_totales = checkpoint.get('victoires_totales', 0)
         etat.palier_cible = checkpoint['palier_cible']
         if checkpoint.get('doorkey_actif_a_la_sauvegarde'):
             # Recrée le détecteur DoorKey s'il était actif à la sauvegarde, pour que

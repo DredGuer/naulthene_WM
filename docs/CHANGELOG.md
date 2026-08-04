@@ -101,6 +101,113 @@ débloque la sortie, les 42 franchissements ne représentent que **7 %** des jou
 
 ---
 
+## [33.0-etape0.6-experimental] - 2026-08-04
+
+### Chronologie des Victoires — hasard stationnaire ou apprentissage lent ?
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | feat (télémétrie, expérimentale) |
+| **Impact** | Fonctionnel (observabilité — **aucun** impact sur la décision, le gradient ou la dopamine) |
+
+**Demande utilisateur, avant tout correctif : « ajouter une métrique (temps depuis la dernière victoire) pour voir si c'est 100 % aléatoire ou s'il réussit de mieux en mieux. Il faut un maximum de données pour tirer des conclusions. »**
+
+**La question que cette métrique tranche — et pourquoi elle décide du sort de la v33**
+
+L'analyse du run de 700 jours (`icfhotie`) a relevé **7 victoires** au Palier 7, aux jours
+93, 153, 191, 281, 298, 407 et 624 — soit des intervalles de **60, 38, 90, 17, 109, 217**
+jours. Ces chiffres suggèrent un processus **stationnaire** (l'agent gagne au hasard, à
+taux constant, sans jamais retenir), ce qui justifierait le Replay Orienté.
+
+Mais ce constat a trois faiblesses qui interdisent d'en tirer une conclusion :
+
+1. il a été obtenu **à la main**, par `grep` a posteriori sur des logs console ;
+2. il repose sur **7 points** — dont 6 intervalles seulement ;
+3. il **ne survivrait pas** à une reprise de run : rien n'était persisté.
+
+Deux lectures restent ouvertes, et elles n'appellent pas le même correctif :
+
+| Régime | Signature | Conséquence pour la v33 |
+|---|---|---|
+| **Stationnaire** | intervalles stables | l'agent ne retient rien → le Replay Orienté est le bon chantier |
+| **Convergent** | intervalles qui se resserrent | il apprend déjà, lentement → c'est la **vitesse** qu'il faut traiter, pas la mémoire |
+
+**La mesure**
+
+Quatre champs d'état, **délibérément hors de `_reinitialiser_buffers_journee`** : ce sont
+des compteurs de **vie**, pas de journée. Les y placer les remettrait à zéro chaque matin
+et détruirait la mesure — piège **inverse** de celui de `score_vocal_jour` (v27.0), où un
+compteur journalier cumulait depuis la naissance. Ici, c'est bien le cumul de toute une
+vie qui est voulu.
+
+| Clé W&B | Mesure |
+|---------|--------|
+| `Victoire_Jours_Depuis_Derniere` | fraîcheur du dernier succès (= l'âge de l'agent s'il n'a jamais gagné) |
+| `Victoire_Total_Vie` / `Victoire_Taux_Vie` | numérateur brut et taux depuis la naissance |
+| `Victoire_Intervalle_Dernier` / `_Moyen` | écarts inter-victoires |
+| **`Victoire_Tendance_Ratio`** | **la métrique décisive** — moyenne de la 2ᵉ moitié des intervalles ÷ 1ʳᵉ moitié |
+
+Lecture du ratio : **< 0.8** les victoires se rapprochent (apprentissage) ; **≈ 1.0**
+stationnaire (hasard) ; **> 1.25** elles s'espacent (régression). Le bilan console traduit
+le chiffre en clair (`↘️ se rapprochent` / `➡️ stationnaire` / `↗️ s'espacent`).
+
+**Deux décisions de conception**
+
+1. **Aucun ratio n'est publié sous 4 intervalles.** En dessous, une seule victoire
+   chanceuse ferait basculer le résultat du simple au double : mieux vaut une clé absente
+   qu'un chiffre trompeur (règle v29.1).
+2. **La première victoire ne crée pas d'intervalle.** Compter « jour 93 » comme un écart
+   de 93 jours mélangerait le temps d'apprentissage initial avec les intervalles
+   inter-victoires, qui sont la seule vraie mesure.
+
+**Persistance — sans quoi la métrique ne vaudrait rien**
+
+Les quatre champs entrent dans le `.brain`. Sans cela, toute reprise de run repartirait
+d'une chronologie vierge, et la question resterait sans réponse précisément sur les
+cerveaux qui ont **le plus de vécu**. Lecture **défensive** (`.get`) au chargement : les
+`.brain` antérieurs n'ont aucune de ces clés et repartent d'une chronologie vide plutôt
+que de faire échouer la résurrection — cohérent avec « greffe par recopie, jamais par
+exclusion ».
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | 4 champs de vie dans `EtatCognitif` (hors `_reinitialiser_buffers_journee`) ; mise à jour dans `executer_nuit` après `victoires_consecutives` ; ligne de bilan « Chrono Victoire » ; **6 clés W&B** |
+| `src/naulthene/cerveau/persistance.py` | 4 clés sauvegardées ; rechargement défensif par `.get` |
+
+**Validation** :
+- **Calendrier RÉEL rejoué** (jours 93/153/191/281/298/407/624 du run `icfhotie`) →
+  intervalles `[60, 38, 90, 17, 109, 217]` exactement reproduits, `jours_depuis_victoire`
+  = 76 au jour 700, et la première victoire ne crée bien **aucun** intervalle.
+- **Les 3 régimes sont discriminés** sur calendriers synthétiques : convergent → ratio
+  `0.19` ; stationnaire → `1.00` ; divergent → `4.83`.
+- **Cas limites** : jamais gagné sur 300 jours → compteur = 300, aucun intervalle ; une
+  seule victoire → aucun intervalle ; 3 intervalles → **aucun ratio publié**.
+- **Persistance** : sauvegarde puis rechargement d'un état à 5 victoires et 4 intervalles
+  → valeurs intactes.
+- **Rétrocompatibilité sur `.brain` RÉEL** (`020820262017_V31_700_RMD`, 700 jours, bus 48,
+  aucune clé v33) : chargement propre, defaults à zéro, puis journée + **nuit complète**
+  (69 clés) — leçon v32.0, jamais valider une persistance sur des ticks seuls.
+- **Invariance comportementale** : empreinte MD5 des 400 actions à graine fixée inchangée
+  (`6573f2fd045d`) — la métrique ne touche ni la décision, ni le gradient, ni la dopamine.
+
+⚠️ **Ce que cette version ne prouve PAS.** Elle rend la question **mesurable**, elle n'y
+répond pas : les intervalles du run `icfhotie` ont été rejoués en simulation, jamais
+produits par un cerveau instrumenté. Seul un run long avec ces clés dira si
+`Victoire_Tendance_Ratio` se stabilise autour de 1.0 (hasard) ou descend (apprentissage) —
+et c'est **cette lecture, et elle seule**, qui doit valider ou invalider le chantier
+Valence & Replay Orienté.
+
+⚠️ **Un second verrou, indépendant, reste ouvert** (découvert pendant cette analyse) :
+`VICTOIRES_REQUISES = 2` exige deux victoires sur des jours **consécutifs**
+(`victoires_consecutives` retombe à 0 dès un jour sans victoire), alors que l'écart minimum
+observé est de **17 jours**. La promotion de niveau est donc aujourd'hui **mathématiquement
+inatteignable** au Palier 7, quel que soit le gain apporté par la v33. Aucun correctif n'est
+appliqué ici — arbitrage utilisateur en attente : assouplir la règle (fenêtre glissante) ou
+juger la v33 sur `Jalon_Taux_Atteinte_Sortie` sans attendre de promotion.
+
+---
+
 ## [33.0-etape0-experimental] - 2026-08-04
 
 ### Chronométrie des Jalons DoorKey — mesurer AVANT de refondre la mémoire

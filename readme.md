@@ -19,7 +19,7 @@ Il intègre la structure de table des matières globale (avec le contexte applic
 2. [Journal des Mises à Jour (Changelog)](https://www.google.com/search?q=%23journal-des-mises-%C3%A0-jour)
 3. [Plan d'Action](https://www.google.com/search?q=%23plan-daction)
 3t. **[Parcourt_readme.md — Guide Complet du Système de Cursus](docs/Parcourt_readme.md)** (commandes de lancement, jours/ticks par parcours, détail des paliers, FAQ)
-3l. [Nouveautés v33.0 étapes 0 & 0.5 (expérimental) — Chronométrie des Jalons & Ablation Inversée](#nouveautés-v330-étapes-0--05-expérimental--la-chronométrie-des-jalons--le-test-dablation-inversée-2026-08-04)
+3l. [Nouveautés v33.0 étapes 0 → 0.6 (expérimental) — Chronométrie des Jalons, Ablation Inversée & Chronologie des Victoires](#nouveautés-v330-étapes-0--06-expérimental--la-chronométrie-des-jalons-le-test-dablation-inversée--la-chronologie-des-victoires-2026-08-04)
 3m. [Nouveautés v32.0 (expérimental) — L'Odorat Topologique & la Clinotaxie](#nouveautés-v320-expérimental--lodorat-topologique--la-clinotaxie-2026-08-03)
 3n. [Nouveautés v31.1 (expérimental) — La Déduplication Mnésique & le Cap de Densité](#nouveautés-v311-expérimental--la-déduplication-mnésique--le-cap-de-densité-spatiale-2026-08-02)
 3o. [Nouveautés v31.0 (expérimental) — La Mémoire Proportionnelle & le Rêve Invariant d'Échelle](#nouveautés-v310-expérimental--la-mémoire-proportionnelle--le-rêve-invariant-déchelle-2026-08-02)
@@ -104,7 +104,7 @@ Pour un historique complet commit par commit, consultez [docs/CHANGELOG.md](docs
 > [docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md](docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md) pour le cadrage et les
 > arbitrages.
 
-### Nouveautés v33.0 étapes 0 & 0.5 (expérimental) — La Chronométrie des Jalons & le Test d'Ablation Inversée (2026-08-04)
+### Nouveautés v33.0 étapes 0 → 0.6 (expérimental) — La Chronométrie des Jalons, le Test d’Ablation Inversée & la Chronologie des Victoires (2026-08-04)
 
 > ⚠️ **Statut expérimental** : vit uniquement dans `src/naulthene/cerveau/noyau.py` (gitignoré), pas encore porté sur `src/naulthene/cerveau/colab.py`.
 
@@ -156,6 +156,33 @@ jamais d'une béquille permanente — voir
 **Garantie de non-régression** : les deux étapes sont purement observationnelles. L'empreinte MD5
 des 400 actions à graine fixée est **identique** avec et sans elles (`6573f2fd045d`, vérifié par
 neutralisation différentielle) — ni la décision, ni le gradient, ni la dopamine ne sont touchés.
+
+#### Étape 0.6 — La Chronologie des Victoires : hasard ou apprentissage ?
+
+Les jalons disent **où** l'agent bloque dans un épisode. Cette étape répond à une question
+différente, et qui décide du sort de la v33 : sur des centaines de jours, **progresse-t-il ?**
+
+Le run instrumenté a relevé 7 victoires au Palier 7, espacées de **60, 38, 90, 17, 109 et 217**
+jours. Deux lectures restaient possibles, et elles n'appellent pas le même correctif :
+
+| Régime | Signature | Conséquence |
+|---|---|---|
+| **Stationnaire** | intervalles stables | l'agent gagne au hasard et **ne retient rien** → le Replay Orienté est le bon chantier |
+| **Convergent** | intervalles qui se resserrent | il apprend déjà lentement → c'est la **vitesse** qu'il faut traiter, pas la mémoire |
+
+`Victoire_Tendance_Ratio` (moyenne de la 2ᵉ moitié des intervalles ÷ 1ʳᵉ moitié) tranche :
+**< 0.8** elles se rapprochent, **≈ 1.0** stationnaire, **> 1.25** elles s'espacent. Aucun ratio
+n'est publié sous 4 intervalles — en dessous, une seule victoire chanceuse ferait basculer le
+chiffre du simple au double.
+
+Ces compteurs sont des compteurs de **vie**, pas de journée : ils sont délibérément tenus hors
+de `_reinitialiser_buffers_journee` et **persistés dans le `.brain`**, sans quoi la question
+resterait sans réponse précisément sur les cerveaux qui ont le plus de vécu.
+
+⚠️ **Un second verrou, indépendant, a été découvert au passage** : `VICTOIRES_REQUISES = 2` exige
+deux victoires sur des jours **consécutifs**, alors que l'écart minimum observé est de 17 jours.
+La promotion de niveau est donc aujourd'hui **mathématiquement inatteignable** au Palier 7, quel
+que soit le gain de la v33. Aucun correctif appliqué — arbitrage en attente.
 
 ### Nouveautés v32.0 (expérimental) — L'Odorat Topologique & la Clinotaxie (2026-08-03)
 
