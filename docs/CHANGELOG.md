@@ -107,7 +107,7 @@ débloque la sortie, les 42 franchissements ne représentent que **7 %** des jou
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `625bd81` |
 | **Catégorie** | fix (correctif d'un défaut de conception de la v33.0-etape0.6) |
 | **Impact** | Fonctionnel (lisibilité d'une métrique de diagnostic — aucun impact sur la décision) |
 
