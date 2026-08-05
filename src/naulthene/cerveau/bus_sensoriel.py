@@ -64,6 +64,25 @@ DIM_TOUCHER = 4   # contact frontal, objet en main, orientation (cos, sin)
 DIM_CHIMIE = 4    # odorat (nourriture, eau) + goût (dernière ressource consommée)
 DIM_EXO = 8       # v30.0 — le 6ème sens, l'Exo-Sens (vecteur perceptif exogène)
 
+# v32.0 — LA CLINOTAXIE : la VARIATION de l'odeur entre deux ticks (food, eau).
+#
+# Jusqu'ici `integrateur_bio` ne recevait que l'intensité instantanée S_t, sans aucun
+# état interne lui permettant d'en dériver quoi que ce soit : le réseau était donc
+# structurellement AVEUGLE AU MOUVEMENT. Il ne pouvait pas savoir si le dernier pas
+# l'avait rapproché ou éloigné d'une ressource — une information que même un ver
+# nématode exploite (la clinotaxie : comparer la concentration courante à la précédente
+# et virer en conséquence).
+#
+# C'est particulièrement décisif sur les petites cartes, là où le diagnostic v29.1 avait
+# montré que l'odorat ne servait à rien : sur `DoorKey-6x6`, S_t reste dans une plage
+# étroite d'une case à l'autre, mais le SIGNE de ΔS bascule proprement à chaque pas.
+# Le gradient existe dans le monde depuis la v30.0 ; ce sont ces 2 dims qui le rendent
+# enfin LISIBLE par le cerveau.
+#
+# Ajoutées EN QUEUE du vecteur bio (contrat append-only), donc hors cible JEPA : la
+# variation olfactive nourrit C1 (`integrateur_bio`), jamais le modèle du monde de C2.
+DIM_ODORAT_DELTA = 2
+
 # --- ODORAT : atténuation exponentielle de proximité (v30.0) ---
 #
 # En v29.x, l'odorat décroissait LINÉAIREMENT sur une portée fixe de 4 cases
@@ -108,6 +127,38 @@ LAMBDA_ODORAT = 0.8
 # `Sens_Odorat_Ticks_Actifs_Ratio` artificiellement à 100 % avec un signal inexploitable.
 SEUIL_COUPURE_ODORAT = 0.02
 
+# --- ODORAT TOPOLOGIQUE : la distance de CHEMINEMENT, pas le vol d'oiseau (v32.0) ---
+#
+# Jusqu'en v31.1, `lire_chimie` calculait une distance de Manhattan pure
+# (|dx| + |dy|), sans jamais consulter la grille entre l'agent et la source. Une odeur
+# traversait donc les murs : sur `DoorKey-6x6`, une ressource située dans la pièce
+# verrouillée émettait exactement le même signal que si la cloison n'existait pas.
+#
+# Conséquence, plus grave qu'une simple imprécision : le gradient devenait TROMPEUR.
+# L'agent qui suit une odeur à travers un mur s'englue contre la paroi — le sens le
+# guide vers un point qu'il ne peut pas atteindre. Un gradient faux est pire que pas de
+# gradient du tout, puisque `integrateur_bio` ne peut pas apprendre à ignorer un signal
+# qui n'est faux qu'une partie du temps.
+#
+# La distance est donc désormais celle d'un parcours en largeur (BFS) MULTI-SOURCES : on
+# part de toutes les sources d'un même type à la fois et on propage sur les cases
+# franchissables. Le coût est en O(V+E) sur une grille de 36 à 169 cases, soit MOINS que
+# la double boucle de scan qu'il remplace (laquelle balayait déjà toute la grille).
+#
+# Les portes fermées ne bloquent PAS : elles « fuient ». Une porte close arrête l'air,
+# pas les molécules — et surtout, la bloquer rendrait l'odorat inutile précisément quand
+# l'agent cherche la clé de cette porte (le signal n'apparaîtrait qu'une fois la porte
+# déjà ouverte, donc le problème déjà résolu). Elle ajoute à la place un SURCOÛT de
+# distance : l'odeur passe dessous, atténuée, et le gradient se renforce brutalement dès
+# l'ouverture. Un mur, lui, reste infranchissable.
+SURCOUT_PORTE_FERMEE = 4
+
+# Types d'objets MiniGrid qui arrêtent totalement la diffusion. `wall` et `lava` bloquent ;
+# une `door` est traitée à part (voir SURCOUT_PORTE_FERMEE) ; tout le reste (`ball`, `key`,
+# `box`, `goal`, case vide) laisse passer l'odeur — un objet posé au sol n'est pas une
+# cloison.
+TYPES_BLOQUANTS_ODORAT = ("wall", "lava")
+
 # Conservée pour la rétrocompatibilité documentaire (v29.x) — n'est plus utilisée par le
 # calcul depuis la v30.0, l'atténuation exponentielle n'ayant pas de portée franche.
 PORTEE_ODORAT = 4.0
@@ -148,6 +199,9 @@ class BusSensoriel:
         self._avertissement_exo_donne = False
         # Trace de goût : [nourriture, eau], décroît à chaque tick.
         self._gout_courant = np.zeros(2, dtype=np.float32)
+        # v32.0 — mémoire d'un tick pour la clinotaxie (ΔS). `None` = pas de tick
+        # précédent comparable (début d'épisode) ⇒ ΔS neutre, voir lire_chimie.
+        self._odeurs_precedentes = None
 
     def _avertir(self, exception):
         if not self._avertissement_donne:
@@ -159,8 +213,16 @@ class BusSensoriel:
     def reinitialiser_episode(self, env=None):
         """Le goût ne traverse PAS les épisodes (contrairement aux jauges du
         BiologicalHomeostasisEngine, qui sont un métabolisme continu) : c'est une
-        sensation immédiate liée à une bouchée précise, pas un état vital."""
+        sensation immédiate liée à une bouchée précise, pas un état vital.
+
+        v32.0 — la mémoire olfactive du tick précédent est effacée pour la même raison,
+        mais avec un enjeu plus vif : au `reset()`, l'agent est TÉLÉPORTÉ et les sources
+        sont régénérées ailleurs. Comparer la première odeur du nouvel épisode à la
+        dernière de l'ancien produirait un ΔS énorme et purement fictif, que C1
+        interpréterait comme un violent rapprochement. Le premier tick d'un épisode n'a
+        donc pas de variation — il n'a rien à quoi se comparer."""
         self._gout_courant[:] = 0.0
+        self._odeurs_precedentes = None
 
     # --- 1. LE TOUCHER (gourmandise moyenne) ---
 
@@ -235,24 +297,15 @@ class BusSensoriel:
                 noyau_env = env.unwrapped
                 grille = noyau_env.grid
                 pos_agent = tuple(int(v) for v in noyau_env.agent_pos)
-                distances = {COULEUR_NOURRITURE: None, COULEUR_EAU: None}
 
-                for x in range(grille.width):
-                    for y in range(grille.height):
-                        objet = grille.get(x, y)
-                        if objet is None or objet.type != "ball":
-                            continue
-                        couleur = getattr(objet, "color", None)
-                        if couleur not in distances:
-                            continue
-                        d = abs(x - pos_agent[0]) + abs(y - pos_agent[1])
-                        if distances[couleur] is None or d < distances[couleur]:
-                            distances[couleur] = d
+                # v32.0 — distance de CHEMINEMENT (BFS multi-sources), plus le vol
+                # d'oiseau : l'odeur ne traverse plus les murs. Voir SURCOUT_PORTE_FERMEE.
+                distances = self._distances_topologiques(grille, pos_agent)
 
                 for i, couleur in enumerate((COULEUR_NOURRITURE, COULEUR_EAU)):
                     d = distances[couleur]
                     if d is None:
-                        continue
+                        continue  # aucune source, ou aucune ATTEIGNABLE (mur infranchissable)
                     # v30.0 — gradient de diffusion chimique plutôt qu'un cercle à bord net.
                     intensite = float(np.exp(-LAMBDA_ODORAT * d))
                     odeurs[i] = intensite if intensite >= SEUIL_COUPURE_ODORAT else 0.0
@@ -260,7 +313,127 @@ class BusSensoriel:
                 self._avertir(e)
                 odeurs = [0.0, 0.0]
 
-        return odeurs + [float(self._gout_courant[0]), float(self._gout_courant[1])]
+        deltas = self._calculer_deltas_odorat(odeurs)
+        return (odeurs + [float(self._gout_courant[0]), float(self._gout_courant[1])]
+                + deltas)
+
+    def _calculer_deltas_odorat(self, odeurs) -> list:
+        """v32.0 — la clinotaxie : ΔS = S_t − S_{t−1} par type de ressource, normalisé
+        dans [0, 1] par `(ΔS + 1) / 2`.
+
+        La normalisation est impérative et non cosmétique : toutes les autres dims du bus
+        sont bornées dans [0, 1] (voir la discipline en tête de module), et une dim
+        signée dans [−1, 1] pèserait deux fois plus lourd à l'entrée de `integrateur_bio`
+        par simple effet d'échelle. Le point neutre est donc **0.5** — « je ne me
+        rapproche ni ne m'éloigne » — au-dessus je me rapproche, en dessous je m'éloigne.
+
+        Sans tick précédent (premier tick d'un épisode, voir `reinitialiser_episode`), la
+        valeur retournée est exactement 0.5 : neutre, jamais un faux pic directionnel.
+        """
+        if self._odeurs_precedentes is None:
+            deltas = [0.5, 0.5]
+        else:
+            deltas = [
+                float(np.clip((odeurs[i] - self._odeurs_precedentes[i] + 1.0) / 2.0, 0.0, 1.0))
+                for i in range(2)
+            ]
+        self._odeurs_precedentes = list(odeurs)
+        return deltas
+
+    def _distances_topologiques(self, grille, pos_agent) -> dict:
+        """Distance de cheminement (BFS multi-sources) de l'agent à la source la plus
+        proche de chaque type — v32.0. Retourne `{couleur: distance ou None}`.
+
+        Un seul parcours par type de ressource, propagé DEPUIS les sources vers l'agent :
+        on s'arrête dès que la case de l'agent est atteinte. Partir des sources plutôt que
+        de l'agent permet de traiter d'un coup toutes les sources d'un même type — c'est
+        le « champ de diffusion » du document de conception, et ça donne directement le
+        minimum recherché sans comparer source par source.
+
+        Le coût de traversée d'une case n'est pas uniforme : une porte fermée coûte
+        `1 + SURCOUT_PORTE_FERMEE` au lieu de 1 (elle « fuit » — voir le commentaire de
+        cette constante). Une file de priorité serait donc formellement requise ; on
+        garde une BFS à seaux (`buckets`), suffisante et plus simple ici puisque les
+        coûts sont de petits entiers bornés.
+
+        `None` signifie « aucune source de ce type, ou aucune atteignable » — un mur
+        infranchissable rend une ressource littéralement inodore, ce qui est le
+        comportement voulu.
+        """
+        resultat = {COULEUR_NOURRITURE: None, COULEUR_EAU: None}
+        largeur, hauteur = grille.width, grille.height
+
+        # Coût d'entrée de chaque case : None = infranchissable. Calculé une fois pour
+        # les deux parcours (la topologie ne dépend pas du type de ressource).
+        cout = [[1] * hauteur for _ in range(largeur)]
+        sources = {COULEUR_NOURRITURE: [], COULEUR_EAU: []}
+        for x in range(largeur):
+            for y in range(hauteur):
+                objet = grille.get(x, y)
+                if objet is None:
+                    continue
+                type_objet = getattr(objet, "type", None)
+                if type_objet in TYPES_BLOQUANTS_ODORAT:
+                    cout[x][y] = None
+                elif type_objet == "door" and not getattr(objet, "is_open", True):
+                    cout[x][y] = 1 + SURCOUT_PORTE_FERMEE
+                elif type_objet == "ball":
+                    couleur = getattr(objet, "color", None)
+                    if couleur in sources:
+                        sources[couleur].append((x, y))
+
+        for couleur, positions in sources.items():
+            if positions:
+                resultat[couleur] = self._bfs_vers_agent(cout, positions, pos_agent,
+                                                         largeur, hauteur)
+        return resultat
+
+    @staticmethod
+    def _bfs_vers_agent(cout, sources, pos_agent, largeur, hauteur):
+        """Propagation à seaux depuis `sources` jusqu'à `pos_agent`. Retourne la distance
+        pondérée, ou None si l'agent n'est pas atteignable.
+
+        Les seaux (`dict[distance] -> cases`) tiennent lieu de file de priorité : les
+        coûts étant de petits entiers (1, ou 1+SURCOUT_PORTE_FERMEE), traiter les
+        distances dans l'ordre croissant garantit qu'une case est finalisée à sa distance
+        minimale — un Dijkstra dégénéré, sans le coût d'un tas."""
+        INFINI = float("inf")
+        meilleure = [[INFINI] * hauteur for _ in range(largeur)]
+        seaux = {0: []}
+        for (x, y) in sources:
+            # Une source posée sur une case franchissable est le point de départ à
+            # distance 0 : c'est l'odeur AU contact de la ressource.
+            if meilleure[x][y] > 0:
+                meilleure[x][y] = 0
+                seaux[0].append((x, y))
+
+        distance_courante = 0
+        distance_max = largeur * hauteur * (1 + SURCOUT_PORTE_FERMEE)
+        while distance_courante <= distance_max:
+            lot = seaux.pop(distance_courante, None)
+            if lot is None:
+                if not seaux:
+                    break
+                distance_courante += 1
+                continue
+            for (x, y) in lot:
+                if meilleure[x][y] < distance_courante:
+                    continue  # entrée périmée, une meilleure distance a été trouvée depuis
+                if (x, y) == pos_agent:
+                    return distance_courante
+                for (vx, vy) in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+                    if not (0 <= vx < largeur and 0 <= vy < hauteur):
+                        continue
+                    cout_case = cout[vx][vy]
+                    if cout_case is None:
+                        continue  # mur : la diffusion s'arrête net
+                    candidate = distance_courante + cout_case
+                    if candidate < meilleure[vx][vy]:
+                        meilleure[vx][vy] = candidate
+                        seaux.setdefault(candidate, []).append((vx, vy))
+            distance_courante += 1
+
+        return None
 
     def signaler_consommation(self, type_ressource: str):
         """Appelée par la boucle principale au moment où l'agent consomme réellement une
@@ -339,13 +512,20 @@ class BusSensoriel:
     # --- 4. L'INTERPRÉTEUR UNIFIÉ ---
 
     def interpreter(self, env, action_item=None, reponse_c3=None) -> list:
-        """Point d'entrée unique : renvoie les DIM_TOUCHER + DIM_CHIMIE + DIM_EXO = 16
-        dims des sens faibles à moyens ET du 6ème sens, dans l'ordre exact attendu par la
-        queue du `vecteur_bio` (voir `BiologicalHomeostasisEngine.obtenir_vecteur_bio`) :
+        """Point d'entrée unique : renvoie les DIM_TOUCHER + DIM_CHIMIE + DIM_EXO +
+        DIM_ODORAT_DELTA = 18 dims des sens faibles à moyens ET du 6ème sens, dans
+        l'ordre exact attendu par la queue du `vecteur_bio` (voir
+        `BiologicalHomeostasisEngine.obtenir_vecteur_bio`) :
 
             [contact, objet_en_main, orient_cos, orient_sin,        ← toucher (v29.0)
              odeur_food, odeur_water, gout_food, gout_water,        ← chimie  (v29.0)
-             exo_0 .. exo_7]                                        ← Exo-Sens (v30.0)
+             exo_0 .. exo_7,                                        ← Exo-Sens (v30.0)
+             delta_odeur_food, delta_odeur_water]                   ← clinotaxie (v32.0)
+
+        ⚠️ Les 2 dims de clinotaxie sont en QUEUE, donc APRÈS l'Exo-Sens — et non
+        accolées à l'odorat dont elles dérivent, ce qui serait plus lisible mais
+        décalerait les 8 dims exogènes d'un `.brain` v30/v31 déjà entraîné. Le contrat
+        append-only prime sur la lisibilité du regroupement.
 
         L'ordre de cette concaténation est un CONTRAT : il doit rester synchronisé avec
         `obtenir_vecteur_bio` et avec la greffe de rétrocompatibilité de
@@ -357,9 +537,16 @@ class BusSensoriel:
         strictement identique à la v29.1.
         """
         self.decroitre_gout()
+        # `lire_chimie` renvoie DIM_CHIMIE + DIM_ODORAT_DELTA valeurs : les 4 dims
+        # chimiques historiques PUIS les 2 deltas, qu'on ré-ordonne ici pour respecter le
+        # contrat append-only (les deltas partent en toute fin, après l'Exo-Sens).
+        chimie_et_deltas = self.lire_chimie(env)
+        chimie = chimie_et_deltas[:DIM_CHIMIE]
+        deltas_odorat = chimie_et_deltas[DIM_CHIMIE:]
         return (self.lire_toucher(env, action_item)
-                + self.lire_chimie(env)
-                + self.percevoir_exogene(reponse_c3))
+                + chimie
+                + self.percevoir_exogene(reponse_c3)
+                + deltas_odorat)
 
     @staticmethod
     def hierarchie_sensorielle() -> dict:
@@ -374,8 +561,12 @@ class BusSensoriel:
                      "chemin": "porte_auditive → bus_latent", "jepa": True},
             "toucher": {"gourmandise": "moyenne", "dims": DIM_TOUCHER,
                         "chemin": "vecteur_bio → integrateur_bio", "jepa": False},
-            "odorat": {"gourmandise": "faible", "dims": 2,
-                       "chemin": "vecteur_bio → integrateur_bio", "jepa": False},
+            # v32.0 — 2 dims d'intensité (S_t) + 2 dims de variation (ΔS, clinotaxie).
+            # La distance est topologique (BFS) depuis cette version : l'odeur ne
+            # traverse plus les murs, une porte fermée la laisse « fuir » avec surcoût.
+            "odorat": {"gourmandise": "faible", "dims": 2 + DIM_ODORAT_DELTA,
+                       "chemin": "vecteur_bio → integrateur_bio", "jepa": False,
+                       "topologique": True, "clinotaxie": True},
             "gout": {"gourmandise": "faible", "dims": 2,
                      "chemin": "vecteur_bio → integrateur_bio", "jepa": False},
             # v30.0 — le 6ème sens. "gourmandise" externe : le coût n'est pas dans le

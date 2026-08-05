@@ -4,6 +4,545 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [33.0-etape0.5-experimental] - 2026-08-04
+
+### Le Test d'Ablation Inversée — la quête auto en Mode Libre + LECTURE DU RUN DE 700 JOURS
+
+| Type | Details |
+|------|---------|
+| **Commit** | `4ccdffc` |
+| **Catégorie** | feat (instrument de diagnostic, expérimental) |
+| **Impact** | Fonctionnel (**inactif par défaut** — `QUETE_AUTO_EN_MODE_LIBRE = False` ⇒ comportement bit-identique à la v32.0) |
+
+**🔬 LA MESURE D'ABORD — ce que le run de 700 jours a révélé**
+
+Un run complet (`50ac6kz0`, cerveau neuf, v32.0, 700 jours) a été analysé **avant** d'écrire
+cette version. Il tranche le débat ouvert par la v33.0-etape0 :
+
+| Fait mesuré | Valeur |
+|---|---|
+| Arrivée au Palier 7 | **jour 94** |
+| Jours passés au Palier 7 | **607** |
+| Réussites du Palier 7 | **1** — le jour 94 lui-même |
+| Jours avec récompense terminale > 0 | **0** |
+| Portage (clé en main) après J94 | **51,4 %** des ticks |
+| Portes franchies après J94 | **42 jours sur 607** |
+| Sorties après J94 | **0** |
+| Sursauts de Volonté | 101, dont **0 % de victoires** |
+| Ressources consommées | **1,4 / jour** |
+
+**Trois conclusions, dont une qui INFIRME une hypothèse de travail :**
+
+1. **Δt1 et Δt2 fonctionnent.** 51,4 % de portage et 42 franchissements de porte : l'agent
+   prend la clé, la transporte, déverrouille et franchit. Ce n'est pas un agent perdu.
+2. **Δt3 est un mur absolu.** 42 franchissements pour **zéro** sortie. Pas « lent » :
+   **jamais** — exactement la distinction que `extraire_deltas` encode avec `None` plutôt
+   qu'avec `0`.
+3. **❌ L'hypothèse du conflit viscéral est INFIRMÉE.** 1,4 ressource par jour : l'agent
+   ne « broute » pas en portant la clé. Cette piste, envisagée dans le cadrage v33, est
+   donc écartée par la mesure — comme la v31.1 avait écarté « le rêve cristallise des
+   réflexes d'échec ».
+
+**🎯 Le détail qui établit la causalité** : la **seule** victoire est le **jour 94**, celui
+de la promotion — donc le dernier jour où l'agent travaillait encore sous guidage. Dès le
+décrochage de `RECOMPENSE_APPROCHE_BUT`, plus jamais aucune sortie en 606 jours. La victoire
+s'est produite précisément quand la béquille était là.
+
+*(Note : les franchissements de porte s'accélèrent nettement en fin de run — jours 600-697.
+L'agent **apprenait encore** à atteindre la porte ; ce progrès ne pouvait simplement
+déboucher sur rien.)*
+
+**L'instrument — rendre au dernier segment le gradient qui lui manque**
+
+`DetecteurProgresPersonnel` (3b, « ai-je battu mon record de proximité au But ? ») est
+historiquement **inactif sur DoorKey**, pour éviter un double guidage avec
+`RECOMPENSE_APPROCHE_BUT`. **Cette exclusion est caduque en Mode Libre** :
+`recompense_continue` n'est ajoutée à `recompense_interne` que si `not etat.mode_libre`.
+Dès le Palier 5, la béquille DoorKey est déjà coupée — il n'y a plus de double guidage à
+craindre, seulement un segment porte→but dépourvu de tout signal.
+
+Nouveau drapeau `QUETE_AUTO_EN_MODE_LIBRE` (**`False` par défaut**). À `True`, la quête auto
+s'active sur DoorKey **en Mode Libre uniquement** — jamais en Mode Guidé, où les deux
+guidages coexisteraient réellement.
+
+⚠️ **C'est un INSTRUMENT DE DIAGNOSTIC, pas une mécanique cognitive.** S'il débloque le
+Palier 7, la nature du blocage est prouvée (rareté du signal) et il doit être **remis à
+`False`** : la vraie solution doit émerger de la mémoire (valence + replay orienté), jamais
+d'une béquille permanente.
+
+**Une décision de conception : une seule source de vérité**
+
+Cinq sites lisaient `not etat.doorkey_actif` en parallèle (init d'épisode ×2, évaluation du
+tick, bilan de nuit). `_quete_auto_active(etat)` les centralise. Motif : les laisser diverger
+produirait ici le pire bug possible — un détecteur qui **évalue sans avoir été
+réinitialisé** compare la distance courante au record d'un épisode précédent, donc sur une
+carte régénérée dont le But a bougé.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | Constante `QUETE_AUTO_EN_MODE_LIBRE` (section 4) documentée par la mesure ci-dessus ; helper `_quete_auto_active()` ; 4 sites de lecture unifiés (2 × `reinitialiser_episode`, `evaluer_tick`, bilan de nuit) ; suffixe `[ABLATION INVERSÉE]` sur la ligne « Quête Auto » ; clé W&B `Jalon_Quete_Auto_Ablation` |
+
+**Validation** :
+- **Non-régression PROUVÉE** : à `False`, l'empreinte MD5 des 400 actions à graine fixée est
+  **identique** (`6573f2fd045d`) à la v33.0-etape0 — le drapeau au repos ne change rien.
+- **Table de vérité complète, 6/6 cas** : hors DoorKey → toujours actif (historique) ;
+  DoorKey **Guidé** → jamais actif, quel que soit le drapeau (le double guidage reste
+  interdit) ; DoorKey **Libre** → actif si et seulement si le drapeau est levé.
+- **Effet réel vérifié sur DoorKey-6x6 en Mode Libre** (800 ticks + nuit) : drapeau `False`
+  → **0** record de proximité et clé W&B à 0 ; drapeau `True` → **5** micro-récompenses de
+  proximité et clé W&B à 1. Le gradient manquant est bien rétabli, et le détecteur est
+  **réinitialisé** (pas seulement évalué).
+- Ligne de bilan vérifiée : `🧭 5 nouveaux records de proximité au But [ABLATION INVERSÉE — Mode Libre DoorKey]`.
+
+⚠️ **Ce que cette version ne prouve PAS.** Elle livre l'instrument, elle ne rend aucun
+verdict : le test doit tourner sur un cerveau **déjà au Palier 7**. Et même si l'ablation
+débloque la sortie, les 42 franchissements ne représentent que **7 %** des jours — le désert
+Δt3 est le blocage **principal**, pas nécessairement le seul.
+
+---
+
+## [33.0-conclusion] - 2026-08-05
+
+### Le cursus est terminé — le blocage n'existait pas, la v33 est close sans être ouverte
+
+| Type | Details |
+|------|---------|
+| **Commit** | `6945e24` |
+| **Catégorie** | docs (clôture de cycle) + archivage |
+| **Impact** | Documentation — **aucun code modifié** |
+
+**Run de 5000 jours (`8q37yinf`, cerveau neuf, v33 instrumentée). L'agent a franchi les CINQ niveaux du `PROGRAMME` et atteint le Doctorat.**
+
+| Jour | Promotion |
+|---|---|
+| 66 | Primaire → Collège |
+| **3335** | Collège → **Lycée** ← le déblocage |
+| 3465 | Lycée → Université |
+| 3509 | Université → **Doctorat** |
+
+**69 victoires** au total, contre 9 sur le run de 700 jours.
+
+**La tendance, mesurée sur 45 intervalles (Collège / DoorKey)**
+
+| | Moyenne |
+|---|---|
+| 1ʳᵉ moitié | 88,3 j |
+| 2ᵉ moitié | 57,7 j |
+| **Ratio** | **0,65 ↘️ se rapprochent** |
+
+Par quart : **126 → 50 → 65 → 51** jours. Cadence : 4 victoires par tranche de 500 jours au
+début, **13** sur la tranche 2500-2999. Avec 45 intervalles, le résultat est solide — plus
+rien à voir avec les 4 points du run précédent. **L'agent apprend réellement, très lentement.**
+
+**Trois diagnostics successifs, tous INFIRMÉS par un run plus long**
+
+| Conclusion tirée | Fondée sur | Verdict du run de 5000 jours |
+|---|---|---|
+| « Δt3 est un **mur absolu**, l'agent ne sort jamais » | run 700 j, 1 victoire | **Faux** — 69 victoires, cursus complet |
+| « Les victoires sont du **bruit stationnaire**, il ne retient rien » | 6 intervalles lus à la main | **Faux** — ratio 0,65, tendance nette |
+| « La promotion est **mathématiquement inatteignable** (2 victoires consécutives exigées, 17 j d'écart minimum) » | run 700 j | **Faux** — 3 enchaînements à 2 jours d'écart (j1083→1085, j1839→1841, j2769→2771) |
+
+**La leçon méthodologique — et c'est le vrai résultat de ce cycle**
+
+Le projet a une doctrine explicite depuis la v30.1 : *instrumenter d'abord, calibrer ensuite*.
+Ce cycle en révèle le corollaire manquant : **une mesure juste sur un échantillon trop court
+produit une conclusion fausse**. Les trois diagnostics ci-dessus étaient rigoureux, chiffrés,
+reproductibles — et faux, parce que 700 jours ne suffisaient pas à observer un apprentissage
+dont la constante de temps est de l'ordre du millier de jours.
+
+Le chantier Valence & Replay Orienté aurait traité un problème **qui n'existe pas**.
+
+**État actuel — le Doctorat est une phase lente, pas un mur**
+
+Depuis le jour 3510 : une seule victoire, puis 1490 jours sans. Mais les indicateurs montent :
+
+| Tranche de 300 j | Records de proximité au But / jour |
+|---|---|
+| 3510-3809 | 7,68 |
+| 4110-4409 | 8,09 |
+| 4710-5009 | **9,14** |
+
+**+19 %**, et l'erreur JEPA continue de descendre (0,00093 → 0,00068) : l'agent modélise
+`MultiRoom` de plus en plus finement et s'approche du but de mieux en mieux. C'est
+**exactement** le motif observé au Collège (3269 jours de montée avant la percée du j3335) —
+et le Doctorat n'a que 1490 jours derrière lui.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `docs/Old_Archive_rmd/CONCEPTION_v33_memoire_emotionnelle.md` | **Archivé** (`git mv`), bandeau expliquant que la prémisse est infirmée et ce qui reste valable (le `abs()` qui détruit la valence, les options écartées, les risques) ; 4 liens entrants corrigés |
+| `docs/Old_Archive_rmd/README.md` | Entrée d'index avec statut « jamais ouverte — prémisse infirmée » |
+| `docs/CHANGELOG.md`, `readme.md`, `docs/LANCEMENT.md` | Cette entrée + résultats du run |
+
+**Ce qui reste acquis de ce cycle** : trois instruments de mesure livrés et validés
+(`ChronometreJalonsDoorKey`, `QUETE_AUTO_EN_MODE_LIBRE`, chronologie des victoires), tous
+**purement observationnels** — empreinte MD5 des 400 actions inchangée (`6573f2fd045d`) à
+travers les quatre étapes. Ce sont eux qui ont permis de trancher, et ils resteront utiles
+pour juger toute mécanique future.
+
+⚠️ **Point de vigilance pour la suite** : le bus est à **80 dims**, le plafond
+`DIM_BUS_MAX` est à **96**. La neurogenèse va bientôt s'arrêter. Si l'agent stagne au
+Doctorat **après** avoir atteint 96 dims, ce sera un signal de nature différente — un manque
+de **capacité**, non de temps — et cette fois un motif légitime d'intervention.
+
+---
+
+## [33.0-etape0.6-fix1-experimental] - 2026-08-04
+
+### La tendance était fausse — segmentation des intervalles par contexte
+
+| Type | Details |
+|------|---------|
+| **Commit** | `625bd81` |
+| **Catégorie** | fix (correctif d'un défaut de conception de la v33.0-etape0.6) |
+| **Impact** | Fonctionnel (lisibilité d'une métrique de diagnostic — aucun impact sur la décision) |
+
+**Bug diagnostiqué sur le run `78859bgs` (700 jours) : la métrique affichait l'INVERSE de la réalité.**
+
+Le bilan annonçait `tendance 34.89 ↗️ s'espacent` — donc un agent qui **régresse** — alors
+que la lecture manuelle des logs montrait qu'il **s'améliorait** en fin de run.
+
+**La cause : un ratio calculé sur des tâches sans commune mesure.**
+
+Les 9 victoires du run n'étaient pas de même nature :
+
+| Jours | Contexte | Nature |
+|---|---|---|
+| 49, 52, 64, 66 | Primaire (`Empty-8x8`) | victoires **faciles**, avant que le Palier 7 existe |
+| 67 | bascule Collège | transition |
+| 115, 583, 623, 695 | Collège, **Palier 7** | les seules victoires qui nous intéressent |
+
+Le ratio comparait donc la première moitié (« Primaire », intervalles de 1 à 12 jours) à la
+seconde (« Palier 7 », intervalles de 40 à 468 jours). Le `34.89` ne mesurait pas une
+régression de l'agent : il mesurait **l'écart de difficulté entre deux niveaux du cursus**.
+
+C'est un défaut de conception de la v33.0-etape0.6, pas un défaut du cerveau — et il aurait
+conduit à trancher le chantier v33 sur un chiffre faux.
+
+**Le correctif : un intervalle n'a de sens qu'à difficulté constante**
+
+La série d'intervalles est désormais **segmentée par contexte** `(niveau_actuel, palier_cible)`.
+Dès que le contexte change, la série est archivée (`intervalles_contexte_prec`, lisible en
+télémétrie) et repart à zéro — exactement comme
+`memoire_episodique_spatiale.reinitialiser_niveau()` efface des coordonnées qui n'ont plus
+de sens sur une autre carte.
+
+Trois points de conception :
+
+1. **`victoires_totales` et `jour_derniere_victoire` ne sont JAMAIS remis à zéro** : ils
+   comptent une vie entière. Seule la série d'intervalles — le support du ratio — est
+   contextuelle.
+2. **`jour_derniere_victoire` est délibérément CONSERVÉ** au changement de contexte : le
+   premier intervalle de la nouvelle série mesure ainsi le temps qu'il a fallu pour
+   **regagner à la nouvelle difficulté**, ce qui est une information utile, pas un artefact.
+3. **Le contexte est affiché avec le chiffre** (`[P7] intervalle moyen 81 j (n=4)`). Sans
+   lui, un « intervalle moyen » ne dit pas s'il parle de Primaire ou du Palier 7 — c'est
+   précisément l'ambiguïté qui a produit le bug. Le `(n=…)` rappelle en outre combien de
+   victoires soutiennent réellement la tendance.
+
+**Effet mesuré sur le run réel** (calendrier `78859bgs` rejoué) :
+
+| | Intervalles | Verdict |
+|---|---|---|
+| **Avant** | `[3, 12, 2, 1, 48, 468, 40, 72]` | `34.89 ↗️ s'espacent` ❌ |
+| **Après** | `[48, 468, 40, 72]` (Palier 7 seul) | `0.22 ↘️ se rapprochent` ✅ |
+
+**Le verdict est inversé**, et le nouveau est conforme à la lecture manuelle : après un trou
+de 468 jours, les victoires reviennent tous les 40-72 jours.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `contexte_victoires` + `intervalles_contexte_prec` dans `EtatCognitif` ; détection du changement de contexte dans `executer_nuit` (lue chaque nuit, pas seulement les jours de victoire) ; contexte et effectif affichés au bilan ; clé `Victoire_Serie_Contexte_N` |
+| `src/naulthene/cerveau/persistance.py` | 2 clés supplémentaires, rechargement défensif par `.get` |
+
+**Validation** :
+- **Calendrier RÉEL rejoué** : `34.89 ↗️` → `0.22 ↘️`, verdict inversé et conforme à la
+  lecture manuelle des logs.
+- **Coupure de contexte** vérifiée en intégration (bascule `Empty` → `DoorKey`) : série
+  remise à zéro, ancienne série archivée, `victoires_totales` et `jour_derniere_victoire`
+  **conservés**.
+- **Non-régression de la détection** : sur une série homogène à contexte unique, un vrai
+  apprentissage reste détecté (`0.23 ↘️`).
+- **Persistance** des 2 nouveaux champs vérifiée (sauvegarde + rechargement).
+- **Invariance comportementale** : empreinte MD5 des 400 actions inchangée (`6573f2fd045d`).
+
+⚠️ **Conséquence sur le diagnostic v33.** Le run `78859bgs`, correctement lu, suggère un
+**apprentissage réel mais très lent** au Palier 7 (468 → 40 → 72 jours), et non le processus
+purement stationnaire supposé jusqu'ici. Cela **affaiblit** l'argument « l'agent ne retient
+rien » qui justifiait le Replay Orienté. À confirmer : la série ne compte que 4 intervalles,
+et le trou de 468 jours pèse lourd dans le ratio. Un run long sur cette métrique corrigée
+doit trancher **avant** d'ouvrir le chantier Valence & Replay.
+
+---
+
+## [33.0-etape0.6-experimental] - 2026-08-04
+
+### Chronologie des Victoires — hasard stationnaire ou apprentissage lent ?
+
+| Type | Details |
+|------|---------|
+| **Commit** | `26e1e50` |
+| **Catégorie** | feat (télémétrie, expérimentale) |
+| **Impact** | Fonctionnel (observabilité — **aucun** impact sur la décision, le gradient ou la dopamine) |
+
+**Demande utilisateur, avant tout correctif : « ajouter une métrique (temps depuis la dernière victoire) pour voir si c'est 100 % aléatoire ou s'il réussit de mieux en mieux. Il faut un maximum de données pour tirer des conclusions. »**
+
+**La question que cette métrique tranche — et pourquoi elle décide du sort de la v33**
+
+L'analyse du run de 700 jours (`icfhotie`) a relevé **7 victoires** au Palier 7, aux jours
+93, 153, 191, 281, 298, 407 et 624 — soit des intervalles de **60, 38, 90, 17, 109, 217**
+jours. Ces chiffres suggèrent un processus **stationnaire** (l'agent gagne au hasard, à
+taux constant, sans jamais retenir), ce qui justifierait le Replay Orienté.
+
+Mais ce constat a trois faiblesses qui interdisent d'en tirer une conclusion :
+
+1. il a été obtenu **à la main**, par `grep` a posteriori sur des logs console ;
+2. il repose sur **7 points** — dont 6 intervalles seulement ;
+3. il **ne survivrait pas** à une reprise de run : rien n'était persisté.
+
+Deux lectures restent ouvertes, et elles n'appellent pas le même correctif :
+
+| Régime | Signature | Conséquence pour la v33 |
+|---|---|---|
+| **Stationnaire** | intervalles stables | l'agent ne retient rien → le Replay Orienté est le bon chantier |
+| **Convergent** | intervalles qui se resserrent | il apprend déjà, lentement → c'est la **vitesse** qu'il faut traiter, pas la mémoire |
+
+**La mesure**
+
+Quatre champs d'état, **délibérément hors de `_reinitialiser_buffers_journee`** : ce sont
+des compteurs de **vie**, pas de journée. Les y placer les remettrait à zéro chaque matin
+et détruirait la mesure — piège **inverse** de celui de `score_vocal_jour` (v27.0), où un
+compteur journalier cumulait depuis la naissance. Ici, c'est bien le cumul de toute une
+vie qui est voulu.
+
+| Clé W&B | Mesure |
+|---------|--------|
+| `Victoire_Jours_Depuis_Derniere` | fraîcheur du dernier succès (= l'âge de l'agent s'il n'a jamais gagné) |
+| `Victoire_Total_Vie` / `Victoire_Taux_Vie` | numérateur brut et taux depuis la naissance |
+| `Victoire_Intervalle_Dernier` / `_Moyen` | écarts inter-victoires |
+| **`Victoire_Tendance_Ratio`** | **la métrique décisive** — moyenne de la 2ᵉ moitié des intervalles ÷ 1ʳᵉ moitié |
+
+Lecture du ratio : **< 0.8** les victoires se rapprochent (apprentissage) ; **≈ 1.0**
+stationnaire (hasard) ; **> 1.25** elles s'espacent (régression). Le bilan console traduit
+le chiffre en clair (`↘️ se rapprochent` / `➡️ stationnaire` / `↗️ s'espacent`).
+
+**Deux décisions de conception**
+
+1. **Aucun ratio n'est publié sous 4 intervalles.** En dessous, une seule victoire
+   chanceuse ferait basculer le résultat du simple au double : mieux vaut une clé absente
+   qu'un chiffre trompeur (règle v29.1).
+2. **La première victoire ne crée pas d'intervalle.** Compter « jour 93 » comme un écart
+   de 93 jours mélangerait le temps d'apprentissage initial avec les intervalles
+   inter-victoires, qui sont la seule vraie mesure.
+
+**Persistance — sans quoi la métrique ne vaudrait rien**
+
+Les quatre champs entrent dans le `.brain`. Sans cela, toute reprise de run repartirait
+d'une chronologie vierge, et la question resterait sans réponse précisément sur les
+cerveaux qui ont **le plus de vécu**. Lecture **défensive** (`.get`) au chargement : les
+`.brain` antérieurs n'ont aucune de ces clés et repartent d'une chronologie vide plutôt
+que de faire échouer la résurrection — cohérent avec « greffe par recopie, jamais par
+exclusion ».
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | 4 champs de vie dans `EtatCognitif` (hors `_reinitialiser_buffers_journee`) ; mise à jour dans `executer_nuit` après `victoires_consecutives` ; ligne de bilan « Chrono Victoire » ; **6 clés W&B** |
+| `src/naulthene/cerveau/persistance.py` | 4 clés sauvegardées ; rechargement défensif par `.get` |
+
+**Validation** :
+- **Calendrier RÉEL rejoué** (jours 93/153/191/281/298/407/624 du run `icfhotie`) →
+  intervalles `[60, 38, 90, 17, 109, 217]` exactement reproduits, `jours_depuis_victoire`
+  = 76 au jour 700, et la première victoire ne crée bien **aucun** intervalle.
+- **Les 3 régimes sont discriminés** sur calendriers synthétiques : convergent → ratio
+  `0.19` ; stationnaire → `1.00` ; divergent → `4.83`.
+- **Cas limites** : jamais gagné sur 300 jours → compteur = 300, aucun intervalle ; une
+  seule victoire → aucun intervalle ; 3 intervalles → **aucun ratio publié**.
+- **Persistance** : sauvegarde puis rechargement d'un état à 5 victoires et 4 intervalles
+  → valeurs intactes.
+- **Rétrocompatibilité sur `.brain` RÉEL** (`020820262017_V31_700_RMD`, 700 jours, bus 48,
+  aucune clé v33) : chargement propre, defaults à zéro, puis journée + **nuit complète**
+  (69 clés) — leçon v32.0, jamais valider une persistance sur des ticks seuls.
+- **Invariance comportementale** : empreinte MD5 des 400 actions à graine fixée inchangée
+  (`6573f2fd045d`) — la métrique ne touche ni la décision, ni le gradient, ni la dopamine.
+
+⚠️ **Ce que cette version ne prouve PAS.** Elle rend la question **mesurable**, elle n'y
+répond pas : les intervalles du run `icfhotie` ont été rejoués en simulation, jamais
+produits par un cerveau instrumenté. Seul un run long avec ces clés dira si
+`Victoire_Tendance_Ratio` se stabilise autour de 1.0 (hasard) ou descend (apprentissage) —
+et c'est **cette lecture, et elle seule**, qui doit valider ou invalider le chantier
+Valence & Replay Orienté.
+
+⚠️ **Un second verrou, indépendant, reste ouvert** (découvert pendant cette analyse) :
+`VICTOIRES_REQUISES = 2` exige deux victoires sur des jours **consécutifs**
+(`victoires_consecutives` retombe à 0 dès un jour sans victoire), alors que l'écart minimum
+observé est de **17 jours**. La promotion de niveau est donc aujourd'hui **mathématiquement
+inatteignable** au Palier 7, quel que soit le gain apporté par la v33. Aucun correctif n'est
+appliqué ici — arbitrage utilisateur en attente : assouplir la règle (fenêtre glissante) ou
+juger la v33 sur `Jalon_Taux_Atteinte_Sortie` sans attendre de promotion.
+
+---
+
+## [33.0-etape0-experimental] - 2026-08-04
+
+### Chronométrie des Jalons DoorKey — mesurer AVANT de refondre la mémoire
+
+| Type | Details |
+|------|---------|
+| **Commit** | `4ccdffc` |
+| **Catégorie** | feat (télémétrie, expérimentale) |
+| **Impact** | Fonctionnel (observabilité — **aucun** impact sur la décision, le gradient ou la dopamine) |
+
+**Arbitrage utilisateur : viser la mémoire humaine, mais utiliser le Palier 7 comme juge de paix. Séquencement strict imposé — Étape 0 (télémétrie) « non négociable » AVANT tout chantier de Mémoire Émotionnelle. Voir [CONCEPTION_v33_memoire_emotionnelle.md](Old_Archive_rmd/CONCEPTION_v33_memoire_emotionnelle.md) pour le cadrage complet et les options écartées.**
+
+**Le problème : un diagnostic non mesuré.**
+
+Trois analyses successives ont conclu que l'agent bloque au Palier 7 parce que le segment
+**porte déverrouillée → sortie** est un « désert de signal » : ni récompense intermédiaire
+(`RECOMPENSE_APPROCHE_BUT` est coupée en Mode Libre), ni gradient olfactif (l'odorat ne
+porte que sur FOOD/WATER), ni repère spatial (seuls FOOD/WATER sont enregistrés).
+
+**Mais ce diagnostic est une DÉDUCTION DE LECTURE DE CODE, jamais une mesure.** La v31.1
+a déjà démontré qu'une intuition forte peut être infirmée par l'instrumentation (« le rêve
+cristallise des réflexes d'échec » : faux, `rever()` ne calcule que `perte_jepa`). Refonder
+la mémoire sur une hypothèse non chiffrée reproduirait exactement l'erreur que la méthode
+v30.1 interdit.
+
+**La mesure — trois deltas et un conflit**
+
+`ChronometreJalonsDoorKey` (nouvelle section **3h**) découpe chaque épisode :
+
+| Delta | Segment | Ce que sa domination signifierait |
+|---|---|---|
+| **Δt1** | reset → prise de la clé | le problème est en amont, bien avant le Palier 7 |
+| **Δt2** | clé → déverrouillage | le goulot est le **transport** (conflit viscéral) → la priorité de la v33 change |
+| **Δt3** | déverrouillage → sortie | le **désert de récompense** est confirmé → la conception v33 s'applique telle quelle |
+
+Plus une mesure directe du **conflit viscéral** : `ressources_post_cle` compte les
+consommations FOOD/WATER survenues **clé en main**. Si « l'agent erre avec la clé en
+cherchant à manger » est vrai, ce compteur le prouve en une courbe.
+
+**La décision de conception qui fonde la métrique : `None` n'est pas `0`.**
+
+Un segment jamais atteint retourne `None`, jamais `0`, et n'entre **ni au numérateur ni au
+dénominateur**. Chaque delta porte donc son propre effectif. Sans cette séparation,
+« le segment est lent » et « le segment n'est jamais atteint » — deux diagnostics
+**opposés** — deviendraient indiscernables dans une moyenne commune. C'est aussi pourquoi
+trois **taux d'atteinte** sont loggés à part : un Δt3 rapide sur n=1 et sur n=200 racontent
+l'inverse l'un de l'autre.
+
+Le bilan console affiche explicitement `JAMAIS ATTEINT (n=0)` plutôt qu'un `0.0` trompeur.
+
+**Contrat de l'étape 0 — observation pure**
+
+Contrairement à tous les détecteurs de 3a/3b, cette classe ne retourne **aucune récompense
+et aucun poids de choc** : elle n'entre ni dans `recompense_interne`, ni dans
+`poids_evenement`, ni dans le gradient. Un jalon n'est daté qu'**une fois par épisode**
+(sinon un aller-retour devant la porte réécrirait la mesure), et le déverrouillage se lit
+sur la **transition** verrouillée→ouverte, jamais sur l'état courant seul (une porte déjà
+ouverte au reset ne doit pas être datée au tick 0).
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | Nouvelle section **3h** `ChronometreJalonsDoorKey` ; instanciation dans `EtatCognitif` ; 8 compteurs journaliers dans `_reinitialiser_buffers_journee` ; appels dans `traiter_tick` (observation + 2 sites de consommation) ; récolte des deltas avant le `reset()` de fin d'épisode ; réinitialisation dans `demarrer_journee` et en fin d'épisode ; ligne de bilan « Jalons DoorKey » ; **6 clés W&B conditionnelles** |
+| `docs/Old_Archive_rmd/CONCEPTION_v33_memoire_emotionnelle.md` | **Nouveau.** Cadrage complet de la v33 : valence, replay orienté, liage multimodal — avec les options **écartées** et leurs raisons |
+
+**Validation** :
+- **Invariance comportementale PROUVÉE par différentiel** : l'empreinte MD5 des 400 actions
+  à graine fixée est **identique** (`6573f2fd045d`) avec et sans les appels du chronomètre
+  (vérifié en neutralisant les 3 sites d'appel puis en comparant) — la télémétrie ne touche
+  ni la décision, ni le gradient, ni la dopamine. Test lui-même vérifié déterministe
+  (2 exécutions identiques).
+- **Ordre et unicité des jalons** (test unitaire) : épisode vierge → 3 `None` ; clé au
+  tick 12 → Δt1=12, Δt2/Δt3 restent `None` ; porte au tick 40 → Δt2=28 ; sortie au tick 55
+  → Δt3=15. `None` jamais confondu avec 0.
+- **Conflit viscéral** : une consommation avant la prise de clé est **ignorée**, deux
+  consommations clé en main sont **comptées**, une consommation après la sortie est
+  **ignorée**.
+- **Run réel DoorKey-6x6 (600 ticks) + NUIT COMPLÈTE** (leçon v32.0 : une mécanique ne se
+  valide jamais sur des ticks seuls) — 74 clés W&B dont 6 de jalons ; bilan console correct,
+  affichant `Δt2 porte JAMAIS ATTEINT (n=0)` sur un cerveau neuf.
+- **Remise à zéro vérifiée** après `demarrer_journee` (piège `score_vocal_jour` v27.0 : un
+  compteur journalier jamais vidé cumule depuis la naissance).
+
+⚠️ **Ce que cette version ne prouve PAS.** Les chiffres du run de validation (Δt1 = 28 ticks
+sur n=1, Δt2/Δt3 jamais atteints) proviennent d'un **cerveau neuf de 600 ticks au Palier 1** :
+ils démontrent que la métrique **fonctionne**, ils ne disent rien du blocage au Palier 7.
+Seul un run de diagnostic sur un cerveau **déjà arrivé au Palier 7** peut trancher entre Δt2
+et Δt3 — et c'est cette lecture, et elle seule, qui doit décider du plan de la v33.
+
+⚠️ **Aucune mécanique de la Mémoire Émotionnelle n'est écrite** : ni valence, ni replay
+orienté, ni liage multimodal. La v33.0-etape0 ne fait que rendre mesurable ce qui devra
+être décidé. `abs(recompense_interne)` reste en place dans le calcul d'`importance`.
+
+---
+
+## [32.0-experimental] - 2026-08-03
+
+### L'Odorat Topologique & la Clinotaxie
+
+| Type | Details |
+|------|---------|
+| **Commit** | `1291323` |
+| **Catégorie** | feat (nouvelle mécanique cognitive, expérimentale) + fix (persistance) |
+| **Impact** | Critique (architecture du réseau, persistance, signal olfactif) |
+
+**Arbitrages utilisateur, tranchés avant implémentation : (1) le BFS plutôt que la pénalité `d_géo + p × N_obstacles`, dont le `N_obstacles` est mal défini dans un labyrinthe ; (2) porte fermée « qui fuit » (surcoût de +4 cases) plutôt que bloquante, pour que l'odorat garde son rôle de guidage AVANT que la porte ne soit ouverte ; (3) λ adaptatif DIFFÉRÉ et habituation au capteur ÉCARTÉE.**
+
+**1. L'odorat cesse de traverser les murs**
+
+`lire_chimie` calculait une distance de Manhattan pure, sans jamais consulter la grille entre l'agent et la source. Le problème n'était pas une imprécision mais un **gradient TROMPEUR** : l'agent qui suit une odeur à travers une cloison s'englue contre la paroi. Un gradient faux est pire que pas de gradient, puisque `integrateur_bio` ne peut pas apprendre à ignorer un signal qui n'est faux qu'une partie du temps.
+
+La distance devient celle d'un parcours en largeur **multi-sources** (`_distances_topologiques` + `_bfs_vers_agent`), propagé depuis toutes les sources d'un type à la fois. Coût en O(V+E) sur 36 à 169 cases — **moins** que la double boucle de scan qu'il remplace. Murs et lave infranchissables ; porte fermée franchissable avec `SURCOUT_PORTE_FERMEE = 4`.
+
+| Cas testé | Distance obtenue | Attendu |
+|---|---|---|
+| Mur plein entre agent et source | `None` (inodore) | `None` |
+| Porte **fermée** sur le chemin | 10 | 6 + 4 |
+| Porte **ouverte** | 6 | 6 |
+| Aucun obstacle | 6 | 6 = Manhattan |
+
+Le dernier cas garantit l'absence de régression sur carte ouverte : sans obstacle, le BFS retombe exactement sur l'ancien calcul.
+
+**2. La clinotaxie — `DIM_VECTEUR_BIO` 32 → 34**
+
+`integrateur_bio` ne recevait que l'intensité instantanée `S_t`, **sans aucun état interne** lui permettant d'en dériver quoi que ce soit : le réseau était structurellement **aveugle au mouvement**, incapable de savoir si son dernier pas l'avait rapproché d'une ressource. Deux dims de variation `ΔS = S_t − S_{t−1}` sont ajoutées **en queue** (contrat append-only), normalisées par `(ΔS+1)/2` — **neutre = 0.5**, au-dessus « je me rapproche », en dessous « je m'éloigne ».
+
+C'est décisif là où le diagnostic v29.1 avait montré que l'odorat ne servait à rien : sur `DoorKey-6x6`, `S_t` varie peu d'une case à l'autre, mais le **signe** de ΔS bascule proprement à chaque pas. Le gradient existe dans le monde depuis la v30.0 ; ces 2 dims le rendent enfin **lisible**.
+
+⚠️ **Le piège du respawn**, traité : au `reset()`, l'agent est téléporté et les sources régénérées ailleurs. Comparer la première odeur du nouvel épisode à la dernière de l'ancien produirait un ΔS énorme et **fictif**, lu par C1 comme un violent rapprochement. `reinitialiser_episode` efface donc la mémoire olfactive — le premier tick d'un épisode n'a rien à quoi se comparer (vérifié : 0.5 exact après un reset près d'une source).
+
+**3. 🐛 Bug de persistance découvert et corrigé — la première nuit d'un cerveau greffé plantait**
+
+Découvert en validant la greffe sur un `.brain` réel de 280 000 ticks. `greffe_detectee` ne se basait que sur `missing_keys`, qui ne signale que les couches **entièrement absentes**. Or une greffe **par recopie** — la règle même du projet — n'en produit aucune : la couche existe, seule sa forme change. Les moments Adam restaient donc chargés à l'ancienne largeur :
+
+```
+RuntimeError: The size of tensor a (80) must match the size of tensor b (82)
+```
+
+Ce crash ne survenait **ni au chargement, ni pendant la journée, mais à la première `executer_nuit`** — invisible à toute vérification courte de type « 30 ticks post-résurrection », qui était le protocole des v29/v30. Le bug était **latent depuis la v29.0** ; il ne s'était jamais manifesté parce que ces versions changeaient `dim_bus` en parallèle, ce qui déclenchait `missing_keys` par un autre chemin. Correctif : se fier au drapeau `bio_greffe` retourné par la greffe elle-même.
+
+Le libellé de greffe est par ailleurs rendu **cumulatif** (`_greffer_vecteur_bio_etendu` annonçait « Exo-Sens (v30.0) » pour une greffe de clinotaxie) : un `.brain` pré-v29 chargé par un binaire v32 annonce désormais les trois blocs acquis.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/bus_sensoriel.py` | `SURCOUT_PORTE_FERMEE`, `TYPES_BLOQUANTS_ODORAT`, `DIM_ODORAT_DELTA=2` ; `_distances_topologiques()` + `_bfs_vers_agent()` (BFS à seaux) ; `_calculer_deltas_odorat()` ; `_odeurs_precedentes` remis à zéro dans `reinitialiser_episode` ; `interpreter()` → 18 dims (deltas en queue, après l'Exo-Sens) ; `hierarchie_sensorielle` enrichie |
+| `src/naulthene/cerveau/noyau.py` | `DIM_VECTEUR_BIO` 32 → 34 ; neutre **0.5** (et non 0.0) pour la clinotaxie hors MiniGrid dans `obtenir_vecteur_bio` ; **borne haute** sur `vecteur_exo` (sans elle les 2 deltas auraient faussé `Sens_Exo_*`) ; 4 compteurs journaliers ; ligne « Clinotaxie » au bilan ; 5 clés W&B |
+| `src/naulthene/cerveau/persistance.py` | **Fix** : `greffe_detectee` s'appuie sur `bio_greffe` et non sur `missing_keys` seul ; libellé de greffe cumulatif |
+
+**Validation** :
+- **BFS** : 4 cas ci-dessus, dont le repli exact sur Manhattan sans obstacle.
+- **Clinotaxie** : approche progressive vers une source → ΔS > 0.5 sur 4 ticks consécutifs (0.5204 → 0.6237) ; demi-tour → ΔS < 0.5 sur 3 ticks (0.3763 → 0.4750). Signe correct dans les deux sens.
+- **Respawn** : 0.5 exact au premier tick après `reinitialiser_episode`, malgré une téléportation à 1 case de la source.
+- **`.brain` RÉEL** (`020820262137_V31_700_RMD`, 280 000 ticks) : greffé 80 → 82, **80 colonnes historiques recopiées au bit près** (`torch.allclose`), palier vocal 19 et 280 000 ticks préservés. Cycle complet vérifié : greffe → journée → **nuit** → sauvegarde → rechargement (sans greffe) → **2ᵉ nuit**.
+- **Neurogenèse** : `integrateur_bio` (16,50) → (32,66), segment bio **fixe à 34** pendant que `dim_bus` double.
+- **Vocal isolé** : vecteur bio à 34 dims, 2 dernières à `[0.5, 0.5]` (neutre, pas une fuite olfactive fictive).
+- Run 400 ticks + nuit (56 clés) ; 12/12 modules importent.
+
+⚠️ **Ce que cette version ne prouve PAS.** `Sens_Odorat_Taux_Approche` vaut 70,4 % sur le run de validation, mais sur **27 ticks de variation seulement** — un nouveau-né ne change de case que 23 fois en 400 ticks (`Contact 53 %` : il tourne sur lui-même et se cogne). Ce chiffre n'est **pas** un résultat : il dit seulement que la métrique fonctionne. La clinotaxie est un apprentissage de `integrateur_bio`, pas un câblage — seul un run long, sur un cerveau qui se déplace vraiment, dira si l'agent **suit** le gradient (≫ 50 %) ou le monte et le descend au hasard (≈ 50 %, auquel cas ces 2 dims seraient à remettre en cause comme l'ont été les 182 doublons de la v31.1).
+
+⚠️ **`λ` reste à 0.8 et aucune formule adaptative n'est écrite** — conformément à la méthode posée en v30.1. Le BFS augmentant mécaniquement les distances dans les labyrinthes, l'hypothèse est qu'il corrige à lui seul l'extinction trop rapide au Doctorat ; à vérifier sur `Sens_Odorat_Moyen` lors d'un run `MultiRoom` **avant** de toucher à λ.
+
+---
+
 ## [31.1-docs] - 2026-08-02
 
 ### Archivage d'EXPLICATIONS_v29_sens.md & §15 d'explications_readme.md rendu autoportant

@@ -1,6 +1,6 @@
 # Guide de Lancement — Naulthène AGI (Cuve Persistante + Hémisphère Audio + Cursus par Ères + Cerveau Bébé + Cursus de la Parole + Port Exocortex C3 + Bus Sensoriel)
 
-Ce guide couvre le lancement local (Mac) de l'écosystème V21-V30 : le cerveau persistant
+Ce guide couvre le lancement local (Mac) de l'écosystème V21-V32 : le cerveau persistant
 (`daemon_cerveau.py`, dans `src/naulthene/cuve/`) et ses deux clients (`client_corps.py` pour
 MiniGrid, `client_professeur.py` pour les leçons de parole ponctuelles), trois cursus
 développementaux autonomes (`src/naulthene/salles_de_classe/`) : le Cursus par Ères
@@ -9,7 +9,8 @@ jours, voir §6bis) et le Cursus de la Parole (`cursus_parole.py`, 900 jours, v2
 voir §6ter), le Port Exocortex C3 (`src/naulthene/exocortex/`, v28.0-expérimental, voir §8),
 le Bus Sensoriel des 5 sens (`src/naulthene/cerveau/bus_sensoriel.py`, v29.0-expérimental, voir
 §9), l'Exo-Sens — le 6ᵉ sens (v30.0-expérimental, voir §10) et les métriques de calibrage
-(v30.1, voir §11). Voir `readme.md` pour l'architecture complète, `CHANGELOG.md` pour
+(v30.1, voir §11), et l'Odorat Topologique & la Clinotaxie (v32.0-expérimental, voir §13).
+Voir `readme.md` pour l'architecture complète, `CHANGELOG.md` pour
 l'historique des versions, et [Old_Archive_rmd/](Old_Archive_rmd/) pour les documents de
 conception historiques.
 
@@ -24,6 +25,13 @@ conception historiques.
 > discriminant en proximité) et l'agent gagne un **6ᵉ sens exogène** (l'Exo-Sens) — mais celui-ci
 > reste **totalement neutre tant qu'aucun plug C3 n'est branché**, ce qui est le cas par défaut de
 > tous les modes ci-dessous. Voir §10 pour brancher un plug et observer ce 6ᵉ sens.
+>
+> 🆕 **v32.0 — rien à configurer non plus.** L'odeur cesse de traverser les murs (distance de
+> cheminement par BFS, porte fermée « qui fuit » à +4 cases) et l'agent gagne la **clinotaxie** :
+> 2 dimensions de variation ΔS qui lui disent enfin s'il se **rapproche** ou s'**éloigne** d'une
+> ressource. Un `.brain` antérieur affiche une fois `👃 integrateur_bio greffé de 80 à 82 dims`,
+> suivi de `🔄 Optimiseur réinitialisé` — les deux sont **normaux**, les acquis sont préservés au
+> bit près. Voir §13.
 
 Depuis le passage en package Python (voir `CLAUDE.md`, section « Architecture »), tous les
 scripts se lancent depuis la racine du dépôt avec `PYTHONPATH=src` et l'option `-m` (module),
@@ -657,8 +665,9 @@ Comment lire la sortie :
 | `contact` | 1 = l'agent est au contact d'un mur ou d'une porte fermée devant lui, 0 = la voie est libre |
 | `main` | 1 = l'agent porte un objet (la clé, typiquement), 0 = mains vides |
 | `orient` | Orientation encodée sur le cercle (cos, sin) — évite la fausse discontinuité entre les directions 3 et 0 |
-| `odorat` | Depuis la v30.0, **atténuation exponentielle** `exp(-0.8 × distance)` : 1.00 au contact, 0.45 à 1 case, 0.20 à 2 cases, coupé à 0.00 au-delà de ~5 cases (voir §10d) |
+| `odorat` | **Atténuation exponentielle** `exp(-0.8 × distance)` : 1.00 au contact, 0.45 à 1 case, 0.20 à 2 cases, coupé à 0.00 au-delà de ~5 cases (v30.0, §10d). Depuis la v32.0, `distance` est la **distance de cheminement** (BFS), pas le vol d'oiseau : une source derrière un mur est **inodore**, derrière une porte fermée elle coûte +4 cases (§13) |
 | `gout` | 1.00 juste après une bouchée, puis décroît (~10 ticks) jusqu'à 0 |
+| `ΔS` (v32.0) | `s[16]`, `s[17]` — la **clinotaxie**, en toute fin de vecteur (après l'Exo-Sens) : **0.5 = neutre**, > 0.5 « je me rapproche », < 0.5 « je m'éloigne ». Vaut exactement 0.5 au premier tick d'un épisode (rien à quoi se comparer) |
 
 ### 9b. Vérifier la hiérarchie des 5 sens
 
@@ -970,6 +979,200 @@ Courbes W&B : `Reve_Facteur_Richesse` et `Reve_Empreinte_Enfance` (à croiser av
 
 ---
 
+## 13. L'Odorat Topologique & la Clinotaxie (v32.0-expérimental)
+
+Rien à activer : les deux mécaniques sont automatiques dans les 4 parcours.
+
+### 13a. Vérifier que l'odeur ne traverse plus les murs
+
+```bash
+WANDB_MODE=offline PYTHONPATH=src python -c "
+from naulthene.cerveau.bus_sensoriel import BusSensoriel, SURCOUT_PORTE_FERMEE
+
+class Obj:
+    def __init__(self, t, c=None, is_open=None):
+        self.type, self.color = t, c
+        if is_open is not None: self.is_open = is_open
+class Grille:
+    def __init__(s, w, h): s.width, s.height, s._d = w, h, {}
+    def set(s, x, y, o): s._d[(x, y)] = o
+    def get(s, x, y): return s._d.get((x, y))
+
+bus = BusSensoriel()
+g = Grille(7, 3)
+for y in range(3): g.set(3, y, Obj('wall'))   # cloison verticale
+g.set(6, 1, Obj('ball', 'red'))               # nourriture derrière
+print('mur plein      :', bus._distances_topologiques(g, (0,1))['red'], '(attendu None = inodore)')
+g.set(3, 1, Obj('door', 'yellow', is_open=False))
+print('porte fermée   :', bus._distances_topologiques(g, (0,1))['red'], '(attendu 6 +', SURCOUT_PORTE_FERMEE, ')')
+g.set(3, 1, Obj('door', 'yellow', is_open=True))
+print('porte ouverte  :', bus._distances_topologiques(g, (0,1))['red'], '(attendu 6)')
+"
+```
+
+Une source derrière un mur devient **littéralement inodore** (`None`). C'est voulu : jusqu'en
+v31.1, l'odeur traversait la cloison et l'agent s'engluait contre la paroi en suivant un gradient
+qu'il ne pouvait pas atteindre — un gradient **faux** est pire que pas de gradient.
+
+La **porte fermée « fuit »** (+4 cases virtuelles) au lieu de bloquer : la rendre opaque priverait
+l'agent du guidage olfactif *précisément* pendant qu'il cherche la clé de cette porte.
+
+### 13b. Lire la ligne « Clinotaxie » du bilan de nuit
+
+```
+├─ Clinotaxie     : 🧭 Approche 70.4% des ticks de variation (|ΔS| moyen 0.124 sur 27 tick(s))
+```
+
+| Champ | Comment le lire |
+|-------|-----------------|
+| `Approche X%` | Part des ticks où l'odeur **monte** (l'agent se rapproche d'une ressource). **≈ 50 % = l'agent monte et descend le gradient au hasard** : la clinotaxie ne l'oriente pas. Nettement > 50 % = elle fait son travail |
+| `\|ΔS\| moyen` | Amplitude typique de la variation — proche de 0 signifie que l'agent bouge peu, ou reste loin de toute source |
+| `sur N tick(s)` | **Le dénominateur, à regarder en premier.** Un N faible rend le pourcentage ininterprétable |
+
+La ligne est **absente** si l'odeur n'a jamais varié de la journée (plutôt qu'un « 0 % » trompeur).
+
+> ⚠️ **Ne pas conclure sur un run court.** Sur la journée de validation, `Approche` valait 70,4 %
+> mais sur **27 ticks seulement** : un agent nouveau-né ne change de case que 23 fois en 400 ticks
+> (il tourne sur lui-même et se cogne — `Contact 53 %`). La clinotaxie est un **apprentissage** de
+> `integrateur_bio`, pas un câblage : seul un run long, sur un agent qui se déplace vraiment, peut
+> trancher. Croiser avec `Sens_Odorat_Ticks_Variation_Ratio` (le dénominateur, en W&B).
+
+### 13c. Les 5 métriques W&B ajoutées
+
+| Clé | Mesure |
+|-----|--------|
+| `Sens_Odorat_Taux_Approche` | **La métrique décisive** — part des variations où l'agent se rapproche |
+| `Sens_Odorat_Delta_Moyen` | Amplitude moyenne \|ΔS\| |
+| `Sens_Odorat_Ticks_Variation_Ratio` | Le dénominateur : part des ticks où l'odeur a bougé |
+| `Sens_Odorat_Ticks_Inodores_Ratio` | Ticks où une source existait sans être sentie — ce que la topologie a cessé de laisser traverser |
+
+### 13d. Le message de greffe (`.brain` antérieur à la v32.0)
+
+```
+👃 integrateur_bio greffé de 80 à 82 dims d'entrée (+2 : clinotaxie olfactive (v32.0)) — acquis existants préservés.
+🔄 Optimiseur réinitialisé (largeur du vecteur bio étendue par greffe) — les poids/acquis existants sont intacts, seule la dynamique Adam repart à neuf.
+```
+
+Les **deux** lignes sont normales, une seule fois. La seconde est le correctif d'un bug latent
+depuis la v29.0 : les moments Adam restaient chargés à l'ancienne largeur, et la **première nuit**
+du cerveau greffé plantait sur `The size of tensor a (80) must match the size of tensor b (82)`.
+Le crash ne survenait ni au chargement ni pendant la journée, ce qui le rendait invisible aux
+vérifications courtes. Seule la dynamique d'apprentissage repart à neuf — **aucun poids appris
+n'est perdu**.
+
+---
+
+## 14. Diagnostiquer le blocage au Palier 7 (v33.0-étapes 0 & 0.5, expérimental)
+
+Deux instruments, livrés ensemble, pour répondre à une seule question : **pourquoi l'agent
+n'atteint-il jamais le Palier 7 ?** Aucune mécanique cognitive n'est ajoutée — c'est
+l'application de la méthode « mesurer avant de refondre » (§11).
+
+### 14a. Lire les jalons dans le bilan de nuit
+
+Rien à activer : dès qu'une journée comporte des épisodes DoorKey, une ligne apparaît.
+
+```
+├─ Jalons DoorKey : ⏱️  Δt1 clé 16.0 ticks (n=1) | Δt2 porte JAMAIS ATTEINT (n=0) | Δt3 sortie JAMAIS ATTEINT (n=0) | 🍎 0 ressource(s) mangée(s) clé en main
+```
+
+| Segment | Ce qu'il mesure | Ce que sa lenteur/absence signifie |
+|---|---|---|
+| **Δt1** | reset → prise de la clé | le problème est en amont, bien avant le Palier 7 |
+| **Δt2** | clé → déverrouillage | le goulot est le **transport** de la clé |
+| **Δt3** | déverrouillage → sortie | le **désert de récompense** du dernier segment |
+| 🍎 | ressources mangées **clé en main** | le **conflit viscéral** (l'agent s'arrête manger au lieu de finir) |
+
+⚠️ **`JAMAIS ATTEINT (n=0)` n'est pas un zéro** : c'est l'information la plus importante de la
+ligne. Un segment jamais atteint est exclu des moyennes, sinon « lent » et « jamais atteint »
+— deux diagnostics opposés — se confondraient. Le `(n=…)` est donc à lire en même temps que la
+durée : `Δt3 12 ticks (n=1)` et `Δt3 12 ticks (n=200)` racontent l'inverse l'un de l'autre.
+
+Côté W&B, 7 clés `Jalon_*` (absentes hors DoorKey, jamais des zéros trompeurs) :
+`Jalon_Delta1_Vers_Cle`, `Jalon_Delta2_Cle_Vers_Porte`, `Jalon_Delta3_Porte_Vers_Sortie`,
+les trois `Jalon_Taux_Atteinte_*` et `Jalon_Ressources_Post_Cle_Par_Episode`.
+
+### 14a-bis. Lire la chronologie des victoires (v33.0-etape0.6)
+
+Les jalons disent *où* l'agent bloque dans un épisode ; cette ligne dit si, **sur des
+centaines de jours**, il progresse :
+
+```
+  ├─ Chrono Victoire: 🏆 9 victoire(s) en 700 jour(s) | dernière il y a 5 j
+                        | [P7] intervalle moyen 157 j (n=4) — tendance 0.22 ↘️ se rapprochent
+```
+
+⚠️ **`[P7]` et `(n=4)` ne sont pas décoratifs** (v33.0-etape0.6-fix1). La série d'intervalles
+est **segmentée par contexte** `(niveau, palier)` : elle repart à zéro à chaque changement de
+difficulté, car un intervalle « Primaire » et un intervalle « Palier 7 » ne sont pas
+comparables. Sans cette segmentation, le run `78859bgs` affichait `34.89 ↗️ s'espacent` alors
+que l'agent **s'améliorait** — le ratio mesurait l'écart de difficulté entre deux niveaux du
+cursus, pas la progression de l'agent. Le `(n=…)` dit combien de victoires soutiennent la
+tendance affichée ; `🏆 9 victoire(s)`, lui, reste le total d'une **vie entière**.
+
+| Ratio | Lecture | Ce que ça implique |
+|---|---|---|
+| **< 0.8** | ↘️ les victoires se rapprochent | l'agent **apprend** déjà — traiter la vitesse, pas la mémoire |
+| **≈ 1.0** | ➡️ stationnaire | il gagne **au hasard**, ne retient rien → le Replay Orienté est le bon chantier |
+| **> 1.25** | ↗️ elles s'espacent | régression — chercher ce qui s'est dégradé |
+
+⚠️ **Aucun ratio n'est affiché sous 4 intervalles** (donc avant 5 victoires) : en dessous,
+une seule victoire chanceuse ferait basculer le chiffre du simple au double. Une absence de
+ratio est voulue, ce n'est pas un bug.
+
+Six clés W&B : `Victoire_Jours_Depuis_Derniere`, `Victoire_Total_Vie`, `Victoire_Taux_Vie`,
+`Victoire_Intervalle_Dernier`, `Victoire_Intervalle_Moyen` et `Victoire_Tendance_Ratio`.
+Toutes sont **persistées dans le `.brain`** : la chronologie survit à une reprise de run
+(les `.brain` antérieurs repartent d'une chronologie vierge, sans erreur).
+
+### 14b. Lancer le test d'ablation inversée
+
+Le drapeau est à `False` par défaut. Pour lancer le test, éditer dans
+`src/naulthene/cerveau/noyau.py` (section 4) :
+
+```python
+QUETE_AUTO_EN_MODE_LIBRE = True   # instrument de diagnostic — À REMETTRE À False
+```
+
+Puis relancer un cursus **sur un cerveau déjà arrivé au Palier 7** (un cerveau neuf mettrait
+~90 jours à y parvenir) :
+
+```bash
+WANDB_MODE=offline PYTHONPATH=src venv/bin/python -m naulthene.salles_de_classe.cursus_developpemental \
+    --jours 50 --brain "brains/<ton_cerveau_au_palier_7>.brain"
+```
+
+La ligne de bilan porte alors un suffixe explicite, pour que les logs restent lisibles a
+posteriori :
+
+```
+├─ Quête Auto     : 🧭 5 nouveaux records de proximité au But [ABLATION INVERSÉE — Mode Libre DoorKey]
+```
+
+⚠️ **Remettre `QUETE_AUTO_EN_MODE_LIBRE = False` après la mesure.** Ce drapeau rétablit
+artificiellement le gradient manquant vers le But : s'il débloque le Palier 7, il **prouve** la
+nature du blocage, il ne le **résout** pas. La vraie solution doit émerger de la mémoire —
+voir [CONCEPTION_v33_memoire_emotionnelle.md](Old_Archive_rmd/CONCEPTION_v33_memoire_emotionnelle.md).
+
+### 14c. Ce que le run de 700 jours a déjà établi
+
+Analyse du run `50ac6kz0` (cerveau neuf, v32.0, 700 jours), **avant** toute modification :
+
+| Fait | Valeur |
+|---|---|
+| Arrivée au Palier 7 / jours passés dessus | jour **94** / **607** |
+| Réussites | **1** — le jour 94 lui-même |
+| Portage (clé en main) | **51,4 %** des ticks |
+| Portes franchies / **sorties** | **42 jours** / **0** |
+| Ressources consommées | 1,4 / jour |
+
+L'agent **prend la clé, la transporte, déverrouille et franchit** — puis ne sort jamais. Sa
+seule victoire est le jour de la promotion, c'est-à-dire le dernier jour où
+`RECOMPENSE_APPROCHE_BUT` était encore active. L'hypothèse « il erre en cherchant à manger » est
+**infirmée** par les 1,4 ressource/jour.
+
+---
+
 ## Dépannage rapide
 
 | Symptôme | Cause probable |
@@ -991,4 +1194,16 @@ Courbes W&B : `Reve_Facteur_Richesse` et `Reve_Empreinte_Enfance` (à croiser av
 | Le toucher renvoie toujours `0.0` sur les 4 dims | Le bus s'est désactivé — cherche l'avertissement `⚠️ Bus sensoriel (toucher/odorat/goût) désactivé (API minigrid incompatible : ...)` affiché **une seule fois** dans la console. Même dégradation gracieuse que les détecteurs génériques : l'entraînement continue normalement, seuls les 3 sens faibles sont neutres. Depuis la v29.1, le suffixe `⚠️ BUS DÉSACTIVÉ` s'affiche en plus à **chaque** bilan de nuit et `Sens_Bus_Actif` passe à 0 dans W&B |
 | Ligne `Les 5 Sens` absente du bilan de nuit (v29.1) | Normal en mode `vocal_isole` pur (aucun environnement MiniGrid lu ce jour-là) : `ticks_sensoriels_jour = 0`, la ligne est volontairement masquée plutôt que d'afficher des ratios vides. Elle réapparaît dès qu'une journée comporte des ticks MiniGrid |
 | `Odorat` proche de 96-100 % à chaque nuit | **Ce pourcentage compte la PRÉSENCE d'une trace, pas son intensité** — il peut rester haut alors que le signal est devenu discriminant (le seuil de coupure est bas). Depuis la v30.0, regarder `Sens_Odorat_Moyen` : ~0.32 sur `Empty-8x8` contre ~0.54 en v29, avec l'odeur forte (> 0.45) réduite à ~30 % des ticks. Voir §10d |
+| L'odorat tombe à 0.00 alors qu'une ressource est visible à 2 cases (v32.0) | **Normal si un mur ou une porte fermée sépare l'agent de la source** : depuis la v32.0 la distance est topologique (BFS), pas à vol d'oiseau. Un mur rend la source inodore, une porte fermée ajoute +4 cases (donc `exp(-0.8×6) ≈ 0.008`, sous le seuil de coupure). Vérifie avec le script de §13a. C'est le comportement voulu — l'ancien signal traversant les murs était un gradient trompeur |
+| Ligne `Clinotaxie` absente du bilan (v32.0) | Normal quand l'odeur n'a **jamais varié** de la journée : agent immobile, ou aucune source à portée. La ligne est masquée plutôt que d'afficher un « 0 % » trompeur. Vérifie `Sens_Odorat_Ticks_Variation_Ratio` en W&B |
+| `Sens_Odorat_Taux_Approche` proche de 50 % | À **ne pas interpréter sur un run court** (voir l'avertissement de §13b) : sur peu de ticks de variation, le chiffre est du bruit. Sur un run long avec un agent mobile, ≈ 50 % durable signifierait que la clinotaxie n'oriente rien — ce serait le signal qu'il faut remettre ces 2 dims en cause |
+| `RuntimeError: The size of tensor a (80) must match ... (82)` à la première nuit | Corrigé en v32.0 (voir §13d). Si le message réapparaît, c'est que `greffe_detectee` ne capte pas la greffe : vérifie que `persistance.py` est bien à jour sur ta branche (le correctif s'appuie sur le drapeau `bio_greffe`, pas sur `missing_keys`) |
+| Ligne `Jalons DoorKey` absente du bilan (v33.0) | Normal hors DoorKey (`Empty`, `MultiRoom`, `MemoryS7`) et en mode `vocal_isole` : la mécanique clé/porte/but n'y a aucun sens, la ligne et les 7 clés `Jalon_*` sont volontairement masquées plutôt que de logger des zéros trompeurs |
+| Ligne `Chrono Victoire` absente (v33.0-etape0.6) | Normal tant que l'agent n'a **jamais** gagné : elle n'apparaît qu'à partir de la 1ʳᵉ victoire, sinon elle répéterait « jamais » pendant des centaines de jours. Suivre `Victoire_Jours_Depuis_Derniere` sur W&B, qui vaut alors l'âge de l'agent |
+| `Victoire_Tendance_Ratio` absent alors que l'agent gagne | Normal sous **4 intervalles** (donc moins de 5 victoires) : en dessous, une seule victoire chanceuse ferait basculer le ratio du simple au double. Absence volontaire plutôt que chiffre trompeur |
+| Chronologie des victoires repartie à zéro après reprise d'un ancien `.brain` | Attendu : les `.brain` antérieurs à la v33.0-etape0.6 ne portent pas ces clés, la lecture est défensive (`.get`) et repart d'une chronologie vierge. Les runs suivants la reconstruisent — aucun acquis n'est perdu par ailleurs |
+| `Δt3 sortie JAMAIS ATTEINT (n=0)` nuit après nuit | **Ce n'est pas un bug, c'est LE résultat** — l'agent déverrouille la porte mais ne rejoint jamais le But. Mesuré sur 607 jours (§14c). Comparer avec `Jalon_Taux_Atteinte_Porte` : s'il est > 0 alors que `Jalon_Taux_Atteinte_Sortie` reste à 0, le blocage est bien le désert de récompense du dernier segment |
+| `Δt1` renseigné mais `Δt2` toujours `n=0` | L'agent prend la clé sans jamais déverrouiller : le goulot est le **transport**, pas le segment final — le plan de la v33 devrait alors être réexaminé (le cadrage suppose l'inverse) |
+| Suffixe `[ABLATION INVERSÉE]` sur la ligne `Quête Auto` | `QUETE_AUTO_EN_MODE_LIBRE = True` est encore actif (§14b). Attendu **pendant** le test de diagnostic uniquement — à remettre à `False` ensuite, sinon l'agent conserve une béquille de guidage permanente vers le But |
+| Aucun record de proximité malgré `QUETE_AUTO_EN_MODE_LIBRE = True` | Le Mode Libre n'est pas actif : il exige `palier_cible >= 5` (`SEUIL_PALIER_MODE_LIBRE`). En Mode **Guidé**, la quête auto reste volontairement désactivée sur DoorKey — c'est là que le double guidage avec `RECOMPENSE_APPROCHE_BUT` existerait réellement |
 | `Portage` reste à 0 % sur DoorKey | L'agent n'a jamais ramassé la clé de la journée — cohérent avec un palier DoorKey encore bas (< 3, « Toucher / Prendre »). Cette métrique est un bon indicateur avancé de la maîtrise des paliers 3-4, avant même que la victoire n'arrive |

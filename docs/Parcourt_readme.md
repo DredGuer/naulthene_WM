@@ -7,12 +7,14 @@ pratique de [readme.md](../readme.md) (vision d'ensemble et formules) et
 [docs/explications_readme.md](explications_readme.md) (détail algorithmique) — ici, l'angle
 est **"je veux lancer un run et comprendre ce qui se passe"**.
 
-Référence code : `src/naulthene/cerveau/noyau.py` (v29.1, intégrée dans `master`) et les trois
+Référence code : `src/naulthene/cerveau/noyau.py` (jusqu'à v32.0) et les trois
 scripts de `src/naulthene/salles_de_classe/`.
 
-> 📍 Une **v30.0** (« l'Exo-Sens ») est en cours de conception sur la branche
-> `feat/v30-exo-sens` — elle n'est **pas encore utilisable** et ne change rien aux commandes de
-> ce guide. Voir [CONCEPTION_v30_exo_sens.md](Old_Archive_rmd/CONCEPTION_v30_exo_sens.md).
+> 📍 **État (2026-08-03)** : `master` porte les v28.0 → v29.1. Les **v30.0/v30.1** (l'Exo-Sens,
+> instrumentation), **v31.0/v31.1** (Mémoire Proportionnelle, Déduplication Mnésique) et
+> **v32.0** (Odorat Topologique & Clinotaxie) sont **implémentées et validées** sur leurs branches
+> respectives, en attente de merge. **Aucune ne change les commandes de ce guide** — toutes sont
+> automatiques, sans flag ni option. Voir [CHANGELOG.md](CHANGELOG.md) pour le détail.
 
 ---
 
@@ -49,9 +51,10 @@ ce que tu veux observer.
 | **Cursus de la Parole** | `cursus_parole.py` | `brains/naulthene_parole.brain` | 900 jours | **800** | Voix réelle de l'utilisateur, synesthésie (mot ancré sur l'objet regardé) |
 | **La Cuve** | `daemon_cerveau.py` + clients | `brains/naulthene_v21.brain` | illimité, manuel | pas de notion de "jour" fixe | Contrôle manuel tick par tick, alterner MiniGrid/vocal à la demande |
 
-**Tous les 4 lancent le même cerveau (`AGI_Naulthene`)** avec la même architecture (v29.1 : 8
-actions dont l'action C3 optionnelle, et les **5 sens** — voir [docs/CHANGELOG.md](CHANGELOG.md),
-entrées v28.0 et v29.0/v29.1) — seule la boucle qui pilote les journées change.
+**Tous les 4 lancent le même cerveau (`AGI_Naulthene`)** avec la même architecture (8 actions dont
+l'action C3 devenue dormante, les **5 sens** + l'Exo-Sens, et depuis la v32.0 l'odorat topologique
+et la clinotaxie — voir [docs/CHANGELOG.md](CHANGELOG.md)) — seule la boucle qui pilote les
+journées change.
 
 **Convention commune aux 3 cursus autonomes** (par Ères, Bébé, Parole) :
 - Chacun **sauvegarde après chaque nuit** — interrompre avec `Ctrl+C` ne perd au pire que la
@@ -425,6 +428,7 @@ Chaque nuit (tous cursus confondus) affiche un bilan de ce type :
   ├─ Potentiomètre  : ⏳ Patience de base du jour: 200 ticks/épisode (1 abandon(s) lucide(s), 0 Sursaut(s) de Volonté)
   ├─ État Viscéral  : 🍎 Satiété 0.00 | 💧 Hydratation 0.40 | ✨ Stimulation 1.00
   ├─ Les 5 Sens     : ✋ Contact 28.5% | 🔑 Portage 20.5% | 👃 Odorat 96.0% des ticks (max 1.50) | 👅 Goût 75 tick(s)
+  ├─ Clinotaxie     : 🧭 Approche 70.4% des ticks de variation (|ΔS| moyen 0.124 sur 27 tick(s))
   ├─ Métabolisme    : r_bio cumulé -1.756 — 0 Nourriture(s), 1 Eau(x) consommée(s)
   ├─ Mémoire Épiso. : 🗺️ 1 souvenir(s) spatial(aux) actif(s)
   └─ Erreur JEPA moy: 0.1400 | Réc. moyenne: 0.000 | Thermostat: Stable
@@ -439,6 +443,7 @@ Chaque nuit (tous cursus confondus) affiche un bilan de ce type :
 | **Potentiomètre** | La patience du jour (combien de ticks avant d'abandonner un épisode qui dérape) |
 | **État Viscéral** | Faim/soif/stimulation — motivations biologiques internes |
 | **Les 5 Sens** (v29.1) | Ce que l'agent a *senti* dans la journée — voir §15 pour la lecture détaillée |
+| **Clinotaxie** (v32.0) | S'il s'est *rapproché* ou *éloigné* des ressources qu'il sentait. Absente si l'odeur n'a jamais varié — voir §15 |
 | **Erreur JEPA / Thermostat** | À quel point le modèle du monde se trompe encore ; `MUTATION !` = le cerveau vient de grandir (+16 dimensions) |
 
 Sur le niveau "Collège" (DoorKey actif), une ligne supplémentaire apparaît :
@@ -481,6 +486,13 @@ La seule chose à savoir : au premier chargement d'un `.brain` créé avant la v
 `👃 integrateur_bio greffé de N à M dims d'entrée` s'affiche **une seule fois** — c'est normal,
 tous les acquis sont conservés. Voir §15 ci-dessous.
 
+**Et l'odorat topologique / la clinotaxie (v32) ?**
+Rien à activer non plus. Deux messages apparaissent une seule fois sur un `.brain` antérieur :
+la greffe `👃 ... 80 à 82 dims` **et** `🔄 Optimiseur réinitialisé`. Les deux sont normaux et
+aucun poids appris n'est perdu — seule la dynamique Adam repart à neuf. Cette seconde ligne
+corrige un bug qui faisait planter la **première nuit** d'un cerveau greffé (latent depuis la
+v29.0, invisible tant qu'on ne validait qu'en ticks sans aller jusqu'à la nuit).
+
 ---
 
 ## 15. Les 5 sens de l'agent (v29)
@@ -494,7 +506,7 @@ plus directement liés à la survie.
 | 👁 **Vue** | La grille MiniGrid (147 valeurs) | Très élevé |
 | 👂 **Ouïe** | Le son brut (130 coefficients MFCC) | Élevé |
 | ✋ **Toucher** | Un obstacle devant lui, un objet dans sa main, son orientation | Moyen |
-| 👃 **Odorat** | Une source de nourriture/eau proche (jusqu'à 4 cases en v29) | Faible |
+| 👃 **Odorat** | Une source de nourriture/eau proche — **en contournant les murs** depuis la v32.0, avec le sens de variation (« je me rapproche / je m'éloigne ») | Faible |
 | 👅 **Goût** | Ce qu'il vient d'avaler (persiste ~10 ticks) | Faible |
 
 **Ce que ça change concrètement** : avant, l'agent ne savait qu'il tenait la clé que de façon
@@ -522,14 +534,31 @@ c'est l'alerte à surveiller.
 
 Côté W&B, 7 courbes `Sens_*` sont enregistrées chaque nuit.
 
-> ⚠️ **Un `Odorat` à 96-100 % est NORMAL sur les petits niveaux.** Avec une portée de 4 cases et
-> 4 sources générées, presque toute la carte est « à portée de nez » sur `Empty-8x8` (97,6 %) et
-> `DoorKey-6x6` (100 %). L'odorat n'y apporte donc presque aucune information utile — il ne
-> devient vraiment discriminant qu'au Doctorat (`MultiRoom`, ~57 %). Ce n'est pas une panne, mais
-> un réglage encore ouvert (voir [EXPLICATIONS_v29_sens.md](Old_Archive_rmd/EXPLICATIONS_v29_sens.md) §12) —
-> c'est devenu le **chantier 1 de la v30.0** (odorat à portée relative à la taille de la carte,
-> voir [CONCEPTION_v30_exo_sens.md](Old_Archive_rmd/CONCEPTION_v30_exo_sens.md) §2).
-> En revanche, un `Odorat` à **0 %** sur un niveau où des ressources existent mérite un coup d'œil.
+> ⚠️ **Un `Odorat` élevé (90-100 %) reste NORMAL** : ce pourcentage compte la **présence** d'une
+> trace, pas son intensité. La saturation diagnostiquée en v29.1 a été corrigée deux fois depuis —
+> par l'atténuation exponentielle (v30.0), puis par la distance topologique (v32.0) — mais le
+> seuil de coupure étant bas, un signal faible compte quand même comme « actif ». Ce qu'il faut
+> regarder, c'est **`Sens_Odorat_Moyen`** dans W&B (~0.32 contre ~0.54 en v29).
+> Un `Odorat` à **0 %** sur un niveau où des ressources existent mérite en revanche un coup d'œil
+> — sauf si un mur sépare l'agent des sources, ce qui les rend **volontairement inodores** depuis
+> la v32.0.
+
+### La clinotaxie — « est-ce que je me rapproche ? » (v32.0)
+
+Depuis la v32.0, une ligne supplémentaire peut apparaître :
+
+```
+├─ Clinotaxie     : 🧭 Approche 70.4% des ticks de variation (|ΔS| moyen 0.124 sur 27 tick(s))
+```
+
+Jusque-là, l'agent percevait l'**intensité** d'une odeur mais était incapable de savoir si son
+dernier pas l'avait rapproché ou éloigné de la source — il était aveugle au mouvement. Il perçoit
+désormais aussi la **variation**.
+
+`Approche X%` se lit comme suit : ≈ 50 % signifie que l'agent monte et descend le gradient au
+hasard (la clinotaxie ne l'oriente pas), nettement au-dessus qu'elle fait son travail. **Toujours
+regarder le nombre de ticks entre parenthèses d'abord** : sur un agent qui bouge peu, le
+pourcentage est du bruit. Voir [docs/LANCEMENT.md](LANCEMENT.md) §13 pour le détail.
 
 📖 Pour le détail complet (formules, pourquoi ces sens n'entrent pas dans le modèle du monde,
 compatibilité des anciens cerveaux) : **[EXPLICATIONS_v29_sens.md](Old_Archive_rmd/EXPLICATIONS_v29_sens.md)**.

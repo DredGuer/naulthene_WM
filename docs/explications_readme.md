@@ -17,7 +17,7 @@ Ce document explique **comment** et **pourquoi** le cerveau `AGI_Naulthene` fonc
 9. [Le réservoir dopaminergique](#9-le-réservoir-dopaminergique)
 10. [Le rêve nocturne adaptatif](#10-le-rêve-nocturne-adaptatif)
 11. [Le cursus académique et la patience adaptative](#11-le-cursus-académique-et-la-patience-adaptative)
-12. [Évolutions du projet (v7 → v31)](#12-évolutions-du-projet-v7--v31)
+12. [Évolutions du projet (v7 → v33)](#12-évolutions-du-projet-v7--v33)
 13. [Glossaire des constantes](#13-glossaire-des-constantes)
 14. [La Cascade C1 → C2 → C3 & le Port Exocortex (expérimental)](#14-la-cascade-c1--c2--c3--le-port-exocortex-expérimental)
 15. [Le Bus Sensoriel & l'identité C1/C2 explicite (expérimental)](#15-le-bus-sensoriel--lidentité-c1c2-explicite-expérimental)
@@ -549,7 +549,7 @@ Dès `palier_cible >= 5` (Viser la Porte), le **Mode Libre** s'active : le guida
 
 ---
 
-## 12. Évolutions du projet (v7 → v31)
+## 12. Évolutions du projet (v7 → v33)
 
 | Version | Ce qui a changé | Pourquoi |
 |---|---|---|
@@ -567,6 +567,9 @@ Dès `palier_cible >= 5` (Viser la Porte), le **Mode Libre** s'active : le guida
 | v29.0 (expérimental) | Le Bus Sensoriel Multimodal & l'identité C1/C2 explicite — toucher/odorat/goût (`DIM_VECTEUR_BIO` 16→24), `_executer_c1_reflexe()`/`_solliciter_c2_neocortex()`, greffe rétrocompatible du vecteur bio | Donner à l'agent les 5 sens plutôt que 2, et nommer la frontière réflexe/néo-cortex qui existait déjà de fait dans le code (§15) |
 | v29.1 (expérimental) | Télémétrie des 5 sens — 7 clés W&B `Sens_*` + ligne au bilan de nuit ; diagnostic de saturation de l'odorat sur les petites cartes | Rendre observable une mécanique jusque-là invisible : sans télémétrie, impossible de démontrer qu'un sens sert réellement à quelque chose sur un run long (§15.6) |
 | v30.0 (expérimental) | L'Odorat Dynamique (atténuation exponentielle `exp(-0.8·d)`) & l'Exo-Sens — C3 devient le 6ème sens, `DIM_VECTEUR_BIO` 24→32, `ACTION_DEMANDER` masquée en permanence | Corriger la saturation diagnostiquée en v29.1 (le gradient, pas la couverture, est ce qui oriente) ; faire de l'Exocortex une perception continue plutôt qu'un cerveau concurrent, sans aucun seuil de déclenchement |
+| v33.0 étape 0.6 (expérimental) | La Chronologie des Victoires — 6 clés `Victoire_*` dont `Victoire_Tendance_Ratio`, persistées dans le `.brain` | Trancher la question qui décide du sort de la v33 : les victoires arrivent-elles au **hasard** (processus stationnaire → l'agent ne retient rien, le Replay Orienté est justifié) ou **de mieux en mieux** (intervalles qui se resserrent → c'est la vitesse qu'il faut traiter, pas la mémoire) ? Les 6 intervalles relevés à la main sur le run de 700 jours (60, 38, 90, 17, 109, 217) ne survivaient à aucune reprise de run |
+| v33.0 étapes 0 & 0.5 (expérimental) | La Chronométrie des Jalons (`ChronometreJalonsDoorKey`, Δt1/Δt2/Δt3 + conflit viscéral, 7 clés `Jalon_*`) & le Test d'Ablation Inversée (`QUETE_AUTO_EN_MODE_LIBRE`, **inactif par défaut**) | Trancher par la mesure, avant toute refonte de la mémoire, *où* se situe le blocage du Palier 7. Le run instrumenté a répondu : l'entonnoir se resserre à chaque étape (116 → 32 → 12 épisodes) et le dernier segment coûte presque **deux fois plus cher** (54 ticks contre 29-31) ; l'hypothèse du conflit viscéral est infirmée (1,4 ressource/jour) |
+| v32.0 (expérimental) | L'Odorat Topologique (BFS multi-sources, porte fermée à surcoût) & la Clinotaxie (`DIM_VECTEUR_BIO` 32→34) ; fix de la détection de greffe dans `persistance.py` | L'odeur traversait les murs, produisant un gradient *trompeur* ; et `integrateur_bio`, sans état interne, était aveugle au mouvement — incapable de savoir si son dernier pas l'avait rapproché d'une ressource (§15.9) |
 | v31.1 (expérimental) | La Déduplication Mnésique (un repère par `(pos,type)`, compactage des `.brain` antérieurs) & le Cap de Densité Spatiale (`cases × 3`) | Un `.brain` réel contenait 200 souvenirs pour 18 repères distincts (91 % de redondance) ; la « saturation » n'était pas un manque de place. Corrige aussi un biais de rappel : `min(distance)` pouvait retenir un souvenir périmé |
 | v31.0 (expérimental) | La Mémoire Proportionnelle (`capacite = dim_bus × 12 × (1+déficit)`) & le Rêve Invariant d'Échelle (référence de richesse normalisée par `empreinte_enfance`) | Supprimer deux biais : un plafond mnésique arbitraire qui saturait, et un `%_reve` qui s'effondrait mécaniquement quand le cerveau grandissait (60 % → 15 %) |
 | v30.1 (expérimental) | Instrumentation avant calibrage — 8 clés `Memoire_*`/`Sursaut_*`, invariance comportementale prouvée par empreinte à graine fixée | Mesurer avant de rendre adaptatives deux constantes arbitraires (`capacite_max=200`, `EXTENSION_PATIENCE_SURSAUT=50`) : remplacer un chiffre arbitraire par une formule arbitraire ne vaut pas mieux |
@@ -582,7 +585,7 @@ Voir [CHANGELOG.md](CHANGELOG.md) pour le détail commit par commit et [readme.m
 | `DIM_VISUELLE` | 147 | Dimension de l'observation MiniGrid aplatie |
 | `dim_bus` | 16 → 96 (`DIM_BUS_MAX`) | Espace latent partagé, +16 par neurogenèse |
 | `num_actions` | 7 → **8** (v28.0) | Actions MiniGrid ; la 8ème est `ACTION_DEMANDER` (§14), masquée à `-inf` tant qu'aucun plug C3 n'est branché |
-| `DIM_VECTEUR_BIO` | 16 → **24** (v29.0) | Vecteur viscéral consommé par `integrateur_bio` : jauges + quêtes + rappel spatial + quête vocale, puis toucher (4) et chimie (4) en queue (§15) |
+| `DIM_VECTEUR_BIO` | 16 → 24 (v29.0) → 32 (v30.0) → **34** (v32.0) | Vecteur viscéral consommé par `integrateur_bio` : jauges + quêtes + rappel spatial + quête vocale, puis toucher (4), chimie (4), Exo-Sens (8) et clinotaxie (2) en queue (§15) |
 | `HORIZONS_PLANIFICATION` | (1, 3, 7) | Horizons du rollout Système 2 |
 | `GAMMA_PLANIFICATION` | 0.9 | Actualisation du rollout mental |
 | `gamma` (RL) | 0.95 | Actualisation du retour Monte-Carlo réel |
@@ -620,8 +623,12 @@ Voir [CHANGELOG.md](CHANGELOG.md) pour le détail commit par commit et [readme.m
 | `LAMBDA_ODORAT` (v30.0, expérimental) | 0.8 | Décroissance exponentielle de l'odorat `exp(-λ·d)` : 1.00 au contact, 0.45 à 1 case, 0.20 à 2 |
 | `SEUIL_COUPURE_ODORAT` (v30.0, expérimental) | 0.02 | Sous ce seuil le signal est coupé net à 0, plutôt que de traîner une valeur inexploitable |
 | `DIM_EXO` (v30.0, expérimental) | 8 | Largeur du vecteur perceptif exogène (l'Exo-Sens), en queue du `vecteur_bio` |
+| `DIM_ODORAT_DELTA` (v32.0, expérimental) | 2 | Clinotaxie : ΔS de l'odorat food/eau entre deux ticks, normalisé avec **0.5 = neutre** (§15.9) |
+| `SURCOUT_PORTE_FERMEE` (v32.0, expérimental) | 4 | Cases virtuelles ajoutées par le BFS à la traversée d'une porte fermée — elle « fuit », elle ne bloque pas |
+| `TYPES_BLOQUANTS_ODORAT` (v32.0, expérimental) | `("wall","lava")` | Objets qui arrêtent totalement la diffusion : une source derrière eux est **inodore** |
 | `PERIODE_PERCEPTION_EXO` (v30.0, expérimental) | 20 | Ticks entre deux interrogations réelles du Port C3 (cache entre-temps) — un plug HTTP coûte 100 ms à 30 s |
 | `DECROISSANCE_GOUT` (v29.0, expérimental) | 0.85 | Décroissance par tick de la trace gustative (~10 ticks de rémanence) |
+| `QUETE_AUTO_EN_MODE_LIBRE` (v33.0-etape0.5, expérimental) | **`False`** | Test d'ablation inversée : à `True`, `DetecteurProgresPersonnel` s'active sur DoorKey **en Mode Libre seulement** (l'exclusion historique visait un double guidage avec `RECOMPENSE_APPROCHE_BUT`, déjà coupée dans ce mode). **Instrument de diagnostic, jamais une mécanique** — à remettre à `False` après mesure. `False` ⇒ comportement bit-identique à la v32.0 |
 
 ---
 
@@ -829,6 +836,24 @@ Une portée relative à la géométrie (`min(W,H)/3`) avait été envisagée pui
 
 Deux constantes arbitraires restent à rendre adaptatives : `capacite_max=200` (mémoire épisodique) et `EXTENSION_PATIENCE_SURSAUT=50`. La v30.1 ne les change pas — elle ajoute 8 métriques (`Memoire_*`, `Sursaut_*`) pour pouvoir les calibrer **sur données réelles**. Remplacer un chiffre arbitraire par une formule arbitraire ne vaut pas mieux : c'est juste plus difficile à remettre en cause. Invariance comportementale prouvée par empreinte de la séquence d'actions à graine fixée, identique avant/après.
 
+### 15.9 v32.0 — l'Odorat Topologique & la Clinotaxie
+
+**La distance devient topologique.** Jusqu'en v31.1, `lire_chimie` calculait $d = |\Delta x| + |\Delta y|$ sans jamais consulter la grille : l'odeur traversait les murs. Le défaut n'est pas l'imprécision mais le **gradient trompeur** — l'agent qui suit une odeur à travers une cloison s'englue contre la paroi, et `integrateur_bio` ne peut pas apprendre à ignorer un signal qui n'est faux qu'*une partie* du temps. La distance est désormais celle d'un **BFS multi-sources** (`_distances_topologiques` → `_bfs_vers_agent`), propagé depuis toutes les sources d'un type simultanément : coût $O(V+E)$ sur 36 à 169 cases, soit **moins** que la double boucle de scan qu'il remplace. Murs et lave sont infranchissables ; une source inatteignable devient littéralement **inodore** (`None`). Sans obstacle, le BFS retombe **exactement** sur Manhattan — c'est le test de non-régression de la mécanique.
+
+**La porte fermée « fuit »** (`SURCOUT_PORTE_FERMEE = 4`) plutôt que de bloquer. Une porte close arrête l'air, pas les molécules ; surtout, la rendre opaque priverait l'agent du guidage olfactif *précisément* pendant qu'il cherche la clé de cette porte — le signal n'apparaîtrait qu'une fois le problème déjà résolu. L'odeur passe donc dessous, atténuée, et le gradient se renforce brutalement à l'ouverture.
+
+**La clinotaxie** (`DIM_ODORAT_DELTA = 2`, `DIM_VECTEUR_BIO` 32 → **34**). `integrateur_bio` ne recevait que l'intensité instantanée $S_t$, **sans aucun état interne** permettant d'en dériver quoi que ce soit : le réseau était structurellement **aveugle au mouvement**. Deux dimensions portent désormais la variation, normalisée pour rester dans l'échelle bornée du bus :
+
+$$\Delta S_{\text{norm}} = \frac{(S_t - S_{t-1}) + 1}{2}, \qquad \textbf{0.5} = \text{neutre}$$
+
+Au-dessus de 0.5 l'agent se rapproche, en dessous il s'éloigne. C'est ce qui débloque les petites cartes diagnostiquées en v29.1 : sur `DoorKey-6x6`, $S_t$ varie peu d'une case à l'autre, mais le **signe** de $\Delta S$ bascule proprement à chaque pas. Le gradient existait dans le monde depuis la v30.0 ; ces 2 dims le rendent **lisible**.
+
+⚠️ Deux pièges traités. (1) `_odeurs_precedentes` est remis à `None` par `reinitialiser_episode` : au `reset()` l'agent est téléporté et les sources régénérées, donc comparer au dernier tick de l'épisode précédent injecterait un $\Delta S$ énorme et **fictif**, lu par C1 comme un violent rapprochement. (2) Le fallback hors MiniGrid (vocal isolé, rêve) vaut **0.5 et non 0.0** — 0.0 signifierait un éloignement maximal permanent.
+
+**Option écartée : l'habituation au capteur.** Un filtre $\max(0,\ S - \alpha \cdot S_{\text{lissé}})$ imite la désensibilisation des récepteurs olfactifs, mais c'est une **dérivée en moins lisible** : le $\max(0, \cdot)$ écrase toute l'information d'éloignement, soit exactement la moitié du signal que la clinotaxie vient d'apporter. Il rendrait de plus l'odorat non-markovien (deux agents à la même position percevraient des odeurs différentes selon leur trajectoire passée). Si une lassitude olfactive est souhaitée, sa place est le réservoir dopaminergique (`stimulation`), qui modélise déjà ce phénomène — pas le capteur, qui ne doit jamais mentir sur la géométrie du monde.
+
+**Corollaire de persistance.** La détection de greffe ne peut pas se fonder sur `missing_keys` : une greffe **par recopie** ne produit aucune clé manquante, la couche existant déjà. Les moments Adam restaient donc chargés à l'ancienne largeur, et la première **`executer_nuit`** d'un cerveau greffé plantait — ni au chargement, ni pendant la journée, donc invisible à toute validation « N ticks post-résurrection ». Bug latent depuis la v29.0. Toute validation de greffe doit désormais inclure **une nuit complète**.
+
 ---
 
-*Document généré à partir d'une lecture directe du code source (`src/naulthene/cerveau/colab.py` v17, `src/naulthene/cerveau/noyau.py` jusqu'à v31.1) — voir [readme.md](../readme.md) pour la documentation narrative complète et [CLAUDE.md](../CLAUDE.md) pour les règles de maintenance du projet.*
+*Document généré à partir d'une lecture directe du code source (`src/naulthene/cerveau/colab.py` v17, `src/naulthene/cerveau/noyau.py` jusqu'à v32.0) — voir [readme.md](../readme.md) pour la documentation narrative complète et [CLAUDE.md](../CLAUDE.md) pour les règles de maintenance du projet.*

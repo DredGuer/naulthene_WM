@@ -177,12 +177,21 @@ def _greffer_vecteur_bio_etendu(state_dict, agent):
     # nombre de dimensions ajoutées : DIM_TOUCHER+DIM_CHIMIE et DIM_EXO valent tous deux
     # 8, donc `nb_nouvelles == 8` est ambigu (un .brain pré-v29 comme un .brain v29
     # gagnent 8 dims, mais pas les mêmes). La largeur d'origine, elle, est sans ambiguïté.
+    # v32.0 — la déduction se fait sur la largeur bio d'ORIGINE (16 pré-v29, 24 en v29.x,
+    # 32 en v30/v31), chaque palier disant sans ambiguïté ce qui manque au checkpoint.
+    # Les libellés se cumulent : un .brain pré-v29 chargé par un binaire v32 gagne d'un
+    # coup les trois blocs, et doit le dire — c'est la seule trace console qu'aura
+    # l'utilisateur de ce qui vient d'être greffé sur un cerveau de plusieurs centaines
+    # de jours.
     largeur_bio_checkpoint = largeur_checkpoint - dim_bus_attendue
+    acquis = []
     if largeur_bio_checkpoint <= 16:
-        libelle = "toucher/odorat/goût (v29.0)" if nb_nouvelles == DIM_TOUCHER + DIM_CHIMIE \
-            else "toucher/odorat/goût + Exo-Sens (v29.0 + v30.0)"
-    else:
-        libelle = "Exo-Sens, le 6ème sens (v30.0)"
+        acquis.append("toucher/odorat/goût (v29.0)")
+    if largeur_bio_checkpoint <= 16 + DIM_TOUCHER + DIM_CHIMIE:
+        acquis.append("Exo-Sens (v30.0)")
+    if largeur_bio_checkpoint <= 16 + DIM_TOUCHER + DIM_CHIMIE + DIM_EXO:
+        acquis.append("clinotaxie olfactive (v32.0)")
+    libelle = " + ".join(acquis) if acquis else "extension du vecteur bio"
     print(f"   👃 integrateur_bio greffé de {largeur_checkpoint} à {largeur_attendue} dims d'entrée "
           f"(+{nb_nouvelles} : {libelle}) — acquis existants préservés.")
     return resultat, True
@@ -226,6 +235,21 @@ class PersistanceAnatomique:
             # --- 5. Curriculum & progression ---
             'niveau_actuel': etat.niveau_actuel,
             'victoires_consecutives': etat.victoires_consecutives,
+            # v33.0-etape0.6 — chronologie des victoires. DOIT être persistée : c'est une
+            # mesure de VIE (intervalles entre victoires sur des centaines de jours), pas
+            # de journée. Sans ça, toute reprise de run remettrait les intervalles à zéro
+            # et la question « hasard ou apprentissage ? » resterait sans réponse sur les
+            # cerveaux qui ont justement le plus de vécu.
+            'jour_derniere_victoire': etat.jour_derniere_victoire,
+            'jours_depuis_victoire': etat.jours_depuis_victoire,
+            'intervalles_victoires': etat.intervalles_victoires,
+            'victoires_totales': etat.victoires_totales,
+            # v33.0-etape0.6-fix1 : le contexte (niveau, palier) de la série courante.
+            # Sans lui, une reprise de run reprendrait les intervalles d'un contexte
+            # sans savoir duquel — et la première nuit les jetterait de toute façon,
+            # `contexte_victoires=None` étant réinitialisé au contexte du moment.
+            'contexte_victoires': etat.contexte_victoires,
+            'intervalles_contexte_prec': etat.intervalles_contexte_prec,
             'env_id': etat.env_id,
             'nom_classe': etat.nom_classe,
             'palier_cible': etat.palier_cible,
@@ -369,7 +393,20 @@ class PersistanceAnatomique:
         state_dict_filtre = _greffer_action_supplementaire(state_dict_filtre, agent)
 
         resultat_chargement = agent.load_state_dict(state_dict_filtre, strict=False)
-        greffe_detectee = bool(resultat_chargement.missing_keys)
+        # v32.0 — `missing_keys` ne suffit PAS à décider du sort de l'optimiseur : il ne
+        # signale que les couches entièrement ABSENTES du checkpoint. Une greffe par
+        # RECOPIE (la règle du projet : `_greffer_vecteur_bio_etendu`,
+        # `_greffer_action_supplementaire`) ne produit aucune clé manquante — la couche
+        # existe et a déjà été réécrite à la BONNE forme, seule sa largeur d'origine a
+        # changé. Les moments Adam restaient donc chargés à l'ancienne largeur, et la
+        # première NUIT du cerveau greffé plantait sur « The size of tensor a (80) must
+        # match the size of tensor b (82) » — jamais au chargement ni pendant la journée,
+        # ce qui rendait le bug invisible à toute vérification courte. Cas réel rencontré
+        # en greffant un `.brain` v31 (80 dims) sur cette version (82).
+        #
+        # On se fie donc au drapeau retourné par la greffe elle-même, seul témoin fiable
+        # qu'une largeur a bougé une fois le state_dict réaligné.
+        greffe_detectee = bool(resultat_chargement.missing_keys) or bio_greffe
         if greffe_detectee:
             print(f"   🌱 Hémisphères nouvellement greffés sur ce cerveau (initialisés à neuf) : "
                   f"{sorted({cle.split('.')[0] for cle in resultat_chargement.missing_keys})}")
@@ -386,7 +423,9 @@ class PersistanceAnatomique:
             # partiel de la dynamique Adam, de toute façon incohérent avec les nouvelles
             # synapses. Seule la dynamique d'apprentissage (moments Adam) est perdue —
             # tous les poids/acquis du state_dict, eux, sont bien préservés au-dessus.
-            print("   🔄 Optimiseur réinitialisé (incompatible avec les nouvelles couches greffées) — "
+            motif = ("nouvelles couches greffées" if resultat_chargement.missing_keys
+                     else "largeur du vecteur bio étendue par greffe")
+            print(f"   🔄 Optimiseur réinitialisé ({motif}) — "
                   "les poids/acquis existants sont intacts, seule la dynamique Adam repart à neuf.")
         else:
             agent.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -423,6 +462,18 @@ class PersistanceAnatomique:
         # --- Curriculum & progression ---
         etat.niveau_actuel = checkpoint['niveau_actuel']
         etat.victoires_consecutives = checkpoint['victoires_consecutives']
+        # v33.0-etape0.6 — lecture DÉFENSIVE (`.get`) : les `.brain` antérieurs à cette
+        # version n'ont aucune de ces clés. Un cerveau ancien repart donc d'une
+        # chronologie vierge (aucune victoire connue) plutôt que de faire planter le
+        # chargement — même principe que les autres champs ajoutés après coup, et
+        # cohérent avec la règle « greffe par recopie, jamais par exclusion » : on
+        # n'ampute rien, on complète ce qui manque.
+        etat.jour_derniere_victoire = checkpoint.get('jour_derniere_victoire')
+        etat.jours_depuis_victoire = checkpoint.get('jours_depuis_victoire', 0)
+        etat.intervalles_victoires = checkpoint.get('intervalles_victoires', [])
+        etat.victoires_totales = checkpoint.get('victoires_totales', 0)
+        etat.contexte_victoires = checkpoint.get('contexte_victoires')
+        etat.intervalles_contexte_prec = checkpoint.get('intervalles_contexte_prec', [])
         etat.palier_cible = checkpoint['palier_cible']
         if checkpoint.get('doorkey_actif_a_la_sauvegarde'):
             # Recrée le détecteur DoorKey s'il était actif à la sauvegarde, pour que

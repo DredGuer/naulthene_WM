@@ -18,19 +18,22 @@ Il intègre la structure de table des matières globale (avec le contexte applic
 1. [Vue d'Ensemble du Projet](https://www.google.com/search?q=%23vue-densemble-du-projet)
 2. [Journal des Mises à Jour (Changelog)](https://www.google.com/search?q=%23journal-des-mises-%C3%A0-jour)
 3. [Plan d'Action](https://www.google.com/search?q=%23plan-daction)
-3t. **[Parcourt_readme.md — Guide Complet du Système de Cursus](docs/Parcourt_readme.md)** (commandes de lancement, jours/ticks par parcours, détail des paliers, FAQ)
-3n. [Nouveautés v31.1 (expérimental) — La Déduplication Mnésique & le Cap de Densité](#nouveautés-v311-expérimental--la-déduplication-mnésique--le-cap-de-densité-spatiale-2026-08-02)
-3o. [Nouveautés v31.0 (expérimental) — La Mémoire Proportionnelle & le Rêve Invariant d'Échelle](#nouveautés-v310-expérimental--la-mémoire-proportionnelle--le-rêve-invariant-déchelle-2026-08-02)
-3p. [Nouveautés v30.1 (expérimental) — Instrumentation avant calibrage : mémoire & Sursaut](#nouveautés-v301-expérimental--instrumentation-avant-calibrage--mémoire--sursaut-2026-08-02)
-3q. [Nouveautés v30.0 (expérimental) — L'Unification & l'Extensibilité : l'Odorat Dynamique & l'Exo-Sens](#nouveautés-v300-expérimental--lunification--lextensibilité--lodorat-dynamique--lexo-sens-2026-08-02)
-3r. [Nouveautés v29.1 (expérimental) — Télémétrie des 5 Sens](#nouveautés-v291-expérimental--télémétrie-des-5-sens-2026-08-02)
-3s. [Nouveautés v29.0 (expérimental) — Le Bus Sensoriel Multimodal & l'Identité C1/C2](#nouveautés-v290-expérimental--le-bus-sensoriel-multimodal--lidentité-c1c2-explicite-2026-08-02)
-3u. [Nouveautés v28.0 (expérimental) — La Cascade C1→C2→C3 & le Port Exocortex](#nouveautés-v280-expérimental--la-cascade-c1c2c3--le-port-exocortex-2026-07-30)
-3v. [Nouveautés v27.6 (expérimental) — L'École de la Parole & Synesthésie](#nouveautés-v276-expérimental--lécole-de-la-parole--synesthésie-2026-07-2728)
-3w. [Nouveautés v26.0 (expérimental) — L'Arène augmentée (mini-IRM + télémétrie complète)](#nouveautés-v260-expérimental--larène-augmentée-mini-irm--télémétrie-complète-2026-07-27)
-3x. [Nouveautés v26.0 (expérimental, §A.5 seul) — Cristallisation Souple](#nouveautés-v260-expérimental-a5-seul--cristallisation-souple-2026-07-27)
-3y. [Nouveautés v25.0 (expérimental) — Le Cerveau Bébé Développemental (0→4 ans)](#nouveautés-v250-expérimental--le-cerveau-bébé-développemental-04-ans-2026-07-24)
-3z. [Correctifs v24.0-fix1 à fix5 (expérimental) — École de Rattrapage Vocal & silence de l'Arène](#correctifs-v240-fix1-à-fix5-expérimental--école-de-rattrapage-vocal--silence-de-larène-2026-07-2324)
+3a. **[Parcourt_readme.md — Guide Complet du Système de Cursus](docs/Parcourt_readme.md)** (commandes de lancement, jours/ticks par parcours, détail des paliers, FAQ)
+3b. [🎓 Conclusion du cycle v33 — Le cursus est terminé, le blocage n'existait pas](#-conclusion-du-cycle-v33--le-cursus-est-terminé-le-blocage-nexistait-pas-2026-08-05)
+3c. [Nouveautés v33.0 étapes 0 → 0.6 (expérimental) — Chronométrie des Jalons, Ablation Inversée & Chronologie des Victoires](#nouveautés-v330-étapes-0--06-expérimental--la-chronométrie-des-jalons-le-test-dablation-inversée--la-chronologie-des-victoires-2026-08-04)
+3d. [Nouveautés v32.0 (expérimental) — L'Odorat Topologique & la Clinotaxie](#nouveautés-v320-expérimental--lodorat-topologique--la-clinotaxie-2026-08-03)
+3e. [Nouveautés v31.1 (expérimental) — La Déduplication Mnésique & le Cap de Densité](#nouveautés-v311-expérimental--la-déduplication-mnésique--le-cap-de-densité-spatiale-2026-08-02)
+3f. [Nouveautés v31.0 (expérimental) — La Mémoire Proportionnelle & le Rêve Invariant d'Échelle](#nouveautés-v310-expérimental--la-mémoire-proportionnelle--le-rêve-invariant-déchelle-2026-08-02)
+3g. [Nouveautés v30.1 (expérimental) — Instrumentation avant calibrage : mémoire & Sursaut](#nouveautés-v301-expérimental--instrumentation-avant-calibrage--mémoire--sursaut-2026-08-02)
+3h. [Nouveautés v30.0 (expérimental) — L'Unification & l'Extensibilité : l'Odorat Dynamique & l'Exo-Sens](#nouveautés-v300-expérimental--lunification--lextensibilité--lodorat-dynamique--lexo-sens-2026-08-02)
+3i. [Nouveautés v29.1 (expérimental) — Télémétrie des 5 Sens](#nouveautés-v291-expérimental--télémétrie-des-5-sens-2026-08-02)
+3j. [Nouveautés v29.0 (expérimental) — Le Bus Sensoriel Multimodal & l'Identité C1/C2](#nouveautés-v290-expérimental--le-bus-sensoriel-multimodal--lidentité-c1c2-explicite-2026-08-02)
+3k. [Nouveautés v28.0 (expérimental) — La Cascade C1→C2→C3 & le Port Exocortex](#nouveautés-v280-expérimental--la-cascade-c1c2c3--le-port-exocortex-2026-07-30)
+3l. [Nouveautés v27.6 (expérimental) — L'École de la Parole & Synesthésie](#nouveautés-v276-expérimental--lécole-de-la-parole--synesthésie-2026-07-2728)
+3m. [Nouveautés v26.0 (expérimental) — L'Arène augmentée (mini-IRM + télémétrie complète)](#nouveautés-v260-expérimental--larène-augmentée-mini-irm--télémétrie-complète-2026-07-27)
+3n. [Nouveautés v26.0 (expérimental, §A.5 seul) — Cristallisation Souple](#nouveautés-v260-expérimental-a5-seul--cristallisation-souple-2026-07-27)
+3o. [Nouveautés v25.0 (expérimental) — Le Cerveau Bébé Développemental (0→4 ans)](#nouveautés-v250-expérimental--le-cerveau-bébé-développemental-04-ans-2026-07-24)
+3p. [Correctifs v24.0-fix1 à fix5 (expérimental) — École de Rattrapage Vocal & silence de l'Arène](#correctifs-v240-fix1-à-fix5-expérimental--école-de-rattrapage-vocal--silence-de-larène-2026-07-2324)
 4. [Nouveautés v24.0 (expérimental) — L'Arène & Démo Live](#nouveautés-v240-expérimental--larène--démo-live-2026-07-23)
 4z. [Nouveautés v23.0 (expérimental) — Le Cursus Développemental par Ères](#nouveautés-v230-expérimental--le-cursus-développemental-par-ères-2026-07-23)
 4a. [Nouveautés v22.1 (expérimental) — Correction de l'Hémisphère Audio](#nouveautés-v221-expérimental--correction-de-lhémisphère-audio-2026-07-23)
@@ -101,6 +104,187 @@ Pour un historique complet commit par commit, consultez [docs/CHANGELOG.md](docs
 > Proportionnelle) et **v31.1** (Déduplication Mnésique) sont **implémentées et validées** sur la branche `feat/v30-exo-sens`, en attente de merge — voir
 > [docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md](docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md) pour le cadrage et les
 > arbitrages.
+
+### 🎓 Conclusion du cycle v33 — Le cursus est terminé, le blocage n'existait pas (2026-08-05)
+
+**Run de 5000 jours (`8q37yinf`, cerveau neuf). L'agent a franchi les CINQ niveaux du
+`PROGRAMME` et atteint le Doctorat** — une première.
+
+| Jour | Promotion |
+|---|---|
+| 66 | Primaire → Collège |
+| **3335** | Collège → **Lycée** ← le déblocage, après 3269 jours |
+| 3465 | Lycée → Université |
+| 3509 | Université → **Doctorat** |
+
+**69 victoires**, contre 9 sur le run de 700 jours. Et la tendance, mesurée sur **45
+intervalles** au Collège : ratio **0,65 ↘️ les victoires se rapprochent** (126 → 50 → 65 → 51
+jours par quart ; cadence de 4 à 13 victoires par tranche de 500 jours). **L'agent apprend
+réellement — très lentement.**
+
+**Trois diagnostics successifs, tous infirmés par un run plus long**
+
+| Conclusion tirée sur 700 jours | Verdict à 5000 jours |
+|---|---|
+| « Δt3 est un **mur absolu** » | **Faux** — 69 victoires, cursus complet |
+| « Les victoires sont du **bruit stationnaire**, il ne retient rien » | **Faux** — ratio 0,65 |
+| « La promotion est **mathématiquement inatteignable** » | **Faux** — 3 enchaînements à 2 jours d'écart |
+
+> **La leçon, et c'est le vrai résultat de ce cycle.** Le projet applique depuis la v30.1 la
+> règle *instrumenter d'abord, calibrer ensuite*. Ce cycle en révèle le corollaire manquant :
+> **une mesure juste sur un échantillon trop court produit une conclusion fausse**. Les trois
+> diagnostics ci-dessus étaient rigoureux, chiffrés, reproductibles — et faux, parce que
+> 700 jours ne suffisent pas à observer un apprentissage dont la constante de temps est de
+> l'ordre du millier de jours.
+
+**Le chantier Valence & Replay Orienté est donc clos sans avoir été ouvert** : il aurait
+traité un problème qui n'existe pas. Son cadrage est archivé dans
+[docs/Old_Archive_rmd/CONCEPTION_v33_memoire_emotionnelle.md](docs/Old_Archive_rmd/CONCEPTION_v33_memoire_emotionnelle.md)
+— il garde la trace des options écartées et de leurs raisons, et reste la référence si une
+refonte de la mémoire devait être envisagée un jour (notamment le constat que
+`abs(recompense_interne)` détruit la valence dans le calcul d'`importance`).
+
+**Où en est l'agent** : depuis le jour 3510 au Doctorat, une seule victoire puis 1490 jours
+sans — mais les records de proximité au But **montent** (7,68 → 9,14 par jour, +19 %) et
+l'erreur JEPA continue de descendre. C'est le motif exact observé au Collège avant la percée :
+une phase lente, pas un mur.
+
+⚠️ **Point de vigilance** : le bus est à **80 dims** pour un plafond `DIM_BUS_MAX` de **96**.
+La neurogenèse va bientôt s'arrêter. Une stagnation *après* avoir atteint 96 dims serait un
+signal de nature différente — un manque de **capacité**, non de temps.
+
+### Nouveautés v33.0 étapes 0 → 0.6 (expérimental) — La Chronométrie des Jalons, le Test d’Ablation Inversée & la Chronologie des Victoires (2026-08-04)
+
+> ⚠️ **Statut expérimental** : vit uniquement dans `src/naulthene/cerveau/noyau.py` (gitignoré), pas encore porté sur `src/naulthene/cerveau/colab.py`.
+
+Cette version ne livre **aucune mécanique cognitive** : elle livre les deux instruments qui
+doivent décider de la suivante. C'est l'application stricte de la méthode posée en v30.1 —
+*mesurer avant de refondre* — sur la question ouverte depuis des centaines de jours : **pourquoi
+l'agent n'atteint-il jamais le Palier 7 ?**
+
+**🔬 Ce que le run de 700 jours a révélé (run `50ac6kz0`, cerveau neuf)**
+
+| Fait mesuré | Valeur |
+|---|---|
+| Arrivée au Palier 7 | jour **94** |
+| Jours passés au Palier 7 | **607** |
+| Réussites | **1** — le jour 94 lui-même |
+| Portage (clé en main) | **51,4 %** des ticks |
+| Portes franchies / sorties | **42 jours** / **0** |
+
+L'agent **prend la clé, la transporte, déverrouille et franchit la porte** — puis ne sort
+jamais *sur cette fenêtre d'observation*. Et la seule victoire du run est le **jour de la
+promotion**, c'est-à-dire le dernier jour où le guidage (`RECOMPENSE_APPROCHE_BUT`) était
+encore actif : dès son retrait, plus rien en 606 jours.
+
+> ⚠️ **Lecture corrigée depuis (2026-08-05)** — la conclusion « le segment final n'est pas
+> *lent*, il est *jamais franchi* » que ce tableau avait inspirée est **fausse**. Le run de
+> 5000 jours montre 69 victoires et un cursus complet : 700 jours ne suffisaient simplement
+> pas à observer un apprentissage dont la constante de temps se compte en milliers de jours.
+> Voir la [conclusion du cycle v33](#-conclusion-du-cycle-v33--le-cursus-est-terminé-le-blocage-nexistait-pas-2026-08-05).
+
+❌ **Une hypothèse infirmée par la mesure** : « l'agent erre avec la clé en cherchant à manger »
+est faux — il ne consomme que **1,4 ressource par jour**. Comme la v31.1 avait écarté « le rêve
+cristallise des réflexes d'échec », la donnée corrige l'intuition.
+
+**Étape 0 — le Chronomètre de Jalons** (`ChronometreJalonsDoorKey`, section 3h)
+
+Découpe chaque épisode en trois deltas : **Δt1** (vers la clé), **Δt2** (clé → porte), **Δt3**
+(porte → sortie), plus un compteur de **conflit viscéral** (ressources mangées clé en main).
+
+Décision de conception centrale : un segment jamais atteint retourne **`None`, jamais `0`**, et
+n'entre ni au numérateur ni au dénominateur. Sans cette séparation, « le segment est lent » et
+« le segment n'est jamais atteint » — deux diagnostics **opposés** — se confondraient. Le bilan
+console affiche explicitement `JAMAIS ATTEINT (n=0)`.
+
+**Étape 0.5 — le Test d'Ablation Inversée** (`QUETE_AUTO_EN_MODE_LIBRE`, **`False` par défaut**)
+
+`DetecteurProgresPersonnel` était exclu de DoorKey pour éviter un double guidage — **mais cette
+exclusion est caduque en Mode Libre**, où `RECOMPENSE_APPROCHE_BUT` est déjà coupée. Le drapeau
+rétablit donc le gradient manquant sur le dernier segment, pour établir la causalité.
+
+⚠️ C'est un **instrument de diagnostic, pas une mécanique** : s'il débloque le Palier 7, il doit
+être remis à `False`. La vraie solution doit émerger de la mémoire (valence + replay orienté),
+jamais d'une béquille permanente — voir
+[docs/Old_Archive_rmd/CONCEPTION_v33_memoire_emotionnelle.md](docs/Old_Archive_rmd/CONCEPTION_v33_memoire_emotionnelle.md).
+
+**Garantie de non-régression** : les deux étapes sont purement observationnelles. L'empreinte MD5
+des 400 actions à graine fixée est **identique** avec et sans elles (`6573f2fd045d`, vérifié par
+neutralisation différentielle) — ni la décision, ni le gradient, ni la dopamine ne sont touchés.
+
+#### Étape 0.6 — La Chronologie des Victoires : hasard ou apprentissage ?
+
+Les jalons disent **où** l'agent bloque dans un épisode. Cette étape répond à une question
+différente, et qui décide du sort de la v33 : sur des centaines de jours, **progresse-t-il ?**
+
+Le run instrumenté a relevé 7 victoires au Palier 7, espacées de **60, 38, 90, 17, 109 et 217**
+jours. Deux lectures restaient possibles, et elles n'appellent pas le même correctif :
+
+| Régime | Signature | Conséquence |
+|---|---|---|
+| **Stationnaire** | intervalles stables | l'agent gagne au hasard et **ne retient rien** → le Replay Orienté est le bon chantier |
+| **Convergent** | intervalles qui se resserrent | il apprend déjà lentement → c'est la **vitesse** qu'il faut traiter, pas la mémoire |
+
+`Victoire_Tendance_Ratio` (moyenne de la 2ᵉ moitié des intervalles ÷ 1ʳᵉ moitié) tranche :
+**< 0.8** elles se rapprochent, **≈ 1.0** stationnaire, **> 1.25** elles s'espacent. Aucun ratio
+n'est publié sous 4 intervalles — en dessous, une seule victoire chanceuse ferait basculer le
+chiffre du simple au double.
+
+Ces compteurs sont des compteurs de **vie**, pas de journée : ils sont délibérément tenus hors
+de `_reinitialiser_buffers_journee` et **persistés dans le `.brain`**, sans quoi la question
+resterait sans réponse précisément sur les cerveaux qui ont le plus de vécu.
+
+⚠️ **Un second verrou, indépendant, a été découvert au passage** : `VICTOIRES_REQUISES = 2` exige
+deux victoires sur des jours **consécutifs**, alors que l'écart minimum observé est de 17 jours.
+La promotion de niveau est donc aujourd'hui **mathématiquement inatteignable** au Palier 7, quel
+que soit le gain de la v33. Aucun correctif appliqué — arbitrage en attente.
+
+### Nouveautés v32.0 (expérimental) — L'Odorat Topologique & la Clinotaxie (2026-08-03)
+
+> ⚠️ **Statut expérimental** : vit dans `src/naulthene/cerveau/noyau.py` (gitignoré), `bus_sensoriel.py` et `persistance.py`, pas encore porté sur `src/naulthene/cerveau/colab.py`.
+
+La v30.0 avait donné à l'odorat la bonne **forme** (atténuation exponentielle). Cette version lui
+donne la bonne **géométrie**, et surtout apprend au cerveau à le *lire*.
+
+* **L'odeur cesse de traverser les murs.** La distance était calculée à vol d'oiseau, sans jamais
+  consulter la grille. Ce n'était pas une imprécision mais un **gradient trompeur** : l'agent qui
+  suit une odeur à travers une cloison s'englue contre la paroi. Un gradient faux est pire que pas
+  de gradient — `integrateur_bio` ne peut pas apprendre à ignorer un signal qui n'est faux qu'une
+  partie du temps. La distance devient celle d'un **BFS multi-sources**, pour un coût *inférieur* à
+  la double boucle de scan qu'il remplace.
+* **La porte fermée « fuit ».** Choix assumé contre l'option « bloquante comme un mur » : une porte
+  close arrête l'air, pas les molécules — et surtout, la bloquer rendrait l'odorat inutile
+  précisément quand l'agent cherche la clé de cette porte. Elle ajoute un **surcoût de +4 cases** :
+  l'odeur passe dessous, atténuée, et le gradient se renforce brutalement dès l'ouverture.
+* **La clinotaxie — le cerveau n'était pas aveugle, il était aveugle *au mouvement*.**
+  `integrateur_bio` recevait `S_t` sans aucun état interne : il ne pouvait pas savoir si son dernier
+  pas l'avait rapproché d'une ressource. `DIM_VECTEUR_BIO` passe de 32 à 34 dims (**en queue**) pour
+  porter `ΔS = S_t − S_{t−1}`, normalisé avec **0.5 = neutre**. C'est ce qui débloque les petites
+  cartes : sur `DoorKey-6x6`, `S_t` varie peu d'une case à l'autre, mais le **signe** de ΔS bascule
+  proprement à chaque pas.
+* **🐛 Un bug de persistance latent depuis la v29.0, découvert et corrigé.** La première **nuit**
+  d'un cerveau greffé plantait (`tensor a (80) must match tensor b (82)`) : les moments Adam
+  restaient chargés à l'ancienne largeur, parce que la détection de greffe ne regardait que les
+  couches *entièrement absentes* — or une greffe par recopie n'en produit aucune. Le crash
+  n'apparaissait ni au chargement ni pendant la journée, donc **invisible** au protocole de
+  validation « 30 ticks post-résurrection » des v29/v30.
+* **Validé sur un `.brain` réel de 280 000 ticks** : greffé 80 → 82 dims, 80 colonnes historiques
+  recopiées **au bit près**, palier vocal 19/19 préservé, cycle complet journée → nuit → sauvegarde
+  → rechargement → 2ᵉ nuit.
+
+> ⚠️ **Ce que cette version ne prouve pas.** `Sens_Odorat_Taux_Approche` affiche 70,4 % sur le run
+> de validation, mais sur **27 ticks de variation seulement** (un nouveau-né ne change de case que
+> 23 fois en 400 ticks). Ce n'est pas un résultat, seulement la preuve que la métrique fonctionne.
+> La clinotaxie est un apprentissage, pas un câblage : seul un run long dira si l'agent **suit** le
+> gradient (≫ 50 %) ou le parcourt au hasard (≈ 50 %) — auquel cas ces 2 dims seraient à remettre
+> en cause, comme l'ont été les 182 doublons de la v31.1.
+
+> ⚠️ **`λ` reste à 0.8**, conformément à la méthode « instrumenter d'abord » de la v30.1. Le BFS
+> augmentant mécaniquement les distances dans les labyrinthes, l'hypothèse est qu'il corrige à lui
+> seul l'extinction trop rapide au Doctorat — à vérifier sur un run `MultiRoom` **avant** de rendre
+> λ adaptatif. L'habituation au capteur a été **écartée** : un filtre `max(0, S − α·S_lissé)` est
+> une dérivée en moins lisible, qui détruirait la moitié du signal (tout l'éloignement) que la
+> clinotaxie vient précisément d'apporter.
 
 ### Nouveautés v31.1 (expérimental) — La Déduplication Mnésique & le Cap de Densité Spatiale (2026-08-02)
 
