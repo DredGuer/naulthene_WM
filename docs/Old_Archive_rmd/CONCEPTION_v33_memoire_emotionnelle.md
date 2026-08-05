@@ -1,6 +1,35 @@
 # CONCEPTION v33 — La Mémoire Émotionnelle & le Replay Orienté
 
-> **Statut : PROPOSITION — aucune ligne de code écrite.**
+> # 🗄️ ARCHIVÉ — 2026-08-05
+>
+> **Le chantier décrit ici n'a PAS été ouvert, et sa prémisse a été INFIRMÉE par la mesure.**
+>
+> Ce document proposait la Valence et le Replay Orienté pour corriger un agent supposé
+> incapable de retenir ses victoires. Les étapes 0 → 0.6 qu'il prescrivait ont été livrées
+> (chronométrie des jalons, ablation inversée, chronologie des victoires) — et c'est
+> précisément cette instrumentation qui a démenti le diagnostic :
+>
+> | Hypothèse de ce document | Ce que le run de 5000 jours a mesuré |
+> |---|---|
+> | « L'agent ne retient rien, ses victoires sont du bruit stationnaire » | **Ratio de tendance 0,65** au Collège sur 45 intervalles — les victoires **se rapprochent** (126 → 50 → 65 → 51 jours par quart) |
+> | « Le Palier 7 est un mur infranchissable » | **Franchi au jour 3335**, puis Lycée, Université et **Doctorat** atteints — le cursus complet |
+> | « La promotion est mathématiquement inatteignable (2 victoires consécutives) » | **Faux** : trois enchaînements à 2 jours d'écart (j1083→1085, j1839→1841, j2769→2771) |
+>
+> **La leçon méthodologique, qui est la vraie valeur de cette archive** : le blocage
+> diagnostiqué sur 700 jours n'était pas un blocage, mais une **phase d'apprentissage lente**
+> observée trop tôt. Trois conclusions successives (« mur absolu », « désert de signal »,
+> « verrou du cursus ») ont été tirées d'échantillons trop courts, et toutes trois démenties
+> par un run plus long. Aucune des mécaniques proposées ici n'aurait traité un problème réel.
+>
+> Ce qui reste valable et mérite d'être relu avant toute future refonte de la mémoire : le
+> constat que `abs(recompense_interne)` **détruit la valence** dans le calcul d'`importance`
+> (§2), les **options écartées** et leurs raisons (§3 — fusion des mémoires, typage dans le
+> tissu synaptique), et les **risques identifiés** (§6).
+>
+> Pour l'état courant : [../../readme.md](../../readme.md),
+> [../CHANGELOG.md](../CHANGELOG.md), [../LANCEMENT.md](../LANCEMENT.md).
+
+> **Statut d'origine : PROPOSITION — aucune ligne de code écrite.**
 > Document de cadrage soumis à arbitrage utilisateur. Il précise ce qui est proposé, ce
 > qui est **écarté et pourquoi**, l'ordre des incréments, et ce qu'il faut **mesurer
 > avant** chacun. Rien ne doit être implémenté avant les arbitrages de la §8.

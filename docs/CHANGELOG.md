@@ -101,6 +101,91 @@ débloque la sortie, les 42 franchissements ne représentent que **7 %** des jou
 
 ---
 
+## [33.0-conclusion] - 2026-08-05
+
+### Le cursus est terminé — le blocage n'existait pas, la v33 est close sans être ouverte
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | docs (clôture de cycle) + archivage |
+| **Impact** | Documentation — **aucun code modifié** |
+
+**Run de 5000 jours (`8q37yinf`, cerveau neuf, v33 instrumentée). L'agent a franchi les CINQ niveaux du `PROGRAMME` et atteint le Doctorat.**
+
+| Jour | Promotion |
+|---|---|
+| 66 | Primaire → Collège |
+| **3335** | Collège → **Lycée** ← le déblocage |
+| 3465 | Lycée → Université |
+| 3509 | Université → **Doctorat** |
+
+**69 victoires** au total, contre 9 sur le run de 700 jours.
+
+**La tendance, mesurée sur 45 intervalles (Collège / DoorKey)**
+
+| | Moyenne |
+|---|---|
+| 1ʳᵉ moitié | 88,3 j |
+| 2ᵉ moitié | 57,7 j |
+| **Ratio** | **0,65 ↘️ se rapprochent** |
+
+Par quart : **126 → 50 → 65 → 51** jours. Cadence : 4 victoires par tranche de 500 jours au
+début, **13** sur la tranche 2500-2999. Avec 45 intervalles, le résultat est solide — plus
+rien à voir avec les 4 points du run précédent. **L'agent apprend réellement, très lentement.**
+
+**Trois diagnostics successifs, tous INFIRMÉS par un run plus long**
+
+| Conclusion tirée | Fondée sur | Verdict du run de 5000 jours |
+|---|---|---|
+| « Δt3 est un **mur absolu**, l'agent ne sort jamais » | run 700 j, 1 victoire | **Faux** — 69 victoires, cursus complet |
+| « Les victoires sont du **bruit stationnaire**, il ne retient rien » | 6 intervalles lus à la main | **Faux** — ratio 0,65, tendance nette |
+| « La promotion est **mathématiquement inatteignable** (2 victoires consécutives exigées, 17 j d'écart minimum) » | run 700 j | **Faux** — 3 enchaînements à 2 jours d'écart (j1083→1085, j1839→1841, j2769→2771) |
+
+**La leçon méthodologique — et c'est le vrai résultat de ce cycle**
+
+Le projet a une doctrine explicite depuis la v30.1 : *instrumenter d'abord, calibrer ensuite*.
+Ce cycle en révèle le corollaire manquant : **une mesure juste sur un échantillon trop court
+produit une conclusion fausse**. Les trois diagnostics ci-dessus étaient rigoureux, chiffrés,
+reproductibles — et faux, parce que 700 jours ne suffisaient pas à observer un apprentissage
+dont la constante de temps est de l'ordre du millier de jours.
+
+Le chantier Valence & Replay Orienté aurait traité un problème **qui n'existe pas**.
+
+**État actuel — le Doctorat est une phase lente, pas un mur**
+
+Depuis le jour 3510 : une seule victoire, puis 1490 jours sans. Mais les indicateurs montent :
+
+| Tranche de 300 j | Records de proximité au But / jour |
+|---|---|
+| 3510-3809 | 7,68 |
+| 4110-4409 | 8,09 |
+| 4710-5009 | **9,14** |
+
+**+19 %**, et l'erreur JEPA continue de descendre (0,00093 → 0,00068) : l'agent modélise
+`MultiRoom` de plus en plus finement et s'approche du but de mieux en mieux. C'est
+**exactement** le motif observé au Collège (3269 jours de montée avant la percée du j3335) —
+et le Doctorat n'a que 1490 jours derrière lui.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `docs/Old_Archive_rmd/CONCEPTION_v33_memoire_emotionnelle.md` | **Archivé** (`git mv`), bandeau expliquant que la prémisse est infirmée et ce qui reste valable (le `abs()` qui détruit la valence, les options écartées, les risques) ; 4 liens entrants corrigés |
+| `docs/Old_Archive_rmd/README.md` | Entrée d'index avec statut « jamais ouverte — prémisse infirmée » |
+| `docs/CHANGELOG.md`, `readme.md`, `docs/LANCEMENT.md` | Cette entrée + résultats du run |
+
+**Ce qui reste acquis de ce cycle** : trois instruments de mesure livrés et validés
+(`ChronometreJalonsDoorKey`, `QUETE_AUTO_EN_MODE_LIBRE`, chronologie des victoires), tous
+**purement observationnels** — empreinte MD5 des 400 actions inchangée (`6573f2fd045d`) à
+travers les quatre étapes. Ce sont eux qui ont permis de trancher, et ils resteront utiles
+pour juger toute mécanique future.
+
+⚠️ **Point de vigilance pour la suite** : le bus est à **80 dims**, le plafond
+`DIM_BUS_MAX` est à **96**. La neurogenèse va bientôt s'arrêter. Si l'agent stagne au
+Doctorat **après** avoir atteint 96 dims, ce sera un signal de nature différente — un manque
+de **capacité**, non de temps — et cette fois un motif légitime d'intervention.
+
+---
+
 ## [33.0-etape0.6-fix1-experimental] - 2026-08-04
 
 ### La tendance était fausse — segmentation des intervalles par contexte
@@ -306,7 +391,7 @@ juger la v33 sur `Jalon_Taux_Atteinte_Sortie` sans attendre de promotion.
 | **Catégorie** | feat (télémétrie, expérimentale) |
 | **Impact** | Fonctionnel (observabilité — **aucun** impact sur la décision, le gradient ou la dopamine) |
 
-**Arbitrage utilisateur : viser la mémoire humaine, mais utiliser le Palier 7 comme juge de paix. Séquencement strict imposé — Étape 0 (télémétrie) « non négociable » AVANT tout chantier de Mémoire Émotionnelle. Voir [CONCEPTION_v33_memoire_emotionnelle.md](CONCEPTION_v33_memoire_emotionnelle.md) pour le cadrage complet et les options écartées.**
+**Arbitrage utilisateur : viser la mémoire humaine, mais utiliser le Palier 7 comme juge de paix. Séquencement strict imposé — Étape 0 (télémétrie) « non négociable » AVANT tout chantier de Mémoire Émotionnelle. Voir [CONCEPTION_v33_memoire_emotionnelle.md](Old_Archive_rmd/CONCEPTION_v33_memoire_emotionnelle.md) pour le cadrage complet et les options écartées.**
 
 **Le problème : un diagnostic non mesuré.**
 
@@ -358,7 +443,7 @@ ouverte au reset ne doit pas être datée au tick 0).
 | Fichier modifié | Changement |
 |-----------------|------------|
 | `src/naulthene/cerveau/noyau.py` | Nouvelle section **3h** `ChronometreJalonsDoorKey` ; instanciation dans `EtatCognitif` ; 8 compteurs journaliers dans `_reinitialiser_buffers_journee` ; appels dans `traiter_tick` (observation + 2 sites de consommation) ; récolte des deltas avant le `reset()` de fin d'épisode ; réinitialisation dans `demarrer_journee` et en fin d'épisode ; ligne de bilan « Jalons DoorKey » ; **6 clés W&B conditionnelles** |
-| `docs/CONCEPTION_v33_memoire_emotionnelle.md` | **Nouveau.** Cadrage complet de la v33 : valence, replay orienté, liage multimodal — avec les options **écartées** et leurs raisons |
+| `docs/Old_Archive_rmd/CONCEPTION_v33_memoire_emotionnelle.md` | **Nouveau.** Cadrage complet de la v33 : valence, replay orienté, liage multimodal — avec les options **écartées** et leurs raisons |
 
 **Validation** :
 - **Invariance comportementale PROUVÉE par différentiel** : l'empreinte MD5 des 400 actions

@@ -1152,7 +1152,7 @@ posteriori :
 ⚠️ **Remettre `QUETE_AUTO_EN_MODE_LIBRE = False` après la mesure.** Ce drapeau rétablit
 artificiellement le gradient manquant vers le But : s'il débloque le Palier 7, il **prouve** la
 nature du blocage, il ne le **résout** pas. La vraie solution doit émerger de la mémoire —
-voir [CONCEPTION_v33_memoire_emotionnelle.md](CONCEPTION_v33_memoire_emotionnelle.md).
+voir [CONCEPTION_v33_memoire_emotionnelle.md](Old_Archive_rmd/CONCEPTION_v33_memoire_emotionnelle.md).
 
 ### 14c. Ce que le run de 700 jours a déjà établi
 

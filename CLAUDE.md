@@ -241,7 +241,7 @@ Utiliser le hash court réel du commit (`git rev-parse --short HEAD`) une fois l
 
 ### 3. Archivage documentaire (`docs/Old_Archive_rmd/`, depuis v30.1)
 
-`docs/` ne contient que des **documents vivants** (5 aujourd'hui). Un document rejoint
+`docs/` ne contient que des **documents vivants** (4 aujourd'hui). Un document rejoint
 `docs/Old_Archive_rmd/` quand sa mécanique est **livrée et documentée ailleurs** — jamais parce
 qu'il est simplement « vieux ». Un cadrage archivé reste précieux : il garde la trace des options
 **écartées** et de leurs raisons, ce qu'aucun document à jour ne raconte, et c'est ce qui évite
