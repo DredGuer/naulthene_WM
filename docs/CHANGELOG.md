@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `3f4157d` |
 | **Catégorie** | feat (télémétrie pure, expérimental) |
 | **Impact** | **Aucun sur le comportement** — invariance validée par empreinte MD5 |
 
@@ -65,7 +65,7 @@ renforcerait ce biais.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `3f4157d` |
 | **Catégorie** | feat (instrument de diagnostic, expérimental) |
 | **Impact** | Fonctionnel (**instrument en lecture seule** — ne modifie aucun `.brain`, n'entraîne rien) |
 
