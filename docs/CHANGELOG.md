@@ -4,6 +4,161 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [34.0-etape0-experimental] - 2026-08-06
+
+### Télémétrie de calibrage Fatigue/Mortalité/Soin — et le fait qui bloque le chantier
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | feat (télémétrie pure, expérimental) |
+| **Impact** | **Aucun sur le comportement** — invariance validée par empreinte MD5 |
+
+**🔒 INVARIANCE PROUVÉE**
+
+Empreinte `efb6ff6506e852ed` **identique** avec et sans les appels de télémétrie
+(neutralisation différentielle à graine fixée, 400 ticks, protocole v33). Aucune valeur
+mesurée n'est lue par `penser()`, le gradient ou la dopamine.
+
+**📊 CE QUI A ÉTÉ MESURÉ** (`REFERENCE_5000j`, 2 j × 400 ticks, 5 niveaux)
+
+| Niveau | Ressources | **Autonomie** | Ticks critiques | Déficit moy / max |
+|---|---|---|---|---|
+| Primaire | 8 | **0,0 %** | **100 %** | 2,49 / 2,95 |
+| Collège | 8 | **0,0 %** | **100 %** | 2,93 / 3,00 |
+| Lycée | 8 | **0,0 %** | **100 %** | 2,94 / 3,00 |
+| Université | 10 | **0,0 %** | **100 %** | 2,98 / 3,00 |
+| Doctorat | 16 | **0,0 %** | **100 %** | 2,99 / 3,00 |
+
+**🔴 LE FAIT QUI CHANGE LE PLAN : l'agent est déjà mort.**
+
+`Autonomie_Jauges = 0,0 %` sur les 5 niveaux : à **aucun tick** l'agent ne maintient ses
+trois jauges au-dessus du seuil critique. Déficit à **2,99 sur 3,00** — satiété,
+hydratation et stimulation sont à **0,00** en permanence.
+
+Conséquence : **l'Étape 3 (la mort) est déjà satisfaite par l'état actuel.** Un seuil létal
+tuerait l'agent au premier tick, sur tous les niveaux, quelle que soit sa compétence.
+
+**🟢 LE BLOCAGE §7.4 EST LEVÉ**
+
+Les cartes contiennent **8 à 16 sources** de nourriture/eau, **y compris au Doctorat**.
+L'odorat à 0,0 % du run de 5000 jours n'était pas une absence de ressources, mais la
+conséquence d'un agent qui ne les atteint jamais. Peupler l'environnement n'est plus un
+préalable.
+
+**🟠 LE RISQUE §4 EST CONFIRMÉ ET CHIFFRÉ**
+
+Avancer coûte **0,510**, tourner **0,270** — un facteur **1,9** — et l'agent avance
+**6,5 %** du temps. Une fatigue branchée naïvement sur `calculer_effort_metabolique`
+renforcerait ce biais.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | 14 compteurs dans `_reinitialiser_buffers_journee`, accumulation en lecture seule dans `traiter_tick`, `_compter_ressources_grille()` (1×/épisode), ligne console `Calibrage v34`, 14 clés `Calibrage_*` inconditionnelles |
+| `docs/CONCEPTION_v34_fatigue_mortalite.md` | cadrage complet + section « Étape 0 livrée » avec les mesures |
+
+---
+
+## [33.1-experimental] - 2026-08-05
+
+### Le Banc d'Ablation — la lobotomie contrôlée
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | feat (instrument de diagnostic, expérimental) |
+| **Impact** | Fonctionnel (**instrument en lecture seule** — ne modifie aucun `.brain`, n'entraîne rien) |
+
+**🔬 POURQUOI — le run de 5000 jours a dit « non »**
+
+Le run `az794yzw` (jours 5001→10000, cerveau `040820262343_V33_5000_RMD`) répond sans
+ambiguïté à la question « évolution ou non » :
+
+| Indicateur | j5001-6000 | j9001-10000 | Verdict |
+|---|---|---|---|
+| **Victoires cumulées** | **69** | **69** | **0 en 5000 jours** |
+| Portes / jour | 0,77 | 0,81 | plat |
+| Records / jour | 8,96 | 9,11 | plat |
+| Erreur JEPA | 0,00067 | 0,00064 | plat |
+| Dopamine | 6,20 | 6,43 | plat |
+| Neurogenèse | 80 dims | 80 dims | **aucune** |
+| Sursauts de Volonté | — | — | **0 sur 5000 jours** |
+
+Dernière victoire : **jour 3510**, soit 6490 jours avant la fin du run. L'agent a
+**convergé** — il n'apprend plus, ne régresse pas. Le temps seul ne débloque plus rien.
+
+Une ablation, elle, répond **en binaire, par composant** : ce qui ne dégrade rien quand on
+le coupe ne portait rien.
+
+**🧠 CE QUE LE BANC A DÉJÀ MESURÉ — C2 est nuisible au Primaire**
+
+Reproduit sur **3 graines indépendantes** (`Empty-8x8`, le niveau le plus simple, franchi
+au jour 66) :
+
+| Graine | Témoin | `c2_coupe` | Δ |
+|---|---|---|---|
+| 1789 | **0,0 %** | **35,0 %** | **+35 pp** |
+| 7 | **0,0 %** | **20,0 %** | **+20 pp** |
+| 424242 | **0,0 %** | **33,3 %** | **+33 pp** |
+
+Le diagnostic explique le mécanisme :
+
+| Mesure | Témoin | `c2_coupe` | Lecture |
+|---|---|---|---|
+| **accord C1↔C2** | **0,000** | 1,000 | C2 contredit le réflexe à **100 %** des ticks |
+| **sur-place** | **0,956** | 0,897 | l'agent ne change pas de case 95,6 % du temps |
+| **couverture** | **0,033** | 0,068 | ×2 de cases explorées sans C2 |
+| dist. min. au But | 4,9 | **2,1** | il s'approche physiquement plus près |
+
+`accord_c1_c2 = 0,000` est le chiffre décisif : **C1 et C2 ne sont jamais d'accord**, pas
+une seule fois sur 16 épisodes. Combiné à des logits d'instinct ~30× plus faibles que
+l'arbitrage (±0,03 contre ±0,74), cela signifie que `logits_instinct + valeurs_simulees ×
+force` est **entièrement dominé par C2**, et que le réflexe n'a aucun pouvoir correcteur.
+
+⚠️ Mesuré **au Primaire seulement**. C2 pourrait être utile au Doctorat, où la
+planification longue a un sens — c'est ce que le banc complet (65 cellules) doit trancher.
+
+**⚙️ CE QUI A ÉTÉ CONSTRUIT**
+
+| Fichier | Changement |
+|---|---|
+| `src/naulthene/instruments/banc_ablation.py` | **nouveau** — 13 lésions × 5 niveaux, copie par cellule, diagnostic C1/C2, publication W&B |
+| `docs/LANCEMENT.md` | **§15** — lancement, catalogue des lésions, grille de lecture |
+| `docs/les_sens_combinatoire.md` | **§9 bis** — disponibilité réelle des sens mesurée sur ce run |
+
+Treize lésions, en deux familles : **sens** (vue, ouïe, toucher, odorat, goût, Exo-Sens,
+vecteur bio entier) et **cognition** (C2 coupé, C2 myope, épisodique, spatiale,
+hippocampe).
+
+**🐛 ERREUR DE CONCEPTION CORRIGÉE — la politique gloutonne**
+
+La première version du banc utilisait `argmax` pour « supprimer le hasard », présenté comme
+une garantie de rigueur. **C'était faux, et mesurable** : en argmax, l'agent joue l'action 0
+(tourner à gauche) **en boucle infinie** et échoue même sur `Empty-8x8`.
+
+La cause : un agent entraîné par **REINFORCE apprend une politique stochastique**. Son mode
+déterministe n'est pas « sa meilleure version », c'est un régime qu'il n'a **jamais connu**
+pendant l'entraînement. Mesurer l'argmax, c'est mesurer un agent qui n'existe pas.
+
+Corrigé par un `multinomial` identique à `traiter_tick`, avec un générateur à graine fixée :
+**la reproductibilité vient de la graine, jamais de la suppression du hasard.** Le premier
+run a été tué avant de produire 65 cellules de résultats faux.
+
+**🔒 LES CINQ GARANTIES**
+
+1. Le cerveau de référence n'est **jamais** touché — une copie par cellule, supprimée après
+2. **Aucun apprentissage** — `torch.no_grad()`, ni `apprendre_journee`, ni `executer_nuit`,
+   ni `sauvegarder` : un cerveau qui apprendrait mesurerait l'apprentissage, pas la lésion
+3. **Graine identique** pour toutes les cellules — mêmes cartes, même ordre
+4. **Politique stochastique**, jamais gloutonne (voir ci-dessus)
+5. **Masques, jamais d'amputation de poids** — supprimer une couche déclencherait une greffe,
+   et on mesurerait la greffe
+
+Le seuil de verdict est l'**intervalle de confiance à 95 %** de chaque cellule, jamais un
+chiffre fixe : un écart sous la marge d'erreur est déclaré `inerte`, pas « petit effet ».
+
+---
+
 ## [33.0-etape0.5-experimental] - 2026-08-04
 
 ### Le Test d'Ablation Inversée — la quête auto en Mode Libre + LECTURE DU RUN DE 700 JOURS

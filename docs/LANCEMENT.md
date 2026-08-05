@@ -1173,6 +1173,215 @@ seule victoire est le jour de la promotion, c'est-à-dire le dernier jour où
 
 ---
 
+## 15. Le Banc d'Ablation — la lobotomie contrôlée (v33.1-expérimental)
+
+`src/naulthene/instruments/banc_ablation.py` prend un `.brain` entraîné, en fait **une copie
+par lésion**, et mesure ce que chaque lésion coûte. Instrument de **diagnostic**, jamais
+d'entraînement.
+
+> **Pourquoi.** Le run `az794yzw` (jours 5001→10000) a montré un agent **convergé** :
+> 0 victoire en 5000 jours, portes 0,77→0,81, JEPA plat à 0,0006, 0 neurogenèse, 0 sursaut.
+> Le temps seul ne débloque plus rien. Une ablation, elle, répond **en binaire, par
+> composant** : ce qui ne dégrade rien quand on le coupe ne portait rien.
+
+### 15a. Lancer le banc
+
+```bash
+# Toujours travailler sur une COPIE, jamais sur le cerveau du run
+mkdir -p brains/ablations
+cp brains/040820262343_V33_5000_RMD.brain brains/ablations/REFERENCE_5000j.brain
+md5 brains/040820262343_V33_5000_RMD.brain brains/ablations/REFERENCE_5000j.brain  # doivent être identiques
+
+# Banc complet : 13 lésions × 5 niveaux = 65 cellules
+WANDB_MODE=offline PYTHONPATH=src python -m naulthene.instruments.banc_ablation \
+    --brain brains/ablations/REFERENCE_5000j.brain \
+    --jours 60 --episodes 3 --tous-niveaux \
+    --sortie brains/ablations/resultats_complet.json
+```
+
+| Option | Rôle |
+|---|---|
+| `--jours N --episodes M` | volume par cellule (N×M épisodes). 60×3 = 180 : assez pour un taux à ±3 pts |
+| `--tous-niveaux` | les 5 niveaux du `PROGRAMME` (défaut : le dernier seulement) |
+| `--niveaux 0,4` | une sélection d'indices |
+| `--lesions temoin,c2_coupe` | une sélection de lésions (`temoin` est **toujours** ajouté) |
+| `--graine` | fixée à 1789 par défaut, **identique pour toutes les cellules** |
+| `--sans-wandb` | rapport console + JSON seulement |
+
+### 15b. Les 13 lésions
+
+| Famille | Lésion | Ce qu'elle neutralise |
+|---|---|---|
+| référence | `temoin` | rien — la base de comparaison |
+| sens | `vue_coupee` | l'observation visuelle (tenseur à zéro) |
+| sens | `ouie_coupee` | l'entrée auditive (`None`, chemin natif) |
+| sens | `toucher_coupe` | les 4 dims tactiles |
+| sens | `odorat_coupe` | odeurs **et** clinotaxie (neutre **0.5**, pas 0.0) |
+| sens | `gout_coupe` | les 2 dims de goût |
+| sens | `exo_coupe` | les 8 dims de l'Exo-Sens |
+| sens | `bio_coupe` | tout le `vecteur_bio` |
+| cognition | `c2_coupe` | `force_planification = 0` — C2 tourne mais n'influence plus |
+| cognition | `c2_horizon_court` | horizon réduit à `(1,)` — C2 myope |
+| cognition | `episodique_coupe` | le contexte épisodique |
+| cognition | `spatiale_coupee` | la mémoire spatiale, vidée à chaque épisode |
+| cognition | `hippocampe_fige` | la mémoire de travail |
+
+### 15a-bis. Les variantes prêtes à l'emploi
+
+> ⚠️ **Un seul banc à la fois par fichier `--sortie`.** Deux runs qui partagent le même
+> chemin s'écrasent mutuellement — chaque variante ci-dessous a donc sa propre sortie.
+
+**A. C2 est-il nuisible partout ? (le test prioritaire, 3 graines)**
+
+```bash
+for G in 1789 7 424242; do
+WANDB_MODE=offline PYTHONPATH=src python -m naulthene.instruments.banc_ablation \
+    --brain brains/ablations/REFERENCE_5000j.brain \
+    --jours 40 --episodes 3 --tous-niveaux \
+    --lesions temoin,c2_coupe,c2_horizon_court \
+    --graine $G --sans-wandb \
+    --sortie "brains/ablations/c2_graine$G.json"
+done
+```
+
+**B. Les sens seuls, sur tous les niveaux**
+
+```bash
+WANDB_MODE=offline PYTHONPATH=src python -m naulthene.instruments.banc_ablation \
+    --brain brains/ablations/REFERENCE_5000j.brain \
+    --jours 40 --episodes 3 --tous-niveaux \
+    --lesions temoin,vue_coupee,ouie_coupee,toucher_coupe,odorat_coupe,gout_coupe,exo_coupe,bio_coupe \
+    --sortie brains/ablations/sens.json
+```
+
+**C. La cognition seule**
+
+```bash
+WANDB_MODE=offline PYTHONPATH=src python -m naulthene.instruments.banc_ablation \
+    --brain brains/ablations/REFERENCE_5000j.brain \
+    --jours 40 --episodes 3 --tous-niveaux \
+    --lesions temoin,c2_coupe,c2_horizon_court,episodique_coupe,spatiale_coupee,hippocampe_fige \
+    --sortie brains/ablations/cognition.json
+```
+
+**D. Haute précision sur les 2 niveaux clés** (marge ±3 pp au lieu de ±7)
+
+```bash
+WANDB_MODE=offline PYTHONPATH=src python -m naulthene.instruments.banc_ablation \
+    --brain brains/ablations/REFERENCE_5000j.brain \
+    --jours 150 --episodes 4 --niveaux 0,4 \
+    --sortie brains/ablations/precision.json
+```
+
+**E. Test rapide (~2 min) — vérifier qu'une modification ne casse rien**
+
+```bash
+WANDB_MODE=offline PYTHONPATH=src python -m naulthene.instruments.banc_ablation \
+    --brain brains/ablations/REFERENCE_5000j.brain \
+    --jours 8 --episodes 2 --niveaux 0 \
+    --lesions temoin,c2_coupe --sans-wandb \
+    --sortie /tmp/test_rapide.json
+```
+
+**F. Comparer deux cerveaux d'époques différentes**
+
+Le problème de C2 existait-il déjà à 700 jours, ou est-il apparu en vieillissant ?
+
+```bash
+cp brains/040820262258_V33_700_RMD.brain brains/ablations/REFERENCE_700j.brain
+
+WANDB_MODE=offline PYTHONPATH=src python -m naulthene.instruments.banc_ablation \
+    --brain brains/ablations/REFERENCE_700j.brain \
+    --jours 40 --episodes 3 --tous-niveaux \
+    --sortie brains/ablations/comparaison_700j.json
+```
+
+**G. Synchroniser vers W&B**
+
+```bash
+wandb sync wandb/offline-run-*
+```
+
+### 15c. Lire le verdict — ce qui marche, ce qui ne marche pas, ce qu'il faut rectifier
+
+Le rapport console classe chaque lésion par son écart au témoin, en points de pourcentage.
+**Le seuil n'est pas un chiffre fixe** : c'est l'intervalle de confiance à 95 % de la
+cellule (≈ ±7 pp sur 180 épisodes). Un écart sous la marge d'erreur est déclaré `inerte`,
+jamais « petit effet ».
+
+| Verdict | Δ | Interprétation | Que faire |
+|---|---|---|---|
+| 🔴 **VITAL** | ≤ −2×seuil | le couper casse l'agent | **conserver tel quel** |
+| 🟠 contribue | ≤ −seuil | apport réel mais modeste | garder, éventuellement renforcer |
+| ⚪ **inerte** | dans la marge | ne porte **aucun** signal utile ici | vérifier le stimulus avant de conclure |
+| 🔵 **NUISIBLE** | ≥ +seuil | l'agent fait **mieux** sans | **RECTIFIER, pas jeter** |
+
+### 15d. Le tableau de diagnostic — le POURQUOI
+
+Sous le verdict, un second tableau explique le mécanisme. C'est lui qui distingue un
+composant à jeter d'un composant à corriger.
+
+| Colonne | Signification | Comment lire |
+|---|---|---|
+| `entropie` | entropie de la politique, en nats | `0` = figée · **`ln(7)=1,946` = hasard pur** |
+| `couverture` | cases distinctes / tick | proche de `0` = **tourne en rond** |
+| `surplace` | ticks sans changer de case | élevé = rotations stériles ou murs |
+| `accordC1C2` | ticks où C1 et C2 veulent la **même** action | **`0` = C2 contredit systématiquement le réflexe** |
+| `|C2|` | amplitude de l'influence de C2 sur l'arbitrage | à comparer aux logits de C1 |
+| `act/7` | actions réellement utilisées sur 7 | `1` = l'agent est bloqué sur une seule |
+
+**Exemple réel** (Primaire, cerveau `REFERENCE_5000j`, 3 graines) :
+
+```
+   —— diagnostic ——      entropie  couvert.  surplace  accordC1C2     |C2|  act/7
+   temoin                   1.840     0.033     0.956       0.000    0.388    7.0
+   c2_coupe                 1.945     0.068     0.897       1.000    0.000    7.0
+```
+
+Lecture : le témoin est à **95,6 % de ticks sur place** et **0,000 d'accord C1↔C2** — C1 et
+C2 ne sont *jamais* d'accord, pas une fois. Couper C2 double la couverture et fait passer
+les victoires de **0 % à 20-35 %** selon la graine. C2 n'est pas inerte : il est
+**nuisible**, et c'est un cas à rectifier (l'arbitrage), pas à supprimer.
+
+> ⚠️ **« Inerte » ne veut pas dire « cassé ».** Un composant peut être inerte faute de
+> stimulus : l'odorat est mesuré à **0,0 % des ticks** au Doctorat, sur des cartes
+> MultiRoom sans nourriture. Le couper ne change évidemment rien. Toujours croiser avec la
+> ligne `Les 5 Sens` des logs avant de conclure qu'un composant est mort.
+
+### 15e. Les cinq garanties du banc
+
+1. **Le cerveau de référence n'est jamais touché** — une copie par cellule, supprimée après.
+2. **Aucun apprentissage** — `torch.no_grad()` partout, ni `apprendre_journee`, ni
+   `executer_nuit`, ni `sauvegarder`. Un cerveau qui apprendrait pendant le test
+   mesurerait l'apprentissage, pas la lésion.
+3. **Graine identique pour toutes les cellules** — mêmes cartes, même ordre. Sans ça,
+   l'écart mesuré mélangerait la lésion et le tirage.
+4. **Politique STOCHASTIQUE** (`multinomial`, comme `traiter_tick`), jamais gloutonne.
+   ⚠️ La première version du banc utilisait `argmax` pour « supprimer le hasard » :
+   mesuré, l'agent joue alors l'action 0 en boucle infinie et échoue même sur
+   `Empty-8x8`. Un agent REINFORCE apprend une politique stochastique — son mode
+   déterministe est un régime qu'il n'a **jamais connu**. La reproductibilité vient de la
+   graine, pas de la suppression du hasard.
+5. **Les lésions sont des masques, jamais des amputations de poids** — supprimer une couche
+   changerait les dimensions et déclencherait une greffe, ce qui mesurerait la greffe.
+
+### 15f. Sorties
+
+- **JSON brut** : `brains/ablations/resultats_complet.json` (toutes les cellules, toutes
+  les mesures, y compris la répartition des 7 actions)
+- **Console** : verdict + tableau de diagnostic, groupés par niveau
+- **W&B** : une `wandb.Table` de 20 colonnes (dont `verdict` et `significatif`) + des
+  séries `Ablation/<niveau>/<lésion>/*` — `taux_victoire`, `delta_pp`, `portes_moy`,
+  `records_moy`, `dist_min_moy`, `entropie`, `couverture`, `sur_place`, `accord_c1_c2`,
+  `ecart_c2`
+
+```bash
+# Synchroniser un banc lancé en WANDB_MODE=offline
+wandb sync wandb/offline-run-*-<id>
+```
+
+---
+
 ## Dépannage rapide
 
 | Symptôme | Cause probable |

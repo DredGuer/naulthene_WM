@@ -1,0 +1,246 @@
+"""LA SONDE DE GRADIENT — l'apprentissage a-t-il seulement démarré ? (v33.1, expérimental)
+
+Instrument de DIAGNOSTIC en lecture seule. Fait vivre à un cerveau une journée complète,
+puis intercepte `apprendre_journee` pour mesurer ce qui arrive RÉELLEMENT à `tete_motrice`.
+
+    Un gradient nul sur la tête motrice = 5000 jours de tirage au sort.
+
+Motivation (banc d'ablation, 2026-08-05) : le cerveau `REFERENCE_5000j` joue l'action
+`forward` dans **5,5 %** des cas et son entropie est de 1,840 sur un maximum de ln(7)=1,946
+— quasi le hasard pur. À 700 jours : 5,7 % et 1,832. **En 4300 jours, rien n'a bougé.**
+Deux explications possibles, que seule cette sonde sépare :
+
+  (a) aucun gradient n'atteint la tête motrice → l'apprentissage n'a jamais démarré ;
+  (b) le gradient arrive mais ne corrige rien → l'apprentissage démarre et échoue.
+
+Ce sont deux problèmes opposés, avec deux réparations opposées. Les confondre coûterait un
+cycle entier (leçon v33).
+
+---
+CE QUE LA SONDE MESURE
+
+1. **Les récompenses du jour** — combien de ticks en reçoivent une, quelle somme.
+   C'est l'entrée du calcul : sans récompense, tout le reste est mécaniquement nul.
+2. **Les returns après normalisation** — `apprendre_journee` centre-réduit les returns.
+   ⚠️ Point critique : si `std <= 1e-6` la normalisation est SAUTÉE (voir le code), mais
+   si tous les rewards sont nuls, les returns le sont aussi et les avantages valent
+   `-valeurs`, ce qui produit un gradient qui n'apprend RIEN d'utile.
+3. **Les avantages** `returns - valeurs.detach()` — le signal qui pondère `log_prob`.
+4. **La norme du gradient PAR COUCHE**, après `backward()` et avant `clip_grad_norm_`.
+   C'est la mesure décisive : `tete_motrice.grad ≈ 0` ⇒ la politique ne bouge pas.
+5. **La part de chaque terme de perte** (JEPA / acteur / critique / entropie) — pour voir
+   qui domine réellement la descente de gradient.
+
+Aucune écriture : le cerveau est chargé depuis une COPIE, jamais sauvegardé.
+
+---
+LANCEMENT
+
+    PYTHONPATH=src python -m naulthene.instruments.sonde_gradient \\
+        --brain brains/ablations/REFERENCE_5000j.brain --jours 3
+
+    # Comparer deux âges de cerveau
+    PYTHONPATH=src python -m naulthene.instruments.sonde_gradient \\
+        --brain brains/ablations/REFERENCE_700j.brain --jours 3 --niveau 0
+"""
+
+import argparse
+import os
+import shutil
+
+import torch
+
+import naulthene.cerveau.noyau as nx
+from naulthene.cerveau.persistance import PersistanceAnatomique
+
+
+# --- 1. L'INTERCEPTION ---
+#
+# On ne modifie PAS `noyau.py` : on remplace `AGI_Naulthene.apprendre_journee` par une
+# version instrumentée le temps de la sonde, puis on restaure l'originale. C'est la même
+# discipline que le banc d'ablation — l'instrument ne laisse aucune trace dans le cerveau
+# ni dans le code de production.
+
+COUCHES_SUIVIES = (
+    "tete_motrice",           # LA politique — c'est elle qui décide de l'action
+    "integrateur_bio",        # l'entrée des sens faibles
+    "porte_visuelle",         # la vue
+    "analyseur", "hippocampe", "fusion_memoire",
+    "generateur_attente",     # le JEPA
+)
+
+
+def instrumenter(agent, journal):
+    """Remplace `apprendre_journee` par une version qui mesure tout avant de déléguer."""
+    originale = agent.apprendre_journee
+
+    def sonde(jepa_losses, log_probs, entropies, valeurs, rewards, dones,
+              gamma=0.95, coeff_entropie=0.02, pertes_vocales=None):
+        mesure = {
+            "ticks": len(rewards),
+            "rewards_non_nuls": sum(1 for r in rewards if r != 0.0),
+            "rewards_somme": float(sum(rewards)),
+            "rewards_max": float(max(rewards)) if rewards else 0.0,
+            "dones": sum(1 for d in dones if d),
+            "log_probs": len(log_probs),
+        }
+
+        # --- Rejeu EXACT du calcul de `apprendre_journee`, en lecture seule ---
+        if log_probs:
+            returns, R = [], 0.0
+            for r, d in zip(reversed(rewards), reversed(dones)):
+                R = r + gamma * (0.0 if d else R)
+                returns.insert(0, R)
+            rt = torch.tensor(returns, dtype=torch.float32, device=nx.DEVICE)
+            mesure["returns_std_avant"] = float(rt.std()) if rt.numel() > 1 else 0.0
+            mesure["returns_abs_moy_avant"] = float(rt.abs().mean())
+            # La normalisation n'a lieu que si l'écart-type est significatif.
+            mesure["normalisation_appliquee"] = bool(
+                rt.numel() > 1 and rt.std() > 1e-6
+            )
+            if mesure["normalisation_appliquee"]:
+                rt = (rt - rt.mean()) / (rt.std() + 1e-8)
+
+            vt = torch.cat(valeurs).squeeze(-1)
+            av = rt - vt.detach()
+            mesure["valeurs_abs_moy"] = float(vt.abs().mean())
+            mesure["avantages_abs_moy"] = float(av.abs().mean())
+            mesure["avantages_std"] = float(av.std()) if av.numel() > 1 else 0.0
+            mesure["entropie_moy"] = float(torch.cat(entropies).squeeze(-1).mean())
+
+        # --- La vraie mise à jour, puis lecture des gradients AVANT qu'ils soient perdus ---
+        #
+        # `apprendre_journee` appelle `optimizer.step()` puis rend la main ; les `.grad`
+        # sont encore présents à ce moment (ils ne sont remis à zéro qu'au DÉBUT de
+        # l'appel suivant, via `zero_grad`). On peut donc les lire juste après.
+        perte = originale(jepa_losses, log_probs, entropies, valeurs, rewards, dones,
+                          gamma=gamma, coeff_entropie=coeff_entropie,
+                          pertes_vocales=pertes_vocales)
+        mesure["perte_totale"] = perte
+
+        normes = {}
+        for nom in COUCHES_SUIVIES:
+            couche = getattr(agent, nom, None)
+            if couche is None:
+                continue
+            total = 0.0
+            for p in couche.parameters():
+                if p.grad is not None:
+                    total += float(p.grad.detach().norm() ** 2)
+            normes[nom] = total ** 0.5
+        mesure["gradients"] = normes
+        journal.append(mesure)
+        return perte
+
+    agent.apprendre_journee = sonde
+    return originale
+
+
+# --- 2. LE RAPPORT ---
+
+def afficher(journal, nom_cerveau, niveau):
+    print("\n" + "=" * 100)
+    print(f"  SONDE DE GRADIENT — {os.path.basename(nom_cerveau)} — {niveau}")
+    print("=" * 100)
+
+    print(f"\n  {'jour':>5} {'ticks':>6} {'r≠0':>5} {'Σr':>9} {'r_max':>7} "
+          f"{'|ret|':>8} {'norm?':>6} {'|avant|':>9} {'entropie':>9} {'perte':>9}")
+    print("  " + "-" * 94)
+    for i, m in enumerate(journal, 1):
+        print(f"  {i:>5} {m['ticks']:>6} {m['rewards_non_nuls']:>5} "
+              f"{m['rewards_somme']:>9.4f} {m['rewards_max']:>7.3f} "
+              f"{m.get('returns_abs_moy_avant', 0):>8.4f} "
+              f"{'oui' if m.get('normalisation_appliquee') else 'NON':>6} "
+              f"{m.get('avantages_abs_moy', 0):>9.4f} "
+              f"{m.get('entropie_moy', 0):>9.4f} {m['perte_totale']:>9.4f}")
+
+    print(f"\n  NORMES DE GRADIENT PAR COUCHE (après backward, avant clipping)")
+    print("  " + "-" * 94)
+    couches = [c for c in COUCHES_SUIVIES if c in journal[0]["gradients"]]
+    print(f"  {'jour':>5} " + " ".join(f"{c[:13]:>14}" for c in couches))
+    for i, m in enumerate(journal, 1):
+        print(f"  {i:>5} " + " ".join(f"{m['gradients'][c]:>14.6f}" for c in couches))
+
+    # --- Verdict ---
+    print("\n" + "=" * 100)
+    moy_motrice = sum(m["gradients"].get("tete_motrice", 0) for m in journal) / len(journal)
+    moy_jepa = sum(m["gradients"].get("generateur_attente", 0) for m in journal) / len(journal)
+    r_tot = sum(m["rewards_non_nuls"] for m in journal)
+    print(f"  Gradient moyen sur tete_motrice : {moy_motrice:.6f}")
+    print(f"  Gradient moyen sur le JEPA      : {moy_jepa:.6f}")
+    print(f"  Ticks avec récompense non nulle : {r_tot} / "
+          f"{sum(m['ticks'] for m in journal)}")
+
+    print()
+    if moy_motrice < 1e-6:
+        print("  🔴 VERDICT (a) : AUCUN gradient n'atteint la tête motrice.")
+        print("     L'apprentissage de la politique n'a JAMAIS démarré — les jours de run")
+        print("     ne sont que des tirages au sort. Chercher en AMONT (récompense, buffers).")
+    elif r_tot == 0:
+        print("  🟠 VERDICT (a-bis) : un gradient existe, mais AUCUNE récompense ne l'a produit.")
+        print("     Il ne vient que du critique et de l'entropie — il pousse la politique")
+        print("     SANS information sur ce qui est bon. C'est du bruit dirigé, pas un apprentissage.")
+    else:
+        print("  🟢 VERDICT (b) : le gradient arrive ET des récompenses existent.")
+        print("     L'apprentissage démarre — le problème est en AVAL (échelle, arbitrage,")
+        print("     ou signal trop rare pour surmonter l'entropie).")
+    print("=" * 100)
+
+
+# --- 3. POINT D'ENTRÉE ---
+
+def main():
+    p = argparse.ArgumentParser(description="Sonde de gradient — l'apprentissage démarre-t-il ?")
+    p.add_argument("--brain", required=True)
+    p.add_argument("--jours", type=int, default=3)
+    p.add_argument("--niveau", type=int, default=None,
+                   help="indice du PROGRAMME (défaut : celui du .brain)")
+    p.add_argument("--graine", type=int, default=1789)
+    args = p.parse_args()
+
+    if not os.path.exists(args.brain):
+        raise SystemExit(f"❌ Cerveau introuvable : {args.brain}")
+
+    # Copie de travail : la sonde fait vivre de vraies journées (donc apprend), il est
+    # hors de question de toucher au cerveau de référence.
+    dossier = os.path.join(os.path.dirname(args.brain) or ".", "_sonde")
+    os.makedirs(dossier, exist_ok=True)
+    copie = os.path.join(dossier, "sonde.brain")
+    shutil.copy2(args.brain, copie)
+
+    torch.manual_seed(args.graine)
+
+    etat = PersistanceAnatomique(copie).charger_ou_naitre()
+    if args.niveau is not None:
+        env_id, nom = nx.PROGRAMME[args.niveau]
+        etat.env.close()
+        etat.env = nx.creer_env(env_id, nx.DIM_VISUELLE)
+        etat.env_id, etat.nom_classe = env_id, nom
+
+    journal = []
+    originale = instrumenter(etat.agent, journal)
+
+    print(f"\n🔬 SONDE DE GRADIENT — {args.jours} journée(s) complète(s) sur {etat.nom_classe}")
+    for j in range(args.jours):
+        nx.demarrer_journee(etat)
+        for _ in range(nx.ticks_par_jour):
+            nx.traiter_tick(etat)
+        # `executer_nuit` déclenche apprendre_journee (intercepté) puis le rêve/sommeil.
+        nx.executer_nuit(etat)
+        print(f"   jour {j+1}/{args.jours} ✓")
+
+    etat.agent.apprendre_journee = originale
+    etat.env.close()
+
+    if not journal:
+        raise SystemExit("❌ `apprendre_journee` n'a jamais été appelée — rien à mesurer.")
+    afficher(journal, args.brain, etat.nom_classe)
+
+    try:
+        shutil.rmtree(dossier)
+    except OSError:
+        pass
+
+
+if __name__ == "__main__":
+    main()
