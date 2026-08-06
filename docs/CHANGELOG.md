@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `9a4659e` |
 | **Catégorie** | fix (critique, complète le fix1) |
 | **Impact** | **Critique** — sans ce correctif, chaque neurogenèse divisait la protection |
 
