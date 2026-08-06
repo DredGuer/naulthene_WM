@@ -4,6 +4,122 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [34.0-fix1-experimental] - 2026-08-06
+
+### 🔴 CRITIQUE — L'EXTINCTION SYNAPTIQUE : le cerveau devenait aveugle et sourd
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | fix (critique) |
+| **Impact** | **Critique** — rendait tout entraînement long depuis zéro structurellement impossible |
+
+**🩺 LE SYMPTÔME**
+
+Le cerveau `060820260038_V34_1500_RMD` (neuf, 1500 jours) mesuré après son run :
+
+| Couche | base_weight non nuls |
+|---|---|
+| `porte_visuelle` | **0 / 11 760** ☠️ |
+| `porte_auditive` | **0 / 10 400** ☠️ |
+| `hippocampe` | **0 / 12 800** ☠️ |
+| `fusion_memoire` | **0 / 12 800** ☠️ |
+| `analyseur` | **0 / 6 400** ☠️ |
+| `generateur_attente` | **0 / 7 040** ☠️ |
+| `generateur_attente_audio` | **0 / 7 040** ☠️ |
+| `tete_requete` | **0 / 400** ☠️ |
+| `integrateur_bio` | 1 032 / 9 120 |
+| `tete_motrice` | 307 / 640 |
+
+**8 couches sur 11 entièrement à zéro.** L'agent était littéralement aveugle et sourd :
+`bus_latent` nul ⇒ JEPA nul (`Erreur JEPA moy: 0.0000`) ⇒ C2 = `[0,0,0,0,0,0,0]` ⇒
+politique réduite au **hasard uniforme** (entropie 1.94587 pour un maximum ln(7)=1.94591).
+
+**🔬 LA MÉCANIQUE, EN TROIS MAILLONS**
+
+1. `myeline_M = max(myeline_M, |annexe_weight|)` — la myéline ne peut venir **que** du
+   gradient. Un agent sans récompense a des gradients infimes ⇒ myéline ≈ 0.
+2. L'érosion vaut alors `base *= (1 − λ)` à **taux plein** chaque nuit. Avec λ=0.05, un
+   poids de 0.05 tombe sous le seuil de pruning (1e-4) en **121 nuits**.
+3. L'Étape 4 met à `0.0` tout ce qui passe sous 1e-4 — **définitivement** (base ET
+   `myeline_M`, donc sans retour possible).
+
+Boucle auto-renforçante : pas de récompense → pas de myéline → érosion → moins de
+perception → encore moins de récompense.
+
+**⚠️ POURQUOI LA PROTECTION EXISTANTE N'A JAMAIS FONCTIONNÉ**
+
+`SEUIL_CRISTAL = 0.80` alors que la myéline maximale **mesurée** sur les cerveaux du dépôt
+est de **0.0038** — un seuil **210× trop haut**. Compteur `cristallisee` :
+
+```
+5000j    : 0 / 11 760 synapses cristallisées
+700j     : 0 / 11 760
+V34_1500 : 0 / 11 760
+```
+
+**La Cristallisation Souple de la v26.0 ne s'est jamais enclenchée une seule fois, sur
+aucun cerveau.** Ce n'était pas un réglage à ajuster : une échelle qui ne correspondait à
+rien de réel.
+
+Le précédent était pourtant connu : `ATTENUATION_EROSION_AUDIO_DEBUT` (v24.0-fix1)
+corrigeait déjà « zéro exact après 1000 nuits d'érosion non amortie » — mais **uniquement
+sur les 3 couches audio**, et par un facteur daté au palier vocal.
+
+**✅ LE CORRECTIF — le Plancher Vital**
+
+Deux garde-fous qui ne dépendent d'**aucun seuil absolu de myéline** :
+
+| Garde-fou | Effet |
+|---|---|
+| `PLANCHER_POIDS_VITAL = 1e-3` | une synapse déjà faible mais vivante n'est **plus érodée** |
+| `FRACTION_NORME_MIN_COUCHE = 0.10` | la couche conserve ≥ 10 % de sa **norme de naissance** |
+
+Ce sont des **bornes**, pas des valeurs de fonctionnement (doctrine du projet) : la
+quantité réellement érodée reste émergente, seul son plafond est fixé. L'oubli reste
+possible — l'**extinction** ne l'est plus.
+
+Nouveau buffer `norme_naissance` par couche (référence **absolue**). Le pruning de
+l'Étape 4 passe de `1e-4` à `1e-12` : il ne nettoie plus que ce qui est déjà mort.
+
+⚠️ **Erreur commise et corrigée en cours de route** : la première version bornait la norme
+relativement à la **nuit précédente**. Ça ne borne rien cumulativement (0.95 × N_veille
+décroît indéfiniment) — simulation à l'appui, la norme tombait quand même à 1 %. D'où la
+référence absolue à la naissance.
+
+**🧪 VALIDATION**
+
+| Test | Avant | Après |
+|---|---|---|
+| 3000 nuits sans myéline (λ=0.05) | extinction totale | **11 760 vivantes, norme stable à 10 %** |
+| 3000 nuits (λ=0.025) | extinction totale | **11 760 vivantes, 10 %** |
+| Oubli toujours actif ? (myéline=1.0) | — | **100 % conservé** ✅ |
+| Cerveau neuf, 150 jours | — | **9 408 vivantes, bus vivant, C2 actif, 5 victoires** |
+| Rétrocompat `.brain` (5000j/700j/V34) | — | **acquis intacts** (1728 nz, norme 0.45838) |
+| **Nuit complète post-chargement** | — | **passe** (test exigé par `CLAUDE.md`) |
+
+**🐛 BUG CONNEXE CORRIGÉ — fausse détection de greffe**
+
+Le nouveau buffer `norme_naissance`, absent de tout `.brain` antérieur, apparaissait dans
+`missing_keys` sur les 12 couches — faisant croire à une greffe massive et
+**réinitialisant Adam sans raison à chaque chargement**. Exclu de la détection : il ne
+participe à aucun calcul de forme, et sa valeur par défaut est correcte pour un cerveau
+déjà entraîné.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `PLANCHER_POIDS_VITAL`, `FRACTION_NORME_MIN_COUCHE`, buffer `norme_naissance` (+ mise à jour dans `agrandir`), plancher vital dans `cycle_sommeil`, pruning 1e-4 → 1e-12 |
+| `src/naulthene/cerveau/persistance.py` | `norme_naissance` exclu de `greffe_detectee` |
+
+**📌 CONSÉQUENCE POUR LES CERVEAUX EXISTANTS**
+
+`060820260038_V34_1500_RMD` est **irrécupérable** : ses poids sont à zéro exact, le
+plancher ne peut pas ressusciter ce qui n'existe plus (0 × k = 0). Les cerveaux `5000j` et
+`700j` sont sauvés — le premier était d'ailleurs **sous le plancher** (norme 0.458 contre
+un plancher de 1.018) et remonte dès la première nuit.
+
+---
+
 ## [34.0-etape0-experimental] - 2026-08-06
 
 ### Télémétrie de calibrage Fatigue/Mortalité/Soin — et le fait qui bloque le chantier

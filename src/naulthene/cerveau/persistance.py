@@ -406,10 +406,23 @@ class PersistanceAnatomique:
         #
         # On se fie donc au drapeau retourné par la greffe elle-même, seul témoin fiable
         # qu'une largeur a bougé une fois le state_dict réaligné.
-        greffe_detectee = bool(resultat_chargement.missing_keys) or bio_greffe
+        #
+        # v34.0-fix1 — `norme_naissance` est un BUFFER DE DIAGNOSTIC ajouté à chaque
+        # NaultheneLinearSynaptique (référence du plancher vital anti-extinction). Il est
+        # forcément absent de tout `.brain` antérieur, sur les 12 couches à la fois — ce
+        # qui faisait croire à une greffe massive et réinitialisait Adam sans raison, à
+        # chaque chargement de chaque ancien cerveau.
+        #
+        # Il ne participe à aucun calcul de forme et sa valeur par défaut (la norme du
+        # tenseur fraîchement initialisé) est la bonne pour un cerveau déjà entraîné : le
+        # plancher se cale alors sur l'échelle d'origine de la couche, exactement comme
+        # pour un cerveau neuf. Il est donc exclu de la détection de greffe.
+        cles_manquantes_reelles = [c for c in resultat_chargement.missing_keys
+                                    if not c.endswith("norme_naissance")]
+        greffe_detectee = bool(cles_manquantes_reelles) or bio_greffe
         if greffe_detectee:
             print(f"   🌱 Hémisphères nouvellement greffés sur ce cerveau (initialisés à neuf) : "
-                  f"{sorted({cle.split('.')[0] for cle in resultat_chargement.missing_keys})}")
+                  f"{sorted({cle.split('.')[0] for cle in cles_manquantes_reelles})}")
         if resultat_chargement.unexpected_keys:
             print(f"   ⚠️  Clés du checkpoint ignorées (absentes de l'architecture actuelle) : "
                   f"{sorted({cle.split('.')[0] for cle in resultat_chargement.unexpected_keys})}")
@@ -423,7 +436,7 @@ class PersistanceAnatomique:
             # partiel de la dynamique Adam, de toute façon incohérent avec les nouvelles
             # synapses. Seule la dynamique d'apprentissage (moments Adam) est perdue —
             # tous les poids/acquis du state_dict, eux, sont bien préservés au-dessus.
-            motif = ("nouvelles couches greffées" if resultat_chargement.missing_keys
+            motif = ("nouvelles couches greffées" if cles_manquantes_reelles
                      else "largeur du vecteur bio étendue par greffe")
             print(f"   🔄 Optimiseur réinitialisé ({motif}) — "
                   "les poids/acquis existants sont intacts, seule la dynamique Adam repart à neuf.")

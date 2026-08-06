@@ -136,13 +136,48 @@ Le projet a **déjà** les deux pièces, mais séparées et incomplètes :
 maturité**, et elle décroît naturellement quand le cerveau grandit. C'est exactement le
 sevrage progressif décrit, et il n'y a rien à inventer.
 
-### 3.2 Les trois gestes du parent
+### 3.2 Les quatre gestes du parent
 
 | Geste | Effet | Se retire quand |
 |---|---|---|
+| **Montrer** | donne l'**exemple** du comportement absent (suivre une odeur jusqu'à sa source) | l'agent reproduit le comportement seul |
 | **Nourrir** | remonte les jauges quand elles passent sous un seuil critique | l'agent sait trouver ses ressources seul |
 | **Cajoler** | remonte la dopamine sur un effort réel, pas seulement sur un succès | l'agent produit sa propre dopamine par ses victoires |
 | **Protéger** | atténue ou empêche la mort | l'agent survit seul assez longtemps |
+
+> **« Montrer » a été ajouté le 2026-08-06** (décision utilisateur), et c'est probablement
+> le geste principal — pas un quatrième d'appoint.
+>
+> *« Il lui faut suffisamment de temps et de maturité, et donc être suffisamment encadré
+> pour réussir. Un enfant de 12/13 ans seulement peut vraiment survivre tout seul — avant,
+> il lui faut énormément d'exemples. »*
+
+**Nourrir sans montrer masque l'incompétence** : les jauges remontent, l'agent ne sait
+toujours pas chercher, et le sevrage le ramène au point de départ. C'est la différence
+entre donner un poisson et pêcher devant lui.
+
+#### Ce que le run `wk6nglld` prouve — et ce qu'il ne prouve PAS
+
+Un cerveau **neuf**, 1500 jours : autonomie à 0,0 % sur 1499 jours, taux de capture des
+ressources à **8,4 %**, clinotaxie à **57 %** (le hasard est à 50 %).
+
+⚠️ **Ce résultat ne dit pas « l'architecture est incapable d'apprendre à se nourrir ».**
+Il dit que **l'essai-erreur solitaire ne suffit pas pour ce comportement.** C'est un
+résultat sur la MÉTHODE, pas sur l'agent — l'agent n'a eu aucun exemple, à aucun moment.
+
+Un enfant élevé sans personne pour lui montrer comment manger n'apprendrait pas davantage,
+et on n'en conclurait pas qu'il en est incapable. Cent mille jours de tâtonnement solitaire
+ne produiraient pas un enfant de 12 ans : ils produiraient un enfant de 0 an qui a tâtonné
+très longtemps.
+
+#### Mature ≠ éduqué
+
+Nuance mesurée, importante pour ne pas se tromper de remède : `empreinte_enfance = 0,20`
+sur ce cerveau, bus à 80 dims, **neurogenèse terminée**. Le substrat a fini de grandir.
+
+**L'agent n'est pas immature — il est mature et non-éduqué.** La première condition
+s'obtient en attendant ; la seconde, jamais. Allonger les runs ne corrigera pas ça, et
+c'est cohérent avec les 5000 jours plats du run `az794yzw`.
 
 ### 3.3 Le sevrage doit être MÉRITÉ, pas daté
 
