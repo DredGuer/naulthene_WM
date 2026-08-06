@@ -4,6 +4,86 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [34.0-fix2-experimental] - 2026-08-06
+
+### La référence du plancher ne doit jamais rétrécir + validation en conditions réelles
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | fix (critique, complète le fix1) |
+| **Impact** | **Critique** — sans ce correctif, chaque neurogenèse divisait la protection |
+
+**✅ D'ABORD : LE FIX1 EST VALIDÉ EN CONDITIONS RÉELLES**
+
+Trois runs successifs sur cerveaux neufs, avec le correctif :
+
+| Run | Jours | Couches mortes | `porte_visuelle` | Victoires |
+|---|---|---|---|---|
+| 1 | 100 | **0 / 11** | 23,7 % | 4 |
+| 2 | **200** | **0 / 11** | 24,6 % | 5 |
+| 3 | **700** | **0 / 11** | 11,0 % | **8** |
+
+Le run à 200 jours dépasse les **121 nuits** où l'ancien code commençait à effacer. À
+comparer au run `060820260038_V34_1500_RMD` (avant correctif) : **8 couches sur 11 à
+zéro**.
+
+Les victoires progressent (4 → 5 → 8) : avec un bus vivant, l'agent apprend enfin.
+
+⚠️ **Le plancher mord fort** : à j700, **6 couches sur 11 sont collées à 10,0 %** — sans
+lui elles seraient mortes ou mourantes. Ce n'est pas un garde-fou dormant, c'est lui qui
+maintient activement le cerveau en vie chaque nuit. Le déséquilibre de fond (érosion >
+apprentissage) subsiste ; le plancher empêche la mort, il ne rétablit pas l'équilibre.
+
+**🔴 LE BUG DÉCOUVERT PAR LE TEST 2 : la neurogenèse affaiblissait la protection**
+
+`agrandir()` recopie les poids anciens (déjà érodés, parfois au plancher) et n'initialise à
+neuf que les dimensions ajoutées. La norme du tenseur agrandi peut donc être **bien plus
+petite** que la norme d'origine. Mesuré :
+
+```
+naissance            : norme_naissance = 5.31290  → plancher 0.53129
+après 200 nuits      : norme réelle    = 0.53129  (au plancher)
+après neurogenèse    : norme_naissance = 0.73749  → plancher 0.07375   ⚠️ ÷7
+```
+
+**Chaque neurogenèse divisait le garde-fou par ~7.** Un cerveau qui grandit beaucoup aurait
+fini sans protection — le fix1 se serait auto-annulé sur la durée.
+
+**✅ LE CORRECTIF**
+
+`norme_naissance = max(ancienne_référence, nouvelle_norme)` : la protection ne peut que
+**croître avec le substrat**, jamais décroître avec l'usure.
+
+Vérifié sur 4 neurogenèses en cascade (16 → 80 dims, 200 nuits d'érosion entre chacune) :
+
+```
+dim_bus  16 →  32 →  48 →  64 →  80
+norme_naissance : 5.31290 (STABLE sur les 5 étapes)
+plancher        : 0.53129 (STABLE)
+synapses        : 4704/4704 → 7056/7056 → 9408/9408 → 11760/11760  (toutes vivantes)
+```
+
+**🧪 LES TROIS TESTS**
+
+| Test | Résultat |
+|---|---|
+| **1. L'oubli reste-t-il gradué ?** | ✅ à 50 nuits : 10 % (m=0) / 28 % (m=0,5) / 78 % (m=0,9). Sur le long terme toute myéline < 0,85 atteint le plancher — c'est la nature géométrique de l'érosion, le plancher **borne** sans moduler |
+| **2. Neurogenèse** | 🔴 bug trouvé → corrigé (ci-dessus) |
+| **3. Reprise de `.brain` réels** (300 nuits + nuit complète) | ✅ `V34fix1_900` : 11 760 nz conservés · `V33_5000j` : 1 728 nz, norme **remontée** 0,458 → 1,014 (il était **sous** le plancher) · `V34_1500` : reste mort (0 × k = 0, attendu) |
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `agrandir()` : `norme_naissance` prend le **maximum** au lieu d'écraser |
+
+**🗂️ ARCHIVAGE**
+
+Tous les `.brain` antérieurs déplacés dans `brains/old_testV30-V34/` (13 fichiers, v30 →
+v34). Seul `060820262236_V34fix1_900_RMD.brain` reste actif — le premier cerveau vivant et
+gagnant depuis le début de ce diagnostic.
+
+---
+
 ## [34.0-fix1-experimental] - 2026-08-06
 
 ### 🔴 CRITIQUE — L'EXTINCTION SYNAPTIQUE : le cerveau devenait aveugle et sourd
