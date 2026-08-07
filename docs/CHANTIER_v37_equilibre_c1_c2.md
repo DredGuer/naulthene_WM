@@ -1,6 +1,9 @@
 # Chantier v37.0 — L'Équilibre C1 / C2
 
-> **Statut** : diagnostic terminé, équilibrage implémenté, **en attente de validation par run long**
+> **Statut** : diagnostic terminé, équilibrage **implémenté et validé sur 600 jours** —
+> l'équilibre C1/C2 tient (ratio 0,57-1,09 contre 9,9-22,1× avant), mais **le cursus reste
+> bloqué** (niveau 2/15). L'équilibre était une condition nécessaire, pas suffisante. Verdict
+> complet en §6bis ; prochain candidat : le rêve, mesuré à 0,1 % sur 600 jours.
 > **Branche** : `feat/v37-equilibre-c1-c2`
 > **Date d'ouverture** : 2026-08-07
 > **Cerveau de référence du diagnostic** : `brains/070820261310_V36_600_RMD.brain` (600 jours, bus 64)
@@ -328,12 +331,12 @@ de distiller uniformément du bruit.
 
 Le chantier ne sera déclaré réussi que si **les quatre** sont observés sur un run long.
 
-| # | Critère | Cible | État au 2026-08-07 (40 j) |
+| # | Critère | Cible | État au 2026-08-08 (run **600 j**, `8wequiqg`) |
 |---|---|---|---|
-| 1 | Le ratio C2/C1 descend sous 3× | `< 3,0` | ✅ **1,48-1,59×**, stable (contre 9,9-22,1×) |
-| 2 | L'accord C1/C2 cesse d'être nul | `> 15 %` | ❌ **0 %** — inchangé |
-| 3 | Les têtes décollent du plancher vital | `> 12 %` de `n_naiss` | 🟡 partiel — `cortex_prefrontal` 11,07 %, `tete_motrice` toujours à 10,00 % (mais se remodèle, voir §8) |
-| 4 | Le niveau 3 est franchi | niveau ≥ 4 | ⏳ **non testé** — 40 jours ne suffisent pas |
+| 1 | Le ratio C2/C1 descend sous 3× | `< 3,0` | ✅ **0,57 à 1,09** sur tout le run (contre 9,9-22,1×) |
+| 2 | L'accord C1/C2 cesse d'être nul | `> 15 %` | 🟡 **29 à 75 %** — le critère est franchi, mais il **oscille** au lieu de converger |
+| 3 | Les têtes décollent du plancher vital | `> 12 %` de `n_naiss` | 🟡 partiel — `cortex_prefrontal` décollé, `tete_motrice` toujours à 10,00 % (mais se remodèle, voir §8) |
+| 4 | Le niveau 3 est franchi | niveau ≥ 4 | ❌ **niveau 2/15** — et **aucune victoire après le jour 288** (312 jours) |
 
 **Le critère 4 est le seul qui compte vraiment.** Les trois premiers peuvent être atteints sans
 que l'agent progresse — ce serait alors un équilibrage cosmétique, et il faudrait revenir au
@@ -359,6 +362,65 @@ doit trancher.
   la mesure 2 l'a trop affaibli.
 - L'accord monte à ~100 % → C1 et C2 sont devenus redondants, l'auto-distillation (mesure 3) a
   écrasé la diversité au lieu de l'équilibrer. **C'est le risque principal de la mesure 3.**
+
+---
+
+## 6bis. Le verdict du run de 600 jours (`8wequiqg`, 2026-08-08)
+
+### L'équilibre est acquis, le déblocage ne l'est pas
+
+| Tranche | Accord | Ratio C2/C1 | C1 | C2 |
+|---|---|---|---|---|
+| 0-100 | 50,0 % | 0,90 | 1,90 | 1,57 |
+| 100-200 | **75,2 %** | 0,57 | 2,82 | 1,59 |
+| 200-300 | 65,8 % | 0,70 | 2,28 | 1,59 |
+| 300-400 | 35,2 % | 0,88 | 1,62 | 1,40 |
+| 400-500 | 41,1 % | 0,91 | 1,61 | 1,45 |
+| 500-600 | **29,2 %** | 1,09 | 1,41 | 1,53 |
+
+Le ratio ne quitte jamais la plage saine [0,57 ; 1,09] : **l'équilibrage de la v37.0 tient sur la
+durée**, et c'est le résultat solide du chantier.
+
+Mais **l'accord oscille au lieu de converger**. Un pic à 100 % observé vers le jour 227 avait été
+lu en cours de run comme une convergence — c'était une oscillation. Ni le mode d'échec redouté
+(redondance à 100 %) ni la convergence espérée : les deux modules coexistent sans s'accorder
+durablement.
+
+### Le critère qui compte a échoué
+
+```
+jour 266 : niveau 0 → 1
+jour 287 : niveau 1 → 2
+jour 288-600 : plus AUCUNE victoire (312 jours), guidage saturé à ×3,0 depuis ~387
+```
+
+**22 victoires, toutes avant le jour 300. Niveau 2/15 à l'arrivée**, contre 3/15 pour le run V36
+de référence. L'agent est *plus lent* que sans la v37, tout en gagnant plus souvent sur un niveau
+plus facile.
+
+### Un bug introduit par la v37.1, trouvé par ce run
+
+`reference_choc_dopamine` utilisait une moyenne glissante **symétrique** : quand l'agent cesse de
+gagner, elle descend vers les micro-chocs (0,2149 → 0,0932, **−57 %**) et, le crédit valant
+`choc / référence`, le même événement médiocre crédite de plus en plus (10 % → **69 %**, ×7).
+
+L'agent devenait **de plus en plus facile à impressionner** — l'inverse exact du principe — et C1
+distillait 70 % de bruit. Corrigé en v37.1-fix1 par un **cliquet** (montée rapide, descente ~50×
+plus lente), même remède que `norme_naissance` en v34.0-fix2.
+
+### Ce que ce run ne dit pas, et qu'il faut isoler
+
+- **Le rêve est quasi inexistant** : `Pourcentage_Reve` à **0,1 %** sur les 600 jours, **75 nuits
+  sans aucun rêve** sur les 100 premières. Un mécanisme entier du projet ne tourne pas — sans
+  rapport avec le chantier C1/C2, mais il fausse toute lecture de la consolidation.
+- **`Recompense_Moyenne = 0.000`** sur l'intégralité du run, comme sur tous les runs précédents.
+
+### Où en est le chantier
+
+L'équilibre C1/C2 était **une condition nécessaire, pas suffisante**. Les quatre bugs de fond
+(plancher-plafond, timing de la myéline, échelle absolue, normalisation conditionnelle) sont
+corrigés et validés. Mais le blocage du cursus persiste, et il faut maintenant chercher ailleurs
+— le rêve à 0,1 % est le prochain candidat, avant de revenir au cursus (§4, première ligne).
 
 ---
 
@@ -399,6 +461,11 @@ doit trancher.
 | 2026-08-07 | Run 40 j de validation | Ratio **1,48-1,59× stable**, C2 constant à ~1,48 |
 | 2026-08-07 | Sonde des poids finale | **3 couches** au plancher (contre 5) ; `cortex_prefrontal` décollé à 11,07 % |
 | 2026-08-07 | Vérification remodelage `tete_motrice` | Norme constante mais **cosinus 0,9972 / 7,43 % des poids modifiés en 5 nuits** — la couche apprend |
+| 2026-08-07 | v37.1 — distillation sélective (crédit rétrograde) | Part de journée distillée 100 % → ~25-35 % ; gradient `tete_motrice` −18 % |
+| 2026-08-08 | **Run 600 j (`8wequiqg`)** | Ratio **0,57-1,09** stable ✅ ; accord **29-75 % oscillant** 🟡 ; **niveau 2/15**, aucune victoire après le jour 288 ❌ |
+| 2026-08-08 | Bug trouvé PAR ce run | `reference_choc_dopamine` symétrique s'effondre de **−57 %** quand l'agent cesse de gagner ; crédit ×7 (10 % → 69 %) |
+| 2026-08-08 | v37.1-fix1 — le cliquet | Simulation du scénario exact : dérive **−71,3 % → −4,4 %**, crédit **87,2 % → 26,1 %** ; principe débutant/expert préservé (×8,8) |
+| 2026-08-08 | Anomalie relevée, **non traitée** | `Pourcentage_Reve` à **0,1 %** sur 600 jours, 75 nuits sans rêve sur les 100 premières — chantier distinct |
 
 ### Note sur `tete_motrice` restée à 10,00 %
 
