@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `991c0ab` |
 | **Catégorie** | feat (mécanique de cursus, expérimental — `noyau.py` uniquement) |
 | **Impact** | **Fonctionnel** — ferme les deux chantiers laissés ouverts par la v35.0 |
 
