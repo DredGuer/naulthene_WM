@@ -4,6 +4,90 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [34.0-diag-cursus] - 2026-08-07
+
+### Le cursus est trop court et trop brutal — diagnostic sur 2700 jours sains
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | docs (diagnostic + refonte proposée, aucun code) |
+| **Impact** | Documentation — le `PROGRAMME` actuel est inchangé |
+
+**✅ D'ABORD : LE CORRECTIF D'EXTINCTION TIENT SUR 2700 JOURS**
+
+| Couche | j700 | **j2700** |
+|---|---|---|
+| `porte_visuelle` | 11,0 % | **21,3 %** ↗ |
+| `hippocampe` | 24,8 % | **33,1 %** ↗ |
+| `fusion_memoire` | 23,5 % | **30,5 %** ↗ |
+| Couches mortes | 0 / 11 | **0 / 11** |
+
+Deux couches **remontent** : le cerveau regagne plus qu'il ne perd. À comparer aux 8 couches
+sur 11 à zéro avant le correctif.
+
+**🔴 MAIS L'AGENT NE PROGRESSE PLUS — et ce n'est plus la vue**
+
+| Mesure sur 2000 jours | Valeur |
+|---|---|
+| Jours au **Collège** | **2000**, sans jamais en sortir |
+| Palier | **7** (dernier) atteint dès le jour 701 |
+| Victoires | 22, **tendance 1,08 → stationnaire** |
+| Δt1 (atteindre la clé) | **JAMAIS ATTEINT** |
+| Contact avec les murs | **82 %** des ticks |
+| Records de proximité | **0,00 / jour** |
+
+L'agent porte la clé 58 % du temps mais n'atteint jamais la porte. Optimum local stable.
+
+**📊 L'ÉCONOMIE S'EST AMÉLIORÉE SEULE** (sonde de récompense, même protocole)
+
+| | Cerveau mourant | **Cerveau sain (2700 j)** |
+|---|---|---|
+| Solde | −7,54 | **−3,30** (÷2,3) |
+| Total positif | +1,12 | **+5,18** (×4,6) |
+| `sous_objectif_intrinseque` | 0,00 | **+3,60** (69 % du positif) |
+| `dopamine_curiosite` | +0,76 | +1,22 |
+
+**La curiosité JEPA s'est réveillée** : 90 sous-quêtes/jour contre zéro avant. Conséquence
+directe du bus vivant — le JEPA fonctionne (0,0038), donc il génère des sous-objectifs.
+
+Deux coûts restent anormaux : `penalite_stagnation` −4,35 (95,8 % des ticks, 51 % du
+déficit) et `MALUS_DOULEUR` −2,85 (**71,2 % des ticks**, 34 %).
+
+**🎓 LES TROIS DÉFAUTS DU CURSUS** (documentés dans `Parcourt_readme.md` §6bis)
+
+1. **Le saut Primaire → Collège demande 5 compétences d'un coup.** `Empty-8x8` a 1 objet,
+   `DoorKey-6x6` en a 3 et exige repérer + ramasser + porter + viser + ouvrir. Deux
+   victoires sur une salle vide suffisent à y accéder.
+2. **Le guidage est coupé au pire moment.** Au Palier 5, `RECOMPENSE_APPROCHE_BUT` tombe à 0
+   d'un coup — mesuré : **0,00 record de proximité/jour** pendant 2000 jours.
+3. **Le dernier niveau a le budget le plus serré.** Vérifié via `env.max_steps` :
+
+   | Niveau | Grille | `max_steps` | Objets |
+   |---|---|---|---|
+   | Collège | 6×6 | 360 | 3 |
+   | **Doctorat** | **25×25** | **120** ⚠️ | **6** (5 portes) |
+
+   **2× moins de temps pour une carte 17× plus grande.** Pas difficile — infaisable.
+
+**💡 LA REFONTE PROPOSÉE : 14 paliers au lieu de 5**
+
+MiniGrid expose **58 environnements**, le projet en utilise 5. Le programme proposé n'ajoute
+**qu'une compétence par étape** : `Empty-5x5` → `Empty-Random-6x6` → `Empty-8x8` →
+`SimpleCrossing` (contourner) → `LavaGap` (danger) → `Fetch` (ramasser) → `GoToDoor` →
+`DoorKey-5x5/6x6/8x8` (même tâche, 3 échelles) → `Unlock` → `UnlockPickup` → `MemoryS7` →
+`MultiRoom-N2` → `MultiRoom-N4`.
+
+Plus trois changements d'accompagnement, **tous touchant des invariants** donc soumis à
+décision utilisateur : promotion sur taux glissant (au lieu de 2 victoires consécutives),
+guidage dégressif (au lieu d'une coupure nette), et **redescente possible** de palier.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `docs/Parcourt_readme.md` | **§6bis** — diagnostic chiffré, les 3 défauts, la refonte à 14 paliers, ce qu'il faut mesurer d'abord ; en-tête et TdM mis à jour |
+
+---
+
 ## [34.0-fix2-experimental] - 2026-08-06
 
 ### La référence du plancher ne doit jamais rétrécir + validation en conditions réelles

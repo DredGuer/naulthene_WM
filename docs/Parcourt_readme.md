@@ -10,11 +10,16 @@ est **"je veux lancer un run et comprendre ce qui se passe"**.
 Référence code : `src/naulthene/cerveau/noyau.py` (jusqu'à v32.0) et les trois
 scripts de `src/naulthene/salles_de_classe/`.
 
-> 📍 **État (2026-08-03)** : `master` porte les v28.0 → v29.1. Les **v30.0/v30.1** (l'Exo-Sens,
-> instrumentation), **v31.0/v31.1** (Mémoire Proportionnelle, Déduplication Mnésique) et
-> **v32.0** (Odorat Topologique & Clinotaxie) sont **implémentées et validées** sur leurs branches
-> respectives, en attente de merge. **Aucune ne change les commandes de ce guide** — toutes sont
-> automatiques, sans flag ni option. Voir [CHANGELOG.md](CHANGELOG.md) pour le détail.
+> 📍 **État (2026-08-07)** : `master` porte les v28.0 → v29.1. Les **v30.0/v30.1** (l'Exo-Sens),
+> **v31.0/v31.1** (Mémoire Proportionnelle), **v32.0** (Odorat Topologique & Clinotaxie),
+> **v33.1** (banc d'ablation) et **v34.0-fix1/fix2** (correctif de l'extinction synaptique) sont
+> **implémentées et validées** sur leurs branches. **Aucune ne change les commandes de ce
+> guide** — toutes sont automatiques, sans flag ni option. Voir [CHANGELOG.md](CHANGELOG.md).
+>
+> 🔴 **À lire avant de lancer un run long** : le [§6bis](#6bis--pourquoi-ce-programme-est-trop-court-et-trop-brutal-diagnostic-2026-08-07)
+> documente pourquoi le cursus actuel bloque l'agent au Collège (2000 jours mesurés sans
+> progression) et propose une refonte à 14 paliers. Le programme décrit au §6 reste celui qui
+> tourne aujourd'hui.
 
 ---
 
@@ -26,6 +31,7 @@ scripts de `src/naulthene/salles_de_classe/`.
 4. [Le Cursus de la Parole (`cursus_parole.py`)](#4-le-cursus-de-la-parole-cursus_parolepy)
 5. [La Cuve (mode manuel client-serveur)](#5-la-cuve-mode-manuel-client-serveur)
 6. [Les 5 niveaux MiniGrid (`PROGRAMME`)](#6-les-5-niveaux-minigrid-programme)
+6bis. [⚠️ Pourquoi ce programme est trop court et trop brutal](#6bis--pourquoi-ce-programme-est-trop-court-et-trop-brutal-diagnostic-2026-08-07)
 7. [Les 7 paliers DoorKey — le détail complet](#7-les-7-paliers-doorkey--le-détail-complet)
 8. [Le curriculum vocal — les 19 paliers](#8-le-curriculum-vocal--les-19-paliers)
 9. [Mode Guidé vs Mode Libre](#9-mode-guidé-vs-mode-libre)
@@ -274,6 +280,121 @@ cerveau, pas dans un cursus particulier).
 **Comment on passe au niveau suivant** : il faut **2 victoires consécutives** sur le niveau
 courant (`VICTOIRES_REQUISES=2`). Une seule défaite entre-temps remet le compteur à zéro (mais le
 niveau lui-même ne recule jamais). Un message `🎓 [PROMOTION]` s'affiche au changement de niveau.
+
+---
+
+## 6bis. ⚠️ Pourquoi ce programme est trop court et trop brutal (diagnostic 2026-08-07)
+
+> **Statut : diagnostic mesuré, refonte PROPOSÉE, aucune ligne de code écrite.** Le
+> `PROGRAMME` ci-dessus est celui qui tourne aujourd'hui. Cette section documente pourquoi
+> il bloque et ce qu'on propose à la place. Voir [CHANGELOG.md](CHANGELOG.md) v34.
+
+### Le constat
+
+Un run de 2700 jours sur un cerveau sain (post-correctif d'extinction synaptique) :
+
+| Mesure | Valeur |
+|---|---|
+| Jours passés au **Collège** | **2000** — sans jamais en sortir |
+| Palier atteint | **7** (le dernier) dès le jour 701 |
+| Victoires | 22 en 2700 jours, **tendance 1,08 → stationnaire** |
+| Δt1 (atteindre la clé) | **JAMAIS ATTEINT** |
+| Contact avec les murs | **82 %** des ticks |
+| Records de proximité | **0,00 par jour** sur 2000 jours |
+
+L'agent porte la clé 58 % du temps mais n'atteint jamais la porte. Il ne progresse plus,
+il ne régresse pas non plus : il est **bloqué dans un optimum local**.
+
+### Les trois défauts de conception
+
+**1. Le saut Primaire → Collège demande 5 compétences d'un coup**
+
+| | Objets sur la carte | Compétences requises |
+|---|---|---|
+| `Empty-8x8` | **1** (le but) | avancer, tourner |
+| `DoorKey-6x6` | **3** (clé, porte, but) | + repérer, ramasser, porter, viser, ouvrir |
+
+Deux victoires sur une salle vide suffisent pour affronter une tâche à 5 sous-objectifs.
+Aucun palier intermédiaire ne fait le pont.
+
+**2. Le guidage est retiré au pire moment**
+
+Au **Palier 5**, le Mode Libre coupe `RECOMPENSE_APPROCHE_BUT` d'un coup (§9). Résultat
+mesuré : **0,00 record de proximité par jour** pendant 2000 jours. L'agent perd tout signal
+de progression spatiale exactement quand la tâche devient la plus dure.
+
+**3. Le dernier niveau a le budget le plus serré**
+
+Vérifié via `env.max_steps` :
+
+| Niveau | Grille | `max_steps` | Objets |
+|---|---|---|---|
+| Primaire | 8×8 | **256** | 1 |
+| Collège | 6×6 | **360** | 3 |
+| Lycée | 11×6 | 288 | 2 |
+| Université | 7×7 | 245 | 3 |
+| **Doctorat** | **25×25** | **120** ⚠️ | **6** (5 portes) |
+
+Le Doctorat a **2× moins de temps** que le Collège pour une carte **17× plus grande** et 5
+portes à franchir. Ce n'est pas un cursus difficile : c'est un cursus **infaisable**.
+
+### La refonte proposée : 14 paliers au lieu de 5
+
+MiniGrid expose **58 environnements** ; le projet n'en utilise que 5. De quoi construire une
+vraie progression, où chaque étape n'ajoute **qu'une seule compétence nouvelle**.
+
+| # | Environnement | Nom | Nouveauté | Grille / steps |
+|---|---|---|---|---|
+| 0 | `Empty-5x5` | Nourrisson | avancer, tourner | 5×5 / 100 |
+| 1 | `Empty-Random-6x6` | Éveil | départ aléatoire (généraliser) | 6×6 / 144 |
+| 2 | `Empty-8x8` | Maternelle | distance plus longue | 8×8 / 256 |
+| 3 | `SimpleCrossingS9N1` | Primaire 1 | **contourner un mur** | 9×9 / 324 |
+| 4 | `LavaGapS5` | Primaire 2 | **éviter le danger** (lave) | 5×5 / 100 |
+| 5 | `Fetch-5x5-N2` | Primaire 3 | **ramasser un objet** | 5×5 / 125 |
+| 6 | `GoToDoor-6x6` | Collège 1 | **aller vers une porte** | 6×6 / 144 |
+| 7 | `DoorKey-5x5` | Collège 2 | **clé + porte**, carte minimale | 5×5 / 250 |
+| 8 | `DoorKey-6x6` | Collège 3 | même tâche, plus grand | 6×6 / 360 |
+| 9 | `DoorKey-8x8` | Lycée 1 | même tâche, distance longue | 8×8 / 640 |
+| 10 | `Unlock` | Lycée 2 | déverrouiller sans but visible | 11×6 / 288 |
+| 11 | `UnlockPickup` | Lycée 3 | + récupérer un objet derrière | 11×6 / 288 |
+| 12 | `MemoryS7` | Université | **mémoriser un indice** | 7×7 / 245 |
+| 13 | `MultiRoom-N2-S4` | Doctorat 1 | **2 pièces** (avant les 4) | 25×25 / 40 |
+| 14 | `MultiRoom-N4-S5` | Doctorat 2 | 4 pièces, 5 portes | 25×25 / 120 |
+
+**Le principe** : entre deux paliers voisins, une seule chose change. `DoorKey-5x5` →
+`DoorKey-6x6` → `DoorKey-8x8` est la même tâche à trois échelles — l'agent consolide au lieu
+de tout réapprendre.
+
+### Trois changements d'accompagnement
+
+**a. Une promotion plus exigeante mais plus juste.** `VICTOIRES_REQUISES = 2` consécutives
+est fragile (une défaite remet à zéro) et faible (2 réussites peuvent être de la chance).
+Un **taux de réussite sur fenêtre glissante** — par exemple 60 % sur 20 épisodes — mesure
+une compétence installée plutôt qu'un coup de chance.
+
+**b. Un guidage qui s'estompe, au lieu de se couper.** Aujourd'hui
+`RECOMPENSE_APPROCHE_BUT` passe de 0,05 à 0 d'un seul coup au Palier 5. Une décroissance
+progressive (indexée sur la maîtrise, pas sur le numéro de palier) éviterait la falaise
+mesurée à 0,00 record/jour.
+
+**c. Une redescente possible.** Aujourd'hui aucun palier ne recule (§11). Un agent qui
+échoue 2000 jours d'affilée reste au Palier 7 — il n'a aucune chance de reconsolider les
+bases. Autoriser une redescente après N jours sans succès rendrait le cursus **réellement
+adaptatif**.
+
+> ⚠️ **Ces trois points touchent des invariants documentés** (`CLAUDE.md` : les 7 paliers
+> DoorKey, le Mode Libre, « ce qui ne régresse jamais »). Ce sont des décisions
+> utilisateur, pas des ajustements de code.
+
+### Ce qu'il faut mesurer d'abord
+
+Conformément à la doctrine du projet (instrumenter avant de calibrer) :
+
+1. **Le taux de réussite par environnement candidat** sur le cerveau actuel — un palier que
+   l'agent réussit déjà à 90 % est inutile dans le cursus.
+2. **Le temps réel jusqu'à la première victoire** sur chaque nouvel environnement.
+3. **Si `max_steps` du Doctorat (120) est atteignable** : le BFS agent→but mesuré vaut
+   19-29 pas, mais avec 5 portes à ouvrir en chemin, 120 steps est probablement le vrai mur.
 
 ---
 
