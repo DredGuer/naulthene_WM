@@ -4,6 +4,98 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [35.1-experimental] - 2026-08-07
+
+### Le Guidage Dégressif & le Filet de Sécurité — « plus il comprend, moins on l'aide »
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | feat (mécanique de cursus, expérimental — `noyau.py` uniquement) |
+| **Impact** | **Fonctionnel** — ferme les deux chantiers laissés ouverts par la v35.0 |
+
+**🎯 LA DÉCISION UTILISATEUR**
+
+> *« Le guidage dégressif : à chaque victoire, jusqu'à 85-100 % de réussite, on fait de
+> façon à moins répéter — comme un enfant : plus il comprend, moins on l'aide, jusqu'à lui
+> laisser assez d'autonomie pour qu'il comprenne. »*
+>
+> *« La redescente de palier : non, il ne peut pas aller faire un palier impossible — et
+> quand il bloque, on l'aide un peu. »*
+
+**📉 LE SEVRAGE — le guidage suit la maîtrise, plus le numéro de palier**
+
+Ce que ça remplace : le guidage était coupé d'un **seul coup** au palier 5 (Mode Libre),
+c'est-à-dire au moment précis où la tâche devient la plus dure. Mesuré sur 2000 jours :
+**0,00 record de proximité par jour**. Une falaise, là où il fallait une pente.
+
+| Maîtrise | Guidage |
+|---|---|
+| non mesurable (< 10 épisodes) | **1,00** — un débutant reste un débutant |
+| ≤ 60 % (`SEUIL_DEBUT_SEVRAGE`) | 1,00 |
+| 70 % | 0,67 |
+| 80 % | 0,33 |
+| ≥ 90 % (`SEUIL_FIN_SEVRAGE`) | **0,00** — autonomie complète |
+
+Le curseur pilote **les deux** sources d'aide en un seul point — `RECOMPENSE_APPROCHE_BUT`
+(DoorKey) et les records de proximité (générique) — au lieu de deux mécaniques qui
+s'éteignaient selon des règles différentes.
+
+**🛟 LE FILET — « quand il bloque, on l'aide un peu »**
+
+La redescente de palier est **écartée** (elle contredirait « ce qui ne régresse jamais »).
+À la place : un agent qui stagne reçoit un **surplus** d'aide, progressif.
+
+| Jours sans victoire | Renfort |
+|---|---|
+| ≤ 30 (`JOURS_AVANT_RENFORT`) | ×1,0 — un échec est normal, pas un blocage |
+| 45 | ×1,5 |
+| 60 | ×2,0 |
+| ≥ 90 | **×3,0** (`RENFORT_AIDE_MAX`) |
+
+Le renfort se replie **dès la première victoire** : c'est une bouée, pas une rente. Il ne
+touche que le guidage, **jamais la récompense terminale** — on aide à trouver le chemin, on
+n'offre jamais la victoire.
+
+Les deux forces ne peuvent pas se contredire : un agent qui stagne a par construction une
+maîtrise basse (donc un sevrage à 1,0 que le renfort amplifie), et un agent qui maîtrise n'a
+aucun jour de stagnation. Vérifié : maîtrise 100 % + 200 jours de stagnation ⇒ guidage 0,00.
+
+**🧪 VALIDATION — le filet a réellement débloqué l'agent**
+
+Cerveau neuf, 100 jours, graine fixée. L'agent cale à `Maternelle` après 3 promotions :
+
+```
+ jour  niv  nom                          maîtrise  guidage  stagn  vict
+    5    2  Maternelle (Longue distance)     —      1.00      0      4
+   20    2  Maternelle                      0.00    1.00     15      4
+   40    2  Maternelle                      0.00    1.13     35      4     ← le filet s'arme
+   60    2  Maternelle                      0.00    1.80     55      4
+   80    2  Maternelle                      0.00    2.47     75      4
+  100    2  Maternelle                      0.05    1.00      5      7     ← VICTOIRES, filet replié
+```
+
+Sans filet, ce cerveau serait resté à 4 victoires — c'est exactement le scénario des 2000
+jours de blocage au Collège. Le run de référence (v35.0 sans filet) calait à **0 % pendant
+79 jours** sur `SimpleCrossingS9N1`.
+
+**📊 TÉLÉMÉTRIE**
+
+`Cursus_Facteur_Guidage` est LA métrique de ce cycle : < 1,0 = le sevrage mord, > 1,0 = le
+filet est déployé, 1,0 constant = ni l'un ni l'autre ne sert. Plus
+`Cursus_Jours_Stagnation`, et une ligne console lisible d'un coup d'œil
+(`🤝 aide pleine` / `📉 sevrage 67%` / `🛟 filet ×2.5` / `🕊️ autonome`).
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `facteur_guidage()`, 5 bornes (`SEUIL_*_SEVRAGE`, `JOURS_AVANT_RENFORT`, `RENFORT_AIDE_MAX`, `PENTE_RENFORT`), `jours_stagnation_niveau`, application en un point unique, 2 clés W&B + ligne console |
+| `src/naulthene/cerveau/persistance.py` | sauvegarde/restauration de `jours_stagnation_niveau` |
+| `docs/Parcourt_readme.md` | §6ter — le sevrage et le filet ; §6bis (b) et (c) marqués livrés |
+
+⚠️ **`noyau.py` uniquement** (terrain d'essai, gitignoré).
+
+---
+
 ## [35.0-experimental] - 2026-08-07
 
 ### Le Cursus Progressif — 15 niveaux au lieu de 5, promotion par maîtrise

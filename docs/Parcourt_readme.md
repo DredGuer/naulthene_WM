@@ -16,11 +16,14 @@ scripts de `src/naulthene/salles_de_classe/`.
 > **implémentées et validées** sur leurs branches. **Aucune ne change les commandes de ce
 > guide** — toutes sont automatiques, sans flag ni option. Voir [CHANGELOG.md](CHANGELOG.md).
 >
-> 🆕 **v35.0 — le cursus est passé de 5 à 15 niveaux.** Le [§6](#6-les-15-niveaux-minigrid-programme-v350)
-> décrit le programme livré et la nouvelle promotion (2 victoires **OU** 60 % de maîtrise
-> sur 20 épisodes) ; le [§6bis](#6bis--pourquoi-ce-programme-est-trop-court-et-trop-brutal-diagnostic-2026-08-07)
-> garde le diagnostic qui l'a motivée (2000 jours de blocage mesurés). **Rien à activer** —
-> un ancien `.brain` est remappé automatiquement.
+> 🆕 **v35.0/v35.1 — le cursus est passé de 5 à 15 niveaux, et l'aide est devenue
+> adaptative.** Le [§6](#6-les-15-niveaux-minigrid-programme-v350) décrit le programme et la
+> nouvelle promotion (2 victoires **OU** 60 % de maîtrise sur 20 épisodes) ; le
+> [§6ter](#6ter-le-guidage-dégressif--le-filet-de-sécurité-v351) le **sevrage** (plus il
+> comprend, moins on l'aide) et le **filet** (quand il bloque, on l'aide plus) ; le
+> [§6bis](#6bis--pourquoi-ce-programme-est-trop-court-et-trop-brutal-diagnostic-2026-08-07)
+> garde le diagnostic qui a motivé la refonte (2000 jours de blocage mesurés).
+> **Rien à activer** — un ancien `.brain` est remappé automatiquement.
 
 ---
 
@@ -33,6 +36,7 @@ scripts de `src/naulthene/salles_de_classe/`.
 5. [La Cuve (mode manuel client-serveur)](#5-la-cuve-mode-manuel-client-serveur)
 6. [Les 15 niveaux MiniGrid (`PROGRAMME`, v35.0)](#6-les-15-niveaux-minigrid-programme-v350)
 6bis. [⚠️ Pourquoi ce programme est trop court et trop brutal](#6bis--pourquoi-ce-programme-est-trop-court-et-trop-brutal-diagnostic-2026-08-07)
+6ter. [Le Guidage Dégressif & le Filet de Sécurité (v35.1)](#6ter-le-guidage-dégressif--le-filet-de-sécurité-v351)
 7. [Les 7 paliers DoorKey — le détail complet](#7-les-7-paliers-doorkey--le-détail-complet)
 8. [Le curriculum vocal — les 19 paliers](#8-le-curriculum-vocal--les-19-paliers)
 9. [Mode Guidé vs Mode Libre](#9-mode-guidé-vs-mode-libre)
@@ -423,23 +427,19 @@ de tout réapprendre.
 
 ### Les trois changements d'accompagnement — état
 
-**a. ✅ LIVRÉ — Promotion par taux de maîtrise.** `VICTOIRES_REQUISES = 2` consécutives
-était fragile (une défaite remet à zéro) et faible (2 réussites peuvent être de la chance).
-La v35.0 **ajoute** une seconde voie — 60 % sur 20 épisodes — sans retirer la première.
-Détail au [§6](#6-les-15-niveaux-minigrid-programme-v350).
+**a. ✅ LIVRÉ (v35.0) — Promotion par taux de maîtrise.** `VICTOIRES_REQUISES = 2`
+consécutives était fragile (une défaite remet à zéro) et faible (2 réussites peuvent être de
+la chance). La v35.0 **ajoute** une seconde voie — 60 % sur 20 épisodes — sans retirer la
+première. Détail au [§6](#6-les-15-niveaux-minigrid-programme-v350).
 
-**b. ⏸️ NON LIVRÉ — Un guidage qui s'estompe.** `RECOMPENSE_APPROCHE_BUT` passe toujours de
-0,05 à 0 d'un seul coup au Palier 5, et la falaise mesurée (0,00 record/jour) subsiste. Une
-décroissance progressive indexée sur la **maîtrise** — désormais disponible via
-`Cursus_Taux_Maitrise_Niveau` — serait le remède naturel.
+**b. ✅ LIVRÉ (v35.1) — Un guidage qui s'estompe.** `RECOMPENSE_APPROCHE_BUT` ne tombe plus
+à 0 d'un coup : l'aide décroît avec la maîtrise mesurée. Voir
+[§6ter](#6ter-le-guidage-dégressif--le-filet-de-sécurité-v351).
 
-**c. ⏸️ NON LIVRÉ — Une redescente possible.** Aucun palier ne recule (§11). Un agent qui
-échoue 2000 jours reste au Palier 7 sans jamais pouvoir reconsolider les bases.
-
-> ⚠️ **(b) et (c) touchent des invariants documentés** (`CLAUDE.md` : le Mode Libre, « ce
-> qui ne régresse jamais »). Ce sont des décisions utilisateur, pas des ajustements de code.
-> Le nouveau programme à 15 niveaux les rend d'ailleurs moins urgentes : la progressivité
-> vient désormais du cursus lui-même plutôt que du guidage.
+**c. ✅ LIVRÉ AUTREMENT (v35.1) — pas de redescente, mais un filet.** La redescente est
+**écartée** (décision utilisateur : *« il ne peut pas aller faire un palier impossible — et
+quand il bloque, on l'aide un peu »*). Un agent qui stagne reçoit un **surplus** d'aide,
+jusqu'à ×3, replié dès sa première victoire. Voir §6ter.
 
 ### Ce qui reste à mesurer
 
@@ -450,6 +450,81 @@ Conformément à la doctrine du projet (instrumenter avant de calibrer) :
 2. **Le temps réel jusqu'à la première victoire** sur chaque nouvel environnement.
 3. ✅ **Fait** : la faisabilité du Doctorat, mesurée par BFS (marge ×3,6 — faisable, mais
    10× plus exigeant que le Collège). Voir le défaut 3 ci-dessus.
+
+---
+
+## 6ter. Le Guidage Dégressif & le Filet de Sécurité (v35.1)
+
+Deux mécaniques opposées, pilotées par **un seul curseur** — le facteur de guidage, affiché
+chaque nuit sur la ligne `Cursus`.
+
+### 📉 Le sevrage — « plus il comprend, moins on l'aide »
+
+L'aide décroît à mesure que la maîtrise monte, comme un enfant qu'on accompagne de moins en
+moins :
+
+| Maîtrise du niveau | Guidage | Ce que ça veut dire |
+|---|---|---|
+| pas encore mesurable (< 10 épisodes) | **1,00** | un débutant reste un débutant |
+| ≤ 60 % | 1,00 | 🤝 aide pleine |
+| 70 % | 0,67 | 📉 sevrage en cours |
+| 80 % | 0,33 | 📉 sevrage avancé |
+| ≥ 90 % | **0,00** | 🕊️ autonome |
+
+**Ce que ça remplace** : le guidage était coupé d'un seul coup au palier 5 (Mode Libre) —
+c'est-à-dire au moment le plus dur. Mesuré : **0,00 record de proximité par jour** sur
+2000 jours. Une falaise, là où il fallait une pente.
+
+Le curseur pilote **les deux** sources d'aide à la fois (`RECOMPENSE_APPROCHE_BUT` sur
+DoorKey et les records de proximité ailleurs), au lieu de deux mécaniques qui s'éteignaient
+différemment.
+
+### 🛟 Le filet — « quand il bloque, on l'aide un peu »
+
+Un agent qui stagne longtemps reçoit un **surplus** d'aide, progressif :
+
+| Jours sans victoire | Renfort |
+|---|---|
+| ≤ 30 | ×1,0 — un échec est normal, pas un blocage |
+| 45 | ×1,5 |
+| 60 | ×2,0 |
+| ≥ 90 | **×3,0** (maximum) |
+
+Trois garanties : le renfort se replie **dès la première victoire** (une bouée, pas une
+rente) ; il ne touche **jamais la récompense terminale** (on aide à trouver le chemin, on
+n'offre pas la victoire) ; et il se remet à zéro **à chaque promotion** (sinon un agent
+promu arriverait avec un renfort déjà armé).
+
+> ℹ️ **Pas de redescente de palier.** Décision utilisateur : un agent ne doit pas se
+> retrouver face à un palier impossible, mais on ne le fait pas non plus reculer — on
+> l'aide davantage. « Ce qui ne régresse jamais » (§11) reste vrai.
+
+### Ce que ça donne — mesuré
+
+Cerveau neuf, 100 jours. L'agent cale à `Maternelle` après 3 promotions rapides :
+
+```
+ jour  niv  nom                          maîtrise  guidage  stagn  vict
+    5    2  Maternelle (Longue distance)     —      1.00      0      4
+   40    2  Maternelle                      0.00    1.13     35      4   ← le filet s'arme
+   60    2  Maternelle                      0.00    1.80     55      4
+   80    2  Maternelle                      0.00    2.47     75      4
+  100    2  Maternelle                      0.05    1.00      5      7   ← VICTOIRES, filet replié
+```
+
+Sans filet, ce cerveau serait resté à 4 victoires. Le run de référence sans cette mécanique
+calait à **0 % de maîtrise pendant 79 jours**.
+
+### Où le lire
+
+Ligne console, chaque nuit :
+
+```
+├─ Cursus : 🎓 Niveau 3/15 — maîtrise 0% (n=20), seuil 60% | série 0/2 | 🛟 filet ×2.5 (75 j sans victoire)
+```
+
+Côté W&B : `Cursus_Facteur_Guidage` (< 1 = sevrage, > 1 = filet, **1,0 constant = aucune des
+deux ne sert**) et `Cursus_Jours_Stagnation`.
 
 ---
 

@@ -236,6 +236,8 @@ class PersistanceAnatomique:
             'niveau_actuel': etat.niveau_actuel,
             # v35.0 — fenêtre glissante de promotion (voir _taux_maitrise_niveau).
             'historique_episodes_niveau': list(etat.historique_episodes_niveau),
+            # v35.1 — filet de sécurité : jours consécutifs sans victoire sur le niveau.
+            'jours_stagnation_niveau': etat.jours_stagnation_niveau,
             'victoires_consecutives': etat.victoires_consecutives,
             # v33.0-etape0.6 — chronologie des victoires. DOIT être persistée : c'est une
             # mesure de VIE (intervalles entre victoires sur des centaines de jours), pas
@@ -505,6 +507,9 @@ class PersistanceAnatomique:
         # MIN_EPISODES_PROMOTION épisodes n'ont pas été rejoués. La voie « série de
         # victoires » reste disponible entre-temps : aucun cerveau ne perd de vitesse.
         etat.historique_episodes_niveau = checkpoint.get('historique_episodes_niveau', [])
+        # v35.1 — un `.brain` antérieur repart à 0 : le filet se réarmera naturellement si
+        # l'agent stagne réellement, plutôt que d'hériter d'un renfort qu'il n'a pas mérité.
+        etat.jours_stagnation_niveau = checkpoint.get('jours_stagnation_niveau', 0)
         # v33.0-etape0.6 — lecture DÉFENSIVE (`.get`) : les `.brain` antérieurs à cette
         # version n'ont aucune de ces clés. Un cerveau ancien repart donc d'une
         # chronologie vierge (aucune victoire connue) plutôt que de faire planter le

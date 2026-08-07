@@ -105,6 +105,23 @@ Pour un historique complet commit par commit, consultez [docs/CHANGELOG.md](docs
 > [docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md](docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md) pour le cadrage et les
 > arbitrages.
 
+### 🤝 Nouveautés v35.1 (expérimental) — Le Guidage Dégressif & le Filet de Sécurité (2026-08-07)
+
+Deux mécaniques opposées, pilotées par **un seul curseur** — la formule de l'utilisateur :
+*« plus il comprend, moins on l'aide ; et quand il bloque, on l'aide un peu »*.
+
+**Le sevrage** : l'aide décroît avec la maîtrise mesurée (1,00 sous 60 % → 0,00 au-dessus de
+90 %), au lieu d'être coupée d'un seul coup au palier 5 comme avant. Le Mode Libre produisait
+une falaise — mesuré, **0,00 record de proximité par jour** pendant 2000 jours.
+
+**Le filet** : un agent qui stagne plus de 30 jours reçoit un **surplus** d'aide, progressif
+jusqu'à ×3. Il se replie dès la première victoire — une bouée, pas une rente — et ne touche
+jamais la récompense terminale. La redescente de palier a été **écartée** : on n'aide pas un
+agent en le faisant reculer.
+
+Mesuré sur un cerveau neuf : bloqué à 4 victoires pendant 75 jours, le filet monte à ×2,47…
+et l'agent débloque à **7 victoires**. Sans filet, le même cerveau calait 79 jours à 0 %.
+
 ### 🎓 Nouveautés v35.0 (expérimental) — Le Cursus Progressif : 15 niveaux au lieu de 5 (2026-08-07)
 
 Le cursus passe de **5 à 15 niveaux**, avec un principe simple : **entre deux paliers voisins,
