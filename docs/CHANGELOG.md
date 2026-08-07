@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `05a28ae` |
 | **Catégorie** | docs (diagnostic + refonte proposée, aucun code) |
 | **Impact** | Documentation — le `PROGRAMME` actuel est inchangé |
 
