@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `9a9eb73` |
 | **Catégorie** | feat (nouvelle mécanique de cursus, expérimental — `noyau.py` uniquement) |
 | **Impact** | **Fonctionnel** — change la progression de tous les parcours |
 
