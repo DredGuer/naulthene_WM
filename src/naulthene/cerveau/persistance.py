@@ -425,8 +425,15 @@ class PersistanceAnatomique:
         # tenseur fraîchement initialisé) est la bonne pour un cerveau déjà entraîné : le
         # plancher se cale alors sur l'échelle d'origine de la couche, exactement comme
         # pour un cerveau neuf. Il est donc exclu de la détection de greffe.
+        #
+        # v37.0-fix — `echelle_myeline` relève exactement du même cas : buffer scalaire
+        # ajouté aux 12 couches (échelle de référence de la myéline, qui remplace l'ancien
+        # `q_ref=1.0` absolu). Absent de tout `.brain` antérieur à la v37, il déclencherait
+        # la même fausse greffe massive. Sa valeur par défaut (0.0) est correcte : la
+        # première nuit la recale sur le maximum réel de `myeline_M` de la couche.
+        BUFFERS_DIAGNOSTIC = ("norme_naissance", "echelle_myeline")
         cles_manquantes_reelles = [c for c in resultat_chargement.missing_keys
-                                    if not c.endswith("norme_naissance")]
+                                    if not c.endswith(BUFFERS_DIAGNOSTIC)]
         greffe_detectee = bool(cles_manquantes_reelles) or bio_greffe
         if greffe_detectee:
             print(f"   🌱 Hémisphères nouvellement greffés sur ce cerveau (initialisés à neuf) : "

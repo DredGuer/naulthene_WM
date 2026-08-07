@@ -1,0 +1,338 @@
+# Chantier v37.0 — L'Équilibre C1 / C2
+
+> **Statut** : diagnostic terminé, équilibrage implémenté, **en attente de validation par run long**
+> **Branche** : `feat/v37-equilibre-c1-c2`
+> **Date d'ouverture** : 2026-08-07
+> **Cerveau de référence du diagnostic** : `brains/070820261310_V36_600_RMD.brain` (600 jours, bus 64)
+
+---
+
+## 1. Le point de départ
+
+Trois cerveaux successifs (V34-fix1 900 j, V35 2700 j, V36 600 j) se sont arrêtés **au même
+niveau du cursus** : `MiniGrid-SimpleCrossingS9N1-v0`, index 3 sur 15 (« Primaire 1 —
+Contourner »). Le run V36 de 600 jours a atteint ce niveau au jour 288 et n'en est jamais
+sorti : 2 victoires en 312 jours, contre 19 sur les 288 premiers.
+
+L'hypothèse initiale — « le niveau 3 est mal placé dans le cursus » — a été **écartée par la
+mesure**. Le blocage n'est pas pédagogique, il est architectural.
+
+---
+
+## 2. Ce que la mesure a montré
+
+### 2.1 La sonde C1/C2 (`instruments/sonde_c1_c2.py`)
+
+Le cerveau V36 a été sondé sur trois environnements, dont deux qu'il avait **maîtrisés** :
+
+| Environnement | Ampl. C1 | Ampl. C2 | Ratio C2/C1 | Accord argmax |
+|---|---|---|---|---|
+| `Empty-5x5` (maîtrisé) | 0,217 | 2,138 | **9,9×** | **0 %** |
+| `Empty-8x8` (maîtrisé) | 0,168 | 2,125 | **12,7×** | **0 %** |
+| `SimpleCrossingS9N1` (bloqué) | 0,095 | 2,105 | **22,1×** | **0 %** |
+
+Deux faits que ce tableau contient et qui ne sont pas anodins :
+
+1. **L'accord C1/C2 est nul sur les trois cartes** — pas faible, *nul*. `argmax(C1) = 3` sur
+   400 ticks sur 400 ; `argmax(C2) = 0` sur 400 ticks sur 400. Chaque module vote une action
+   **constante**, différente de l'autre, indépendamment de l'observation.
+2. **L'amplitude de C2 est identique (2,10 ± 0,02) sur trois cartes de difficultés très
+   différentes.** Un module qui délibère devrait varier ; celui-ci ne varie pas.
+
+Le déséquilibre existe **aussi sur les niveaux maîtrisés** (9,9× sur `Empty-5x5`). Il n'a donc
+pas été causé par le blocage : il le précède. Les 21 victoires du run V36 (taux de vie 3,5 %)
+sont attribuables à la marche aléatoire du `multinomial`, pas à une politique apprise.
+
+### 2.2 La sonde des poids (`instruments/sonde_poids.py`)
+
+```
+couche                      |base|   |annexe|   myeline   n_naiss    ratio
+porte_visuelle              0.8607    0.0000       nan     5.3207   16.18%
+hippocampe                  1.1712    0.0000       nan     4.6802   25.03%
+fusion_memoire              1.0351    0.0000       nan     4.5238   22.88%
+analyseur                   0.8676    0.0000       nan     4.1177   21.07%
+integrateur_bio             0.6577    0.0000       nan     4.9644   13.25%
+tete_motrice                0.3195    0.0000       nan     3.1949   10.00%   ← plancher exact
+cortex_prefrontal           0.1288    0.0000       nan     1.2879   10.00%   ← plancher exact
+generateur_attente          0.4476    0.0000       nan     4.4759   10.00%   ← plancher exact
+tete_requete                0.2898    0.0000       nan     2.8983   10.00%
+porte_auditive              1.1852    0.0000       nan     5.4489   21.75%
+tete_vocale                 0.3168    0.0000       nan     3.1677   10.00%
+generateur_attente_audio    0.5559    0.0000       nan     4.4147   12.59%
+```
+
+---
+
+## 3. Les trois causes, empilées
+
+### Cause 1 — Les deux têtes de décision sont collées au plancher vital
+
+`tete_motrice` et `cortex_prefrontal` sont à **exactement 10,00 %** de leur norme de naissance,
+c'est-à-dire pile sur `FRACTION_NORME_MIN_COUCHE = 0.10`. Elles ne sont pas mortes : le
+plancher vital v34.0-fix1 les en a empêchées, et c'est une confirmation supplémentaire de son
+utilité (6 couches sur 12 y sont collées ici). Mais **il les maintient à 10 % de leur force**.
+
+C1 produit des logits d'amplitude 0,1 parce qu'il ne lui reste que 10 % de ses poids. Le
+plancher vital a converti une mort certaine en **survie muette** — ce qui est un progrès, mais
+pas une solution.
+
+> Le plancher vital est un garde-fou de dernier recours, pas un régime de croisière. Le fait
+> que 6 couches y soient collées en permanence signifie que l'érosion reste trop forte pour un
+> cerveau qui ne reçoit pas de récompense, pas que le plancher est mal réglé.
+
+### Cause 2 — Aucune myéline, nulle part
+
+`annexe_weight = 0.0000` sur les 12 couches, `myeline_M` non renseignée. La chaîne causale
+documentée depuis la v34.0 se vérifie intégralement :
+
+```
+pas de victoire → pas de récompense → gradient ~0 → annexe ~0
+                → myeline_M = max(myeline_M, |annexe|) ~0
+                → érosion à taux plein (facteur = 1 − λ)
+                → chute jusqu'au plancher vital
+```
+
+C'est un **cercle vicieux** : l'agent a besoin de gagner pour myéliniser, et de ses poids pour
+gagner. Le plancher vital coupe la chute mais ne relance pas la machine.
+
+### Cause 3 — C2 est normalisé, C1 ne l'est pas *(la cause immédiate du déséquilibre)*
+
+Dans `simuler_futur_et_planifier` (`noyau.py:534-535`) :
+
+```python
+if valeur_cumulee.std() > 1e-6:
+    valeur_cumulee = (valeur_cumulee - valeur_cumulee.mean()) / (valeur_cumulee.std() + 1e-8)
+```
+
+**C2 sort toujours avec un écart-type de 1**, quelle que soit sa confiance réelle. Un C2 qui
+n'a aucun avis (toutes les branches équivalentes) et un C2 parfaitement sûr produisent des
+sorties de **même amplitude**. L'information de confiance est calculée (`indecision_c2`, le std
+brut d'avant normalisation) puis **jetée** du chemin de décision — elle ne sert que de
+télémétrie.
+
+C1, lui, conserve son échelle brute, qui est celle de ses poids érodés : ~0,1.
+
+L'arbitrage `logits_instinct + valeurs_simulees × force_planification` additionne donc
+**0,1 et 2,1 × 0,85 ≈ 1,8**. Le rapport de force 1:18 n'a jamais été un choix d'architecture :
+c'est un artefact de la normalisation d'un seul des deux termes.
+
+> **C2 n'écrase pas C1 parce qu'il est meilleur. Il l'écrase parce qu'il est le seul des deux à
+> avoir une échelle garantie par construction.**
+
+---
+
+## 4. Ce qui a été écarté, et pourquoi
+
+Traçabilité des options évaluées puis rejetées, pour éviter qu'elles soient réintroduites sans
+l'argument qui les a écartées.
+
+| Option écartée | Raison |
+|---|---|
+| **Insérer un palier entre `Empty-8x8` et `SimpleCrossing`** | Le déséquilibre C1/C2 est présent **aussi sur les niveaux maîtrisés** (9,9× sur `Empty-5x5`). Un palier de plus serait franchi par la même marche aléatoire, sans rien apprendre. À reconsidérer **après** la v37, si le blocage persiste. |
+| **Supprimer la normalisation z-score de C2** | Elle a une fonction réelle : sans elle, l'échelle de `cortex_prefrontal` dérive librement et C2 peut exploser. Le problème n'est pas qu'elle existe, c'est qu'elle **efface la confiance**. |
+| **Baisser `FORCE_PLANIFICATION` (0,85 → 0,05)** | Constante arbitraire remplaçant une constante arbitraire. Ne corrige pas la cause (l'asymétrie d'échelle) et casserait C2 sur un cerveau sain dont C1 serait fort. Interdit par la doctrine « instrumenter d'abord, calibrer ensuite ». |
+| **Court-circuit « C1 saute C2 s'il est confiant »** | Refusé par l'utilisateur en v29.0, et à nouveau ici. C2 est sollicité à **chaque** tick ; l'équilibrage porte sur la fusion, jamais sur un `if`. |
+| **Remonter `FRACTION_NORME_MIN_COUCHE` à 0,30** | Traite le symptôme (têtes faibles) sans traiter la cause (érosion sans myéline). Et masquerait le signal de diagnostic : le fait que 6 couches soient collées au plancher est une **information**, qu'il ne faut pas rendre invisible. |
+
+---
+
+## 5. L'équilibrage retenu (v37.0)
+
+Le chantier a livré **deux mesures d'arbitrage et trois correctifs de fond**. Une troisième
+mesure a été implémentée, mesurée, puis retirée (§5.4) — elle est documentée avec les autres
+parce que son échec est le résultat le plus instructif du chantier.
+
+### 5.1 — Mesure 2 : le gain de C1 est à double sens
+
+L'amplitude de C1 est ramenée vers `VIGUEUR_MIN_C1` par un facteur **scalaire**, dans les deux
+sens : il relève un réflexe étouffé par l'érosion, il tempère un réflexe devenu tonitruant.
+L'opinion de C1 (les rapports entre ses 7 logits) reste rigoureusement intacte — seul son
+volume est réglé.
+
+`VIGUEUR_MIN_C1` n'est **pas posée à la main**, elle est dérivée de la seule échelle de
+référence disponible :
+
+```python
+VIGUEUR_MIN_C1 = (AMPLITUDE_C2_NORMALISEE * FORCE_PLANIFICATION_LIBRE) / RATIO_C1C2_VISE
+#              = (2.1 × 0.85) / 2.0 ≈ 0.89
+```
+
+`AMPLITUDE_C2_NORMALISEE = 2.1` est l'amplitude d'un z-score sur 7 actions, **vérifiée
+empiriquement** sur trois environnements (2,105 / 2,096 / 2,103). `RATIO_C1C2_VISE = 2.0`
+maintient C2 prépondérant — c'est voulu : C2 doit continuer de faire émerger l'intelligence,
+pas être mis à égalité avec le réflexe.
+
+> **La borne haute (`GAIN_C1_MAX`) a été ajoutée après mesure.** La première version ne faisait
+> qu'amplifier (`min=1.0`) : une fois les têtes débloquées par les correctifs §5.2 et §5.3, la
+> distillation a renforcé C1 bien plus vite que C2, et le ratio s'est **inversé à 0,21×**.
+> C'était exactement le mode d'échec annoncé au §6. Le gain est donc borné des deux côtés.
+
+### 5.2 — Correctif : le plancher vital ne doit jamais être un plafond
+
+La v34.0 renormalisait à `norme_plancher` **depuis** la norme post-érosion, ramenant la couche
+à *exactement* 10 % de sa naissance quelle que soit sa valeur d'entrée. Pour une couche collée
+au plancher, tout ce que le gradient avait consolidé était donc effacé chaque nuit.
+
+```python
+# v34.0 — ramène à exactement le plancher, dans les deux sens
+if 0 < norme_apres < norme_plancher:
+    self.base_weight *= (norme_plancher / norme_apres)
+
+# v37.0-fix — ne remonte que ce qui manque, ne redescend jamais
+facteur_plancher = torch.clamp(norme_plancher / norme_apres, min=1.0)
+```
+
+### 5.3 — Correctif : la myéline doit voir l'apprentissage du jour
+
+`myeline_M = max(myeline_M, |annexe|)` n'était calculée que dans `forward()`, donc **pendant**
+la journée — à un moment où `annexe_weight` vaut encore la valeur de la veille. Or la séquence
+nocturne est `apprendre_journee` (step #1) → `rever` (step #2) → `cycle_sommeil` : aucun
+`forward` n'a lieu entre le dernier pas d'optimiseur et l'érosion.
+
+**La myéline qui protège une couche ignorait donc systématiquement tout ce qu'elle venait
+d'apprendre.** Le rafraîchissement a été placé en tête de `cycle_sommeil`, seul point qui voit
+l'état final de `annexe_weight`. L'invariant est intact : la myéline vient toujours **uniquement
+du gradient** — seul le *moment* de la lecture change.
+
+### 5.4 — Correctif : l'échelle de la myéline est relative, plus absolue
+
+`q_ref = 1.0` (paramètre jamais passé par aucun appelant depuis l'origine) suppose une myéline
+d'ordre 1. La mesure dit ~0,002. **L'échelle était 500× trop grande**, donc `myeline_norm`
+restait collée à 0 et *toute* couche s'érodait au taux plein, myélinisée ou non : la protection
+promise par la Cristallisation Souple n'a jamais pu s'exercer sur aucun cerveau du dépôt.
+
+C'est le défaut de `SEUIL_CRISTAL = 0.80` à l'identique — une échelle absolue posée a priori,
+jamais confrontée à une mesure.
+
+L'échelle suit désormais le **3ᵉ quartile de `myeline_M` de la couche elle-même**. Le quantile
+plutôt que le maximum : normaliser par le max fait porter toute l'échelle par une seule synapse
+extrême et écrase les 99 % restantes (distribution mesurée sur `tete_motrice` : médiane 0,027,
+p90 0,197, p99 1,000 — protection moyenne 12,7 % seulement). La hiérarchie entre synapses est
+strictement conservée : c'est l'unité qui change, jamais l'ordre.
+
+### 5.5 — Mesure 3 : le réflexe reçoit un gradient qui ne dépend pas de la victoire
+
+Tant que seule une victoire produit du gradient, un agent qui ne gagne pas ne consolide rien.
+C1 est donc tiré vers ce que C2 a jugé meilleur **après délibération** — auto-distillation.
+
+**Rien n'est expliqué en dur** : la cible n'est pas une table « action 2 = bien », c'est la
+sortie d'un module du cerveau lui-même, `.detach()`ée. Ce `.detach()` est essentiel — sans lui,
+le gradient remonterait dans le rollout et C2 apprendrait à se rendre *prévisible* plutôt que
+juste. Vérifié : `cortex_prefrontal` reçoit bien un gradient de **0,00000000** par ce canal.
+
+Désactivable entièrement par `TAUX_DISTILLATION_C1 = 0.0`.
+
+### 5.6 — Mesure 1 : ESSAYÉE, MESURÉE, RETIRÉE
+
+L'idée : la normalisation z-score efface la confiance de C2 (un C2 sans avis et un C2 certain
+sortent tous deux à std=1), il faudrait donc la réinjecter. **Deux implémentations, deux échecs :**
+
+| Tentative | Résultat mesuré | Cause |
+|---|---|---|
+| Échelle **absolue** (`valeur × std_brut`) | **Éteint C2** — ratio tombé à 0,01× | Le std brut vaut 0,0008 et ne varie que de **1,00×** entre min et max sur 300 ticks |
+| Échelle **relative** (rapport à une moyenne glissante de son propre std) | **Sature** — `confiance = 2.0000` en permanence | La moyenne glissante décroît plus vite que le signal ; effet net = facteur constant, donc rien |
+
+**Conclusion : tant que `cortex_prefrontal` est au plancher, C2 n'a aucune confiance variable à
+exprimer — il n'y a rien à réinjecter.** Le code a été retiré, la trace conservée dans
+`simuler_futur_et_planifier` à l'endroit exact où il aurait vécu. À reconsidérer seulement si
+un run montre `indecision_c2` réellement variable.
+
+### 5.7 — Correctif : la normalisation de C2 devient inconditionnelle
+
+L'ancien `if std > 1e-6` laissait, en dessous du seuil, `valeur_cumulee` à son échelle brute
+(~1e-7) — un C2 **numériquement éteint** qui disparaissait de la fusion sans que rien ne le
+signale. Observé sur les runs de validation : des journées entières à `C2=0.000` alternant avec
+des journées normales.
+
+« C2 hésite entre des branches proches » ne veut pas dire « C2 n'a pas d'avis » : la hiérarchie
+relative entre les 7 actions reste porteuse d'information. L'epsilon au dénominateur suffit à
+couvrir le cas dégénéré sans jamais éteindre le module.
+
+---
+
+## 6. Critères de validation
+
+Le chantier ne sera déclaré réussi que si **les quatre** sont observés sur un run long.
+
+| # | Critère | Cible | État au 2026-08-07 (40 j) |
+|---|---|---|---|
+| 1 | Le ratio C2/C1 descend sous 3× | `< 3,0` | ✅ **1,48-1,59×**, stable (contre 9,9-22,1×) |
+| 2 | L'accord C1/C2 cesse d'être nul | `> 15 %` | ❌ **0 %** — inchangé |
+| 3 | Les têtes décollent du plancher vital | `> 12 %` de `n_naiss` | 🟡 partiel — `cortex_prefrontal` 11,07 %, `tete_motrice` toujours à 10,00 % (mais se remodèle, voir §8) |
+| 4 | Le niveau 3 est franchi | niveau ≥ 4 | ⏳ **non testé** — 40 jours ne suffisent pas |
+
+**Le critère 4 est le seul qui compte vraiment.** Les trois premiers peuvent être atteints sans
+que l'agent progresse — ce serait alors un équilibrage cosmétique, et il faudrait revenir au
+cursus (§4, première ligne du tableau).
+
+### Lecture honnête de l'état actuel
+
+Le chantier a corrigé des **bugs réels et mesurés** (§5.2, §5.3, §5.4, §5.7), dont deux qui
+rendaient l'apprentissage des têtes de décision *mathématiquement impossible*. L'équilibre
+d'arbitrage est atteint et stable. Trois couches sur cinq ont quitté le plancher vital.
+
+Mais **le critère 2 n'a pas bougé d'un pouce** : C1 et C2 restent en désaccord sur 100 % des
+ticks. Les deux modules ont maintenant des voix comparables, ils ne convergent pas pour autant.
+Il est trop tôt pour dire si l'auto-distillation les rapprochera sur plusieurs centaines de
+jours, ou si un autre mécanisme les maintient orthogonaux.
+
+**Rien ne permet encore d'affirmer que la v37 débloquera le niveau 3.** C'est ce que le run long
+doit trancher.
+
+### Ce qui invaliderait le chantier
+
+- Le ratio descend mais l'agent **régresse** sur les niveaux 0-2 déjà acquis → C2 était utile,
+  la mesure 2 l'a trop affaibli.
+- L'accord monte à ~100 % → C1 et C2 sont devenus redondants, l'auto-distillation (mesure 3) a
+  écrasé la diversité au lieu de l'équilibrer. **C'est le risque principal de la mesure 3.**
+
+---
+
+## 7. Invariants à ne pas casser
+
+- **C2 est sollicité à chaque tick.** Aucun court-circuit conditionnel, aucun seuil dans le
+  chemin de décision (refusé en v28, v29, v30 — et ici).
+- **C2 ne reçoit que `pensee_bio`**, l'état déjà compressé par C1. Jamais l'observation brute,
+  jamais l'environnement.
+- **Le rollout garde sa complexité linéaire** : premier pas sur les 7 actions réelles, pas
+  suivants en argmax glouton. Jamais 7^horizon.
+- **Rien n'est expliqué en dur.** Aucune table action→valeur, aucun objet nommé. Le signal de
+  la mesure 3 vient de la cohérence entre modules, pas d'une connaissance injectée.
+- **Les constantes sont des bornes, les valeurs sont dérivées.** `confiance_c2` est mesurée à
+  chaque tick, jamais fixée.
+- **Rétrocompatibilité des `.brain`** : la v37 ne change aucune dimension ni forme de tenseur.
+  Un `.brain` v36 se recharge sans greffe.
+
+---
+
+## 8. Journal du chantier
+
+| Date | Étape | Résultat |
+|---|---|---|
+| 2026-08-07 | Sonde C1/C2 sur 3 environnements | Ratio 9,9× à 22,1×, accord **0 %** partout |
+| 2026-08-07 | Sonde des poids sur cerveau V36 | 5 couches sur 12 collées au plancher vital ; `annexe = 0` partout |
+| 2026-08-07 | Identification de la cause immédiate | Normalisation z-score de C2 non appliquée à C1 |
+| 2026-08-07 | Mesure 1, tentative absolue | **Échec** — éteint C2 (ratio 0,01×) |
+| 2026-08-07 | Mesure 1, tentative relative | **Échec** — sature au plafond (confiance = 2,0000 constante) |
+| 2026-08-07 | Mesure 1 retirée | Trace conservée dans le code ; le déséquilibre se corrige côté C1 |
+| 2026-08-07 | Mesure 2 (gain amplificateur seul) | Ratio ramené à 2,36× et **stable sur les 3 cartes** (contre 9,9-22,1× dérivant) |
+| 2026-08-07 | Correctif plancher-plafond | Le gradient consolidé n'est plus effacé chaque nuit |
+| 2026-08-07 | Correctif timing myéline | Myéline de `tete_motrice` : 0,000000 → 0,0033 |
+| 2026-08-07 | Correctif échelle myéline (quantile) | Protection moyenne 0 % → 45,9 % ; érosion effective 0,050 → 0,027 |
+| 2026-08-07 | Run 30 j | **Ratio inversé à 0,21×** — C1 écrase C2, mode d'échec §6 déclenché |
+| 2026-08-07 | Gain rendu à double sens | Ratio remonté et **convergent vers 1,5×** |
+| 2026-08-07 | Normalisation C2 inconditionnelle | Fin des `C2=0.000` intermittents |
+| 2026-08-07 | Run 40 j de validation | Ratio **1,48-1,59× stable**, C2 constant à ~1,48 |
+| 2026-08-07 | Sonde des poids finale | **3 couches** au plancher (contre 5) ; `cortex_prefrontal` décollé à 11,07 % |
+| 2026-08-07 | Vérification remodelage `tete_motrice` | Norme constante mais **cosinus 0,9972 / 7,43 % des poids modifiés en 5 nuits** — la couche apprend |
+
+### Note sur `tete_motrice` restée à 10,00 %
+
+La couche reste collée au plancher en **norme**, ce qui a d'abord été lu comme un échec. La
+mesure dit autre chose : sa consolidation nocturne fait *baisser* la norme (0,31949 → 0,31823),
+parce que le gradient pointe en sens opposé aux poids existants — **il les corrige, il ne les
+grossit pas**. Le plancher la remonte ensuite à son échelle d'origine.
+
+Vérifié sur 5 nuits : similarité cosinus 0,9972, distance relative **7,43 %**. La couche se
+remodèle activement à norme constante. Le plancher normalise l'échelle, pas le contenu — c'est
+un comportement sain, et la norme seule est un mauvais indicateur d'apprentissage.

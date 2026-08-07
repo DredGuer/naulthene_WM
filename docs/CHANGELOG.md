@@ -4,6 +4,106 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [37.0-experimental] - 2026-08-07
+
+### L'Équilibre C1 / C2 — le réflexe cesse d'être inaudible, et les têtes de décision peuvent enfin apprendre
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | feat + fix critique (arbitrage cognitif & plasticité, expérimental — `noyau.py` + `persistance.py`) |
+| **Impact** | **Critique** — trois bugs rendaient l'apprentissage des deux têtes de décision *mathématiquement impossible* |
+
+Chantier complet et traçabilité des options écartées :
+[`CHANTIER_v37_equilibre_c1_c2.md`](CHANTIER_v37_equilibre_c1_c2.md).
+
+**🔴 CE QUI ÉTAIT CASSÉ** (mesuré sur `070820261310_V36_600_RMD.brain`, 600 jours)
+
+Trois cerveaux successifs (V34-fix1 900 j, V35 2700 j, V36 600 j) se sont arrêtés au **même
+niveau** du cursus (`SimpleCrossingS9N1`, index 3/15). L'hypothèse « le niveau est mal placé »
+a été **écartée par la mesure** : le blocage est architectural.
+
+| Environnement | Ampl. C1 | Ampl. C2 | Ratio | Accord argmax |
+|---|---|---|---|---|
+| `Empty-5x5` (maîtrisé) | 0,217 | 2,138 | 9,9× | **0 %** |
+| `Empty-8x8` (maîtrisé) | 0,168 | 2,125 | 12,7× | **0 %** |
+| `SimpleCrossingS9N1` (bloqué) | 0,095 | 2,105 | 22,1× | **0 %** |
+
+`argmax(C1) = 3` sur 400 ticks / 400 ; `argmax(C2) = 0` sur 400 / 400. Chaque module votait une
+action **constante**, différente de l'autre, indépendamment de l'observation — **y compris sur
+les niveaux déjà maîtrisés**. Les 21 victoires du run V36 (taux de vie 3,5 %) sont attribuables
+à la marche aléatoire du `multinomial`, pas à une politique apprise.
+
+**🔬 LES QUATRE CAUSES, EMPILÉES**
+
+| # | Cause | Preuve |
+|---|---|---|
+| 1 | **Le plancher vital était devenu un plafond.** La v34.0 renormalisait à *exactement* 10 % de la naissance depuis la norme post-érosion : tout ce que le gradient consolidait était effacé chaque nuit. | `tete_motrice` : 0,319490 avant la journée, annexe consolidée +0,0139, norme après sommeil **0,319490** — au millionième près |
+| 2 | **La myéline ne voyait jamais l'apprentissage du jour.** Calculée uniquement dans `forward()`, donc pendant la journée, alors que `annexe_weight` ne prend sa valeur qu'au `optimizer.step()` du soir. Aucun `forward` n'a lieu entre le dernier pas et `cycle_sommeil`. | myéline de `tete_motrice` et `cortex_prefrontal` : **0,000000 exact** après 600 jours |
+| 3 | **`q_ref = 1.0` : échelle 500× trop grande.** Paramètre jamais passé par aucun appelant depuis l'origine. Suppose une myéline d'ordre 1 ; la mesure dit ~0,002. `myeline_norm` restait donc collée à 0 et **toute** couche s'érodait au taux plein. | Même défaut que `SEUIL_CRISTAL = 0.80` face à une myéline réelle de 0,0038 — la Cristallisation Souple n'a jamais pu s'exercer |
+| 4 | **C2 normalisé, C1 non.** `valeur_cumulee` sort d'un z-score, donc écart-type 1 **par construction** ; C1 garde son échelle brute, érodée au plancher. La fusion additionnait 0,1 et 1,8. | Amplitude C2 = 2,10 ± 0,02 **identique** sur trois cartes de difficultés très différentes |
+
+> **C2 n'écrasait pas C1 parce qu'il était meilleur. Il l'écrasait parce qu'il était le seul des
+> deux à avoir une échelle garantie par construction.**
+
+**✅ CE QUI A ÉTÉ LIVRÉ**
+
+| Fichier | Changement |
+|---|---|
+| `src/naulthene/cerveau/noyau.py` | **Correctif plancher** : `torch.clamp(norme_plancher / norme_apres, min=1.0)` — ne remonte que ce qui manque, ne redescend jamais |
+| `src/naulthene/cerveau/noyau.py` | **Correctif myéline** : rafraîchie en tête de `cycle_sommeil`, seul point qui voit l'état final de `annexe_weight`. L'invariant tient — la myéline vient toujours **uniquement** du gradient, seul le *moment* de la lecture change |
+| `src/naulthene/cerveau/noyau.py` | **Échelle de myéline relative** : 3ᵉ quartile de `myeline_M` de la couche (`QUANTILE_ECHELLE_MYELINE`), au lieu de `q_ref=1.0`. Le quantile et non le max : normaliser par le max fait porter l'échelle par une seule synapse (p50 = 0,027 mais p99 = 1,000) |
+| `src/naulthene/cerveau/noyau.py` | **Mesure 2 — gain de C1 à double sens** : facteur scalaire ramenant l'amplitude vers `VIGUEUR_MIN_C1`, borné par `GAIN_C1_MIN/MAX`. L'opinion de C1 est intacte, seul son volume est réglé |
+| `src/naulthene/cerveau/noyau.py` | **Mesure 3 — auto-distillation C2 → C1** (`TAUX_DISTILLATION_C1`) : le réflexe reçoit un gradient qui ne dépend d'aucune victoire. Cible `.detach()`ée — vérifié : `cortex_prefrontal` reçoit 0,00000000 par ce canal, C2 n'apprend donc pas à se rendre prévisible |
+| `src/naulthene/cerveau/noyau.py` | **Normalisation de C2 inconditionnelle** : l'ancien `if std > 1e-6` laissait C2 à son échelle brute (~1e-7) sous le seuil — un module **numériquement éteint**, sans aucun signal. Observé : des journées entières à `C2=0.000` |
+| `src/naulthene/cerveau/noyau.py` | **Télémétrie** (v29.1) : `Arbitrage_Ratio_C2C1`, `Arbitrage_Accord`, `Arbitrage_Amplitude_C1/C2`, `Arbitrage_Gain_C1`, `Distillation_C2_vers_C1` + ligne de bilan console. Conditionnelles — un jour sans tick moteur ne logge pas de zéros |
+| `src/naulthene/cerveau/persistance.py` | `echelle_myeline` exclu de la détection de greffe (même cas que `norme_naissance` v34.0-fix1 : buffer scalaire ajouté aux 12 couches, il aurait déclenché une fausse greffe massive et réinitialisé Adam à chaque chargement) |
+| `src/naulthene/instruments/sonde_c1_c2.py` | **NOUVEAU** — rapport de force C1/C2 sur un `.brain`, en lecture seule. Politique **stochastique** (`multinomial`), jamais `argmax` : un agent REINFORCE n'a jamais expérimenté son mode déterministe |
+| `src/naulthene/instruments/sonde_poids.py` | **NOUVEAU** — santé synaptique couche par couche, signale les couches collées au plancher vital |
+
+**⚠️ UNE MESURE ESSAYÉE PUIS RETIRÉE**
+
+« L'échelle de C2 porte sa confiance » (réinjecter `indecision_c2` après la normalisation) a été
+implémentée **deux fois**, mesurée **deux fois**, et retirée :
+
+| Tentative | Résultat | Cause |
+|---|---|---|
+| Échelle **absolue** | **Éteint C2** (ratio 0,01×) | Le std brut vaut 0,0008 et ne varie que de **1,00×** entre min et max sur 300 ticks |
+| Échelle **relative** (moyenne glissante) | **Sature** (`confiance = 2.0000` constante) | La moyenne glissante décroît plus vite que le signal — effet net : un facteur constant |
+
+Tant que `cortex_prefrontal` est au plancher, C2 n'a **aucune confiance variable à exprimer**.
+La trace est conservée dans `simuler_futur_et_planifier`, à l'endroit exact où le code aurait
+vécu, pour que l'idée ne soit pas réintroduite sans ces deux mesures.
+
+**📊 RÉSULTATS (run de validation, 40 jours)**
+
+| Critère | Avant | Après |
+|---|---|---|
+| Ratio C2/C1 | 9,9× à 22,1×, **dérivant** selon la carte | **1,48-1,59×**, stable |
+| Accord C1/C2 | 0 % | **0 %** — ❌ inchangé |
+| Couches au plancher vital | 5 / 12 | **3 / 12** |
+| Myéline `tete_motrice` | 0,000000 | 0,0033 |
+| Protection moyenne contre l'érosion | ~0 % | **45,9 %** (érosion effective 0,050 → 0,027) |
+
+**Une régression a été rencontrée et corrigée en cours de route** : une fois les têtes
+débloquées, la distillation a renforcé C1 plus vite que C2 et le ratio s'est **inversé à 0,21×**
+— exactement le mode d'échec que le chantier s'était engagé à surveiller. D'où le gain à double
+sens (borne haute `GAIN_C1_MAX`).
+
+**Sur `tete_motrice`, restée à 10,00 %** : sa consolidation nocturne fait *baisser* la norme
+(0,31949 → 0,31823) — le gradient pointe en sens opposé aux poids existants, **il les corrige,
+il ne les grossit pas**. Vérifié sur 5 nuits : cosinus 0,9972, **7,43 % des poids modifiés**.
+La couche se remodèle à norme constante ; la norme seule est un mauvais indicateur d'apprentissage.
+
+**🚧 CE QUI RESTE OUVERT**
+
+- **L'accord C1/C2 est toujours à 0 %.** Les deux voix sont désormais comparables, elles ne
+  convergent pas pour autant. Trop tôt pour dire si l'auto-distillation les rapprochera.
+- **Rien ne prouve encore que la v37 débloque le niveau 3** — 40 jours ne suffisent pas.
+  C'est ce que le run long doit trancher.
+
+---
+
 ## [36.0-experimental] - 2026-08-07
 
 ### Le Flux Enrichi & l'Abstraction par Récurrence — la mémoire cesse d'être affamée
