@@ -224,6 +224,11 @@ class PersistanceAnatomique:
             # --- 2. Poids, traces de myéline/éligibilité et optimiseur ---
             'state_dict': etat.agent.state_dict(),
             'optimizer_state_dict': etat.agent.optimizer.state_dict(),
+            # v37.1 — l'échelle à laquelle CET agent juge un choc dopaminergique fort ou
+            # faible (distillation sélective). Ce n'est pas un réglage mais un acquis :
+            # il encode ce que l'agent a vécu depuis sa naissance, et c'est ce qui fait
+            # qu'un expert cesse de trouver marquant ce qui bouleversait le débutant.
+            'reference_choc_dopamine': etat.agent.reference_choc_dopamine,
 
             # --- 3. Chimie viscérale (réservoir dopaminergique + moteur homéostatique) ---
             'teneur_dopamine': etat.teneur_dopamine,
@@ -457,6 +462,11 @@ class PersistanceAnatomique:
                   "les poids/acquis existants sont intacts, seule la dynamique Adam repart à neuf.")
         else:
             agent.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+
+        # v37.1 — `.get()` avec None par défaut : un .brain antérieur à la v37.1 n'a pas
+        # cette clé, et None est exactement la valeur d'initialisation attendue (« jamais
+        # mesuré »). Aucune greffe : c'est un scalaire, pas un tenseur.
+        agent.reference_choc_dopamine = checkpoint.get('reference_choc_dopamine')
 
         env_id = checkpoint['env_id']
         nom_classe = checkpoint['nom_classe']

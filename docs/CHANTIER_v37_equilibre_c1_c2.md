@@ -250,6 +250,80 @@ couvrir le cas dégénéré sans jamais éteindre le module.
 
 ---
 
+## 5bis. v37.1 — La distillation devient sélective
+
+> Ajout postérieur à la v37.0, issu d'une remarque de l'utilisateur : *« rejouer
+> prioritairement les épisodes où l'intervention de C2 a mené à un succès »*.
+
+### Le défaut corrigé
+
+La distillation v37.0 était **plate** : C1 imitait C2 à chaque tick, au même poids, que C2
+ait eu raison ou tort. Sur un C2 aussi médiocre que l'actuel (amplitude constante, argmax
+figé), cela revient à **faire apprendre à C1 les erreurs de C2**.
+
+Le principe biologique est le bon : on n'automatise pas tous ses gestes, on automatise ceux
+qui ont marché.
+
+### Le crédit rétrograde
+
+Un tick est crédité si un choc dopaminergique le **suit**, et le crédit décroît
+exponentiellement à mesure qu'on remonte le temps — le geste juste avant la récompense
+compte plus que celui d'il y a trente ticks. C'est le patron de `trace_activation`
+(LTP v20.0), appliqué ici à la sélection de ce qui vaut d'être gravé dans le réflexe.
+
+La propagation **s'arrête aux frontières d'épisode** : créditer un tick de l'épisode
+précédent pour une réussite du suivant serait une superstition, l'agent ayant été téléporté
+entre les deux.
+
+```
+chocs : [0, 0, 0, 0, 0, 0.8, 0, 0, | 0, 0, 0.4, 0]      (| = fin d'épisode)
+poids : [.66,.72,.78,.85,.92, 1.0, 0., 0., .56,.61,.67, 0.]
+                                    └──┬──┘
+                              crédit coupé net
+```
+
+### Rien n'est en dur : le niveau, pas le seuil
+
+Il n'existe **aucun seuil** du type « si choc > X, imiter ». Le crédit est **continu** et
+proportionnel au choc. Et l'échelle à laquelle un choc est jugé fort n'est pas une
+constante : c'est `reference_choc_dopamine`, moyenne glissante de ce que **cet agent** a
+lui-même vécu, sérialisée dans le `.brain`.
+
+Vérifié en simulation :
+
+| Agent | Référence apprise | Crédit accordé à un choc de 0,1 |
+|---|---|---|
+| **Débutant** (n'a connu que des micro-progrès) | 0,100 | **100 %** |
+| **Le même, expert** (200 jours de victoires) | 0,879 | **11,5 %** |
+
+Le même événement est **8,7× moins marquant** pour l'expert que pour le débutant. Le niveau
+évolue avec l'âge et les habitudes, exactement comme la faim ou la soif — pas de seuil, un
+niveau relatif à une histoire.
+
+Les deux seules constantes ajoutées sont des **dynamiques**, jamais des seuils de décision :
+`DECROISSANCE_CREDIT_DISTILLATION` (à quelle vitesse un crédit s'efface vers le passé) et
+`INERTIE_REFERENCE_CHOC` (à quelle vitesse la référence suit la maturation).
+
+### Effet mesuré
+
+| | v37.0 (plate) | v37.1 (sélective) |
+|---|---|---|
+| Part de la journée distillée | 100 % | **~25-35 %** |
+| Gradient reçu par `tete_motrice` | 0,01117 | 0,00912 (**−18 %**) |
+
+Une journée entièrement stérile (aucun choc) ne distille désormais **rien du tout**, au lieu
+de distiller uniformément du bruit.
+
+### Ce qui a été écarté
+
+| Option | Raison |
+|---|---|
+| **`f_planif` piloté par l'entropie de C1 / l'erreur JEPA** | Le signal n'existe pas : `indecision_c2` varie de **1,00×** entre min et max (0,000756 → 0,000773 sur 300 ticks). Et c'est un déclenchement sur seuil déguisé en formule continue — refusé v28/v29/v30. Le ratio est déjà passé de 22× à 0,6× **sans aucun pilotage**, par la seule maturation synaptique : c'est le principe A de la réflexion utilisateur, et il se suffit à lui-même. À reconsidérer si un run long montre le ratio **stagnant**. |
+| **C2 réinjecté comme canal continu dans `integrateur_bio`** | Crée une boucle : C2 est calculé **à partir de** `pensee_bio`, qui sort de `integrateur_bio`. Exigerait un décalage d'un tick, donc un C2 qui conseille sur l'état précédent. |
+| **Rejouer les épisodes « C2-réussis » dans `rever()`** | Retenu dans l'esprit, mais implémenté **dans le gradient diurne** plutôt que dans le tirage du rêve : `memoire_moyen_terme` ne conserve aucune trace de la contribution de C2 à chaque tick, alors que la pondération de la perte y a directement accès. Même effet, sans nouvelle structure de données. |
+
+---
+
 ## 6. Critères de validation
 
 Le chantier ne sera déclaré réussi que si **les quatre** sont observés sur un run long.

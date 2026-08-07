@@ -4,6 +4,83 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [37.1-experimental] - 2026-08-07
+
+### La Distillation Sélective — C1 n'automatise que ce qui a marché
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | feat (apprentissage du réflexe, expérimental — `noyau.py` + `persistance.py`) |
+| **Impact** | **Fonctionnel** — la distillation v37.0 passe de plate à pondérée |
+
+Issu d'une remarque de l'utilisateur sur la v37.0. Détail :
+[`CHANTIER_v37_equilibre_c1_c2.md §5bis`](CHANTIER_v37_equilibre_c1_c2.md).
+
+**🔴 LE DÉFAUT**
+
+La distillation v37.0 était **plate** : C1 imitait C2 à chaque tick, au même poids, que C2
+ait eu raison ou tort. Sur un C2 médiocre (amplitude constante, argmax figé sur une seule
+action), cela revient à **faire apprendre à C1 les erreurs de C2**.
+
+**🧠 LE MODÈLE** — on n'automatise pas tous ses gestes, on automatise ceux qui ont marché.
+
+Un tick est crédité si un choc dopaminergique le **suit**, avec une décroissance
+exponentielle vers le passé (patron de `trace_activation`, LTP v20.0). La propagation
+**s'arrête aux frontières d'épisode** — créditer un tick de l'épisode précédent pour une
+réussite du suivant serait une superstition, l'agent ayant été téléporté entre les deux.
+
+```
+chocs : [0, 0, 0, 0, 0, 0.8, 0, 0, | 0, 0, 0.4, 0]      (| = fin d'épisode)
+poids : [.66,.72,.78,.85,.92, 1.0, 0., 0., .56,.61,.67, 0.]
+                                    └──┬──┘
+                              crédit coupé net
+```
+
+**⚖️ RIEN N'EST EN DUR — un NIVEAU, pas un SEUIL**
+
+Il n'existe aucune règle « si choc > X, imiter » : le crédit est **continu** et proportionnel
+au choc. Et l'échelle à laquelle un choc est jugé fort n'est pas une constante — c'est
+`reference_choc_dopamine`, moyenne glissante de ce que **cet agent** a lui-même vécu,
+sérialisée dans le `.brain`.
+
+| Agent | Référence apprise | Crédit accordé à un choc de 0,1 |
+|---|---|---|
+| **Débutant** (n'a connu que des micro-progrès) | 0,100 | **100 %** |
+| **Le même, expert** (200 j de victoires) | 0,879 | **11,5 %** |
+
+Le même événement est **8,7× moins marquant** pour l'expert. Le niveau évolue avec l'âge et
+les habitudes, exactement comme la faim ou la soif.
+
+Les deux constantes ajoutées sont des **dynamiques** (vitesse d'effacement d'un crédit,
+vitesse de suivi de la référence), jamais des seuils de décision.
+
+| Fichier | Changement |
+|---|---|
+| `src/naulthene/cerveau/noyau.py` | `_ponderer_distillation()` — crédit rétrograde borné aux épisodes ; moyenne **pondérée** dans `apprendre_journee` (une journée stérile ne distille plus rien, au lieu de distiller du bruit) |
+| `src/naulthene/cerveau/noyau.py` | `chocs_dopamine_journee` — buffer journalier, remis à zéro dans `_reinitialiser_buffers_journee` |
+| `src/naulthene/cerveau/noyau.py` | `reference_choc_dopamine` — le niveau adaptatif ; `DECROISSANCE_CREDIT_DISTILLATION`, `INERTIE_REFERENCE_CHOC` |
+| `src/naulthene/cerveau/noyau.py` | Télémétrie : `Distillation_Credit_Moyen`, `Distillation_Reference_Choc` + bilan console |
+| `src/naulthene/cerveau/persistance.py` | `reference_choc_dopamine` sérialisée (`.get()` → rétrocompatible, aucune greffe) |
+
+**📊 EFFET MESURÉ**
+
+| | v37.0 (plate) | v37.1 (sélective) |
+|---|---|---|
+| Part de la journée distillée | 100 % | **~25-35 %** |
+| Gradient reçu par `tete_motrice` | 0,01117 | 0,00912 (**−18 %**) |
+
+**⚠️ DEUX LEVIERS ÉCARTÉS** (proposés, mesurés, refusés)
+
+- **`f_planif` piloté par l'entropie de C1 / l'erreur JEPA** : le signal n'existe pas —
+  `indecision_c2` varie de **1,00×** entre min et max sur 300 ticks. Et c'est un
+  déclenchement sur seuil déguisé en formule continue (refusé v28/v29/v30). Le ratio est
+  déjà passé de 22× à 0,6× **sans aucun pilotage**, par la seule maturation synaptique.
+- **C2 réinjecté comme canal continu dans `integrateur_bio`** : crée une boucle, C2 étant
+  calculé à partir de `pensee_bio` qui sort d'`integrateur_bio`.
+
+---
+
 ## [37.0-experimental] - 2026-08-07
 
 ### L'Équilibre C1 / C2 — le réflexe cesse d'être inaudible, et les têtes de décision peuvent enfin apprendre
