@@ -105,6 +105,34 @@ Pour un historique complet commit par commit, consultez [docs/CHANGELOG.md](docs
 > [docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md](docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md) pour le cadrage et les
 > arbitrages.
 
+### 🔧 Nouveautés v37.1-fix1 (expérimental) — Le Cliquet de la Référence (2026-08-08)
+
+Le run de 600 jours de la v37.1 a révélé un bug dans le mécanisme même que la v37.1
+introduisait. `reference_choc_dopamine` utilisait une moyenne glissante **symétrique** :
+quand l'agent cesse de gagner, il ne reste que des micro-chocs, et la référence descend
+**vers eux**.
+
+| Période | Référence | Crédit moyen |
+|---|---|---|
+| jours 0-50 | 0,2149 | 10,0 % |
+| jours 550-600 | **0,0932** (−57 %) | **69,3 %** (×7) |
+
+Le crédit valant `choc / référence`, l'agent devenait **de plus en plus facile à
+impressionner** — l'inverse exact du principe voulu — et C1 finissait par distiller 70 % de
+bruit. La protection « une journée stérile ne distille rien » n'y pouvait rien : la journée
+n'était jamais *stérile*, elle était **médiocre**, et la référence s'adaptait à la médiocrité.
+
+C'est le défaut de `norme_naissance` (v34.0-fix2) à l'identique : une référence qui suit la
+décroissance ne borne plus rien. Même remède — **un cliquet**. La montée reste rapide
+(découvrir qu'on peut vivre mieux relève la barre sans tarder), la descente devient ~50× plus
+lente (traverser une mauvaise passe ne fait pas réviser à la baisse ce qu'on sait être un bon
+jour). Elle reste **non nulle** : un monde durablement plus pauvre doit pouvoir recalibrer,
+mais sur des centaines de nuits.
+
+Vérifié en simulation du scénario exact du run raté : dérive de la référence **−71,3 % → −4,4 %**,
+crédit final **87,2 % → 26,1 %**. Le principe débutant/expert est préservé (un même choc reste
+**8,8× moins marquant** pour l'expert).
+
 ### 🎯 Nouveautés v37.1 (expérimental) — La Distillation Sélective (2026-08-07)
 
 La v37.0 faisait imiter C2 par C1 à **chaque** tick, au même poids — donc C1 apprenait aussi

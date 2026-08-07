@@ -4,6 +4,81 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [37.1-fix1-experimental] - 2026-08-08
+
+### Le Cliquet de la Référence — la barre monte vite, elle ne redescend presque plus
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | fix critique (distillation sélective, expérimental — `noyau.py`) |
+| **Impact** | **Critique** — la v37.1 rendait l'agent *de plus en plus facile à impressionner*, l'inverse exact du principe visé |
+
+**🔴 LE BUG** (mesuré sur le run `8wequiqg`, 600 jours, `070820261634_V371_600_RMD.brain`)
+
+`reference_choc_dopamine` utilisait une moyenne glissante **symétrique**. Quand l'agent cesse
+de gagner, il ne reste que des micro-chocs — la référence descend donc **vers eux** :
+
+| Période | Référence | Crédit moyen |
+|---|---|---|
+| jours 0-50 | 0,2149 | 10,0 % |
+| jours 300-350 | 0,2182 | 21,1 % |
+| jours 450-500 | 0,1348 | 52,6 % |
+| jours 550-600 | **0,0932** (−57 %) | **69,3 %** (×7) |
+
+Le crédit valant `choc / référence`, une référence qui s'effondre fait qu'un **même événement
+médiocre crédite de plus en plus**. Une boucle s'installait : moins de victoires → référence
+plus basse → tout paraît marquant → C1 distille 70 % de bruit → encore moins de victoires.
+
+La protection « une journée stérile ne distille rien » n'y pouvait rien : la journée n'était
+jamais *stérile*, elle était **médiocre**, et la référence s'adaptait à la médiocrité.
+
+**C'est exactement le défaut de `norme_naissance` corrigé en v34.0-fix2** : une référence qui
+suit la décroissance ne borne plus rien. Même remède — un cliquet.
+
+**✅ LE CORRECTIF**
+
+L'inertie devient **asymétrique** : montée rapide (`INERTIE_REFERENCE_CHOC = 0.99`, inchangée),
+descente ~50× plus lente (`INERTIE_OUBLI_REFERENCE_CHOC = 0.9998`). Découvrir qu'on peut vivre
+mieux relève la barre sans tarder ; traverser une mauvaise passe ne fait pas réviser à la
+baisse ce qu'on sait être un bon jour.
+
+La descente reste **non nulle** : un monde durablement plus pauvre (nouveau niveau, ressources
+plus rares) doit pouvoir recalibrer — mais sur des centaines de nuits, jamais sur une saison
+creuse.
+
+| Fichier | Changement |
+|---|---|
+| `src/naulthene/cerveau/noyau.py` | `_ponderer_distillation` — inertie asymétrique selon le sens de variation ; `INERTIE_OUBLI_REFERENCE_CHOC` |
+
+**📊 VÉRIFIÉ** — simulation du scénario exact du run raté (300 j avec victoires, puis 300 j sans) :
+
+| | Dérive de la référence | Crédit final |
+|---|---|---|
+| v37.1 (symétrique) | **−71,3 %** | **87,2 %** |
+| v37.1-fix1 (cliquet) | **−4,4 %** | **26,1 %** |
+
+Non-régressions confirmées : le principe débutant/expert tient (référence ×8,8, un même choc
+**8,8× moins marquant** pour l'expert) ; la coupure aux frontières d'épisode est intacte ; le
+recalibrage reste possible (−29 % après 2000 jours de monde pauvre — soit bien au-delà d'un run).
+
+> ⚠️ Un `.brain` produit par la v37.1 garde sa référence **déjà effondrée** : le cliquet la gèle
+> au lieu de la réparer (on n'invente pas un vécu). Relancer sur un cerveau neuf pour mesurer
+> l'effet réel du correctif.
+
+**📉 CE QUE LE RUN A AUSSI MONTRÉ** (indépendant de ce bug, non corrigé à ce stade)
+
+- **Niveau 2/15 au jour 600**, contre 3/15 pour le run V36 — et **aucune victoire après le
+  jour 288** (312 jours), guidage saturé à ×3,0 depuis le jour ~387.
+- L'accord C1/C2 **oscille** (50 % → 75 % → 29 %) au lieu de converger : l'équilibre v37.0 tient
+  (le ratio reste entre 0,57 et 1,09, jamais les 22× d'avant), mais les deux modules ne
+  s'accordent pas durablement. Le pic à 100 % observé en cours de run était une oscillation, pas
+  une tendance.
+- **Le rêve est quasi inexistant** : `Pourcentage_Reve` à 0,1 % sur les 600 jours, 75 nuits sans
+  aucun rêve sur les 100 premières. À investiguer séparément.
+
+---
+
 ## [37.1-experimental] - 2026-08-07
 
 ### La Distillation Sélective — C1 n'automatise que ce qui a marché
