@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `b088416` |
 | **Catégorie** | fix critique (distillation sélective, expérimental — `noyau.py`) |
 | **Impact** | **Critique** — la v37.1 rendait l'agent *de plus en plus facile à impressionner*, l'inverse exact du principe visé |
 
