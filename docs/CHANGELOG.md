@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `9502f26` |
 | **Catégorie** | feat (apprentissage du réflexe, expérimental — `noyau.py` + `persistance.py`) |
 | **Impact** | **Fonctionnel** — la distillation v37.0 passe de plate à pondérée |
 
