@@ -105,6 +105,48 @@ Pour un historique complet commit par commit, consultez [docs/CHANGELOG.md](docs
 > [docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md](docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md) pour le cadrage et les
 > arbitrages.
 
+### 🎓 Nouveautés v35.0 (expérimental) — Le Cursus Progressif : 15 niveaux au lieu de 5 (2026-08-07)
+
+Le cursus passe de **5 à 15 niveaux**, avec un principe simple : **entre deux paliers voisins,
+une seule chose change**. `DoorKey-5x5 → 6x6 → 8x8` est la même tâche à trois échelles —
+l'agent consolide au lieu de tout réapprendre.
+
+**Pourquoi** : un run de 2700 jours sur un cerveau sain a montré **2000 jours de blocage au
+Collège** (palier 7 atteint dès le jour 701, puis tendance 1,08 = stationnaire). Trois causes
+mesurées — le saut Primaire→Collège demandait 5 compétences d'un coup ; le guidage était coupé
+net au palier 5 (0,00 record de proximité/jour) ; et l'exigence d'efficacité bondissait de ×37
+à ×3,6 de marge sans étape intermédiaire.
+
+**La promotion a désormais deux voies en OU** : 2 victoires consécutives (rapide, historique)
+**ou** 60 % de réussite sur les 20 derniers épisodes (lent, robuste). La seconde ajoute une
+porte sans fermer la première — un agent à 80 % de réussite qui perdait un épisode sur cinq
+restait auparavant bloqué à vie.
+
+**Rétrocompatibilité** : `niveau_actuel` étant un index, un ancien `.brain` est **remappé par
+`env_id`** (`🔀 Niveau remappé : index 4 → 14`) — vérifié nuit complète incluse sur deux
+cerveaux réels. Voir [docs/Parcourt_readme.md §6](docs/Parcourt_readme.md) et
+[docs/CHANGELOG.md](docs/CHANGELOG.md).
+
+> ⚠️ **Uniquement dans `noyau.py`** (terrain d'essai local, gitignoré) — `colab.py` conserve
+> ses 5 niveaux.
+
+### 🩺 Nouveautés v34.0-fix1/fix2 (expérimental) — L'Extinction Synaptique (2026-08-06)
+
+**Bug critique** : après 1500 nuits, **8 couches sur 11 étaient entièrement à zéro** — le
+cerveau était littéralement aveugle et sourd (bus nul ⇒ JEPA nul ⇒ C2 nul ⇒ politique réduite
+au hasard uniforme). La myéline ne pouvant venir que du gradient, un agent sans récompense
+s'érodait à taux plein et mourait en ~121 nuits.
+
+⚠️ La protection existante n'avait **jamais** fonctionné : `SEUIL_CRISTAL = 0,80` contre une
+myéline réelle maximale de **0,0038** — la Cristallisation Souple v26.0 ne s'est enclenchée sur
+aucun cerveau du dépôt.
+
+**Le correctif — le Plancher Vital** : une synapse faible mais vivante n'est plus érodée, et
+une couche conserve au minimum 10 % de sa *norme de naissance*. Ce sont des **bornes**, pas des
+valeurs de fonctionnement : l'oubli reste possible, l'extinction non. Validé sur 3000 nuits
+sans myéline (11 760 synapses vivantes contre 0 avant) et sur un run réel de 2700 jours
+(0 couche morte, `porte_visuelle` remontée de 11 % à 21 %).
+
 ### 🎓 Conclusion du cycle v33 — Le cursus est terminé, le blocage n'existait pas (2026-08-05)
 
 **Run de 5000 jours (`8q37yinf`, cerveau neuf). L'agent a franchi les CINQ niveaux du
@@ -972,7 +1014,7 @@ MiniGrid n'a pas d'objets Nourriture/Eau natifs. Ce détecteur réutilise `Ball`
 
 **Forage 80/20 (v19.0)** : contrairement à la v18.0 où une ressource consommée disparaissait définitivement, la Nourriture (uniquement — l'Eau ne respawn pas) réapparaît immédiatement après consommation :
 
-* **80%** : sur une case libre à proximité (±1 case) d'un "Nid" — la première case vide trouvée à l'initialisation de l'épisode, jamais une coordonnée fixe codée en dur, pour rester agnostique de la carte et fonctionner identiquement sur les 5 niveaux du `PROGRAMME`.
+* **80%** : sur une case libre à proximité (±1 case) d'un "Nid" — la première case vide trouvée à l'initialisation de l'épisode, jamais une coordonnée fixe codée en dur, pour rester agnostique de la carte et fonctionner identiquement sur tous les niveaux du `PROGRAMME` (15 depuis la v35.0).
 * **20%** : dispersée totalement aléatoirement sur la grille.
 
 ### 4. Génération Autonome de Quêtes de Survie

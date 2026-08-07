@@ -4,6 +4,102 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [35.0-experimental] - 2026-08-07
+
+### Le Cursus Progressif — 15 niveaux au lieu de 5, promotion par maîtrise
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | feat (nouvelle mécanique de cursus, expérimental — `noyau.py` uniquement) |
+| **Impact** | **Fonctionnel** — change la progression de tous les parcours |
+
+**🎓 LE PROGRAMME PASSE DE 5 À 15 NIVEAUX**
+
+Principe : **entre deux paliers voisins, une seule chose change.**
+
+| # | Environnement | Nom | Nouveauté |
+|---|---|---|---|
+| 0-2 | `Empty-5x5` · `Empty-Random-6x6` · `Empty-8x8` | Nourrisson → Maternelle | bouger · départ variable · distance |
+| 3-5 | `SimpleCrossingS9N1` · `LavaGapS5` · `Fetch-5x5-N2` | Primaire 1-3 | contourner · danger · **ramasser** |
+| 6-8 | `GoToDoor-6x6` · `DoorKey-5x5` · `DoorKey-6x6` | Collège 1-3 | viser une porte · **clé+porte** · échelle |
+| 9-11 | `DoorKey-8x8` · `Unlock` · `UnlockPickup` | Lycée 1-3 | distance · sans but visible · + objet |
+| 12-14 | `MemoryS7` · `MultiRoom-N2-S4` · `MultiRoom-N4-S5` | Université → Doctorat | mémoire · 2 salles · 4 salles |
+
+`DoorKey-5x5 → 6x6 → 8x8` est la **même tâche à trois échelles** : l'agent consolide au lieu
+de tout réapprendre. MiniGrid expose 58 environnements ; le projet n'en utilisait que 5.
+
+**📏 CORRECTION D'UN DIAGNOSTIC ERRONÉ — le Doctorat EST faisable**
+
+L'entrée `[34.0-diag-cursus]` concluait que `MultiRoom-N4-S5` était « infaisable » avec
+`max_steps=120`. **C'est faux.** Mesure par BFS sur `(x, y, direction)` — coût réel en
+ACTIONS (rotations + avances + `toggle`), 30 graines par niveau :
+
+| Niveau | `max_steps` | Coût optimal (moy / max) | **Marge** |
+|---|---|---|---|
+| `DoorKey-6x6` | 360 | 9,7 / 15 | **37,0×** |
+| `Empty-8x8` | 256 | 11,0 / 11 | **23,3×** |
+| `MultiRoom-N2-S4` | 40 | 7,3 / 10 | 5,5× |
+| **`MultiRoom-N4-S5`** | **120** | **33,7 / 43** | **3,6×** |
+
+Le but est atteignable — la marge reste positive. Le vrai problème est **le saut
+d'exigence** : l'agent passe d'un droit à l'erreur de ×37 à ×3,6 en un seul niveau, sans
+étape intermédiaire. `MultiRoom-N2-S4` (×5,5) est précisément cette étape.
+
+**🏆 PROMOTION : DEUX VOIES EN « OU »**
+
+| Voie | Critère | Caractère |
+|---|---|---|
+| **Série** (historique) | 2 victoires consécutives | rapide, mais une défaite remet à zéro |
+| **Maîtrise** (nouveau) | 60 % sur les 20 derniers épisodes | lent à établir, robuste |
+
+Les deux coexistent : la seconde **ajoute** une porte sans fermer la première, donc aucun
+cerveau existant ne régresse en vitesse de promotion. Un agent à 80 % de réussite qui perdait
+un épisode sur cinq restait bloqué à vie avec l'ancien critère seul.
+
+Trois garde-fous : le taux n'est calculé qu'à partir de **10 épisodes** (avant, il vaut
+`None` — « pas encore mesurable » ≠ « mesuré à zéro ») ; la fenêtre est **vidée à chaque
+promotion** (sinon un taux hérité d'un niveau facile promouvrait en chaîne) ; et la réussite
+se juge sur **`recompense_env > 0`**, jamais sur `termine` seul — sur `LavaGap`, `termine`
+vaut aussi True quand l'agent meurt.
+
+**🔀 RÉTROCOMPATIBILITÉ — le remappage par `env_id`**
+
+`niveau_actuel` est un **INDEX**. Un `.brain` au niveau 4 (ex-Doctorat) se serait retrouvé à
+l'index 4 du nouveau programme (`LavaGapS5`) — **rétrogradé de dix crans**. La persistance
+remappe donc par `env_id`, seule donnée non ambiguë :
+
+```
+🔀 Niveau remappé : index 4 → 14 (Doctorat) — le PROGRAMME a changé de taille (v35.0),
+   aucune progression n'est perdue.
+```
+
+Vérifié sur deux `.brain` réels, **nuit complète incluse** (test exigé par `CLAUDE.md`) :
+Collège 1 → 8, Doctorat 4 → 14.
+
+**🧪 VALIDATION**
+
+Cerveau neuf, 60 jours : 4 promotions en 40 jours (`Nourrisson` → `Primaire 2`), fenêtre de
+maîtrise correctement remplie et remise à zéro à chaque passage.
+
+**📊 TÉLÉMÉTRIE** (obligatoire dans le même commit)
+
+Ligne console `Cursus` + 4 clés W&B : `Cursus_Niveau_Index`, `Cursus_Niveau_Total`,
+`Cursus_Episodes_Fenetre`, `Cursus_Taux_Maitrise_Niveau` (à **−1.0** tant que la fenêtre
+n'est pas significative — un 0.0 laisserait croire à un échec mesuré).
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `PROGRAMME` 5→15, `FENETRE_PROMOTION`/`TAUX_PROMOTION`/`MIN_EPISODES_PROMOTION`, `_enregistrer_episode_niveau()`, `_taux_maitrise_niveau()`, double voie de promotion, ligne console + 4 clés W&B |
+| `src/naulthene/cerveau/persistance.py` | remappage du niveau par `env_id`, sauvegarde/restauration de `historique_episodes_niveau` |
+| `CLAUDE.md` | nouvel invariant « `PROGRAMME` du cursus » (4 points) + invariant « érosion nocturne » (v34) |
+| `docs/Parcourt_readme.md` | §6 réécrit (15 niveaux, 2 voies, remappage), §6bis marqué livré |
+| `readme.md` | mention du cursus à 15 niveaux |
+
+⚠️ **`noyau.py` uniquement** (terrain d'essai, gitignoré) — `colab.py` garde ses 5 niveaux.
+
+---
+
 ## [34.0-diag-cursus] - 2026-08-07
 
 ### Le cursus est trop court et trop brutal — diagnostic sur 2700 jours sains

@@ -234,6 +234,8 @@ class PersistanceAnatomique:
 
             # --- 5. Curriculum & progression ---
             'niveau_actuel': etat.niveau_actuel,
+            # v35.0 — fenêtre glissante de promotion (voir _taux_maitrise_niveau).
+            'historique_episodes_niveau': list(etat.historique_episodes_niveau),
             'victoires_consecutives': etat.victoires_consecutives,
             # v33.0-etape0.6 — chronologie des victoires. DOIT être persistée : c'est une
             # mesure de VIE (intervalles entre victoires sur des centaines de jours), pas
@@ -473,8 +475,36 @@ class PersistanceAnatomique:
                   f"→ {restants} repère(s) distinct(s) (v31.1, aucune information perdue).")
 
         # --- Curriculum & progression ---
+        #
+        # v35.0 — REMAPPAGE DU NIVEAU. `niveau_actuel` est un INDEX dans `PROGRAMME`, or
+        # le programme est passé de 5 à 15 entrées. Un `.brain` sauvegardé au niveau 4
+        # (ex-Doctorat, `MultiRoom-N4-S5`) se retrouverait sinon à l'index 4 du nouveau
+        # programme (`LavaGapS5`) — c'est-à-dire RÉTROGRADÉ de dix crans sans le savoir,
+        # et son `env_id` sauvegardé ne correspondrait plus à son index.
+        #
+        # On se fie donc à `env_id`, qui est la seule donnée non ambiguë : on cherche
+        # l'index réel de cet environnement dans le programme courant. Même règle que la
+        # greffe par recopie — on traduit, on ne jette jamais.
         etat.niveau_actuel = checkpoint['niveau_actuel']
+        index_reel = next((i for i, (e, _) in enumerate(PROGRAMME) if e == env_id), None)
+        if index_reel is None:
+            # L'environnement du checkpoint ne fait plus partie du programme : on garde
+            # l'index tel quel s'il est valide, sinon on borne. L'agent reprendra sur son
+            # env_id d'origine (déjà créé ci-dessus) et sera réaligné à la 1re promotion.
+            etat.niveau_actuel = min(etat.niveau_actuel, len(PROGRAMME) - 1)
+            print(f"   ⚠️  '{env_id}' ne figure plus dans le PROGRAMME — niveau borné à "
+                  f"{etat.niveau_actuel}. L'agent continue sur cet environnement.")
+        elif index_reel != etat.niveau_actuel:
+            print(f"   🔀 Niveau remappé : index {etat.niveau_actuel} → {index_reel} "
+                  f"({nom_classe}) — le PROGRAMME a changé de taille (v35.0), "
+                  f"aucune progression n'est perdue.")
+            etat.niveau_actuel = index_reel
         etat.victoires_consecutives = checkpoint['victoires_consecutives']
+        # v35.0 — historique glissant de promotion. Absent des `.brain` antérieurs : on
+        # repart d'une fenêtre vide, donc `_taux_maitrise_niveau` renvoie None tant que
+        # MIN_EPISODES_PROMOTION épisodes n'ont pas été rejoués. La voie « série de
+        # victoires » reste disponible entre-temps : aucun cerveau ne perd de vitesse.
+        etat.historique_episodes_niveau = checkpoint.get('historique_episodes_niveau', [])
         # v33.0-etape0.6 — lecture DÉFENSIVE (`.get`) : les `.brain` antérieurs à cette
         # version n'ont aucune de ces clés. Un cerveau ancien repart donc d'une
         # chronologie vierge (aucune victoire connue) plutôt que de faire planter le

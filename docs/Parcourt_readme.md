@@ -16,10 +16,11 @@ scripts de `src/naulthene/salles_de_classe/`.
 > **implémentées et validées** sur leurs branches. **Aucune ne change les commandes de ce
 > guide** — toutes sont automatiques, sans flag ni option. Voir [CHANGELOG.md](CHANGELOG.md).
 >
-> 🔴 **À lire avant de lancer un run long** : le [§6bis](#6bis--pourquoi-ce-programme-est-trop-court-et-trop-brutal-diagnostic-2026-08-07)
-> documente pourquoi le cursus actuel bloque l'agent au Collège (2000 jours mesurés sans
-> progression) et propose une refonte à 14 paliers. Le programme décrit au §6 reste celui qui
-> tourne aujourd'hui.
+> 🆕 **v35.0 — le cursus est passé de 5 à 15 niveaux.** Le [§6](#6-les-15-niveaux-minigrid-programme-v350)
+> décrit le programme livré et la nouvelle promotion (2 victoires **OU** 60 % de maîtrise
+> sur 20 épisodes) ; le [§6bis](#6bis--pourquoi-ce-programme-est-trop-court-et-trop-brutal-diagnostic-2026-08-07)
+> garde le diagnostic qui l'a motivée (2000 jours de blocage mesurés). **Rien à activer** —
+> un ancien `.brain` est remappé automatiquement.
 
 ---
 
@@ -30,7 +31,7 @@ scripts de `src/naulthene/salles_de_classe/`.
 3. [Le Cerveau Bébé (`cursus_bebe.py`)](#3-le-cerveau-bébé-cursus_bebepy)
 4. [Le Cursus de la Parole (`cursus_parole.py`)](#4-le-cursus-de-la-parole-cursus_parolepy)
 5. [La Cuve (mode manuel client-serveur)](#5-la-cuve-mode-manuel-client-serveur)
-6. [Les 5 niveaux MiniGrid (`PROGRAMME`)](#6-les-5-niveaux-minigrid-programme)
+6. [Les 15 niveaux MiniGrid (`PROGRAMME`, v35.0)](#6-les-15-niveaux-minigrid-programme-v350)
 6bis. [⚠️ Pourquoi ce programme est trop court et trop brutal](#6bis--pourquoi-ce-programme-est-trop-court-et-trop-brutal-diagnostic-2026-08-07)
 7. [Les 7 paliers DoorKey — le détail complet](#7-les-7-paliers-doorkey--le-détail-complet)
 8. [Le curriculum vocal — les 19 paliers](#8-le-curriculum-vocal--les-19-paliers)
@@ -118,7 +119,7 @@ manuellement, un message `🌅 [NOUVELLE ÈRE]` s'affiche au bon moment.
 ### Ce qui progresse pendant ce cursus
 
 Deux progressions **indépendantes**, en parallèle, sur le même cerveau :
-1. **Le niveau MiniGrid** (`PROGRAMME`, 5 niveaux — voir §6) et, à l'intérieur du niveau
+1. **Le niveau MiniGrid** (`PROGRAMME`, 15 niveaux depuis la v35.0 — voir §6) et, à l'intérieur du niveau
    "Collège", **les 7 paliers DoorKey** (voir §7).
 2. **Le palier vocal** (1 à 19 — voir §8), totalement indépendant du niveau MiniGrid.
 
@@ -264,30 +265,78 @@ détail complet (options, dépannage).
 
 ---
 
-## 6. Les 5 niveaux MiniGrid (`PROGRAMME`)
+## 6. Les 15 niveaux MiniGrid (`PROGRAMME`, v35.0)
 
 C'est la progression "scolaire" de base, commune à **tous** les parcours (elle vit dans le
 cerveau, pas dans un cursus particulier).
 
-| # | Environnement | Nom | Ce que ça teste |
-|---|---|---|---|
-| 0 | `MiniGrid-Empty-8x8-v0` | **Primaire** (Mouvement basique) | Se déplacer sans se cogner |
-| 1 | `MiniGrid-DoorKey-6x6-v0` | **Collège** (Logique Simple) | Trouver une clé, ouvrir une porte (7 paliers, voir §7) |
-| 2 | `MiniGrid-Unlock-v0` | **Lycée** (Manipulation Avancée) | Déverrouiller un coffre |
-| 3 | `MiniGrid-MemoryS7-v0` | **Université** (Mémoire Épisodique) | Se souvenir d'un indice vu plus tôt |
-| 4 | `MiniGrid-MultiRoom-N4-S5-v0` | **Doctorat** (Planification Longue) | Traverser plusieurs pièces jusqu'au but |
+> 🆕 **v35.0** — le programme est passé de **5 à 15 niveaux**. Le §6bis explique pourquoi
+> (2000 jours de blocage mesurés) ; ici, ce que ça donne concrètement.
 
-**Comment on passe au niveau suivant** : il faut **2 victoires consécutives** sur le niveau
-courant (`VICTOIRES_REQUISES=2`). Une seule défaite entre-temps remet le compteur à zéro (mais le
-niveau lui-même ne recule jamais). Un message `🎓 [PROMOTION]` s'affiche au changement de niveau.
+| # | Environnement | Nom | Nouveauté par rapport au précédent |
+|---|---|---|---|
+| 0 | `Empty-5x5` | **Nourrisson** (Premiers pas) | avancer, tourner |
+| 1 | `Empty-Random-6x6` | **Éveil** (Départ aléatoire) | départ variable → généraliser |
+| 2 | `Empty-8x8` | **Maternelle** (Longue distance) | trajet plus long |
+| 3 | `SimpleCrossingS9N1` | **Primaire 1** (Contourner) | un mur sur le chemin |
+| 4 | `LavaGapS5` | **Primaire 2** (Éviter le danger) | la lave tue |
+| 5 | `Fetch-5x5-N2` | **Primaire 3** (Ramasser) | manipuler un objet |
+| 6 | `GoToDoor-6x6` | **Collège 1** (Viser une porte) | la porte devient une cible |
+| 7 | `DoorKey-5x5` | **Collège 2** (Clé & porte, minimal) | clé + porte, carte minimale |
+| 8 | `DoorKey-6x6` | **Collège 3** (Clé & porte) | même tâche, plus grand |
+| 9 | `DoorKey-8x8` | **Lycée 1** (Clé & porte, distance) | même tâche, distance longue |
+| 10 | `Unlock` | **Lycée 2** (Déverrouiller) | plus de but visible |
+| 11 | `UnlockPickup` | **Lycée 3** (Déverrouiller & prendre) | + récupérer derrière la porte |
+| 12 | `MemoryS7` | **Université** (Mémoire Épisodique) | se souvenir d'un indice |
+| 13 | `MultiRoom-N2-S4` | **Doctorat 1** (Deux pièces) | enchaîner deux salles |
+| 14 | `MultiRoom-N4-S5` | **Doctorat 2** (Planification Longue) | 4 salles, 5 portes |
+
+**Le principe** : entre deux paliers voisins, **une seule chose change**. `DoorKey-5x5` →
+`6x6` → `8x8` est la *même tâche à trois échelles* — l'agent consolide au lieu de tout
+réapprendre à chaque étage.
+
+### Comment on passe au niveau suivant — deux voies (v35.0)
+
+| Voie | Critère | Caractère |
+|---|---|---|
+| **Série** (historique) | 2 victoires **consécutives** | rapide, mais une défaite remet à zéro |
+| **Maîtrise** (nouveau) | **60 %** de réussite sur les **20** derniers épisodes | lent à établir, mais robuste |
+
+Les deux coexistent en **OU** : la première reste la voie rapide, la seconde rattrape le cas
+qui bloquait — un agent à 80 % de réussite qui perd un épisode sur cinq restait coincé à vie
+avec l'ancien critère seul.
+
+Le taux n'est calculé qu'à partir de **10 épisodes** observés (avant, il affiche `—` : « pas
+encore mesurable » n'est pas « mesuré à zéro »). La fenêtre est **vidée à chaque promotion**
+— sinon un taux hérité d'un niveau facile promouvrait en chaîne.
+
+Une ligne le montre chaque nuit :
+
+```
+├─ Cursus         : 🎓 Niveau 8/15 — maîtrise 45% (n=20), seuil 60% | série 0/2
+```
+
+### Reprendre un ancien cerveau : le remappage automatique
+
+`niveau_actuel` est un **index** dans `PROGRAMME`. Un `.brain` sauvegardé au niveau 4
+(ex-Doctorat) se retrouverait sinon à l'index 4 du nouveau programme (`LavaGapS5`),
+c'est-à-dire **rétrogradé de dix crans**. La persistance remappe donc par `env_id` :
+
+```
+🔀 Niveau remappé : index 4 → 14 (Doctorat (Planification Longue)) — le PROGRAMME
+   a changé de taille (v35.0), aucune progression n'est perdue.
+```
+
+Message **normal**, affiché une seule fois par cerveau. Vérifié sur deux `.brain` réels
+(Collège 1 → 8, Doctorat 4 → 14), nuit complète incluse.
 
 ---
 
 ## 6bis. ⚠️ Pourquoi ce programme est trop court et trop brutal (diagnostic 2026-08-07)
 
-> **Statut : diagnostic mesuré, refonte PROPOSÉE, aucune ligne de code écrite.** Le
-> `PROGRAMME` ci-dessus est celui qui tourne aujourd'hui. Cette section documente pourquoi
-> il bloque et ce qu'on propose à la place. Voir [CHANGELOG.md](CHANGELOG.md) v34.
+> ✅ **Statut : refonte LIVRÉE en v35.0** (2026-08-07). Cette section garde le diagnostic
+> qui l'a motivée — les chiffres mesurés sur l'ancien programme à 5 niveaux, et les options
+> écartées. Le programme livré est décrit au [§6](#6-les-15-niveaux-minigrid-programme-v350).
 
 ### Le constat
 
@@ -323,20 +372,27 @@ Au **Palier 5**, le Mode Libre coupe `RECOMPENSE_APPROCHE_BUT` d'un coup (§9). 
 mesuré : **0,00 record de proximité par jour** pendant 2000 jours. L'agent perd tout signal
 de progression spatiale exactement quand la tâche devient la plus dure.
 
-**3. Le dernier niveau a le budget le plus serré**
+**3. Le dernier niveau exige une efficacité 10× supérieure**
 
-Vérifié via `env.max_steps` :
+Mesuré par BFS sur l'espace `(x, y, direction)` — le **coût réel en ACTIONS** (rotations +
+avances + `toggle` des portes), sur 30 graines par niveau :
 
-| Niveau | Grille | `max_steps` | Objets |
+| Niveau | `max_steps` | Coût optimal (moy) | **Marge** |
 |---|---|---|---|
-| Primaire | 8×8 | **256** | 1 |
-| Collège | 6×6 | **360** | 3 |
-| Lycée | 11×6 | 288 | 2 |
-| Université | 7×7 | 245 | 3 |
-| **Doctorat** | **25×25** | **120** ⚠️ | **6** (5 portes) |
+| Collège (`DoorKey-6x6`) | 360 | 9,7 | **37,0×** |
+| Primaire (`Empty-8x8`) | 256 | 11,0 | **23,3×** |
+| Doctorat 1 (`MultiRoom-N2-S4`) | 40 | 7,3 | 5,5× |
+| **Doctorat (`MultiRoom-N4-S5`)** | **120** | **33,7** (max 43) | **3,6×** ⚠️ |
 
-Le Doctorat a **2× moins de temps** que le Collège pour une carte **17× plus grande** et 5
-portes à franchir. Ce n'est pas un cursus difficile : c'est un cursus **infaisable**.
+> ✅ **Correction d'un diagnostic erroné (2026-08-07).** Une première lecture concluait que
+> le Doctorat était « infaisable ». **C'est faux** : avec 33,7 actions optimales pour 120
+> disponibles, le but est atteignable — la marge est de 3,6×, jamais négative.
+>
+> Le vrai problème est **le saut d'exigence** : l'agent peut se permettre 37 fois le trajet
+> optimal au Collège, mais seulement 3,6 fois au Doctorat. Il doit devenir **10× plus
+> efficace** d'un niveau à l'autre, sans qu'aucun palier intermédiaire ne l'y prépare.
+>
+> C'est exactement ce que `MultiRoom-N2-S4` (marge 5,5×) apporte comme étape manquante.
 
 ### La refonte proposée : 14 paliers au lieu de 5
 
@@ -365,36 +421,35 @@ vraie progression, où chaque étape n'ajoute **qu'une seule compétence nouvell
 `DoorKey-6x6` → `DoorKey-8x8` est la même tâche à trois échelles — l'agent consolide au lieu
 de tout réapprendre.
 
-### Trois changements d'accompagnement
+### Les trois changements d'accompagnement — état
 
-**a. Une promotion plus exigeante mais plus juste.** `VICTOIRES_REQUISES = 2` consécutives
-est fragile (une défaite remet à zéro) et faible (2 réussites peuvent être de la chance).
-Un **taux de réussite sur fenêtre glissante** — par exemple 60 % sur 20 épisodes — mesure
-une compétence installée plutôt qu'un coup de chance.
+**a. ✅ LIVRÉ — Promotion par taux de maîtrise.** `VICTOIRES_REQUISES = 2` consécutives
+était fragile (une défaite remet à zéro) et faible (2 réussites peuvent être de la chance).
+La v35.0 **ajoute** une seconde voie — 60 % sur 20 épisodes — sans retirer la première.
+Détail au [§6](#6-les-15-niveaux-minigrid-programme-v350).
 
-**b. Un guidage qui s'estompe, au lieu de se couper.** Aujourd'hui
-`RECOMPENSE_APPROCHE_BUT` passe de 0,05 à 0 d'un seul coup au Palier 5. Une décroissance
-progressive (indexée sur la maîtrise, pas sur le numéro de palier) éviterait la falaise
-mesurée à 0,00 record/jour.
+**b. ⏸️ NON LIVRÉ — Un guidage qui s'estompe.** `RECOMPENSE_APPROCHE_BUT` passe toujours de
+0,05 à 0 d'un seul coup au Palier 5, et la falaise mesurée (0,00 record/jour) subsiste. Une
+décroissance progressive indexée sur la **maîtrise** — désormais disponible via
+`Cursus_Taux_Maitrise_Niveau` — serait le remède naturel.
 
-**c. Une redescente possible.** Aujourd'hui aucun palier ne recule (§11). Un agent qui
-échoue 2000 jours d'affilée reste au Palier 7 — il n'a aucune chance de reconsolider les
-bases. Autoriser une redescente après N jours sans succès rendrait le cursus **réellement
-adaptatif**.
+**c. ⏸️ NON LIVRÉ — Une redescente possible.** Aucun palier ne recule (§11). Un agent qui
+échoue 2000 jours reste au Palier 7 sans jamais pouvoir reconsolider les bases.
 
-> ⚠️ **Ces trois points touchent des invariants documentés** (`CLAUDE.md` : les 7 paliers
-> DoorKey, le Mode Libre, « ce qui ne régresse jamais »). Ce sont des décisions
-> utilisateur, pas des ajustements de code.
+> ⚠️ **(b) et (c) touchent des invariants documentés** (`CLAUDE.md` : le Mode Libre, « ce
+> qui ne régresse jamais »). Ce sont des décisions utilisateur, pas des ajustements de code.
+> Le nouveau programme à 15 niveaux les rend d'ailleurs moins urgentes : la progressivité
+> vient désormais du cursus lui-même plutôt que du guidage.
 
-### Ce qu'il faut mesurer d'abord
+### Ce qui reste à mesurer
 
 Conformément à la doctrine du projet (instrumenter avant de calibrer) :
 
-1. **Le taux de réussite par environnement candidat** sur le cerveau actuel — un palier que
-   l'agent réussit déjà à 90 % est inutile dans le cursus.
+1. **Le taux de réussite par niveau** — un palier que l'agent traverse en 2 jours n'apporte
+   rien ; la métrique `Cursus_Taux_Maitrise_Niveau` le dira. À lire sur un run long.
 2. **Le temps réel jusqu'à la première victoire** sur chaque nouvel environnement.
-3. **Si `max_steps` du Doctorat (120) est atteignable** : le BFS agent→but mesuré vaut
-   19-29 pas, mais avec 5 portes à ouvrir en chemin, 120 steps est probablement le vrai mur.
+3. ✅ **Fait** : la faisabilité du Doctorat, mesurée par BFS (marge ×3,6 — faisable, mais
+   10× plus exigeant que le Collège). Voir le défaut 3 ci-dessus.
 
 ---
 
