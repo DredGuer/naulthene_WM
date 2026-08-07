@@ -58,18 +58,23 @@ Le projet est organisé en **package Python** sous `src/naulthene/`, avec un dos
 │   └── instruments/               ← INSTRUMENTS D'OBSERVATION (lecture seule)
 │       ├── arene_visuelle.py     fenêtre pygame de visualisation en direct
 │       ├── lancer_arene.py       lance l'Arène (pygame + audio)
-│       └── irm_cerveau.py        scanner d'activations internes, ne modifie jamais le .brain
+│       ├── irm_cerveau.py        scanner d'activations internes, ne modifie jamais le .brain
+│       ├── sonde_c1_c2.py        rapport de force C1/C2 (v37.0) — amplitudes, ratio, accord
+│       └── sonde_poids.py        santé synaptique couche par couche (v37.0) — signale les
+│                                   couches collées au plancher vital
 │
 ├── brains/                       cerveaux cristallisés (*.brain, gitignorés) — un fichier par run,
 │   └── old_V30/                    nommé DDMMYYYYHHMM_VXX_NMRTOUR_RMD.brain (voir « Convention de
 │                                   nommage des cerveaux ») ; old_VXX/ archive les générations
 │                                   précédentes, jamais supprimées
-└── docs/                         DOCUMENTS VIVANTS uniquement (4) :
+└── docs/                         DOCUMENTS VIVANTS uniquement (5) :
     │                               CHANGELOG.md — historique version par version, la référence
     │                               factuelle ; LANCEMENT.md — toutes les commandes et le dépannage ;
     │                               Parcourt_readme.md — guide vulgarisé des 4 parcours ;
     │                               explications_readme.md — détail algorithmique et mathématique
-    │                               (dont §15 : Bus Sensoriel, identité C1/C2, Exo-Sens)
+    │                               (dont §15 : Bus Sensoriel, identité C1/C2, Exo-Sens) ;
+    │                               CHANTIER_v37_equilibre_c1_c2.md — chantier EN COURS (équilibre
+    │                               C1/C2), à archiver une fois la v37 validée par un run long
     └── Old_Archive_rmd/          documents historiques : conceptions dont la mécanique est livrée
                                     (CONCEPTION_v22_audio, CONCEPTION_v30_exo_sens, Maj_V29_readme,
                                     EXPLICATIONS_v29_sens),
@@ -272,4 +277,4 @@ tous les liens entrants**. Attention : ces documents sont référencés depuis `
 | `fix` mineur / `refactor` / `docs` | même version + suffixe | 14.0-fix1, 14.0-docs |
 | `chore` / `style` | pas d'incrément | - |
 
-Le script de référence `src/naulthene/cerveau/colab.py` est actuellement en version **17** (voir `readme.md`, table des matières et journal des mises à jour). `src/naulthene/cerveau/noyau.py` porte en plus toutes les mécaniques expérimentales non encore portées sur `colab.py` (actuellement jusqu'à **v32.0** — l'Odorat Topologique & la Clinotaxie — en passant par v31.0/v31.1 la Mémoire Proportionnelle, le Rêve Invariant d'Échelle & la Déduplication Mnésique, en passant par v18.0 Architecture Homéostatique Biologique, v22 Hémisphère Auditif & Vocal, v27.x École de la Parole, v28.0 Cascade C1→C2→C3 & Port Exocortex, v29.0/v29.1 Bus Sensoriel & télémétrie des 5 sens, v30.0/v30.1 Odorat Dynamique, Exo-Sens & instrumentation, voir [Variante Locale de Test](#variante-locale-de-test-mac--srcnaulthenecerveaunoyaupy) et `readme.md`/`docs/CHANGELOG.md` pour le détail) — toute nouvelle mécanique testée localement suit la même échelle de version que le script de référence, marquée `-experimental` tant qu'elle n'y est pas portée. Poursuivre sur cette échelle entière (+1.0 pour la prochaine mécanique majeure) sauf décision contraire de l'utilisateur.
+Le script de référence `src/naulthene/cerveau/colab.py` est actuellement en version **17** (voir `readme.md`, table des matières et journal des mises à jour). `src/naulthene/cerveau/noyau.py` porte en plus toutes les mécaniques expérimentales non encore portées sur `colab.py` (actuellement jusqu'à **v37.0/v37.1** — l'Équilibre C1/C2 & la Distillation Sélective — en passant par v36.0 le Flux Enrichi & l'Abstraction par Récurrence, v35.0/v35.1 le Cursus Progressif à 15 niveaux, le Guidage Dégressif & le Filet de Sécurité, v34.0-fix1/fix2 le correctif d'Extinction Synaptique, v32.0 l'Odorat Topologique & la Clinotaxie, v31.0/v31.1 la Mémoire Proportionnelle, le Rêve Invariant d'Échelle & la Déduplication Mnésique, en passant par v18.0 Architecture Homéostatique Biologique, v22 Hémisphère Auditif & Vocal, v27.x École de la Parole, v28.0 Cascade C1→C2→C3 & Port Exocortex, v29.0/v29.1 Bus Sensoriel & télémétrie des 5 sens, v30.0/v30.1 Odorat Dynamique, Exo-Sens & instrumentation, voir [Variante Locale de Test](#variante-locale-de-test-mac--srcnaulthenecerveaunoyaupy) et `readme.md`/`docs/CHANGELOG.md` pour le détail) — toute nouvelle mécanique testée localement suit la même échelle de version que le script de référence, marquée `-experimental` tant qu'elle n'y est pas portée. Poursuivre sur cette échelle entière (+1.0 pour la prochaine mécanique majeure) sauf décision contraire de l'utilisateur.

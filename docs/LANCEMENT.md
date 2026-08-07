@@ -1382,6 +1382,67 @@ wandb sync wandb/offline-run-*-<id>
 
 ---
 
+## 16. Les sondes de diagnostic C1/C2 (v37.0-expérimental)
+
+Deux instruments **en lecture seule** : ils chargent un `.brain`, l'observent, et ne le
+sauvegardent jamais. Le fichier passé en argument ressort bit-identique — même discipline que
+`irm_cerveau.py`. Aucun apprentissage n'est déclenché.
+
+### 16a. `sonde_c1_c2` — le rapport de force entre les deux voix
+
+```bash
+# Sur le niveau bloquant (valeur par défaut si l'env est omis)
+PYTHONPATH=src python -m naulthene.instruments.sonde_c1_c2 \
+    brains/<mon_cerveau>.brain MiniGrid-SimpleCrossingS9N1-v0 400
+
+# Comparer avec un niveau déjà maîtrisé — c'est la comparaison qui est parlante
+PYTHONPATH=src python -m naulthene.instruments.sonde_c1_c2 \
+    brains/<mon_cerveau>.brain MiniGrid-Empty-5x5-v0 400
+```
+
+| Ligne | Ce qu'elle dit |
+|---|---|
+| **Ratio C2/C1** | Au-delà de ~3×, C2 domine la fusion quelle que soit `force_planification` : l'arbitrage est décoratif. Cible v37 : **< 3,0** |
+| **Accord C1==C2** | Part des ticks où les deux désignent la même action. **0 % = le réflexe n'a aucune influence** ; ~100 % = les deux sont devenus redondants. Les deux extrêmes sont pathologiques |
+| **argmax C1 / C2** | Une seule action sur tous les ticks révèle un module qui ne réagit plus à l'observation |
+| **gain v37** | Facteur appliqué à la voix de C1. ×1,00 = C1 est à sa vigueur cible ; très au-dessus = C1 est étouffé ; très en dessous = C1 est devenu tonitruant |
+
+> La politique jouée est **stochastique** (`multinomial`), jamais `argmax` : un agent entraîné
+> par REINFORCE n'a jamais expérimenté son mode déterministe, et le forcer produit des boucles
+> infinies et un diagnostic faux. Leçon du banc d'ablation.
+
+### 16b. `sonde_poids` — la santé synaptique couche par couche
+
+```bash
+PYTHONPATH=src python -m naulthene.instruments.sonde_poids brains/<mon_cerveau>.brain
+```
+
+| Colonne | Ce qu'elle dit |
+|---|---|
+| **ratio** | `\|base\| / norme_naissance`. À **exactement 10,00 %**, la couche est collée au plancher vital : vivante *uniquement* grâce au garde-fou v34.0-fix1 |
+| **\|annexe\|** | Le gradient du jour, avant consolidation. À 0,0000 partout, le cerveau n'apprend plus rien |
+| **myéline** | Ne peut venir **que** du gradient. Rappel : le maximum observé sur les cerveaux du dépôt est 0,0038, très loin de `SEUIL_CRISTAL = 0.80` |
+
+⚠️ **La norme est un mauvais indicateur d'apprentissage.** Une couche peut rester à 10,00 % en
+norme tout en modifiant 7,4 % de ses poids en 5 nuits : sa consolidation *corrige* les poids
+au lieu de les grossir, ce qui fait baisser la norme, et le plancher la remonte ensuite.
+Vérifier la **direction** (similarité cosinus), pas seulement la magnitude.
+
+### 16c. Les métriques W&B du chantier
+
+| Clé | Ce qu'elle doit faire |
+|---|---|
+| `Arbitrage_Ratio_C2C1` | Rester sous 3. S'il **décroît** avec la maturation, c'est le comportement attendu — ne pas le piloter par une formule |
+| `Arbitrage_Accord` | **Décoller de 0** — c'est le critère encore ouvert de la v37 |
+| `Arbitrage_Gain_C1` | Rester proche de 1 une fois le cerveau mûr |
+| `Distillation_Credit_Moyen` | Part de la journée jugée digne d'être automatisée (~25-35 % mesuré). Une journée stérile doit tendre vers 0 |
+| `Distillation_Reference_Choc` | **Monter** avec la maturation : l'agent devient progressivement plus difficile à impressionner |
+
+Contexte complet, causes mesurées et options écartées :
+[CHANTIER_v37_equilibre_c1_c2.md](CHANTIER_v37_equilibre_c1_c2.md).
+
+---
+
 ## Dépannage rapide
 
 | Symptôme | Cause probable |

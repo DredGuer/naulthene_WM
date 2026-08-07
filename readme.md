@@ -105,6 +105,69 @@ Pour un historique complet commit par commit, consultez [docs/CHANGELOG.md](docs
 > [docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md](docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md) pour le cadrage et les
 > arbitrages.
 
+### 🎯 Nouveautés v37.1 (expérimental) — La Distillation Sélective (2026-08-07)
+
+La v37.0 faisait imiter C2 par C1 à **chaque** tick, au même poids — donc C1 apprenait aussi
+les **erreurs** de C2. Principe corrigé, formulé par l'utilisateur : *on n'automatise pas tous
+ses gestes, on automatise ceux qui ont marché*.
+
+Un tick n'est distillé que si un choc dopaminergique le **suit**, avec un crédit qui décroît
+en remontant le temps — et qui est **coupé net aux frontières d'épisode** : créditer un tick
+de l'épisode précédent pour une réussite du suivant serait une superstition, l'agent ayant été
+téléporté entre les deux.
+
+**Un NIVEAU, jamais un SEUIL.** Il n'existe aucune règle « si choc > X, imiter » : le crédit
+est continu et proportionnel. Et l'échelle qui juge un choc *fort* n'est pas une constante —
+c'est `reference_choc_dopamine`, moyenne glissante de ce que **cet agent** a lui-même vécu,
+sauvegardée dans le `.brain`.
+
+| Agent | Sa référence | Crédit pour un choc de 0,1 |
+|---|---|---|
+| Débutant (n'a connu que des micro-progrès) | 0,100 | **100 %** |
+| Le même, après 200 j de victoires | 0,879 | **11,5 %** |
+
+Le même événement est **8,7× moins marquant** pour l'expert : le niveau évolue avec l'âge et
+les habitudes, exactement comme la faim ou la soif. Mesuré : la part de journée distillée
+tombe de 100 % à **~25-35 %** ; une journée stérile ne distille désormais plus rien, au lieu
+de distiller uniformément du bruit.
+
+### ⚖️ Nouveautés v37.0 (expérimental) — L'Équilibre C1 / C2 (2026-08-07)
+
+Trois cerveaux successifs (900 j, 2700 j, 600 j) se sont arrêtés au **même** niveau du cursus.
+L'hypothèse « le niveau est mal placé » a été **écartée par la mesure** : le blocage était
+architectural, et il durait depuis le début.
+
+Sondés sur trois environnements — dont deux **déjà maîtrisés** — C1 et C2 n'étaient d'accord
+sur **aucun tick** (0 %), chacun votant une action *constante*, avec un ratio d'amplitude de
+9,9× à 22,1×. Les victoires du run précédent étaient attribuables à la marche aléatoire, pas
+à une politique apprise.
+
+**Quatre causes empilées, dont trois rendaient l'apprentissage mathématiquement impossible :**
+
+1. **Le plancher vital v34.0 était devenu un plafond** — il renormalisait à *exactement* 10 %
+   de la naissance, effaçant chaque nuit ce que le gradient venait de consolider
+   (`tete_motrice` : 0,319490 → +0,0139 d'annexe → **0,319490**, au millionième).
+2. **La myéline ne voyait jamais l'apprentissage du jour** — lue dans `forward()` pendant la
+   journée, alors que le poids annexe ne prend sa valeur qu'au pas d'optimiseur du soir.
+   Myéline mesurée sur les deux têtes de décision après 600 jours : **`0.000000` exact**.
+3. **`q_ref = 1.0` : une échelle 500× trop grande** — supposait une myéline d'ordre 1, alors
+   qu'elle vaut ~0,002. Résultat : *toute* couche s'érodait au taux plein, myélinisée ou non.
+   Même défaut que `SEUIL_CRISTAL = 0.80`, jamais franchi non plus.
+4. **C2 sortait d'une normalisation, C1 non** — écart-type 1 garanti d'un côté, échelle brute
+   érodée de l'autre. Le rapport 1:18 était un artefact, pas un choix d'architecture.
+
+| Critère | Avant | Après (40 j) |
+|---|---|---|
+| Ratio C2/C1 | 9,9× à 22,1×, dérivant | **1,48-1,59×**, stable |
+| Couches au plancher vital | 5 / 12 | **3 / 12** |
+| Protection contre l'érosion | ~0 % | **45,9 %** |
+| Accord C1/C2 | 0 % | **0 %** — toujours ouvert |
+
+Deux instruments de diagnostic **en lecture seule** accompagnent le chantier :
+`sonde_c1_c2.py` (rapport de force entre les deux voix) et `sonde_poids.py` (santé synaptique
+couche par couche). Détail complet, options écartées et mesures qui les ont écartées :
+[docs/CHANTIER_v37_equilibre_c1_c2.md](docs/CHANTIER_v37_equilibre_c1_c2.md).
+
 ### 🧠 Nouveautés v36.0 (expérimental) — Le Flux Enrichi & l'Abstraction par Récurrence (2026-08-07)
 
 La mémoire spatiale ne recevait que **deux** types d'événements (nourriture, eau) et rejetait
