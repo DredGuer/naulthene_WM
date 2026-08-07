@@ -4,6 +4,108 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [36.0-experimental] - 2026-08-07
+
+### Le Flux Enrichi & l'Abstraction par Récurrence — la mémoire cesse d'être affamée
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | feat (mécanique mnésique, expérimental — `noyau.py` + `persistance.py`) |
+| **Impact** | **Fonctionnel** — `DIM_VECTEUR_BIO` passe de 34 à 36 |
+
+**🔴 CE QUI ÉTAIT CASSÉ** (mesuré, run `58ssyw19`, 600 jours)
+
+| Fait | Valeur |
+|---|---|
+| Types d'événements que la mémoire spatiale pouvait recevoir | **2** (`FOOD`, `WATER`) — deux sites d'appel dans tout le code |
+| Part du flux **rejetée** par déduplication | **98,6 %** (869 doublons pour 12 repères) |
+| Ne pouvaient **jamais** entrer | la clé, la porte, le but, **la lave**, un mur percuté, un échec |
+
+Ce n'était pas un mauvais filtre : **c'était un filtre privé de matière**. Une mémoire ne
+peut pas trier ce qu'on ne lui donne jamais. Et l'agent bloquait 338 jours sur `LavaGapS5`
+— une carte où mourir est l'information principale, et où mourir ne laissait aucune trace.
+
+**🧠 LE MODÈLE** (décision utilisateur)
+
+> 1. *« Il devrait absolument tout mémoriser, mais avec des filtres de pondération selon :
+>    nouveau, récurrent, etc. »*
+> 2. *« La récurrence devient des abstractions dans le cerveau. »*
+> 3. *« Le routage est un lien intrinsèque écrit dans l'ADN. »*
+> 4. *« L'oubli est un moyen de dire : l'abstraction est faite, on met en archive
+>    dégradable avec le temps. »*
+> 5. *« Rien ne doit être expliqué en dur — le cerveau ne sait pas ce qu'est une pomme ou
+>    une clé, c'est lié à l'apprentissage. »*
+
+⚠️ **Option écartée : le routeur centralisé.** Une première proposition plaçait un
+aiguilleur unique en amont des mémoires. Écartée sur correction de l'utilisateur : ce serait
+un **goulot** et un point de défaillance unique. Les mémoires ne sont pas des destinations
+qu'on choisit — **elles SONT les filtres**, en parallèle, chacune puisant dans un flux
+commun. On ne centralise pas : on cesse d'affamer.
+
+**✅ CE QUI A ÉTÉ LIVRÉ**
+
+**1. Le flux enrichi** — `_memoriser_si_saillant()` remplace les deux appels codés en dur.
+Tout tick dont la charge dépasse `SEUIL_SAILLANCE_MEMOIRE` laisse une trace, quelle que
+soit sa nature. L'étiquette est **dérivée de l'API MiniGrid** (`objet.type`) et reste une
+chaîne **opaque** : aucune table `lave = danger` n'existe ni ne doit exister.
+
+**2. L'abstraction par récurrence** — un doublon n'est plus jeté, il **confirme** :
+
+```python
+souvenir['confirmations'] += 1
+souvenir['valence'] = moyenne glissante des chocs vécus ici
+```
+
+La valence est **apprise**, jamais déclarée. C'est le seul canal par lequel un danger peut
+devenir évitable sans qu'aucune ligne ne mentionne « lave ».
+
+**3. L'oubli comme archivage** — l'éviction ne jette plus le plus ancien mais **le moins
+abstrait** (`min(confirmations, tick)`). Un repère confirmé cent fois est une régularité du
+monde ; un repère vu une fois est peut-être un accident.
+
+**4. Le rappel agnostique** — `rappel_le_plus_marquant()` ne demande **aucun type** : il
+balaie tous les repères et rend `(valence, confiance)` du plus pesant. L'agent ne cherche
+pas « de la nourriture », il perçoit « ici, il s'est passé quelque chose ».
+
+`DIM_RAPPEL_MARQUANT = 2` en **queue** du `vecteur_bio` (contrat append-only). Neutre
+**`[0.5, 0.0]`** — jamais `0.0` pour la valence, qui signifierait « le pire souvenir
+possible » et rendrait l'agent craintif partout où il n'a rien vécu (même discipline que la
+clinotaxie v32.0).
+
+**🧪 VALIDATION**
+
+Cerveau neuf, 40 jours :
+
+| Mesure | Avant v36 | Après |
+|---|---|---|
+| Types appris | 2 (câblés) | **4** (`FOOD`, `WATER`, `porte_ball`, `sol`) — dérivés |
+| Confirmations / repère | 1 (doublons jetés) | **4,65** |
+| Rappel marquant actif | — | **26-100 %** des ticks |
+
+Rétrocompatibilité, **nuit complète incluse** (test exigé par `CLAUDE.md`) :
+
+```
+👃 integrateur_bio greffé de 114 à 116 dims (+2 : rappel marquant (v36.0))
+   — acquis existants préservés.
+```
+
+Vérifié sur deux `.brain` réels ; tous deux apprennent immédiatement de nouveaux types
+(`porte_key`, `door`) qu'ils ne pouvaient pas mémoriser avant.
+
+**📊 TÉLÉMÉTRIE** — 5 clés `Memoire_*` + ligne console. `Memoire_Confirmations_Moy` est LA
+métrique de l'abstraction : > 1 signifie que la récurrence se convertit en repères solides
+au lieu d'être jetée. `Memoire_Rappels_Ratio` à 0 signifierait un canal mort.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `_memoriser_si_saillant()`, `rappel_le_plus_marquant()`, `enregistrer_evenement(intensite=)` avec confirmations/valence, éviction par abstraction, `DIM_RAPPEL_MARQUANT`, 2 bornes, 5 clés W&B + ligne console |
+| `src/naulthene/cerveau/persistance.py` | libellé de greffe v36.0, import `DIM_ODORAT_DELTA` |
+
+⚠️ **`noyau.py` uniquement** (terrain d'essai, gitignoré).
+
+---
+
 ## [35.1-experimental] - 2026-08-07
 
 ### Le Guidage Dégressif & le Filet de Sécurité — « plus il comprend, moins on l'aide »

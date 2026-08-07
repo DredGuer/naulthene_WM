@@ -31,7 +31,7 @@ from naulthene.cerveau.noyau import (
     AGI_Naulthene, EtatCognitif, DIM_VISUELLE, BUS_REFERENCE_INITIAL,
     PROGRAMME, DEVICE, creer_env, DetecteurJalonsDoorKey, GestionnaireCursusAbnegation,
     NUM_ACTIONS_BASE, NUM_ACTIONS_AVEC_C3, DIM_VECTEUR_BIO,
-    DIM_TOUCHER, DIM_CHIMIE, DIM_EXO,
+    DIM_TOUCHER, DIM_CHIMIE, DIM_EXO, DIM_ODORAT_DELTA,
 )
 
 
@@ -191,6 +191,10 @@ def _greffer_vecteur_bio_etendu(state_dict, agent):
         acquis.append("Exo-Sens (v30.0)")
     if largeur_bio_checkpoint <= 16 + DIM_TOUCHER + DIM_CHIMIE + DIM_EXO:
         acquis.append("clinotaxie olfactive (v32.0)")
+    # v36.0 — le rappel marquant : 2 dims [valence, confiance] du repère le plus pesant
+    # près de l'agent, toutes étiquettes confondues (voir `rappel_le_plus_marquant`).
+    if largeur_bio_checkpoint <= 16 + DIM_TOUCHER + DIM_CHIMIE + DIM_EXO + DIM_ODORAT_DELTA:
+        acquis.append("rappel marquant (v36.0)")
     libelle = " + ".join(acquis) if acquis else "extension du vecteur bio"
     print(f"   👃 integrateur_bio greffé de {largeur_checkpoint} à {largeur_attendue} dims d'entrée "
           f"(+{nb_nouvelles} : {libelle}) — acquis existants préservés.")

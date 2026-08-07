@@ -105,6 +105,25 @@ Pour un historique complet commit par commit, consultez [docs/CHANGELOG.md](docs
 > [docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md](docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md) pour le cadrage et les
 > arbitrages.
 
+### 🧠 Nouveautés v36.0 (expérimental) — Le Flux Enrichi & l'Abstraction par Récurrence (2026-08-07)
+
+La mémoire spatiale ne recevait que **deux** types d'événements (nourriture, eau) et rejetait
+**98,6 %** de ce qu'elle voyait. Ne pouvaient jamais y entrer : la clé, la porte, le but, la
+lave, un mur percuté. Ce n'était pas un mauvais filtre — c'était un filtre privé de matière.
+
+**Trois principes, formulés par l'utilisateur** : tout est mémorisé mais pondéré ; la
+récurrence devient une **abstraction** (un doublon n'est plus jeté, il *confirme*) ; l'oubli
+est un **archivage dégradable** — l'éviction retire le repère le moins confirmé, pas le plus
+ancien.
+
+**L'invariant qui gouverne tout** : *rien n'est expliqué en dur*. Le cerveau ne sait pas ce
+qu'est une clé ; les étiquettes restent opaques et la valeur d'un lieu est **apprise** par
+accumulation des chocs vécus. C'est le seul canal par lequel un danger devient évitable sans
+qu'aucune ligne ne mentionne « lave ».
+
+Mesuré sur 40 jours : 4 types appris au lieu de 2, **4,65 confirmations par repère** (contre
+des doublons jetés), rappel actif sur 26-100 % des ticks. `DIM_VECTEUR_BIO` : 34 → 36.
+
 ### 🤝 Nouveautés v35.1 (expérimental) — Le Guidage Dégressif & le Filet de Sécurité (2026-08-07)
 
 Deux mécaniques opposées, pilotées par **un seul curseur** — la formule de l'utilisateur :
