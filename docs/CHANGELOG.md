@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `766239c` |
 | **Catégorie** | feat + fix critique (arbitrage cognitif & plasticité, expérimental — `noyau.py` + `persistance.py`) |
 | **Impact** | **Critique** — trois bugs rendaient l'apprentissage des deux têtes de décision *mathématiquement impossible* |
 
