@@ -3,7 +3,9 @@
 > **Statut** : diagnostic terminé, équilibrage **implémenté et validé sur 600 jours** —
 > l'équilibre C1/C2 tient (ratio 0,57-1,09 contre 9,9-22,1× avant), mais **le cursus reste
 > bloqué** (niveau 2/15). L'équilibre était une condition nécessaire, pas suffisante. Verdict
-> complet en §6bis ; prochain candidat : le rêve, mesuré à 0,1 % sur 600 jours.
+> complet en §6bis. **Suite du diagnostic dans [dia_Aout_2026.md](dia_Aout_2026.md)** (run de
+> 1300 jours) : le blocage est **économique** — l'espérance d'un épisode vaut **−0,97**, ce qui
+> rend l'échec rationnel.
 > **Branche** : `feat/v37-equilibre-c1-c2`
 > **Date d'ouverture** : 2026-08-07
 > **Cerveau de référence du diagnostic** : `brains/070820261310_V36_600_RMD.brain` (600 jours, bus 64)
@@ -410,9 +412,11 @@ plus lente), même remède que `norme_naissance` en v34.0-fix2.
 
 ### Ce que ce run ne dit pas, et qu'il faut isoler
 
-- **Le rêve est quasi inexistant** : `Pourcentage_Reve` à **0,1 %** sur les 600 jours, **75 nuits
-  sans aucun rêve** sur les 100 premières. Un mécanisme entier du projet ne tourne pas — sans
-  rapport avec le chantier C1/C2, mais il fausse toute lecture de la consolidation.
+- ~~**Le rêve est quasi inexistant** : `Pourcentage_Reve` à **0,1 %**~~ ❌ **FAUX — corrigé le
+  2026-08-08** ([dia_Aout_2026.md](dia_Aout_2026.md) §2.2). La valeur est une **fraction**
+  affichée avec un `%` en trop : le rêve rejoue en réalité **15-18 %** de la journée (70 rêves
+  par nuit en fin de run) et **fonctionne**. Les nuits sans rêve du début sont réelles mais
+  disparaissent après le jour 400.
 - **`Recompense_Moyenne = 0.000`** sur l'intégralité du run, comme sur tous les runs précédents.
 
 ### Où en est le chantier
@@ -420,7 +424,8 @@ plus lente), même remède que `norme_naissance` en v34.0-fix2.
 L'équilibre C1/C2 était **une condition nécessaire, pas suffisante**. Les quatre bugs de fond
 (plancher-plafond, timing de la myéline, échelle absolue, normalisation conditionnelle) sont
 corrigés et validés. Mais le blocage du cursus persiste, et il faut maintenant chercher ailleurs
-— le rêve à 0,1 % est le prochain candidat, avant de revenir au cursus (§4, première ligne).
+— le run de 1300 jours ([dia_Aout_2026.md](dia_Aout_2026.md)) a tranché : le blocage est
+**l'économie de récompense** (espérance −0,97 par épisode), pas une mécanique cognitive.
 
 ---
 
@@ -465,7 +470,9 @@ corrigés et validés. Mais le blocage du cursus persiste, et il faut maintenant
 | 2026-08-08 | **Run 600 j (`8wequiqg`)** | Ratio **0,57-1,09** stable ✅ ; accord **29-75 % oscillant** 🟡 ; **niveau 2/15**, aucune victoire après le jour 288 ❌ |
 | 2026-08-08 | Bug trouvé PAR ce run | `reference_choc_dopamine` symétrique s'effondre de **−57 %** quand l'agent cesse de gagner ; crédit ×7 (10 % → 69 %) |
 | 2026-08-08 | v37.1-fix1 — le cliquet | Simulation du scénario exact : dérive **−71,3 % → −4,4 %**, crédit **87,2 % → 26,1 %** ; principe débutant/expert préservé (×8,8) |
-| 2026-08-08 | Anomalie relevée, **non traitée** | `Pourcentage_Reve` à **0,1 %** sur 600 jours, 75 nuits sans rêve sur les 100 premières — chantier distinct |
+| 2026-08-08 | ~~Anomalie du rêve~~ | ❌ **Erreur de diagnostic** : fraction lue comme un pourcentage. Le rêve rejoue **15-18 %** de la journée et fonctionne — voir [dia_Aout_2026.md](dia_Aout_2026.md) §2.2 |
+| 2026-08-08 | **Run 1300 j (`ous47258`)** — v37.1-fix1 | Cliquet validé (dérive **−7,4 %** sur 2× plus long) ; **1 couche au plancher contre 5** ; mais **niveau 2/15**, 678 j sans victoire |
+| 2026-08-08 | Cause du blocage identifiée | **Économie de récompense** : espérance **−0,97** par épisode (25 % × +1,00 + 75 % × −1,63) — l'échec est rationnel. Diagnostic complet : [dia_Aout_2026.md](dia_Aout_2026.md) |
 
 ### Note sur `tete_motrice` restée à 10,00 %
 

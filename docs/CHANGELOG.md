@@ -74,8 +74,13 @@ recalibrage reste possible (−29 % après 2000 jours de monde pauvre — soit b
   (le ratio reste entre 0,57 et 1,09, jamais les 22× d'avant), mais les deux modules ne
   s'accordent pas durablement. Le pic à 100 % observé en cours de run était une oscillation, pas
   une tendance.
-- **Le rêve est quasi inexistant** : `Pourcentage_Reve` à 0,1 % sur les 600 jours, 75 nuits sans
-  aucun rêve sur les 100 premières. À investiguer séparément.
+- ~~**Le rêve est quasi inexistant** : `Pourcentage_Reve` à 0,1 % sur les 600 jours~~
+  ❌ **AFFIRMATION FAUSSE, corrigée le 2026-08-08** (voir [dia_Aout_2026.md](dia_Aout_2026.md) §2.2).
+  `Pourcentage_Reve` est logué comme une **fraction** (`0,177`) mais affiché suivi d'un `%` — la
+  valeur réelle est **17,7 %**, pas 0,177 %. Vérifié : `Nb_Reves / Pourcentage_Reve = 398 ≈
+  len(memoire_moyen_terme)` sur 400 ticks. **Le rêve rejoue 15-18 % de la journée et fonctionne.**
+  Les 75 nuits sans rêve des 100 premiers jours sont réelles (plasticité basse chez un cerveau
+  neuf) mais disparaissent totalement après le jour 400.
 
 ---
 
