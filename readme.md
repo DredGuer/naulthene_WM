@@ -105,6 +105,14 @@ Pour un historique complet commit par commit, consultez [docs/CHANGELOG.md](docs
 > [docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md](docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md) pour le cadrage et les
 > arbitrages.
 
+> 🩺 **Diagnostic complet du système (2026-08-08)** — [docs/dia_Aout_2026.md](docs/dia_Aout_2026.md),
+> adossé à un run de **1300 jours**. Toutes les mécaniques cognitives fonctionnent et sont
+> chiffrées (plasticité, rêve, C1/C2, mémoire, sens, vocal) ; le blocage du cursus tient à **trois
+> facteurs non cognitifs** — un saut de difficulté ×10 au niveau 2, une patience deux fois plus
+> courte que le budget natif de MiniGrid, et une économie de récompense à espérance négative. Le
+> document contient aussi les **formules et constantes de référence** du système, et la trace des
+> erreurs de diagnostic commises puis corrigées.
+
 ### 🔧 Nouveautés v37.1-fix1 (expérimental) — Le Cliquet de la Référence (2026-08-08)
 
 Le run de 600 jours de la v37.1 a révélé un bug dans le mécanisme même que la v37.1

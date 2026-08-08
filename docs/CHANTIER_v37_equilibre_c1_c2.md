@@ -4,8 +4,10 @@
 > l'équilibre C1/C2 tient (ratio 0,57-1,09 contre 9,9-22,1× avant), mais **le cursus reste
 > bloqué** (niveau 2/15). L'équilibre était une condition nécessaire, pas suffisante. Verdict
 > complet en §6bis. **Suite du diagnostic dans [dia_Aout_2026.md](dia_Aout_2026.md)** (run de
-> 1300 jours) : le blocage est **économique** — l'espérance d'un épisode vaut **−0,97**, ce qui
-> rend l'échec rationnel.
+> 1300 jours) : le blocage tient à **trois facteurs composés** — un saut de difficulté ×10 entre
+> `Empty-6x6` et `Empty-8x8` (taux de réussite aléatoire 38,2 % → 3,8 %), une patience (120)
+> inférieure à la moitié du budget natif MiniGrid (256), et une économie de récompense dont
+> l'espérance vaut **−1,06** par épisode. Aucun n'est cognitif.
 > **Branche** : `feat/v37-equilibre-c1-c2`
 > **Date d'ouverture** : 2026-08-07
 > **Cerveau de référence du diagnostic** : `brains/070820261310_V36_600_RMD.brain` (600 jours, bus 64)
@@ -425,7 +427,8 @@ L'équilibre C1/C2 était **une condition nécessaire, pas suffisante**. Les qua
 (plancher-plafond, timing de la myéline, échelle absolue, normalisation conditionnelle) sont
 corrigés et validés. Mais le blocage du cursus persiste, et il faut maintenant chercher ailleurs
 — le run de 1300 jours ([dia_Aout_2026.md](dia_Aout_2026.md)) a tranché : le blocage est
-**l'économie de récompense** (espérance −0,97 par épisode), pas une mécanique cognitive.
+**les conditions d'exercice**, pas une mécanique cognitive — saut de difficulté ×10 au niveau 2,
+patience deux fois trop courte, et espérance de −1,06 par épisode.
 
 ---
 
@@ -472,7 +475,7 @@ corrigés et validés. Mais le blocage du cursus persiste, et il faut maintenant
 | 2026-08-08 | v37.1-fix1 — le cliquet | Simulation du scénario exact : dérive **−71,3 % → −4,4 %**, crédit **87,2 % → 26,1 %** ; principe débutant/expert préservé (×8,8) |
 | 2026-08-08 | ~~Anomalie du rêve~~ | ❌ **Erreur de diagnostic** : fraction lue comme un pourcentage. Le rêve rejoue **15-18 %** de la journée et fonctionne — voir [dia_Aout_2026.md](dia_Aout_2026.md) §2.2 |
 | 2026-08-08 | **Run 1300 j (`ous47258`)** — v37.1-fix1 | Cliquet validé (dérive **−7,4 %** sur 2× plus long) ; **1 couche au plancher contre 5** ; mais **niveau 2/15**, 678 j sans victoire |
-| 2026-08-08 | Cause du blocage identifiée | **Économie de récompense** : espérance **−0,97** par épisode (25 % × +1,00 + 75 % × −1,63) — l'échec est rationnel. Diagnostic complet : [dia_Aout_2026.md](dia_Aout_2026.md) |
+| 2026-08-08 | Cause du blocage identifiée | **Trois facteurs composés, aucun cognitif** : saut de difficulté ×10 (`Empty-6x6` 38,2 % → `Empty-8x8` 3,8 % en politique aléatoire) ; patience 120 contre 256 natifs (4,7 % → 21,0 % de réussite atteignable) ; espérance **−1,06** par épisode. Diagnostic complet : [dia_Aout_2026.md](dia_Aout_2026.md) |
 
 ### Note sur `tete_motrice` restée à 10,00 %
 
