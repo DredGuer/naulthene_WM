@@ -31,7 +31,7 @@ from naulthene.cerveau.noyau import (
     AGI_Naulthene, EtatCognitif, DIM_VISUELLE, BUS_REFERENCE_INITIAL,
     PROGRAMME, DEVICE, creer_env, DetecteurJalonsDoorKey, GestionnaireCursusAbnegation,
     NUM_ACTIONS_BASE, NUM_ACTIONS_AVEC_C3, DIM_VECTEUR_BIO,
-    DIM_TOUCHER, DIM_CHIMIE, DIM_EXO,
+    DIM_TOUCHER, DIM_CHIMIE, DIM_EXO, DIM_ODORAT_DELTA,
 )
 
 
@@ -191,6 +191,10 @@ def _greffer_vecteur_bio_etendu(state_dict, agent):
         acquis.append("Exo-Sens (v30.0)")
     if largeur_bio_checkpoint <= 16 + DIM_TOUCHER + DIM_CHIMIE + DIM_EXO:
         acquis.append("clinotaxie olfactive (v32.0)")
+    # v36.0 — le rappel marquant : 2 dims [valence, confiance] du repère le plus pesant
+    # près de l'agent, toutes étiquettes confondues (voir `rappel_le_plus_marquant`).
+    if largeur_bio_checkpoint <= 16 + DIM_TOUCHER + DIM_CHIMIE + DIM_EXO + DIM_ODORAT_DELTA:
+        acquis.append("rappel marquant (v36.0)")
     libelle = " + ".join(acquis) if acquis else "extension du vecteur bio"
     print(f"   👃 integrateur_bio greffé de {largeur_checkpoint} à {largeur_attendue} dims d'entrée "
           f"(+{nb_nouvelles} : {libelle}) — acquis existants préservés.")
@@ -220,6 +224,11 @@ class PersistanceAnatomique:
             # --- 2. Poids, traces de myéline/éligibilité et optimiseur ---
             'state_dict': etat.agent.state_dict(),
             'optimizer_state_dict': etat.agent.optimizer.state_dict(),
+            # v37.1 — l'échelle à laquelle CET agent juge un choc dopaminergique fort ou
+            # faible (distillation sélective). Ce n'est pas un réglage mais un acquis :
+            # il encode ce que l'agent a vécu depuis sa naissance, et c'est ce qui fait
+            # qu'un expert cesse de trouver marquant ce qui bouleversait le débutant.
+            'reference_choc_dopamine': etat.agent.reference_choc_dopamine,
 
             # --- 3. Chimie viscérale (réservoir dopaminergique + moteur homéostatique) ---
             'teneur_dopamine': etat.teneur_dopamine,
@@ -234,6 +243,10 @@ class PersistanceAnatomique:
 
             # --- 5. Curriculum & progression ---
             'niveau_actuel': etat.niveau_actuel,
+            # v35.0 — fenêtre glissante de promotion (voir _taux_maitrise_niveau).
+            'historique_episodes_niveau': list(etat.historique_episodes_niveau),
+            # v35.1 — filet de sécurité : jours consécutifs sans victoire sur le niveau.
+            'jours_stagnation_niveau': etat.jours_stagnation_niveau,
             'victoires_consecutives': etat.victoires_consecutives,
             # v33.0-etape0.6 — chronologie des victoires. DOIT être persistée : c'est une
             # mesure de VIE (intervalles entre victoires sur des centaines de jours), pas
@@ -406,10 +419,30 @@ class PersistanceAnatomique:
         #
         # On se fie donc au drapeau retourné par la greffe elle-même, seul témoin fiable
         # qu'une largeur a bougé une fois le state_dict réaligné.
-        greffe_detectee = bool(resultat_chargement.missing_keys) or bio_greffe
+        #
+        # v34.0-fix1 — `norme_naissance` est un BUFFER DE DIAGNOSTIC ajouté à chaque
+        # NaultheneLinearSynaptique (référence du plancher vital anti-extinction). Il est
+        # forcément absent de tout `.brain` antérieur, sur les 12 couches à la fois — ce
+        # qui faisait croire à une greffe massive et réinitialisait Adam sans raison, à
+        # chaque chargement de chaque ancien cerveau.
+        #
+        # Il ne participe à aucun calcul de forme et sa valeur par défaut (la norme du
+        # tenseur fraîchement initialisé) est la bonne pour un cerveau déjà entraîné : le
+        # plancher se cale alors sur l'échelle d'origine de la couche, exactement comme
+        # pour un cerveau neuf. Il est donc exclu de la détection de greffe.
+        #
+        # v37.0-fix — `echelle_myeline` relève exactement du même cas : buffer scalaire
+        # ajouté aux 12 couches (échelle de référence de la myéline, qui remplace l'ancien
+        # `q_ref=1.0` absolu). Absent de tout `.brain` antérieur à la v37, il déclencherait
+        # la même fausse greffe massive. Sa valeur par défaut (0.0) est correcte : la
+        # première nuit la recale sur le maximum réel de `myeline_M` de la couche.
+        BUFFERS_DIAGNOSTIC = ("norme_naissance", "echelle_myeline")
+        cles_manquantes_reelles = [c for c in resultat_chargement.missing_keys
+                                    if not c.endswith(BUFFERS_DIAGNOSTIC)]
+        greffe_detectee = bool(cles_manquantes_reelles) or bio_greffe
         if greffe_detectee:
             print(f"   🌱 Hémisphères nouvellement greffés sur ce cerveau (initialisés à neuf) : "
-                  f"{sorted({cle.split('.')[0] for cle in resultat_chargement.missing_keys})}")
+                  f"{sorted({cle.split('.')[0] for cle in cles_manquantes_reelles})}")
         if resultat_chargement.unexpected_keys:
             print(f"   ⚠️  Clés du checkpoint ignorées (absentes de l'architecture actuelle) : "
                   f"{sorted({cle.split('.')[0] for cle in resultat_chargement.unexpected_keys})}")
@@ -423,12 +456,17 @@ class PersistanceAnatomique:
             # partiel de la dynamique Adam, de toute façon incohérent avec les nouvelles
             # synapses. Seule la dynamique d'apprentissage (moments Adam) est perdue —
             # tous les poids/acquis du state_dict, eux, sont bien préservés au-dessus.
-            motif = ("nouvelles couches greffées" if resultat_chargement.missing_keys
+            motif = ("nouvelles couches greffées" if cles_manquantes_reelles
                      else "largeur du vecteur bio étendue par greffe")
             print(f"   🔄 Optimiseur réinitialisé ({motif}) — "
                   "les poids/acquis existants sont intacts, seule la dynamique Adam repart à neuf.")
         else:
             agent.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+
+        # v37.1 — `.get()` avec None par défaut : un .brain antérieur à la v37.1 n'a pas
+        # cette clé, et None est exactement la valeur d'initialisation attendue (« jamais
+        # mesuré »). Aucune greffe : c'est un scalaire, pas un tenseur.
+        agent.reference_choc_dopamine = checkpoint.get('reference_choc_dopamine')
 
         env_id = checkpoint['env_id']
         nom_classe = checkpoint['nom_classe']
@@ -460,8 +498,39 @@ class PersistanceAnatomique:
                   f"→ {restants} repère(s) distinct(s) (v31.1, aucune information perdue).")
 
         # --- Curriculum & progression ---
+        #
+        # v35.0 — REMAPPAGE DU NIVEAU. `niveau_actuel` est un INDEX dans `PROGRAMME`, or
+        # le programme est passé de 5 à 15 entrées. Un `.brain` sauvegardé au niveau 4
+        # (ex-Doctorat, `MultiRoom-N4-S5`) se retrouverait sinon à l'index 4 du nouveau
+        # programme (`LavaGapS5`) — c'est-à-dire RÉTROGRADÉ de dix crans sans le savoir,
+        # et son `env_id` sauvegardé ne correspondrait plus à son index.
+        #
+        # On se fie donc à `env_id`, qui est la seule donnée non ambiguë : on cherche
+        # l'index réel de cet environnement dans le programme courant. Même règle que la
+        # greffe par recopie — on traduit, on ne jette jamais.
         etat.niveau_actuel = checkpoint['niveau_actuel']
+        index_reel = next((i for i, (e, _) in enumerate(PROGRAMME) if e == env_id), None)
+        if index_reel is None:
+            # L'environnement du checkpoint ne fait plus partie du programme : on garde
+            # l'index tel quel s'il est valide, sinon on borne. L'agent reprendra sur son
+            # env_id d'origine (déjà créé ci-dessus) et sera réaligné à la 1re promotion.
+            etat.niveau_actuel = min(etat.niveau_actuel, len(PROGRAMME) - 1)
+            print(f"   ⚠️  '{env_id}' ne figure plus dans le PROGRAMME — niveau borné à "
+                  f"{etat.niveau_actuel}. L'agent continue sur cet environnement.")
+        elif index_reel != etat.niveau_actuel:
+            print(f"   🔀 Niveau remappé : index {etat.niveau_actuel} → {index_reel} "
+                  f"({nom_classe}) — le PROGRAMME a changé de taille (v35.0), "
+                  f"aucune progression n'est perdue.")
+            etat.niveau_actuel = index_reel
         etat.victoires_consecutives = checkpoint['victoires_consecutives']
+        # v35.0 — historique glissant de promotion. Absent des `.brain` antérieurs : on
+        # repart d'une fenêtre vide, donc `_taux_maitrise_niveau` renvoie None tant que
+        # MIN_EPISODES_PROMOTION épisodes n'ont pas été rejoués. La voie « série de
+        # victoires » reste disponible entre-temps : aucun cerveau ne perd de vitesse.
+        etat.historique_episodes_niveau = checkpoint.get('historique_episodes_niveau', [])
+        # v35.1 — un `.brain` antérieur repart à 0 : le filet se réarmera naturellement si
+        # l'agent stagne réellement, plutôt que d'hériter d'un renfort qu'il n'a pas mérité.
+        etat.jours_stagnation_niveau = checkpoint.get('jours_stagnation_niveau', 0)
         # v33.0-etape0.6 — lecture DÉFENSIVE (`.get`) : les `.brain` antérieurs à cette
         # version n'ont aucune de ces clés. Un cerveau ancien repart donc d'une
         # chronologie vierge (aucune victoire connue) plutôt que de faire planter le

@@ -13,6 +13,15 @@ brains/*.brain
 # sous-répertoires, et un cerveau archivé pèse de 0,5 à 3 Mo.
 brains/**/*.brain
 
+# Résultats bruts du banc d'ablation (v33.1) : mesures d'un run local précis, au même
+# titre que les analyses de run archivées. Le CHANGELOG en garde la synthèse chiffrée ;
+# le JSON complet (65 cellules × 20 mesures) n'a d'intérêt que sur la machine qui l'a
+# produit, et il est régénérable par `banc_ablation.py`.
+brains/ablations/*.json
+
+# macOS
+.DS_Store
+
 # Copie de travail locale (Mac, terrain d'essai des mécaniques expérimentales avant
 # portage éventuel sur src/naulthene/cerveau/colab.py — voir CLAUDE.md, section
 # "Variante Locale de Test"). Jamais trackée par git, contrairement aux autres

@@ -105,6 +105,183 @@ Pour un historique complet commit par commit, consultez [docs/CHANGELOG.md](docs
 > [docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md](docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md) pour le cadrage et les
 > arbitrages.
 
+> 🩺 **Diagnostic complet du système (2026-08-08)** — [docs/dia_Aout_2026.md](docs/dia_Aout_2026.md),
+> adossé à un run de **1300 jours**. Toutes les mécaniques cognitives fonctionnent et sont
+> chiffrées (plasticité, rêve, C1/C2, mémoire, sens, vocal) ; le blocage du cursus tient à **trois
+> facteurs non cognitifs** — un saut de difficulté ×10 au niveau 2, une patience deux fois plus
+> courte que le budget natif de MiniGrid, et une économie de récompense à espérance négative. Le
+> document contient aussi les **formules et constantes de référence** du système, et la trace des
+> erreurs de diagnostic commises puis corrigées.
+
+### 🔧 Nouveautés v37.1-fix1 (expérimental) — Le Cliquet de la Référence (2026-08-08)
+
+Le run de 600 jours de la v37.1 a révélé un bug dans le mécanisme même que la v37.1
+introduisait. `reference_choc_dopamine` utilisait une moyenne glissante **symétrique** :
+quand l'agent cesse de gagner, il ne reste que des micro-chocs, et la référence descend
+**vers eux**.
+
+| Période | Référence | Crédit moyen |
+|---|---|---|
+| jours 0-50 | 0,2149 | 10,0 % |
+| jours 550-600 | **0,0932** (−57 %) | **69,3 %** (×7) |
+
+Le crédit valant `choc / référence`, l'agent devenait **de plus en plus facile à
+impressionner** — l'inverse exact du principe voulu — et C1 finissait par distiller 70 % de
+bruit. La protection « une journée stérile ne distille rien » n'y pouvait rien : la journée
+n'était jamais *stérile*, elle était **médiocre**, et la référence s'adaptait à la médiocrité.
+
+C'est le défaut de `norme_naissance` (v34.0-fix2) à l'identique : une référence qui suit la
+décroissance ne borne plus rien. Même remède — **un cliquet**. La montée reste rapide
+(découvrir qu'on peut vivre mieux relève la barre sans tarder), la descente devient ~50× plus
+lente (traverser une mauvaise passe ne fait pas réviser à la baisse ce qu'on sait être un bon
+jour). Elle reste **non nulle** : un monde durablement plus pauvre doit pouvoir recalibrer,
+mais sur des centaines de nuits.
+
+Vérifié en simulation du scénario exact du run raté : dérive de la référence **−71,3 % → −4,4 %**,
+crédit final **87,2 % → 26,1 %**. Le principe débutant/expert est préservé (un même choc reste
+**8,8× moins marquant** pour l'expert).
+
+### 🎯 Nouveautés v37.1 (expérimental) — La Distillation Sélective (2026-08-07)
+
+La v37.0 faisait imiter C2 par C1 à **chaque** tick, au même poids — donc C1 apprenait aussi
+les **erreurs** de C2. Principe corrigé, formulé par l'utilisateur : *on n'automatise pas tous
+ses gestes, on automatise ceux qui ont marché*.
+
+Un tick n'est distillé que si un choc dopaminergique le **suit**, avec un crédit qui décroît
+en remontant le temps — et qui est **coupé net aux frontières d'épisode** : créditer un tick
+de l'épisode précédent pour une réussite du suivant serait une superstition, l'agent ayant été
+téléporté entre les deux.
+
+**Un NIVEAU, jamais un SEUIL.** Il n'existe aucune règle « si choc > X, imiter » : le crédit
+est continu et proportionnel. Et l'échelle qui juge un choc *fort* n'est pas une constante —
+c'est `reference_choc_dopamine`, moyenne glissante de ce que **cet agent** a lui-même vécu,
+sauvegardée dans le `.brain`.
+
+| Agent | Sa référence | Crédit pour un choc de 0,1 |
+|---|---|---|
+| Débutant (n'a connu que des micro-progrès) | 0,100 | **100 %** |
+| Le même, après 200 j de victoires | 0,879 | **11,5 %** |
+
+Le même événement est **8,7× moins marquant** pour l'expert : le niveau évolue avec l'âge et
+les habitudes, exactement comme la faim ou la soif. Mesuré : la part de journée distillée
+tombe de 100 % à **~25-35 %** ; une journée stérile ne distille désormais plus rien, au lieu
+de distiller uniformément du bruit.
+
+### ⚖️ Nouveautés v37.0 (expérimental) — L'Équilibre C1 / C2 (2026-08-07)
+
+Trois cerveaux successifs (900 j, 2700 j, 600 j) se sont arrêtés au **même** niveau du cursus.
+L'hypothèse « le niveau est mal placé » a été **écartée par la mesure** : le blocage était
+architectural, et il durait depuis le début.
+
+Sondés sur trois environnements — dont deux **déjà maîtrisés** — C1 et C2 n'étaient d'accord
+sur **aucun tick** (0 %), chacun votant une action *constante*, avec un ratio d'amplitude de
+9,9× à 22,1×. Les victoires du run précédent étaient attribuables à la marche aléatoire, pas
+à une politique apprise.
+
+**Quatre causes empilées, dont trois rendaient l'apprentissage mathématiquement impossible :**
+
+1. **Le plancher vital v34.0 était devenu un plafond** — il renormalisait à *exactement* 10 %
+   de la naissance, effaçant chaque nuit ce que le gradient venait de consolider
+   (`tete_motrice` : 0,319490 → +0,0139 d'annexe → **0,319490**, au millionième).
+2. **La myéline ne voyait jamais l'apprentissage du jour** — lue dans `forward()` pendant la
+   journée, alors que le poids annexe ne prend sa valeur qu'au pas d'optimiseur du soir.
+   Myéline mesurée sur les deux têtes de décision après 600 jours : **`0.000000` exact**.
+3. **`q_ref = 1.0` : une échelle 500× trop grande** — supposait une myéline d'ordre 1, alors
+   qu'elle vaut ~0,002. Résultat : *toute* couche s'érodait au taux plein, myélinisée ou non.
+   Même défaut que `SEUIL_CRISTAL = 0.80`, jamais franchi non plus.
+4. **C2 sortait d'une normalisation, C1 non** — écart-type 1 garanti d'un côté, échelle brute
+   érodée de l'autre. Le rapport 1:18 était un artefact, pas un choix d'architecture.
+
+| Critère | Avant | Après (40 j) |
+|---|---|---|
+| Ratio C2/C1 | 9,9× à 22,1×, dérivant | **1,48-1,59×**, stable |
+| Couches au plancher vital | 5 / 12 | **3 / 12** |
+| Protection contre l'érosion | ~0 % | **45,9 %** |
+| Accord C1/C2 | 0 % | **0 %** — toujours ouvert |
+
+Deux instruments de diagnostic **en lecture seule** accompagnent le chantier :
+`sonde_c1_c2.py` (rapport de force entre les deux voix) et `sonde_poids.py` (santé synaptique
+couche par couche). Détail complet, options écartées et mesures qui les ont écartées :
+[docs/CHANTIER_v37_equilibre_c1_c2.md](docs/CHANTIER_v37_equilibre_c1_c2.md).
+
+### 🧠 Nouveautés v36.0 (expérimental) — Le Flux Enrichi & l'Abstraction par Récurrence (2026-08-07)
+
+La mémoire spatiale ne recevait que **deux** types d'événements (nourriture, eau) et rejetait
+**98,6 %** de ce qu'elle voyait. Ne pouvaient jamais y entrer : la clé, la porte, le but, la
+lave, un mur percuté. Ce n'était pas un mauvais filtre — c'était un filtre privé de matière.
+
+**Trois principes, formulés par l'utilisateur** : tout est mémorisé mais pondéré ; la
+récurrence devient une **abstraction** (un doublon n'est plus jeté, il *confirme*) ; l'oubli
+est un **archivage dégradable** — l'éviction retire le repère le moins confirmé, pas le plus
+ancien.
+
+**L'invariant qui gouverne tout** : *rien n'est expliqué en dur*. Le cerveau ne sait pas ce
+qu'est une clé ; les étiquettes restent opaques et la valeur d'un lieu est **apprise** par
+accumulation des chocs vécus. C'est le seul canal par lequel un danger devient évitable sans
+qu'aucune ligne ne mentionne « lave ».
+
+Mesuré sur 40 jours : 4 types appris au lieu de 2, **4,65 confirmations par repère** (contre
+des doublons jetés), rappel actif sur 26-100 % des ticks. `DIM_VECTEUR_BIO` : 34 → 36.
+
+### 🤝 Nouveautés v35.1 (expérimental) — Le Guidage Dégressif & le Filet de Sécurité (2026-08-07)
+
+Deux mécaniques opposées, pilotées par **un seul curseur** — la formule de l'utilisateur :
+*« plus il comprend, moins on l'aide ; et quand il bloque, on l'aide un peu »*.
+
+**Le sevrage** : l'aide décroît avec la maîtrise mesurée (1,00 sous 60 % → 0,00 au-dessus de
+90 %), au lieu d'être coupée d'un seul coup au palier 5 comme avant. Le Mode Libre produisait
+une falaise — mesuré, **0,00 record de proximité par jour** pendant 2000 jours.
+
+**Le filet** : un agent qui stagne plus de 30 jours reçoit un **surplus** d'aide, progressif
+jusqu'à ×3. Il se replie dès la première victoire — une bouée, pas une rente — et ne touche
+jamais la récompense terminale. La redescente de palier a été **écartée** : on n'aide pas un
+agent en le faisant reculer.
+
+Mesuré sur un cerveau neuf : bloqué à 4 victoires pendant 75 jours, le filet monte à ×2,47…
+et l'agent débloque à **7 victoires**. Sans filet, le même cerveau calait 79 jours à 0 %.
+
+### 🎓 Nouveautés v35.0 (expérimental) — Le Cursus Progressif : 15 niveaux au lieu de 5 (2026-08-07)
+
+Le cursus passe de **5 à 15 niveaux**, avec un principe simple : **entre deux paliers voisins,
+une seule chose change**. `DoorKey-5x5 → 6x6 → 8x8` est la même tâche à trois échelles —
+l'agent consolide au lieu de tout réapprendre.
+
+**Pourquoi** : un run de 2700 jours sur un cerveau sain a montré **2000 jours de blocage au
+Collège** (palier 7 atteint dès le jour 701, puis tendance 1,08 = stationnaire). Trois causes
+mesurées — le saut Primaire→Collège demandait 5 compétences d'un coup ; le guidage était coupé
+net au palier 5 (0,00 record de proximité/jour) ; et l'exigence d'efficacité bondissait de ×37
+à ×3,6 de marge sans étape intermédiaire.
+
+**La promotion a désormais deux voies en OU** : 2 victoires consécutives (rapide, historique)
+**ou** 60 % de réussite sur les 20 derniers épisodes (lent, robuste). La seconde ajoute une
+porte sans fermer la première — un agent à 80 % de réussite qui perdait un épisode sur cinq
+restait auparavant bloqué à vie.
+
+**Rétrocompatibilité** : `niveau_actuel` étant un index, un ancien `.brain` est **remappé par
+`env_id`** (`🔀 Niveau remappé : index 4 → 14`) — vérifié nuit complète incluse sur deux
+cerveaux réels. Voir [docs/Parcourt_readme.md §6](docs/Parcourt_readme.md) et
+[docs/CHANGELOG.md](docs/CHANGELOG.md).
+
+> ⚠️ **Uniquement dans `noyau.py`** (terrain d'essai local, gitignoré) — `colab.py` conserve
+> ses 5 niveaux.
+
+### 🩺 Nouveautés v34.0-fix1/fix2 (expérimental) — L'Extinction Synaptique (2026-08-06)
+
+**Bug critique** : après 1500 nuits, **8 couches sur 11 étaient entièrement à zéro** — le
+cerveau était littéralement aveugle et sourd (bus nul ⇒ JEPA nul ⇒ C2 nul ⇒ politique réduite
+au hasard uniforme). La myéline ne pouvant venir que du gradient, un agent sans récompense
+s'érodait à taux plein et mourait en ~121 nuits.
+
+⚠️ La protection existante n'avait **jamais** fonctionné : `SEUIL_CRISTAL = 0,80` contre une
+myéline réelle maximale de **0,0038** — la Cristallisation Souple v26.0 ne s'est enclenchée sur
+aucun cerveau du dépôt.
+
+**Le correctif — le Plancher Vital** : une synapse faible mais vivante n'est plus érodée, et
+une couche conserve au minimum 10 % de sa *norme de naissance*. Ce sont des **bornes**, pas des
+valeurs de fonctionnement : l'oubli reste possible, l'extinction non. Validé sur 3000 nuits
+sans myéline (11 760 synapses vivantes contre 0 avant) et sur un run réel de 2700 jours
+(0 couche morte, `porte_visuelle` remontée de 11 % à 21 %).
+
 ### 🎓 Conclusion du cycle v33 — Le cursus est terminé, le blocage n'existait pas (2026-08-05)
 
 **Run de 5000 jours (`8q37yinf`, cerveau neuf). L'agent a franchi les CINQ niveaux du
@@ -972,7 +1149,7 @@ MiniGrid n'a pas d'objets Nourriture/Eau natifs. Ce détecteur réutilise `Ball`
 
 **Forage 80/20 (v19.0)** : contrairement à la v18.0 où une ressource consommée disparaissait définitivement, la Nourriture (uniquement — l'Eau ne respawn pas) réapparaît immédiatement après consommation :
 
-* **80%** : sur une case libre à proximité (±1 case) d'un "Nid" — la première case vide trouvée à l'initialisation de l'épisode, jamais une coordonnée fixe codée en dur, pour rester agnostique de la carte et fonctionner identiquement sur les 5 niveaux du `PROGRAMME`.
+* **80%** : sur une case libre à proximité (±1 case) d'un "Nid" — la première case vide trouvée à l'initialisation de l'épisode, jamais une coordonnée fixe codée en dur, pour rester agnostique de la carte et fonctionner identiquement sur tous les niveaux du `PROGRAMME` (15 depuis la v35.0).
 * **20%** : dispersée totalement aléatoirement sur la grille.
 
 ### 4. Génération Autonome de Quêtes de Survie

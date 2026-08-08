@@ -4,6 +4,988 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [37.1-fix1-experimental] - 2026-08-08
+
+### Le Cliquet de la Référence — la barre monte vite, elle ne redescend presque plus
+
+| Type | Details |
+|------|---------|
+| **Commit** | `b088416` |
+| **Catégorie** | fix critique (distillation sélective, expérimental — `noyau.py`) |
+| **Impact** | **Critique** — la v37.1 rendait l'agent *de plus en plus facile à impressionner*, l'inverse exact du principe visé |
+
+**🔴 LE BUG** (mesuré sur le run `8wequiqg`, 600 jours, `070820261634_V371_600_RMD.brain`)
+
+`reference_choc_dopamine` utilisait une moyenne glissante **symétrique**. Quand l'agent cesse
+de gagner, il ne reste que des micro-chocs — la référence descend donc **vers eux** :
+
+| Période | Référence | Crédit moyen |
+|---|---|---|
+| jours 0-50 | 0,2149 | 10,0 % |
+| jours 300-350 | 0,2182 | 21,1 % |
+| jours 450-500 | 0,1348 | 52,6 % |
+| jours 550-600 | **0,0932** (−57 %) | **69,3 %** (×7) |
+
+Le crédit valant `choc / référence`, une référence qui s'effondre fait qu'un **même événement
+médiocre crédite de plus en plus**. Une boucle s'installait : moins de victoires → référence
+plus basse → tout paraît marquant → C1 distille 70 % de bruit → encore moins de victoires.
+
+La protection « une journée stérile ne distille rien » n'y pouvait rien : la journée n'était
+jamais *stérile*, elle était **médiocre**, et la référence s'adaptait à la médiocrité.
+
+**C'est exactement le défaut de `norme_naissance` corrigé en v34.0-fix2** : une référence qui
+suit la décroissance ne borne plus rien. Même remède — un cliquet.
+
+**✅ LE CORRECTIF**
+
+L'inertie devient **asymétrique** : montée rapide (`INERTIE_REFERENCE_CHOC = 0.99`, inchangée),
+descente ~50× plus lente (`INERTIE_OUBLI_REFERENCE_CHOC = 0.9998`). Découvrir qu'on peut vivre
+mieux relève la barre sans tarder ; traverser une mauvaise passe ne fait pas réviser à la
+baisse ce qu'on sait être un bon jour.
+
+La descente reste **non nulle** : un monde durablement plus pauvre (nouveau niveau, ressources
+plus rares) doit pouvoir recalibrer — mais sur des centaines de nuits, jamais sur une saison
+creuse.
+
+| Fichier | Changement |
+|---|---|
+| `src/naulthene/cerveau/noyau.py` | `_ponderer_distillation` — inertie asymétrique selon le sens de variation ; `INERTIE_OUBLI_REFERENCE_CHOC` |
+
+**📊 VÉRIFIÉ** — simulation du scénario exact du run raté (300 j avec victoires, puis 300 j sans) :
+
+| | Dérive de la référence | Crédit final |
+|---|---|---|
+| v37.1 (symétrique) | **−71,3 %** | **87,2 %** |
+| v37.1-fix1 (cliquet) | **−4,4 %** | **26,1 %** |
+
+Non-régressions confirmées : le principe débutant/expert tient (référence ×8,8, un même choc
+**8,8× moins marquant** pour l'expert) ; la coupure aux frontières d'épisode est intacte ; le
+recalibrage reste possible (−29 % après 2000 jours de monde pauvre — soit bien au-delà d'un run).
+
+> ⚠️ Un `.brain` produit par la v37.1 garde sa référence **déjà effondrée** : le cliquet la gèle
+> au lieu de la réparer (on n'invente pas un vécu). Relancer sur un cerveau neuf pour mesurer
+> l'effet réel du correctif.
+
+**📉 CE QUE LE RUN A AUSSI MONTRÉ** (indépendant de ce bug, non corrigé à ce stade)
+
+- **Niveau 2/15 au jour 600**, contre 3/15 pour le run V36 — et **aucune victoire après le
+  jour 288** (312 jours), guidage saturé à ×3,0 depuis le jour ~387.
+- L'accord C1/C2 **oscille** (50 % → 75 % → 29 %) au lieu de converger : l'équilibre v37.0 tient
+  (le ratio reste entre 0,57 et 1,09, jamais les 22× d'avant), mais les deux modules ne
+  s'accordent pas durablement. Le pic à 100 % observé en cours de run était une oscillation, pas
+  une tendance.
+- ~~**Le rêve est quasi inexistant** : `Pourcentage_Reve` à 0,1 % sur les 600 jours~~
+  ❌ **AFFIRMATION FAUSSE, corrigée le 2026-08-08** (voir [dia_Aout_2026.md](dia_Aout_2026.md) §2.2).
+  `Pourcentage_Reve` est logué comme une **fraction** (`0,177`) mais affiché suivi d'un `%` — la
+  valeur réelle est **17,7 %**, pas 0,177 %. Vérifié : `Nb_Reves / Pourcentage_Reve = 398 ≈
+  len(memoire_moyen_terme)` sur 400 ticks. **Le rêve rejoue 15-18 % de la journée et fonctionne.**
+  Les 75 nuits sans rêve des 100 premiers jours sont réelles (plasticité basse chez un cerveau
+  neuf) mais disparaissent totalement après le jour 400.
+
+---
+
+## [37.1-experimental] - 2026-08-07
+
+### La Distillation Sélective — C1 n'automatise que ce qui a marché
+
+| Type | Details |
+|------|---------|
+| **Commit** | `9502f26` |
+| **Catégorie** | feat (apprentissage du réflexe, expérimental — `noyau.py` + `persistance.py`) |
+| **Impact** | **Fonctionnel** — la distillation v37.0 passe de plate à pondérée |
+
+Issu d'une remarque de l'utilisateur sur la v37.0. Détail :
+[`CHANTIER_v37_equilibre_c1_c2.md §5bis`](CHANTIER_v37_equilibre_c1_c2.md).
+
+**🔴 LE DÉFAUT**
+
+La distillation v37.0 était **plate** : C1 imitait C2 à chaque tick, au même poids, que C2
+ait eu raison ou tort. Sur un C2 médiocre (amplitude constante, argmax figé sur une seule
+action), cela revient à **faire apprendre à C1 les erreurs de C2**.
+
+**🧠 LE MODÈLE** — on n'automatise pas tous ses gestes, on automatise ceux qui ont marché.
+
+Un tick est crédité si un choc dopaminergique le **suit**, avec une décroissance
+exponentielle vers le passé (patron de `trace_activation`, LTP v20.0). La propagation
+**s'arrête aux frontières d'épisode** — créditer un tick de l'épisode précédent pour une
+réussite du suivant serait une superstition, l'agent ayant été téléporté entre les deux.
+
+```
+chocs : [0, 0, 0, 0, 0, 0.8, 0, 0, | 0, 0, 0.4, 0]      (| = fin d'épisode)
+poids : [.66,.72,.78,.85,.92, 1.0, 0., 0., .56,.61,.67, 0.]
+                                    └──┬──┘
+                              crédit coupé net
+```
+
+**⚖️ RIEN N'EST EN DUR — un NIVEAU, pas un SEUIL**
+
+Il n'existe aucune règle « si choc > X, imiter » : le crédit est **continu** et proportionnel
+au choc. Et l'échelle à laquelle un choc est jugé fort n'est pas une constante — c'est
+`reference_choc_dopamine`, moyenne glissante de ce que **cet agent** a lui-même vécu,
+sérialisée dans le `.brain`.
+
+| Agent | Référence apprise | Crédit accordé à un choc de 0,1 |
+|---|---|---|
+| **Débutant** (n'a connu que des micro-progrès) | 0,100 | **100 %** |
+| **Le même, expert** (200 j de victoires) | 0,879 | **11,5 %** |
+
+Le même événement est **8,7× moins marquant** pour l'expert. Le niveau évolue avec l'âge et
+les habitudes, exactement comme la faim ou la soif.
+
+Les deux constantes ajoutées sont des **dynamiques** (vitesse d'effacement d'un crédit,
+vitesse de suivi de la référence), jamais des seuils de décision.
+
+| Fichier | Changement |
+|---|---|
+| `src/naulthene/cerveau/noyau.py` | `_ponderer_distillation()` — crédit rétrograde borné aux épisodes ; moyenne **pondérée** dans `apprendre_journee` (une journée stérile ne distille plus rien, au lieu de distiller du bruit) |
+| `src/naulthene/cerveau/noyau.py` | `chocs_dopamine_journee` — buffer journalier, remis à zéro dans `_reinitialiser_buffers_journee` |
+| `src/naulthene/cerveau/noyau.py` | `reference_choc_dopamine` — le niveau adaptatif ; `DECROISSANCE_CREDIT_DISTILLATION`, `INERTIE_REFERENCE_CHOC` |
+| `src/naulthene/cerveau/noyau.py` | Télémétrie : `Distillation_Credit_Moyen`, `Distillation_Reference_Choc` + bilan console |
+| `src/naulthene/cerveau/persistance.py` | `reference_choc_dopamine` sérialisée (`.get()` → rétrocompatible, aucune greffe) |
+
+**📊 EFFET MESURÉ**
+
+| | v37.0 (plate) | v37.1 (sélective) |
+|---|---|---|
+| Part de la journée distillée | 100 % | **~25-35 %** |
+| Gradient reçu par `tete_motrice` | 0,01117 | 0,00912 (**−18 %**) |
+
+**⚠️ DEUX LEVIERS ÉCARTÉS** (proposés, mesurés, refusés)
+
+- **`f_planif` piloté par l'entropie de C1 / l'erreur JEPA** : le signal n'existe pas —
+  `indecision_c2` varie de **1,00×** entre min et max sur 300 ticks. Et c'est un
+  déclenchement sur seuil déguisé en formule continue (refusé v28/v29/v30). Le ratio est
+  déjà passé de 22× à 0,6× **sans aucun pilotage**, par la seule maturation synaptique.
+- **C2 réinjecté comme canal continu dans `integrateur_bio`** : crée une boucle, C2 étant
+  calculé à partir de `pensee_bio` qui sort d'`integrateur_bio`.
+
+---
+
+## [37.0-experimental] - 2026-08-07
+
+### L'Équilibre C1 / C2 — le réflexe cesse d'être inaudible, et les têtes de décision peuvent enfin apprendre
+
+| Type | Details |
+|------|---------|
+| **Commit** | `766239c` |
+| **Catégorie** | feat + fix critique (arbitrage cognitif & plasticité, expérimental — `noyau.py` + `persistance.py`) |
+| **Impact** | **Critique** — trois bugs rendaient l'apprentissage des deux têtes de décision *mathématiquement impossible* |
+
+Chantier complet et traçabilité des options écartées :
+[`CHANTIER_v37_equilibre_c1_c2.md`](CHANTIER_v37_equilibre_c1_c2.md).
+
+**🔴 CE QUI ÉTAIT CASSÉ** (mesuré sur `070820261310_V36_600_RMD.brain`, 600 jours)
+
+Trois cerveaux successifs (V34-fix1 900 j, V35 2700 j, V36 600 j) se sont arrêtés au **même
+niveau** du cursus (`SimpleCrossingS9N1`, index 3/15). L'hypothèse « le niveau est mal placé »
+a été **écartée par la mesure** : le blocage est architectural.
+
+| Environnement | Ampl. C1 | Ampl. C2 | Ratio | Accord argmax |
+|---|---|---|---|---|
+| `Empty-5x5` (maîtrisé) | 0,217 | 2,138 | 9,9× | **0 %** |
+| `Empty-8x8` (maîtrisé) | 0,168 | 2,125 | 12,7× | **0 %** |
+| `SimpleCrossingS9N1` (bloqué) | 0,095 | 2,105 | 22,1× | **0 %** |
+
+`argmax(C1) = 3` sur 400 ticks / 400 ; `argmax(C2) = 0` sur 400 / 400. Chaque module votait une
+action **constante**, différente de l'autre, indépendamment de l'observation — **y compris sur
+les niveaux déjà maîtrisés**. Les 21 victoires du run V36 (taux de vie 3,5 %) sont attribuables
+à la marche aléatoire du `multinomial`, pas à une politique apprise.
+
+**🔬 LES QUATRE CAUSES, EMPILÉES**
+
+| # | Cause | Preuve |
+|---|---|---|
+| 1 | **Le plancher vital était devenu un plafond.** La v34.0 renormalisait à *exactement* 10 % de la naissance depuis la norme post-érosion : tout ce que le gradient consolidait était effacé chaque nuit. | `tete_motrice` : 0,319490 avant la journée, annexe consolidée +0,0139, norme après sommeil **0,319490** — au millionième près |
+| 2 | **La myéline ne voyait jamais l'apprentissage du jour.** Calculée uniquement dans `forward()`, donc pendant la journée, alors que `annexe_weight` ne prend sa valeur qu'au `optimizer.step()` du soir. Aucun `forward` n'a lieu entre le dernier pas et `cycle_sommeil`. | myéline de `tete_motrice` et `cortex_prefrontal` : **0,000000 exact** après 600 jours |
+| 3 | **`q_ref = 1.0` : échelle 500× trop grande.** Paramètre jamais passé par aucun appelant depuis l'origine. Suppose une myéline d'ordre 1 ; la mesure dit ~0,002. `myeline_norm` restait donc collée à 0 et **toute** couche s'érodait au taux plein. | Même défaut que `SEUIL_CRISTAL = 0.80` face à une myéline réelle de 0,0038 — la Cristallisation Souple n'a jamais pu s'exercer |
+| 4 | **C2 normalisé, C1 non.** `valeur_cumulee` sort d'un z-score, donc écart-type 1 **par construction** ; C1 garde son échelle brute, érodée au plancher. La fusion additionnait 0,1 et 1,8. | Amplitude C2 = 2,10 ± 0,02 **identique** sur trois cartes de difficultés très différentes |
+
+> **C2 n'écrasait pas C1 parce qu'il était meilleur. Il l'écrasait parce qu'il était le seul des
+> deux à avoir une échelle garantie par construction.**
+
+**✅ CE QUI A ÉTÉ LIVRÉ**
+
+| Fichier | Changement |
+|---|---|
+| `src/naulthene/cerveau/noyau.py` | **Correctif plancher** : `torch.clamp(norme_plancher / norme_apres, min=1.0)` — ne remonte que ce qui manque, ne redescend jamais |
+| `src/naulthene/cerveau/noyau.py` | **Correctif myéline** : rafraîchie en tête de `cycle_sommeil`, seul point qui voit l'état final de `annexe_weight`. L'invariant tient — la myéline vient toujours **uniquement** du gradient, seul le *moment* de la lecture change |
+| `src/naulthene/cerveau/noyau.py` | **Échelle de myéline relative** : 3ᵉ quartile de `myeline_M` de la couche (`QUANTILE_ECHELLE_MYELINE`), au lieu de `q_ref=1.0`. Le quantile et non le max : normaliser par le max fait porter l'échelle par une seule synapse (p50 = 0,027 mais p99 = 1,000) |
+| `src/naulthene/cerveau/noyau.py` | **Mesure 2 — gain de C1 à double sens** : facteur scalaire ramenant l'amplitude vers `VIGUEUR_MIN_C1`, borné par `GAIN_C1_MIN/MAX`. L'opinion de C1 est intacte, seul son volume est réglé |
+| `src/naulthene/cerveau/noyau.py` | **Mesure 3 — auto-distillation C2 → C1** (`TAUX_DISTILLATION_C1`) : le réflexe reçoit un gradient qui ne dépend d'aucune victoire. Cible `.detach()`ée — vérifié : `cortex_prefrontal` reçoit 0,00000000 par ce canal, C2 n'apprend donc pas à se rendre prévisible |
+| `src/naulthene/cerveau/noyau.py` | **Normalisation de C2 inconditionnelle** : l'ancien `if std > 1e-6` laissait C2 à son échelle brute (~1e-7) sous le seuil — un module **numériquement éteint**, sans aucun signal. Observé : des journées entières à `C2=0.000` |
+| `src/naulthene/cerveau/noyau.py` | **Télémétrie** (v29.1) : `Arbitrage_Ratio_C2C1`, `Arbitrage_Accord`, `Arbitrage_Amplitude_C1/C2`, `Arbitrage_Gain_C1`, `Distillation_C2_vers_C1` + ligne de bilan console. Conditionnelles — un jour sans tick moteur ne logge pas de zéros |
+| `src/naulthene/cerveau/persistance.py` | `echelle_myeline` exclu de la détection de greffe (même cas que `norme_naissance` v34.0-fix1 : buffer scalaire ajouté aux 12 couches, il aurait déclenché une fausse greffe massive et réinitialisé Adam à chaque chargement) |
+| `src/naulthene/instruments/sonde_c1_c2.py` | **NOUVEAU** — rapport de force C1/C2 sur un `.brain`, en lecture seule. Politique **stochastique** (`multinomial`), jamais `argmax` : un agent REINFORCE n'a jamais expérimenté son mode déterministe |
+| `src/naulthene/instruments/sonde_poids.py` | **NOUVEAU** — santé synaptique couche par couche, signale les couches collées au plancher vital |
+
+**⚠️ UNE MESURE ESSAYÉE PUIS RETIRÉE**
+
+« L'échelle de C2 porte sa confiance » (réinjecter `indecision_c2` après la normalisation) a été
+implémentée **deux fois**, mesurée **deux fois**, et retirée :
+
+| Tentative | Résultat | Cause |
+|---|---|---|
+| Échelle **absolue** | **Éteint C2** (ratio 0,01×) | Le std brut vaut 0,0008 et ne varie que de **1,00×** entre min et max sur 300 ticks |
+| Échelle **relative** (moyenne glissante) | **Sature** (`confiance = 2.0000` constante) | La moyenne glissante décroît plus vite que le signal — effet net : un facteur constant |
+
+Tant que `cortex_prefrontal` est au plancher, C2 n'a **aucune confiance variable à exprimer**.
+La trace est conservée dans `simuler_futur_et_planifier`, à l'endroit exact où le code aurait
+vécu, pour que l'idée ne soit pas réintroduite sans ces deux mesures.
+
+**📊 RÉSULTATS (run de validation, 40 jours)**
+
+| Critère | Avant | Après |
+|---|---|---|
+| Ratio C2/C1 | 9,9× à 22,1×, **dérivant** selon la carte | **1,48-1,59×**, stable |
+| Accord C1/C2 | 0 % | **0 %** — ❌ inchangé |
+| Couches au plancher vital | 5 / 12 | **3 / 12** |
+| Myéline `tete_motrice` | 0,000000 | 0,0033 |
+| Protection moyenne contre l'érosion | ~0 % | **45,9 %** (érosion effective 0,050 → 0,027) |
+
+**Une régression a été rencontrée et corrigée en cours de route** : une fois les têtes
+débloquées, la distillation a renforcé C1 plus vite que C2 et le ratio s'est **inversé à 0,21×**
+— exactement le mode d'échec que le chantier s'était engagé à surveiller. D'où le gain à double
+sens (borne haute `GAIN_C1_MAX`).
+
+**Sur `tete_motrice`, restée à 10,00 %** : sa consolidation nocturne fait *baisser* la norme
+(0,31949 → 0,31823) — le gradient pointe en sens opposé aux poids existants, **il les corrige,
+il ne les grossit pas**. Vérifié sur 5 nuits : cosinus 0,9972, **7,43 % des poids modifiés**.
+La couche se remodèle à norme constante ; la norme seule est un mauvais indicateur d'apprentissage.
+
+**🚧 CE QUI RESTE OUVERT**
+
+- **L'accord C1/C2 est toujours à 0 %.** Les deux voix sont désormais comparables, elles ne
+  convergent pas pour autant. Trop tôt pour dire si l'auto-distillation les rapprochera.
+- **Rien ne prouve encore que la v37 débloque le niveau 3** — 40 jours ne suffisent pas.
+  C'est ce que le run long doit trancher.
+
+---
+
+## [36.0-experimental] - 2026-08-07
+
+### Le Flux Enrichi & l'Abstraction par Récurrence — la mémoire cesse d'être affamée
+
+| Type | Details |
+|------|---------|
+| **Commit** | `e2a134e` |
+| **Catégorie** | feat (mécanique mnésique, expérimental — `noyau.py` + `persistance.py`) |
+| **Impact** | **Fonctionnel** — `DIM_VECTEUR_BIO` passe de 34 à 36 |
+
+**🔴 CE QUI ÉTAIT CASSÉ** (mesuré, run `58ssyw19`, 600 jours)
+
+| Fait | Valeur |
+|---|---|
+| Types d'événements que la mémoire spatiale pouvait recevoir | **2** (`FOOD`, `WATER`) — deux sites d'appel dans tout le code |
+| Part du flux **rejetée** par déduplication | **98,6 %** (869 doublons pour 12 repères) |
+| Ne pouvaient **jamais** entrer | la clé, la porte, le but, **la lave**, un mur percuté, un échec |
+
+Ce n'était pas un mauvais filtre : **c'était un filtre privé de matière**. Une mémoire ne
+peut pas trier ce qu'on ne lui donne jamais. Et l'agent bloquait 338 jours sur `LavaGapS5`
+— une carte où mourir est l'information principale, et où mourir ne laissait aucune trace.
+
+**🧠 LE MODÈLE** (décision utilisateur)
+
+> 1. *« Il devrait absolument tout mémoriser, mais avec des filtres de pondération selon :
+>    nouveau, récurrent, etc. »*
+> 2. *« La récurrence devient des abstractions dans le cerveau. »*
+> 3. *« Le routage est un lien intrinsèque écrit dans l'ADN. »*
+> 4. *« L'oubli est un moyen de dire : l'abstraction est faite, on met en archive
+>    dégradable avec le temps. »*
+> 5. *« Rien ne doit être expliqué en dur — le cerveau ne sait pas ce qu'est une pomme ou
+>    une clé, c'est lié à l'apprentissage. »*
+
+⚠️ **Option écartée : le routeur centralisé.** Une première proposition plaçait un
+aiguilleur unique en amont des mémoires. Écartée sur correction de l'utilisateur : ce serait
+un **goulot** et un point de défaillance unique. Les mémoires ne sont pas des destinations
+qu'on choisit — **elles SONT les filtres**, en parallèle, chacune puisant dans un flux
+commun. On ne centralise pas : on cesse d'affamer.
+
+**✅ CE QUI A ÉTÉ LIVRÉ**
+
+**1. Le flux enrichi** — `_memoriser_si_saillant()` remplace les deux appels codés en dur.
+Tout tick dont la charge dépasse `SEUIL_SAILLANCE_MEMOIRE` laisse une trace, quelle que
+soit sa nature. L'étiquette est **dérivée de l'API MiniGrid** (`objet.type`) et reste une
+chaîne **opaque** : aucune table `lave = danger` n'existe ni ne doit exister.
+
+**2. L'abstraction par récurrence** — un doublon n'est plus jeté, il **confirme** :
+
+```python
+souvenir['confirmations'] += 1
+souvenir['valence'] = moyenne glissante des chocs vécus ici
+```
+
+La valence est **apprise**, jamais déclarée. C'est le seul canal par lequel un danger peut
+devenir évitable sans qu'aucune ligne ne mentionne « lave ».
+
+**3. L'oubli comme archivage** — l'éviction ne jette plus le plus ancien mais **le moins
+abstrait** (`min(confirmations, tick)`). Un repère confirmé cent fois est une régularité du
+monde ; un repère vu une fois est peut-être un accident.
+
+**4. Le rappel agnostique** — `rappel_le_plus_marquant()` ne demande **aucun type** : il
+balaie tous les repères et rend `(valence, confiance)` du plus pesant. L'agent ne cherche
+pas « de la nourriture », il perçoit « ici, il s'est passé quelque chose ».
+
+`DIM_RAPPEL_MARQUANT = 2` en **queue** du `vecteur_bio` (contrat append-only). Neutre
+**`[0.5, 0.0]`** — jamais `0.0` pour la valence, qui signifierait « le pire souvenir
+possible » et rendrait l'agent craintif partout où il n'a rien vécu (même discipline que la
+clinotaxie v32.0).
+
+**🧪 VALIDATION**
+
+Cerveau neuf, 40 jours :
+
+| Mesure | Avant v36 | Après |
+|---|---|---|
+| Types appris | 2 (câblés) | **4** (`FOOD`, `WATER`, `porte_ball`, `sol`) — dérivés |
+| Confirmations / repère | 1 (doublons jetés) | **4,65** |
+| Rappel marquant actif | — | **26-100 %** des ticks |
+
+Rétrocompatibilité, **nuit complète incluse** (test exigé par `CLAUDE.md`) :
+
+```
+👃 integrateur_bio greffé de 114 à 116 dims (+2 : rappel marquant (v36.0))
+   — acquis existants préservés.
+```
+
+Vérifié sur deux `.brain` réels ; tous deux apprennent immédiatement de nouveaux types
+(`porte_key`, `door`) qu'ils ne pouvaient pas mémoriser avant.
+
+**📊 TÉLÉMÉTRIE** — 5 clés `Memoire_*` + ligne console. `Memoire_Confirmations_Moy` est LA
+métrique de l'abstraction : > 1 signifie que la récurrence se convertit en repères solides
+au lieu d'être jetée. `Memoire_Rappels_Ratio` à 0 signifierait un canal mort.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `_memoriser_si_saillant()`, `rappel_le_plus_marquant()`, `enregistrer_evenement(intensite=)` avec confirmations/valence, éviction par abstraction, `DIM_RAPPEL_MARQUANT`, 2 bornes, 5 clés W&B + ligne console |
+| `src/naulthene/cerveau/persistance.py` | libellé de greffe v36.0, import `DIM_ODORAT_DELTA` |
+
+⚠️ **`noyau.py` uniquement** (terrain d'essai, gitignoré).
+
+---
+
+## [35.1-experimental] - 2026-08-07
+
+### Le Guidage Dégressif & le Filet de Sécurité — « plus il comprend, moins on l'aide »
+
+| Type | Details |
+|------|---------|
+| **Commit** | `991c0ab` |
+| **Catégorie** | feat (mécanique de cursus, expérimental — `noyau.py` uniquement) |
+| **Impact** | **Fonctionnel** — ferme les deux chantiers laissés ouverts par la v35.0 |
+
+**🎯 LA DÉCISION UTILISATEUR**
+
+> *« Le guidage dégressif : à chaque victoire, jusqu'à 85-100 % de réussite, on fait de
+> façon à moins répéter — comme un enfant : plus il comprend, moins on l'aide, jusqu'à lui
+> laisser assez d'autonomie pour qu'il comprenne. »*
+>
+> *« La redescente de palier : non, il ne peut pas aller faire un palier impossible — et
+> quand il bloque, on l'aide un peu. »*
+
+**📉 LE SEVRAGE — le guidage suit la maîtrise, plus le numéro de palier**
+
+Ce que ça remplace : le guidage était coupé d'un **seul coup** au palier 5 (Mode Libre),
+c'est-à-dire au moment précis où la tâche devient la plus dure. Mesuré sur 2000 jours :
+**0,00 record de proximité par jour**. Une falaise, là où il fallait une pente.
+
+| Maîtrise | Guidage |
+|---|---|
+| non mesurable (< 10 épisodes) | **1,00** — un débutant reste un débutant |
+| ≤ 60 % (`SEUIL_DEBUT_SEVRAGE`) | 1,00 |
+| 70 % | 0,67 |
+| 80 % | 0,33 |
+| ≥ 90 % (`SEUIL_FIN_SEVRAGE`) | **0,00** — autonomie complète |
+
+Le curseur pilote **les deux** sources d'aide en un seul point — `RECOMPENSE_APPROCHE_BUT`
+(DoorKey) et les records de proximité (générique) — au lieu de deux mécaniques qui
+s'éteignaient selon des règles différentes.
+
+**🛟 LE FILET — « quand il bloque, on l'aide un peu »**
+
+La redescente de palier est **écartée** (elle contredirait « ce qui ne régresse jamais »).
+À la place : un agent qui stagne reçoit un **surplus** d'aide, progressif.
+
+| Jours sans victoire | Renfort |
+|---|---|
+| ≤ 30 (`JOURS_AVANT_RENFORT`) | ×1,0 — un échec est normal, pas un blocage |
+| 45 | ×1,5 |
+| 60 | ×2,0 |
+| ≥ 90 | **×3,0** (`RENFORT_AIDE_MAX`) |
+
+Le renfort se replie **dès la première victoire** : c'est une bouée, pas une rente. Il ne
+touche que le guidage, **jamais la récompense terminale** — on aide à trouver le chemin, on
+n'offre jamais la victoire.
+
+Les deux forces ne peuvent pas se contredire : un agent qui stagne a par construction une
+maîtrise basse (donc un sevrage à 1,0 que le renfort amplifie), et un agent qui maîtrise n'a
+aucun jour de stagnation. Vérifié : maîtrise 100 % + 200 jours de stagnation ⇒ guidage 0,00.
+
+**🧪 VALIDATION — le filet a réellement débloqué l'agent**
+
+Cerveau neuf, 100 jours, graine fixée. L'agent cale à `Maternelle` après 3 promotions :
+
+```
+ jour  niv  nom                          maîtrise  guidage  stagn  vict
+    5    2  Maternelle (Longue distance)     —      1.00      0      4
+   20    2  Maternelle                      0.00    1.00     15      4
+   40    2  Maternelle                      0.00    1.13     35      4     ← le filet s'arme
+   60    2  Maternelle                      0.00    1.80     55      4
+   80    2  Maternelle                      0.00    2.47     75      4
+  100    2  Maternelle                      0.05    1.00      5      7     ← VICTOIRES, filet replié
+```
+
+Sans filet, ce cerveau serait resté à 4 victoires — c'est exactement le scénario des 2000
+jours de blocage au Collège. Le run de référence (v35.0 sans filet) calait à **0 % pendant
+79 jours** sur `SimpleCrossingS9N1`.
+
+**📊 TÉLÉMÉTRIE**
+
+`Cursus_Facteur_Guidage` est LA métrique de ce cycle : < 1,0 = le sevrage mord, > 1,0 = le
+filet est déployé, 1,0 constant = ni l'un ni l'autre ne sert. Plus
+`Cursus_Jours_Stagnation`, et une ligne console lisible d'un coup d'œil
+(`🤝 aide pleine` / `📉 sevrage 67%` / `🛟 filet ×2.5` / `🕊️ autonome`).
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `facteur_guidage()`, 5 bornes (`SEUIL_*_SEVRAGE`, `JOURS_AVANT_RENFORT`, `RENFORT_AIDE_MAX`, `PENTE_RENFORT`), `jours_stagnation_niveau`, application en un point unique, 2 clés W&B + ligne console |
+| `src/naulthene/cerveau/persistance.py` | sauvegarde/restauration de `jours_stagnation_niveau` |
+| `docs/Parcourt_readme.md` | §6ter — le sevrage et le filet ; §6bis (b) et (c) marqués livrés |
+
+⚠️ **`noyau.py` uniquement** (terrain d'essai, gitignoré).
+
+---
+
+## [35.0-experimental] - 2026-08-07
+
+### Le Cursus Progressif — 15 niveaux au lieu de 5, promotion par maîtrise
+
+| Type | Details |
+|------|---------|
+| **Commit** | `9a9eb73` |
+| **Catégorie** | feat (nouvelle mécanique de cursus, expérimental — `noyau.py` uniquement) |
+| **Impact** | **Fonctionnel** — change la progression de tous les parcours |
+
+**🎓 LE PROGRAMME PASSE DE 5 À 15 NIVEAUX**
+
+Principe : **entre deux paliers voisins, une seule chose change.**
+
+| # | Environnement | Nom | Nouveauté |
+|---|---|---|---|
+| 0-2 | `Empty-5x5` · `Empty-Random-6x6` · `Empty-8x8` | Nourrisson → Maternelle | bouger · départ variable · distance |
+| 3-5 | `SimpleCrossingS9N1` · `LavaGapS5` · `Fetch-5x5-N2` | Primaire 1-3 | contourner · danger · **ramasser** |
+| 6-8 | `GoToDoor-6x6` · `DoorKey-5x5` · `DoorKey-6x6` | Collège 1-3 | viser une porte · **clé+porte** · échelle |
+| 9-11 | `DoorKey-8x8` · `Unlock` · `UnlockPickup` | Lycée 1-3 | distance · sans but visible · + objet |
+| 12-14 | `MemoryS7` · `MultiRoom-N2-S4` · `MultiRoom-N4-S5` | Université → Doctorat | mémoire · 2 salles · 4 salles |
+
+`DoorKey-5x5 → 6x6 → 8x8` est la **même tâche à trois échelles** : l'agent consolide au lieu
+de tout réapprendre. MiniGrid expose 58 environnements ; le projet n'en utilisait que 5.
+
+**📏 CORRECTION D'UN DIAGNOSTIC ERRONÉ — le Doctorat EST faisable**
+
+L'entrée `[34.0-diag-cursus]` concluait que `MultiRoom-N4-S5` était « infaisable » avec
+`max_steps=120`. **C'est faux.** Mesure par BFS sur `(x, y, direction)` — coût réel en
+ACTIONS (rotations + avances + `toggle`), 30 graines par niveau :
+
+| Niveau | `max_steps` | Coût optimal (moy / max) | **Marge** |
+|---|---|---|---|
+| `DoorKey-6x6` | 360 | 9,7 / 15 | **37,0×** |
+| `Empty-8x8` | 256 | 11,0 / 11 | **23,3×** |
+| `MultiRoom-N2-S4` | 40 | 7,3 / 10 | 5,5× |
+| **`MultiRoom-N4-S5`** | **120** | **33,7 / 43** | **3,6×** |
+
+Le but est atteignable — la marge reste positive. Le vrai problème est **le saut
+d'exigence** : l'agent passe d'un droit à l'erreur de ×37 à ×3,6 en un seul niveau, sans
+étape intermédiaire. `MultiRoom-N2-S4` (×5,5) est précisément cette étape.
+
+**🏆 PROMOTION : DEUX VOIES EN « OU »**
+
+| Voie | Critère | Caractère |
+|---|---|---|
+| **Série** (historique) | 2 victoires consécutives | rapide, mais une défaite remet à zéro |
+| **Maîtrise** (nouveau) | 60 % sur les 20 derniers épisodes | lent à établir, robuste |
+
+Les deux coexistent : la seconde **ajoute** une porte sans fermer la première, donc aucun
+cerveau existant ne régresse en vitesse de promotion. Un agent à 80 % de réussite qui perdait
+un épisode sur cinq restait bloqué à vie avec l'ancien critère seul.
+
+Trois garde-fous : le taux n'est calculé qu'à partir de **10 épisodes** (avant, il vaut
+`None` — « pas encore mesurable » ≠ « mesuré à zéro ») ; la fenêtre est **vidée à chaque
+promotion** (sinon un taux hérité d'un niveau facile promouvrait en chaîne) ; et la réussite
+se juge sur **`recompense_env > 0`**, jamais sur `termine` seul — sur `LavaGap`, `termine`
+vaut aussi True quand l'agent meurt.
+
+**🔀 RÉTROCOMPATIBILITÉ — le remappage par `env_id`**
+
+`niveau_actuel` est un **INDEX**. Un `.brain` au niveau 4 (ex-Doctorat) se serait retrouvé à
+l'index 4 du nouveau programme (`LavaGapS5`) — **rétrogradé de dix crans**. La persistance
+remappe donc par `env_id`, seule donnée non ambiguë :
+
+```
+🔀 Niveau remappé : index 4 → 14 (Doctorat) — le PROGRAMME a changé de taille (v35.0),
+   aucune progression n'est perdue.
+```
+
+Vérifié sur deux `.brain` réels, **nuit complète incluse** (test exigé par `CLAUDE.md`) :
+Collège 1 → 8, Doctorat 4 → 14.
+
+**🧪 VALIDATION**
+
+Cerveau neuf, 60 jours : 4 promotions en 40 jours (`Nourrisson` → `Primaire 2`), fenêtre de
+maîtrise correctement remplie et remise à zéro à chaque passage.
+
+**📊 TÉLÉMÉTRIE** (obligatoire dans le même commit)
+
+Ligne console `Cursus` + 4 clés W&B : `Cursus_Niveau_Index`, `Cursus_Niveau_Total`,
+`Cursus_Episodes_Fenetre`, `Cursus_Taux_Maitrise_Niveau` (à **−1.0** tant que la fenêtre
+n'est pas significative — un 0.0 laisserait croire à un échec mesuré).
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `PROGRAMME` 5→15, `FENETRE_PROMOTION`/`TAUX_PROMOTION`/`MIN_EPISODES_PROMOTION`, `_enregistrer_episode_niveau()`, `_taux_maitrise_niveau()`, double voie de promotion, ligne console + 4 clés W&B |
+| `src/naulthene/cerveau/persistance.py` | remappage du niveau par `env_id`, sauvegarde/restauration de `historique_episodes_niveau` |
+| `CLAUDE.md` | nouvel invariant « `PROGRAMME` du cursus » (4 points) + invariant « érosion nocturne » (v34) |
+| `docs/Parcourt_readme.md` | §6 réécrit (15 niveaux, 2 voies, remappage), §6bis marqué livré |
+| `readme.md` | mention du cursus à 15 niveaux |
+
+⚠️ **`noyau.py` uniquement** (terrain d'essai, gitignoré) — `colab.py` garde ses 5 niveaux.
+
+---
+
+## [34.0-diag-cursus] - 2026-08-07
+
+### Le cursus est trop court et trop brutal — diagnostic sur 2700 jours sains
+
+| Type | Details |
+|------|---------|
+| **Commit** | `05a28ae` |
+| **Catégorie** | docs (diagnostic + refonte proposée, aucun code) |
+| **Impact** | Documentation — le `PROGRAMME` actuel est inchangé |
+
+**✅ D'ABORD : LE CORRECTIF D'EXTINCTION TIENT SUR 2700 JOURS**
+
+| Couche | j700 | **j2700** |
+|---|---|---|
+| `porte_visuelle` | 11,0 % | **21,3 %** ↗ |
+| `hippocampe` | 24,8 % | **33,1 %** ↗ |
+| `fusion_memoire` | 23,5 % | **30,5 %** ↗ |
+| Couches mortes | 0 / 11 | **0 / 11** |
+
+Deux couches **remontent** : le cerveau regagne plus qu'il ne perd. À comparer aux 8 couches
+sur 11 à zéro avant le correctif.
+
+**🔴 MAIS L'AGENT NE PROGRESSE PLUS — et ce n'est plus la vue**
+
+| Mesure sur 2000 jours | Valeur |
+|---|---|
+| Jours au **Collège** | **2000**, sans jamais en sortir |
+| Palier | **7** (dernier) atteint dès le jour 701 |
+| Victoires | 22, **tendance 1,08 → stationnaire** |
+| Δt1 (atteindre la clé) | **JAMAIS ATTEINT** |
+| Contact avec les murs | **82 %** des ticks |
+| Records de proximité | **0,00 / jour** |
+
+L'agent porte la clé 58 % du temps mais n'atteint jamais la porte. Optimum local stable.
+
+**📊 L'ÉCONOMIE S'EST AMÉLIORÉE SEULE** (sonde de récompense, même protocole)
+
+| | Cerveau mourant | **Cerveau sain (2700 j)** |
+|---|---|---|
+| Solde | −7,54 | **−3,30** (÷2,3) |
+| Total positif | +1,12 | **+5,18** (×4,6) |
+| `sous_objectif_intrinseque` | 0,00 | **+3,60** (69 % du positif) |
+| `dopamine_curiosite` | +0,76 | +1,22 |
+
+**La curiosité JEPA s'est réveillée** : 90 sous-quêtes/jour contre zéro avant. Conséquence
+directe du bus vivant — le JEPA fonctionne (0,0038), donc il génère des sous-objectifs.
+
+Deux coûts restent anormaux : `penalite_stagnation` −4,35 (95,8 % des ticks, 51 % du
+déficit) et `MALUS_DOULEUR` −2,85 (**71,2 % des ticks**, 34 %).
+
+**🎓 LES TROIS DÉFAUTS DU CURSUS** (documentés dans `Parcourt_readme.md` §6bis)
+
+1. **Le saut Primaire → Collège demande 5 compétences d'un coup.** `Empty-8x8` a 1 objet,
+   `DoorKey-6x6` en a 3 et exige repérer + ramasser + porter + viser + ouvrir. Deux
+   victoires sur une salle vide suffisent à y accéder.
+2. **Le guidage est coupé au pire moment.** Au Palier 5, `RECOMPENSE_APPROCHE_BUT` tombe à 0
+   d'un coup — mesuré : **0,00 record de proximité/jour** pendant 2000 jours.
+3. **Le dernier niveau a le budget le plus serré.** Vérifié via `env.max_steps` :
+
+   | Niveau | Grille | `max_steps` | Objets |
+   |---|---|---|---|
+   | Collège | 6×6 | 360 | 3 |
+   | **Doctorat** | **25×25** | **120** ⚠️ | **6** (5 portes) |
+
+   **2× moins de temps pour une carte 17× plus grande.** Pas difficile — infaisable.
+
+**💡 LA REFONTE PROPOSÉE : 14 paliers au lieu de 5**
+
+MiniGrid expose **58 environnements**, le projet en utilise 5. Le programme proposé n'ajoute
+**qu'une compétence par étape** : `Empty-5x5` → `Empty-Random-6x6` → `Empty-8x8` →
+`SimpleCrossing` (contourner) → `LavaGap` (danger) → `Fetch` (ramasser) → `GoToDoor` →
+`DoorKey-5x5/6x6/8x8` (même tâche, 3 échelles) → `Unlock` → `UnlockPickup` → `MemoryS7` →
+`MultiRoom-N2` → `MultiRoom-N4`.
+
+Plus trois changements d'accompagnement, **tous touchant des invariants** donc soumis à
+décision utilisateur : promotion sur taux glissant (au lieu de 2 victoires consécutives),
+guidage dégressif (au lieu d'une coupure nette), et **redescente possible** de palier.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `docs/Parcourt_readme.md` | **§6bis** — diagnostic chiffré, les 3 défauts, la refonte à 14 paliers, ce qu'il faut mesurer d'abord ; en-tête et TdM mis à jour |
+
+---
+
+## [34.0-fix2-experimental] - 2026-08-06
+
+### La référence du plancher ne doit jamais rétrécir + validation en conditions réelles
+
+| Type | Details |
+|------|---------|
+| **Commit** | `9a4659e` |
+| **Catégorie** | fix (critique, complète le fix1) |
+| **Impact** | **Critique** — sans ce correctif, chaque neurogenèse divisait la protection |
+
+**✅ D'ABORD : LE FIX1 EST VALIDÉ EN CONDITIONS RÉELLES**
+
+Trois runs successifs sur cerveaux neufs, avec le correctif :
+
+| Run | Jours | Couches mortes | `porte_visuelle` | Victoires |
+|---|---|---|---|---|
+| 1 | 100 | **0 / 11** | 23,7 % | 4 |
+| 2 | **200** | **0 / 11** | 24,6 % | 5 |
+| 3 | **700** | **0 / 11** | 11,0 % | **8** |
+
+Le run à 200 jours dépasse les **121 nuits** où l'ancien code commençait à effacer. À
+comparer au run `060820260038_V34_1500_RMD` (avant correctif) : **8 couches sur 11 à
+zéro**.
+
+Les victoires progressent (4 → 5 → 8) : avec un bus vivant, l'agent apprend enfin.
+
+⚠️ **Le plancher mord fort** : à j700, **6 couches sur 11 sont collées à 10,0 %** — sans
+lui elles seraient mortes ou mourantes. Ce n'est pas un garde-fou dormant, c'est lui qui
+maintient activement le cerveau en vie chaque nuit. Le déséquilibre de fond (érosion >
+apprentissage) subsiste ; le plancher empêche la mort, il ne rétablit pas l'équilibre.
+
+**🔴 LE BUG DÉCOUVERT PAR LE TEST 2 : la neurogenèse affaiblissait la protection**
+
+`agrandir()` recopie les poids anciens (déjà érodés, parfois au plancher) et n'initialise à
+neuf que les dimensions ajoutées. La norme du tenseur agrandi peut donc être **bien plus
+petite** que la norme d'origine. Mesuré :
+
+```
+naissance            : norme_naissance = 5.31290  → plancher 0.53129
+après 200 nuits      : norme réelle    = 0.53129  (au plancher)
+après neurogenèse    : norme_naissance = 0.73749  → plancher 0.07375   ⚠️ ÷7
+```
+
+**Chaque neurogenèse divisait le garde-fou par ~7.** Un cerveau qui grandit beaucoup aurait
+fini sans protection — le fix1 se serait auto-annulé sur la durée.
+
+**✅ LE CORRECTIF**
+
+`norme_naissance = max(ancienne_référence, nouvelle_norme)` : la protection ne peut que
+**croître avec le substrat**, jamais décroître avec l'usure.
+
+Vérifié sur 4 neurogenèses en cascade (16 → 80 dims, 200 nuits d'érosion entre chacune) :
+
+```
+dim_bus  16 →  32 →  48 →  64 →  80
+norme_naissance : 5.31290 (STABLE sur les 5 étapes)
+plancher        : 0.53129 (STABLE)
+synapses        : 4704/4704 → 7056/7056 → 9408/9408 → 11760/11760  (toutes vivantes)
+```
+
+**🧪 LES TROIS TESTS**
+
+| Test | Résultat |
+|---|---|
+| **1. L'oubli reste-t-il gradué ?** | ✅ à 50 nuits : 10 % (m=0) / 28 % (m=0,5) / 78 % (m=0,9). Sur le long terme toute myéline < 0,85 atteint le plancher — c'est la nature géométrique de l'érosion, le plancher **borne** sans moduler |
+| **2. Neurogenèse** | 🔴 bug trouvé → corrigé (ci-dessus) |
+| **3. Reprise de `.brain` réels** (300 nuits + nuit complète) | ✅ `V34fix1_900` : 11 760 nz conservés · `V33_5000j` : 1 728 nz, norme **remontée** 0,458 → 1,014 (il était **sous** le plancher) · `V34_1500` : reste mort (0 × k = 0, attendu) |
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `agrandir()` : `norme_naissance` prend le **maximum** au lieu d'écraser |
+
+**🗂️ ARCHIVAGE**
+
+Tous les `.brain` antérieurs déplacés dans `brains/old_testV30-V34/` (13 fichiers, v30 →
+v34). Seul `060820262236_V34fix1_900_RMD.brain` reste actif — le premier cerveau vivant et
+gagnant depuis le début de ce diagnostic.
+
+---
+
+## [34.0-fix1-experimental] - 2026-08-06
+
+### 🔴 CRITIQUE — L'EXTINCTION SYNAPTIQUE : le cerveau devenait aveugle et sourd
+
+| Type | Details |
+|------|---------|
+| **Commit** | `15e3aa9` |
+| **Catégorie** | fix (critique) |
+| **Impact** | **Critique** — rendait tout entraînement long depuis zéro structurellement impossible |
+
+**🩺 LE SYMPTÔME**
+
+Le cerveau `060820260038_V34_1500_RMD` (neuf, 1500 jours) mesuré après son run :
+
+| Couche | base_weight non nuls |
+|---|---|
+| `porte_visuelle` | **0 / 11 760** ☠️ |
+| `porte_auditive` | **0 / 10 400** ☠️ |
+| `hippocampe` | **0 / 12 800** ☠️ |
+| `fusion_memoire` | **0 / 12 800** ☠️ |
+| `analyseur` | **0 / 6 400** ☠️ |
+| `generateur_attente` | **0 / 7 040** ☠️ |
+| `generateur_attente_audio` | **0 / 7 040** ☠️ |
+| `tete_requete` | **0 / 400** ☠️ |
+| `integrateur_bio` | 1 032 / 9 120 |
+| `tete_motrice` | 307 / 640 |
+
+**8 couches sur 11 entièrement à zéro.** L'agent était littéralement aveugle et sourd :
+`bus_latent` nul ⇒ JEPA nul (`Erreur JEPA moy: 0.0000`) ⇒ C2 = `[0,0,0,0,0,0,0]` ⇒
+politique réduite au **hasard uniforme** (entropie 1.94587 pour un maximum ln(7)=1.94591).
+
+**🔬 LA MÉCANIQUE, EN TROIS MAILLONS**
+
+1. `myeline_M = max(myeline_M, |annexe_weight|)` — la myéline ne peut venir **que** du
+   gradient. Un agent sans récompense a des gradients infimes ⇒ myéline ≈ 0.
+2. L'érosion vaut alors `base *= (1 − λ)` à **taux plein** chaque nuit. Avec λ=0.05, un
+   poids de 0.05 tombe sous le seuil de pruning (1e-4) en **121 nuits**.
+3. L'Étape 4 met à `0.0` tout ce qui passe sous 1e-4 — **définitivement** (base ET
+   `myeline_M`, donc sans retour possible).
+
+Boucle auto-renforçante : pas de récompense → pas de myéline → érosion → moins de
+perception → encore moins de récompense.
+
+**⚠️ POURQUOI LA PROTECTION EXISTANTE N'A JAMAIS FONCTIONNÉ**
+
+`SEUIL_CRISTAL = 0.80` alors que la myéline maximale **mesurée** sur les cerveaux du dépôt
+est de **0.0038** — un seuil **210× trop haut**. Compteur `cristallisee` :
+
+```
+5000j    : 0 / 11 760 synapses cristallisées
+700j     : 0 / 11 760
+V34_1500 : 0 / 11 760
+```
+
+**La Cristallisation Souple de la v26.0 ne s'est jamais enclenchée une seule fois, sur
+aucun cerveau.** Ce n'était pas un réglage à ajuster : une échelle qui ne correspondait à
+rien de réel.
+
+Le précédent était pourtant connu : `ATTENUATION_EROSION_AUDIO_DEBUT` (v24.0-fix1)
+corrigeait déjà « zéro exact après 1000 nuits d'érosion non amortie » — mais **uniquement
+sur les 3 couches audio**, et par un facteur daté au palier vocal.
+
+**✅ LE CORRECTIF — le Plancher Vital**
+
+Deux garde-fous qui ne dépendent d'**aucun seuil absolu de myéline** :
+
+| Garde-fou | Effet |
+|---|---|
+| `PLANCHER_POIDS_VITAL = 1e-3` | une synapse déjà faible mais vivante n'est **plus érodée** |
+| `FRACTION_NORME_MIN_COUCHE = 0.10` | la couche conserve ≥ 10 % de sa **norme de naissance** |
+
+Ce sont des **bornes**, pas des valeurs de fonctionnement (doctrine du projet) : la
+quantité réellement érodée reste émergente, seul son plafond est fixé. L'oubli reste
+possible — l'**extinction** ne l'est plus.
+
+Nouveau buffer `norme_naissance` par couche (référence **absolue**). Le pruning de
+l'Étape 4 passe de `1e-4` à `1e-12` : il ne nettoie plus que ce qui est déjà mort.
+
+⚠️ **Erreur commise et corrigée en cours de route** : la première version bornait la norme
+relativement à la **nuit précédente**. Ça ne borne rien cumulativement (0.95 × N_veille
+décroît indéfiniment) — simulation à l'appui, la norme tombait quand même à 1 %. D'où la
+référence absolue à la naissance.
+
+**🧪 VALIDATION**
+
+| Test | Avant | Après |
+|---|---|---|
+| 3000 nuits sans myéline (λ=0.05) | extinction totale | **11 760 vivantes, norme stable à 10 %** |
+| 3000 nuits (λ=0.025) | extinction totale | **11 760 vivantes, 10 %** |
+| Oubli toujours actif ? (myéline=1.0) | — | **100 % conservé** ✅ |
+| Cerveau neuf, 150 jours | — | **9 408 vivantes, bus vivant, C2 actif, 5 victoires** |
+| Rétrocompat `.brain` (5000j/700j/V34) | — | **acquis intacts** (1728 nz, norme 0.45838) |
+| **Nuit complète post-chargement** | — | **passe** (test exigé par `CLAUDE.md`) |
+
+**🐛 BUG CONNEXE CORRIGÉ — fausse détection de greffe**
+
+Le nouveau buffer `norme_naissance`, absent de tout `.brain` antérieur, apparaissait dans
+`missing_keys` sur les 12 couches — faisant croire à une greffe massive et
+**réinitialisant Adam sans raison à chaque chargement**. Exclu de la détection : il ne
+participe à aucun calcul de forme, et sa valeur par défaut est correcte pour un cerveau
+déjà entraîné.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `PLANCHER_POIDS_VITAL`, `FRACTION_NORME_MIN_COUCHE`, buffer `norme_naissance` (+ mise à jour dans `agrandir`), plancher vital dans `cycle_sommeil`, pruning 1e-4 → 1e-12 |
+| `src/naulthene/cerveau/persistance.py` | `norme_naissance` exclu de `greffe_detectee` |
+
+**📌 CONSÉQUENCE POUR LES CERVEAUX EXISTANTS**
+
+`060820260038_V34_1500_RMD` est **irrécupérable** : ses poids sont à zéro exact, le
+plancher ne peut pas ressusciter ce qui n'existe plus (0 × k = 0). Les cerveaux `5000j` et
+`700j` sont sauvés — le premier était d'ailleurs **sous le plancher** (norme 0.458 contre
+un plancher de 1.018) et remonte dès la première nuit.
+
+---
+
+## [34.0-etape0-experimental] - 2026-08-06
+
+### Télémétrie de calibrage Fatigue/Mortalité/Soin — et le fait qui bloque le chantier
+
+| Type | Details |
+|------|---------|
+| **Commit** | `3f4157d` |
+| **Catégorie** | feat (télémétrie pure, expérimental) |
+| **Impact** | **Aucun sur le comportement** — invariance validée par empreinte MD5 |
+
+**🔒 INVARIANCE PROUVÉE**
+
+Empreinte `efb6ff6506e852ed` **identique** avec et sans les appels de télémétrie
+(neutralisation différentielle à graine fixée, 400 ticks, protocole v33). Aucune valeur
+mesurée n'est lue par `penser()`, le gradient ou la dopamine.
+
+**📊 CE QUI A ÉTÉ MESURÉ** (`REFERENCE_5000j`, 2 j × 400 ticks, 5 niveaux)
+
+| Niveau | Ressources | **Autonomie** | Ticks critiques | Déficit moy / max |
+|---|---|---|---|---|
+| Primaire | 8 | **0,0 %** | **100 %** | 2,49 / 2,95 |
+| Collège | 8 | **0,0 %** | **100 %** | 2,93 / 3,00 |
+| Lycée | 8 | **0,0 %** | **100 %** | 2,94 / 3,00 |
+| Université | 10 | **0,0 %** | **100 %** | 2,98 / 3,00 |
+| Doctorat | 16 | **0,0 %** | **100 %** | 2,99 / 3,00 |
+
+**🔴 LE FAIT QUI CHANGE LE PLAN : l'agent est déjà mort.**
+
+`Autonomie_Jauges = 0,0 %` sur les 5 niveaux : à **aucun tick** l'agent ne maintient ses
+trois jauges au-dessus du seuil critique. Déficit à **2,99 sur 3,00** — satiété,
+hydratation et stimulation sont à **0,00** en permanence.
+
+Conséquence : **l'Étape 3 (la mort) est déjà satisfaite par l'état actuel.** Un seuil létal
+tuerait l'agent au premier tick, sur tous les niveaux, quelle que soit sa compétence.
+
+**🟢 LE BLOCAGE §7.4 EST LEVÉ**
+
+Les cartes contiennent **8 à 16 sources** de nourriture/eau, **y compris au Doctorat**.
+L'odorat à 0,0 % du run de 5000 jours n'était pas une absence de ressources, mais la
+conséquence d'un agent qui ne les atteint jamais. Peupler l'environnement n'est plus un
+préalable.
+
+**🟠 LE RISQUE §4 EST CONFIRMÉ ET CHIFFRÉ**
+
+Avancer coûte **0,510**, tourner **0,270** — un facteur **1,9** — et l'agent avance
+**6,5 %** du temps. Une fatigue branchée naïvement sur `calculer_effort_metabolique`
+renforcerait ce biais.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | 14 compteurs dans `_reinitialiser_buffers_journee`, accumulation en lecture seule dans `traiter_tick`, `_compter_ressources_grille()` (1×/épisode), ligne console `Calibrage v34`, 14 clés `Calibrage_*` inconditionnelles |
+| `docs/CONCEPTION_v34_fatigue_mortalite.md` | cadrage complet + section « Étape 0 livrée » avec les mesures |
+
+---
+
+## [33.1-experimental] - 2026-08-05
+
+### Le Banc d'Ablation — la lobotomie contrôlée
+
+| Type | Details |
+|------|---------|
+| **Commit** | `3f4157d` |
+| **Catégorie** | feat (instrument de diagnostic, expérimental) |
+| **Impact** | Fonctionnel (**instrument en lecture seule** — ne modifie aucun `.brain`, n'entraîne rien) |
+
+**🔬 POURQUOI — le run de 5000 jours a dit « non »**
+
+Le run `az794yzw` (jours 5001→10000, cerveau `040820262343_V33_5000_RMD`) répond sans
+ambiguïté à la question « évolution ou non » :
+
+| Indicateur | j5001-6000 | j9001-10000 | Verdict |
+|---|---|---|---|
+| **Victoires cumulées** | **69** | **69** | **0 en 5000 jours** |
+| Portes / jour | 0,77 | 0,81 | plat |
+| Records / jour | 8,96 | 9,11 | plat |
+| Erreur JEPA | 0,00067 | 0,00064 | plat |
+| Dopamine | 6,20 | 6,43 | plat |
+| Neurogenèse | 80 dims | 80 dims | **aucune** |
+| Sursauts de Volonté | — | — | **0 sur 5000 jours** |
+
+Dernière victoire : **jour 3510**, soit 6490 jours avant la fin du run. L'agent a
+**convergé** — il n'apprend plus, ne régresse pas. Le temps seul ne débloque plus rien.
+
+Une ablation, elle, répond **en binaire, par composant** : ce qui ne dégrade rien quand on
+le coupe ne portait rien.
+
+**🧠 CE QUE LE BANC A DÉJÀ MESURÉ — C2 est nuisible au Primaire**
+
+Reproduit sur **3 graines indépendantes** (`Empty-8x8`, le niveau le plus simple, franchi
+au jour 66) :
+
+| Graine | Témoin | `c2_coupe` | Δ |
+|---|---|---|---|
+| 1789 | **0,0 %** | **35,0 %** | **+35 pp** |
+| 7 | **0,0 %** | **20,0 %** | **+20 pp** |
+| 424242 | **0,0 %** | **33,3 %** | **+33 pp** |
+
+Le diagnostic explique le mécanisme :
+
+| Mesure | Témoin | `c2_coupe` | Lecture |
+|---|---|---|---|
+| **accord C1↔C2** | **0,000** | 1,000 | C2 contredit le réflexe à **100 %** des ticks |
+| **sur-place** | **0,956** | 0,897 | l'agent ne change pas de case 95,6 % du temps |
+| **couverture** | **0,033** | 0,068 | ×2 de cases explorées sans C2 |
+| dist. min. au But | 4,9 | **2,1** | il s'approche physiquement plus près |
+
+`accord_c1_c2 = 0,000` est le chiffre décisif : **C1 et C2 ne sont jamais d'accord**, pas
+une seule fois sur 16 épisodes. Combiné à des logits d'instinct ~30× plus faibles que
+l'arbitrage (±0,03 contre ±0,74), cela signifie que `logits_instinct + valeurs_simulees ×
+force` est **entièrement dominé par C2**, et que le réflexe n'a aucun pouvoir correcteur.
+
+⚠️ Mesuré **au Primaire seulement**. C2 pourrait être utile au Doctorat, où la
+planification longue a un sens — c'est ce que le banc complet (65 cellules) doit trancher.
+
+**⚙️ CE QUI A ÉTÉ CONSTRUIT**
+
+| Fichier | Changement |
+|---|---|
+| `src/naulthene/instruments/banc_ablation.py` | **nouveau** — 13 lésions × 5 niveaux, copie par cellule, diagnostic C1/C2, publication W&B |
+| `docs/LANCEMENT.md` | **§15** — lancement, catalogue des lésions, grille de lecture |
+| `docs/les_sens_combinatoire.md` | **§9 bis** — disponibilité réelle des sens mesurée sur ce run |
+
+Treize lésions, en deux familles : **sens** (vue, ouïe, toucher, odorat, goût, Exo-Sens,
+vecteur bio entier) et **cognition** (C2 coupé, C2 myope, épisodique, spatiale,
+hippocampe).
+
+**🐛 ERREUR DE CONCEPTION CORRIGÉE — la politique gloutonne**
+
+La première version du banc utilisait `argmax` pour « supprimer le hasard », présenté comme
+une garantie de rigueur. **C'était faux, et mesurable** : en argmax, l'agent joue l'action 0
+(tourner à gauche) **en boucle infinie** et échoue même sur `Empty-8x8`.
+
+La cause : un agent entraîné par **REINFORCE apprend une politique stochastique**. Son mode
+déterministe n'est pas « sa meilleure version », c'est un régime qu'il n'a **jamais connu**
+pendant l'entraînement. Mesurer l'argmax, c'est mesurer un agent qui n'existe pas.
+
+Corrigé par un `multinomial` identique à `traiter_tick`, avec un générateur à graine fixée :
+**la reproductibilité vient de la graine, jamais de la suppression du hasard.** Le premier
+run a été tué avant de produire 65 cellules de résultats faux.
+
+**🔒 LES CINQ GARANTIES**
+
+1. Le cerveau de référence n'est **jamais** touché — une copie par cellule, supprimée après
+2. **Aucun apprentissage** — `torch.no_grad()`, ni `apprendre_journee`, ni `executer_nuit`,
+   ni `sauvegarder` : un cerveau qui apprendrait mesurerait l'apprentissage, pas la lésion
+3. **Graine identique** pour toutes les cellules — mêmes cartes, même ordre
+4. **Politique stochastique**, jamais gloutonne (voir ci-dessus)
+5. **Masques, jamais d'amputation de poids** — supprimer une couche déclencherait une greffe,
+   et on mesurerait la greffe
+
+Le seuil de verdict est l'**intervalle de confiance à 95 %** de chaque cellule, jamais un
+chiffre fixe : un écart sous la marge d'erreur est déclaré `inerte`, pas « petit effet ».
+
+---
+
 ## [33.0-etape0.5-experimental] - 2026-08-04
 
 ### Le Test d'Ablation Inversée — la quête auto en Mode Libre + LECTURE DU RUN DE 700 JOURS
