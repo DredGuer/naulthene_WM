@@ -16,6 +16,54 @@
 
 ---
 
+## ⛔ NOTE DES BLOQUANTS — à lire avant toute reprise
+
+État au moment du merge de la branche `feat/v37-equilibre-c1-c2` sur `master`.
+
+### Ce qui bloque l'agent (mesuré, non corrigé)
+
+| # | Bloquant | Mesure | Où |
+|---|---|---|---|
+| **B1** | **Patience deux fois trop courte** | 120 ticks contre **256** natifs MiniGrid → réussite atteignable **4,7 % vs 21,0 %** | `PATIENCE_MIN/MAX`, `EXTENSION_PATIENCE_SURSAUT` |
+| **B2** | **Saut de difficulté ×10 au niveau 2** | réussite aléatoire **38,2 %** (`Empty-6x6`) → **3,8 %** (`Empty-8x8`) | `PROGRAMME` |
+| **B3** | **Économie de récompense négative** | espérance **−1,06** par épisode (25 % × +0,67 + 75 % × −1,63) | `ThermostatCinetique`, `PENALITE_STAGNATION_BASE` |
+| **B4** | **4 actions inutiles sur 7** | 3 actions utiles → réussite **×5** (4,7 % → 23,3 %) | `num_actions` |
+| **B5** | **Ère Intégration** | ×2 d'épisodes perdants au jour 600, et suppression du seul cursus qui progressait (vocal) | `BORNES_ERES = (400, 600)` |
+
+**Aucun de ces cinq bloquants n'est cognitif.** Toutes les mécaniques du cerveau fonctionnent
+(§3) — c'est l'environnement d'exercice qui rend la réussite statistiquement inatteignable.
+
+### Défauts connus, non corrigés
+
+| # | Défaut | Impact |
+|---|---|---|
+| **D1** | **Affichage : `%` en trop sur `Pourcentage_Reve`** | La valeur est une fraction (`0,177`) affichée « 0,177 % ». **A déjà causé une erreur de diagnostic propagée dans deux documents.** Cosmétique mais piégeux |
+| **D2** | `Score_Spectral_Moyen_Jour = 0,000` | La composante spectrale du score vocal est morte ou jamais branchée — non investigué |
+| **D3** | `SEUIL_CRISTAL = 0.80` jamais franchi | Myéline réelle max **0,007**. La Cristallisation Souple v26.0 ne s'est enclenchée sur **aucun** cerveau du dépôt |
+| **D4** | `EXTENSION_PATIENCE_SURSAUT = 50` | Constante en attente de calibrage **depuis la v30.1**, jamais tranchée |
+| **D5** | Déficit métabolique permanent | Jauges à 0, **100 %** des ticks en zone critique, sur tous les runs. Toute mécanique de satiété/fatigue serait calibrée sur du vide |
+
+### Questions ouvertes (à instrumenter, pas à supposer)
+
+| # | Question | Test qui trancherait |
+|---|---|---|
+| **Q1** | Le guidage ×3,0 nuit-il aux victoires ? | Ablation à graine fixée, guidage figé à 1,0, 300 jours |
+| **Q2** | L'erreur JEPA qui remonte : bénin ou dégradation ? | Comparer à dimension de bus constante |
+| **Q3** | L'accord C1/C2 peut-il se stabiliser ? | Indissociable du blocage — c'est un thermomètre, pas un levier |
+
+### Ce que je recommande comme prochain run
+
+**Un seul changement à la fois.** Le mieux mesuré est **B1** : passer la patience de 120 à 256.
+C'est une constante, aucune mécanique cognitive touchée, et un facteur **4,5** en jeu sur le taux
+de réussite atteignable. Si ça débloque, B2 à B5 attendront.
+
+> ⚠️ **Rappel structurel** : tout le code des v34 à v37 vit dans
+> `src/naulthene/cerveau/noyau.py`, qui est **gitignoré** (terrain d'essai local). Ce merge
+> apporte la documentation, `persistance.py` et les instruments — **pas les mécaniques
+> elles-mêmes**. Un clone du dépôt n'aura pas la v37.
+
+---
+
 ## Sommaire
 
 1. [Le résultat en une page](#1-le-résultat-en-une-page)
