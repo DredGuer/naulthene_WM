@@ -4,6 +4,109 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [recherche] - 2026-08-11
+
+### Campagne d'investigation « bug or not bug » — 7 hypothèses testées, aucune ligne de `src/` modifiée
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | docs (recherche expérimentale) |
+| **Impact** | **Documentation** — aucun changement de code |
+
+Après le run de 1300 jours (`ous47258`) établissant que l'agent plafonne au niveau 2/15 depuis
+678 jours, sept expériences de 800 jours ont été menées pour trancher : **bug ou erreur
+logique ?**
+
+Toutes les constantes ont été **surchargées en mémoire** depuis un script isolé du scratchpad.
+`src/naulthene/` n'a reçu aucune modification.
+
+**📋 Carnet complet** : [`recherche_bug_or_not_bug.md`](recherche_bug_or_not_bug.md) — 11
+hypothèses, protocoles, mesures, et les erreurs de diagnostic commises.
+
+**🔬 RÉSULTATS DES SEPT RUNS (800 jours chacun)**
+
+| Run | Victoires | Confirmations mém. | Accord C1/C2 |
+|---|---|---|---|
+| Témoin (cursus officiel) | **12** | 42,7 | 0,874 |
+| Variété d'abord | 2 | 75,7 | 0,205 |
+| **Adaptatif (DoorKey)** | **7** | 534,7 | 0,358 |
+| Quête auto rétablie | 5 | 564,3 | 0,493 |
+| Indulgence ×0,1 | 3 | 1047 | 0,294 |
+| Sans sanction | 5 | **1542** | **0,794** |
+| Sévérité décroissante | 3 | 1087 | 0,291 |
+
+**🟢 CE QUI EST ROBUSTE** (écart d'un ordre de grandeur, mesuré sur 3 runs indépendants)
+
+- **Moins on sanctionne, plus le cerveau consolide** : 42,7 → 1542 confirmations par repère
+  (**×36**), accord C1/C2 de 0,29 à 0,79 (**×3**). La sanction n'empêche pas de gagner —
+  **elle empêche d'apprendre**.
+- **Le cursus officiel s'éteint, le cursus DoorKey accélère** :
+  ```
+  TÉMOIN     6 6 0 0 0 0 0 0   ← 12 victoires en 200 j, puis MORT pendant 600 j
+  ADAPTATIF  0 1 1 0 1 2 2 0   ← lent au départ, puis ACCÉLÈRE
+  ```
+  Sur 800 jours le témoin gagne ; **sur la tendance, c'est l'inverse**, et aucun run DoorKey
+  n'avait fini de progresser à l'arrêt.
+- **Les 3 premiers niveaux du cursus sont les plus pauvres du programme** : `Empty-5x5` et
+  `Empty-8x8` produisent **1 seule configuration** sur 500 graines, contre 500 pour
+  `GoToDoor`. Le cursus est construit à l'envers.
+
+**❌ CE QUI EST RÉFUTÉ**
+
+- **Donner de la variété d'abord** : 6× moins de victoires (2 contre 12). Quand le but change
+  de place, les records de proximité tombent à **0,00/jour** — l'agent perd tout signal
+  intermédiaire.
+- **Le signal de progrès manquant** : `QUETE_AUTO_EN_MODE_LIBRE` activé (le code le décrit
+  comme un instrument de diagnostic prévu pour ça). Santé interne améliorée, **mais moins de
+  victoires**. Remis à `False`. La rareté du signal n'est pas la cause principale.
+- **Enlever la notation** : 5 victoires contre 7. La consolidation explose, les victoires non.
+
+**⚠️ VARIANCE MESURÉE — à garder en tête pour toute lecture de ce carnet**
+
+Un run raté pour cause d'erreur de conception (sévérité ancrée sur le taux de maîtrise, resté
+à 0 % — mécanisme **circulaire**) a servi de **second témoin involontaire** : mêmes conditions
+que le run adaptatif, **3 victoires contre 7**.
+
+**Aucun écart de moins de 4 victoires sur 800 jours n'est significatif.**
+
+**📐 MESURES DE RÉFÉRENCE ÉTABLIES** (simulation directe, pas lecture de courbe)
+
+| Mesure | Valeur |
+|---|---|
+| Configurations distinctes, `Empty-5x5` / `Empty-8x8` | **1** sur 500 graines |
+| Observations distinctes en 300 ticks, `Empty-5x5` | **24** (contre 171 sur `GoToDoor`) |
+| Optimal BFS `(x,y,dir)`, `Empty-8x8` | **11** actions (patience 120 → marge ×10,9) |
+| Réussite d'une politique aléatoire, `Empty-8x8` | **3,8 %** (contre 38,2 % sur `Empty-6x6`) |
+| Idem à patience 256 (natif MiniGrid) | **21,0 %** |
+| Idem avec 3 actions utiles au lieu de 7 | **23,3 %** |
+| Ratio sanction / récompense | **314× à 4,8 milliards ×** |
+
+**🧬 CADRE BIOLOGIQUE APPORTÉ PAR L'UTILISATEUR**
+
+Deux faits qui recadrent des conclusions antérieures :
+
+1. **Surproduction puis élagage** — le cerveau humain crée jusqu'à 1 M de synapses/seconde et
+   atteint 90 % de son volume adulte à 5 ans, **avant** d'élaguer (−1 à −2 %/an). Naulthène
+   fait l'inverse : il naît à 16 dims et **élague sans avoir jamais foisonné**. Les 50-98 % de
+   synapses mortes des runs pré-v34 ressemblaient à une pathologie ; l'élagage massif est
+   pourtant le régime biologique normal. Ce qui manquait n'était pas moins d'élagage, mais
+   **plus de matière au départ**.
+2. **Décalage maturatif** — le système limbique mûrit à l'adolescence, le cortex préfrontal
+   seulement à 25 ans. Chez Naulthène, `cortex_prefrontal` fait **64 paramètres sur 55 232**
+   (0,1 % du réseau), et couper C2 double le taux de succès. La conclusion « C2 nuit »
+   pourrait simplement signifier « **C2 n'a pas fini de mûrir** ».
+
+**🌙 RUNS DE 1200 JOURS EN COURS** (lancés dans la nuit du 11 au 12 août)
+
+| Run | Bus de naissance | Promotion | Hypothèse |
+|---|---|---|---|
+| H11 | **64** (au lieu de 16) | 60 % / 2 vict. | Surproduction initiale |
+| H09 | 16 | **25 % / 1 vict.** | Seuil adapté au monde riche |
+| H11+H09 | **64** | **25 % / 1 vict.** | Les deux combinées |
+
+---
+
 ## [37.1-fix1-experimental] - 2026-08-08
 
 ### Le Cliquet de la Référence — la barre monte vite, elle ne redescend presque plus

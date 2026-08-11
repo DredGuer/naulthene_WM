@@ -90,7 +90,7 @@ Le projet est organisé en **package Python** sous `src/naulthene/`, avec un dos
 │   └── old_V30/                    nommé DDMMYYYYHHMM_VXX_NMRTOUR_RMD.brain (voir « Convention de
 │                                   nommage des cerveaux ») ; old_VXX/ archive les générations
 │                                   précédentes, jamais supprimées
-└── docs/                         DOCUMENTS VIVANTS uniquement (6) :
+└── docs/                         DOCUMENTS VIVANTS uniquement (7) :
     │                               CHANGELOG.md — historique version par version, la référence
     │                               factuelle ; LANCEMENT.md — toutes les commandes et le dépannage ;
     │                               Parcourt_readme.md — guide vulgarisé des 4 parcours ;
@@ -100,7 +100,11 @@ Le projet est organisé en **package Python** sous `src/naulthene/`, avec un dos
     │                               C1/C2), à archiver une fois la v37 validée par un run long ;
     │                               dia_Aout_2026.md — DIAGNOSTIC COMPLET du système (run 1300 j) :
     │                               ce qui marche, ce qui bloque, ce qui reste inconnu, et les
-    │                               erreurs de diagnostic commises puis corrigées
+    │                               erreurs de diagnostic commises puis corrigées ;
+    │                               recherche_bug_or_not_bug.md — CARNET D'INVESTIGATION sur le
+    │                               blocage du cursus : 11 hypothèses avec leur statut, les
+    │                               protocoles, les mesures, et surtout ce qui a été RÉFUTÉ.
+    │                               Rien n'y est jamais effacé — un test raté est une donnée
     └── Old_Archive_rmd/          documents historiques : conceptions dont la mécanique est livrée
                                     (CONCEPTION_v22_audio, CONCEPTION_v30_exo_sens, Maj_V29_readme,
                                     EXPLICATIONS_v29_sens),
