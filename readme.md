@@ -9,13 +9,30 @@ one vector, not bolting on a subsystem.
 **55,232 parameters. 0.21 MB.** One `nn.Module`, twelve layers, twelve hundred simulated days of
 continuous life.
 
+### What this is meant to become
+
+**A complete brain, waiting for a body.**
+
+Naulthène is not a MiniGrid solver. MiniGrid is a *crib* — a cheap, fast world in which a brain
+can be grown, broken and measured. What is being built is the organ itself: senses that all feed
+one space, a metabolism that gets hungry, a reflex layer and a deliberative layer, memory that
+abstracts by repetition, and a day/night cycle that consolidates or forgets. Swap the crib for a
+camera, a microphone and a motor bus, and the same `nn.Module` should keep running — because
+nothing in it names "grid", "key" or "door".
+
+**⚠️ It does not work yet.** The agent is stuck at level 2 of a 15-level curriculum and has not
+won in 678 simulated days. This repository documents an architecture under active development,
+including [everything that is broken](docs/dia_Aout_2026.md) and every diagnostic mistake made
+along the way. Read it as a research log, not a released system.
+
 *Long-term direction: a generalist intelligence that runs on a single Apple Silicon chip, with no
 datacenter.*
 
-> 🇫🇷 **[Documentation complète en français →](readme_fr.md)** (1500+ lines: architecture,
-> formulas, full changelog v7 → v37)
+> 🇫🇷 **[Miroir français complet →](readme_fr.md)** (architecture, formules, changelog v7 → v37)
 > 🩺 **[System diagnostic, August 2026 →](docs/dia_Aout_2026.md)** (1300-day run: what works,
 > what is blocked, what remains unknown)
+> 📊 **[Live experiments on Weights & Biases →](https://wandb.ai/naultadrien123-nvnc/Naulthene-AGI)**
+> (every run, every curve, including the failures)
 
 **Author**: Adrien Nault ([@DredGuer](https://github.com/DredGuer)) — [Apache 2.0](LICENSE).
 Any reuse, redistribution or derivative work building on this concept or architecture **must
@@ -273,6 +290,26 @@ PYTHONPATH=src python -m naulthene.instruments.sonde_poids <brain>
 
 Full command reference and troubleshooting: [docs/LANCEMENT.md](docs/LANCEMENT.md).
 
+### Following the experiments
+
+Every run is logged to **[Weights & Biases → `Naulthene-AGI`](https://wandb.ai/naultadrien123-nvnc/Naulthene-AGI)**,
+public and unfiltered — the failed runs are there too, because they are where the diagnostics
+came from.
+
+Roughly 90 metrics per simulated night. The ones worth watching:
+
+| Metric | What it tells you |
+|---|---|
+| `Cursus_Niveau_Index` | Curriculum progress — flat at 2 since day 274 |
+| `Victoire_Taux_Vie` | Lifetime win rate — 1.69 % |
+| `Arbitrage_Ratio_C2C1` / `Arbitrage_Accord` | Balance and agreement between the reflex and the neocortex |
+| `Distillation_Reference_Choc` | The agent's own bar for what counts as remarkable — should rise with maturity |
+| `Memoire_Confirmations_Moy` | Abstraction by recurrence — 108 confirmations per landmark |
+| `Erreur_JEPA` | World-model prediction error |
+| `Teneur_Dopamine`, `Bio_Deficit` | Motivation reservoir and metabolic state |
+| `Sens_Odorat_Taux_Approche` | Does the agent actually follow smell gradients? (63.4 %, chance = 50 %) |
+| `Synapses_Mortes`, `Taille_Thalamus` | Synaptic death count and neurogenesis |
+
 ---
 
 ## What actually works — measured over 1300 days
@@ -309,10 +346,21 @@ this line is a direction, not a promise.
 
 ---
 
-## Status
+## Status — work in progress, openly
 
-Exploratory research, single author. No test suite, no CI — validation is by W&B curves, console
-logs and read-only probes. The agent is **blocked at level 2 of 15** and the reasons are
-[documented in full](docs/dia_Aout_2026.md), including the diagnostic mistakes made along the way.
+Exploratory research, single author, **actively under development**. No test suite, no CI —
+validation is by W&B curves, console logs and read-only probes.
 
-If you read one supporting document, read that one. It is more useful than this README.
+What that means concretely:
+
+- The agent is **blocked at level 2 of 15**, and has not won in 678 simulated days.
+- The **v34–v37 mechanics are not in this repository** (`noyau.py` is gitignored) — the
+  documentation, `persistance.py` and the instruments are.
+- Two of three benchmark tables are filled; the one that matters most (equal-budget comparison
+  against PPO) **has not been run**.
+- The thesis defended here is **unification**, which is measured. Lightness is *not* yet
+  demonstrated — Naulthène is currently 2.85× heavier than a PPO CNN baseline, and this README
+  says so.
+
+Everything that is broken is written down, including the diagnostic errors made along the way.
+[**Read the diagnostic**](docs/dia_Aout_2026.md) — it is more useful than this README.

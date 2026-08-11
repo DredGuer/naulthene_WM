@@ -18,7 +18,26 @@ Naulthène AGI est un projet de recherche (packagé en `src/naulthene/`, cœur d
 
 L'agent progresse à travers un **cursus académique** de **15 niveaux** MiniGrid (v35.0 — 5 avant), du Nourrisson (`Empty-5x5`) au Doctorat (planification longue distance), promu par **2 victoires consécutives OU 60 % de maîtrise sur une fenêtre glissante de 20 épisodes**.
 
-Ce n'est pas une application produit : c'est un script de recherche exécuté en continu (boucle de jours/ticks), instrumenté avec **Weights & Biases** pour le suivi expérimental. Pas de tests automatisés, pas de build — la validation passe par l'observation des courbes W&B et des logs console.
+Ce n'est pas une application produit : c'est un script de recherche exécuté en continu (boucle de jours/ticks), instrumenté avec **Weights & Biases** pour le suivi expérimental — projet public [`Naulthene-AGI`](https://wandb.ai/naultadrien123-nvnc/Naulthene-AGI), ~90 métriques par nuit simulée. Pas de tests automatisés, pas de build — la validation passe par l'observation des courbes W&B et des logs console.
+
+### Le positionnement du projet (à préserver dans toute communication)
+
+**Naulthène a vocation à être un CERVEAU COMPLET EN ATTENTE D'UN CORPS**, et il est
+**toujours en cours de développement**.
+
+MiniGrid n'est pas la finalité : c'est un **berceau** — un monde peu coûteux et rapide où élever,
+casser et mesurer un cerveau. Ce qui se construit est l'organe : des sens qui alimentent tous le
+même espace, un métabolisme, une couche réflexe et une couche délibérative, une mémoire qui
+abstrait par répétition, un cycle jour/nuit. **Rien dans le cœur ne nomme « grille », « clé » ni
+« porte »** — c'est précisément ce qui rend envisageable le remplacement du berceau par une
+caméra, un micro et un bus moteur.
+
+Deux conséquences pour la rédaction de toute doc, tout commit, toute description :
+
+- Ne jamais présenter le projet comme un solveur MiniGrid, ni comme un système livré.
+- Ne jamais masquer l'état réel : l'agent est **bloqué au niveau 2 sur 15** et n'a pas gagné
+  depuis 678 jours simulés. L'échec fait partie du carnet de recherche et se documente
+  (voir `docs/dia_Aout_2026.md`).
 
 ## Architecture
 
@@ -275,25 +294,48 @@ tous les liens entrants**. Attention : ces documents sont référencés depuis `
 - Ajouter une nouvelle section "Nouveautés vX.X — Titre" en haut du Journal des Mises à Jour si le changement est significatif (feat / fix majeur), et mettre à jour la table des matières en conséquence
 - Ne pas toucher aux sections narratives (architecture, formules) pour des commits `docs` / `chore` mineurs
 
-### 2bis. `readme.md` (la vitrine anglaise)
+### 2bis. `readme.md` (anglais) et `readme_fr.md` (miroir français) — RÈGLE DE MIROIR
 
-`readme.md` est la **page d'accueil GitHub**, en anglais, volontairement courte. Elle n'a pas
-vocation à suivre chaque version — elle porte la **thèse** du projet (tous les paramètres dans un
-espace vectoriel unifié) et les **chiffres qui la rendent falsifiable**.
+**`readme.md` est la page d'accueil GitHub et il est en ANGLAIS.** `readme_fr.md` en est le
+**miroir français** : son en-tête reprend la même thèse, les mêmes chiffres et les mêmes tableaux,
+avant de dérouler la documentation narrative longue (architecture, formules, journal v7→v37) qui
+n'existe qu'en français.
 
-Ne la mettre à jour que si l'un de ces trois éléments bouge :
+**Toute modification de l'en-tête de l'un doit être répercutée dans l'autre, dans le même
+commit.** Un lecteur francophone et un lecteur anglophone doivent lire les mêmes faits. Ce qui
+doit rester en miroir :
 
-1. **Le nombre de paramètres** (tableau par couche, total, comparaison aux baselines RL). Le
-   recompter réellement, jamais l'estimer : `sum(p.numel() for p in agent.parameters())`.
+| Bloc | Présent dans les deux |
+|---|---|
+| La thèse (espace vectoriel unifié) | ✅ |
+| « Un cerveau complet, en attente d'un corps » | ✅ |
+| L'avertissement **« cela ne fonctionne pas encore »** | ✅ |
+| Le tableau des paramètres par couche + total | ✅ |
+| La comparaison aux baselines RL (et son verdict défavorable) | ✅ |
+| L'état du blocage (niveau, taux de victoire, jours sans victoire) | ✅ |
+| Le tableau d'ablation sensorielle | ✅ |
+| L'empreinte mémoire | ✅ |
+| Le lien W&B public | ✅ |
+| Journal des versions, formules détaillées, paliers | ❌ **français seulement** |
+
+Ne mettre à jour ces blocs que si l'un de ces éléments bouge :
+
+1. **Le nombre de paramètres**. Le recompter réellement, jamais l'estimer :
+   `sum(p.numel() for p in agent.parameters())`.
 2. **L'état du blocage** (niveau atteint, taux de victoire, jours sans victoire).
-3. **Les tableaux de benchmark vides** — dès qu'une mesure existe, elle y entre.
+3. **Un tableau de benchmark** — dès qu'une mesure existe, elle y entre, des deux côtés.
 
-⚠️ **Ne jamais y écrire une supériorité non mesurée.** Le README affirme explicitement que
-Naulthène est **2,85× plus lourd** qu'un PPO CNN standard (55 232 contre 19 384 paramètres) et
-qu'il **ne résout pas** `Empty-8x8`. Ces chiffres sont vérifiables en cinq minutes par n'importe
-quel lecteur ; les enjoliver coûterait toute la crédibilité du dépôt. La thèse défendable est
-**l'unification** (une seule règle de plasticité, un seul bus, ajout de sens additif), pas la
-légèreté — celle-ci reste à démontrer par un benchmark à budget égal.
+⚠️ **Ne jamais écrire une supériorité non mesurée.** Les deux README affirment explicitement que
+Naulthène est **2,85× plus lourd** qu'un PPO CNN standard (55 232 contre 19 384 paramètres), qu'il
+**ne résout pas** `Empty-8x8`, et que **couper C2 double le taux de succès**. Ces chiffres sont
+vérifiables en cinq minutes par n'importe quel lecteur ; les enjoliver coûterait toute la
+crédibilité du dépôt. La thèse défendable est **l'unification** (une seule règle de plasticité, un
+seul bus, ajout de sens additif) — la légèreté reste à démontrer par un benchmark à budget égal.
+
+⚠️ **Le positionnement doit rester « un cerveau complet en attente d'un corps », et
+« en cours de développement ».** MiniGrid est un berceau, pas la finalité : rien dans le cœur ne
+nomme « grille », « clé » ni « porte », et c'est ce qui rend le remplacement du berceau par un
+corps réel envisageable. Ne jamais présenter le projet comme un système livré ou fonctionnel.
 
 ### Règles de versioning
 

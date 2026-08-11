@@ -1,14 +1,154 @@
-> 🇬🇧 **[English README →](readme.md)** — la thèse du projet (espace vectoriel unifié), les
-> chiffres honnêtes de comparaison aux baselines, et l'état du blocage.
+# 🧠 Naulthène AGI
+
+**Un agent cognitif où tous les paramètres vivent dans un espace vectoriel unifié — aucun module
+par tâche, aucune tête séparée par compétence, aucune couche d'orchestration.**
+
+La vue, l'ouïe, le toucher, l'odorat, le goût, le contrôle moteur, un modèle du monde, la mémoire
+épisodique et la parole lisent et écrivent tous dans **un seul bus latent**. Ajouter un sens, c'est
+ajouter des dimensions à un vecteur — pas greffer un sous-système.
+
+**55 232 paramètres. 0,21 Mo.** Un seul `nn.Module`, douze couches, mille trois cents jours
+simulés de vie continue.
+
+### Ce que ce projet a vocation à devenir
+
+**Un cerveau complet, en attente d'un corps.**
+
+Naulthène n'est pas un solveur MiniGrid. MiniGrid est un **berceau** — un monde peu coûteux et
+rapide dans lequel un cerveau peut être élevé, cassé et mesuré. Ce qui se construit, c'est
+l'organe lui-même : des sens qui alimentent tous le même espace, un métabolisme qui a faim, une
+couche réflexe et une couche délibérative, une mémoire qui abstrait par répétition, et un cycle
+jour/nuit qui consolide ou oublie. Remplacez le berceau par une caméra, un micro et un bus moteur,
+et le même `nn.Module` devrait continuer de tourner — parce que rien à l'intérieur ne nomme
+« grille », « clé » ou « porte ».
+
+**⚠️ Cela ne fonctionne pas encore.** L'agent est bloqué au niveau 2 d'un cursus de 15 niveaux et
+n'a plus gagné depuis 678 jours simulés. Ce dépôt documente une architecture **en cours de
+développement**, y compris [tout ce qui est cassé](docs/dia_Aout_2026.md) et chaque erreur de
+diagnostic commise en chemin. À lire comme un carnet de recherche, pas comme un système livré.
+
+*Direction long terme : une intelligence généraliste qui tourne sur une puce Apple Silicon, sans
+datacenter.*
+
+> 🇬🇧 **[English README →](readme.md)** — la vitrine, en anglais.
 > 🩺 **[Diagnostic complet du système →](docs/dia_Aout_2026.md)** — run de 1300 jours : ce qui
 > marche, ce qui bloque, ce qui reste inconnu.
->
-> **Ce document-ci est la documentation narrative de référence** : architecture détaillée,
-> formules, et le journal complet des mises à jour de la v7 à la v37.
+> 📊 **[Expériences en direct sur Weights & Biases →](https://wandb.ai/naultadrien123-nvnc/Naulthene-AGI)**
+> — tous les runs, toutes les courbes, échecs compris.
 
 ---
 
-# 🧠 Naulthène AGI — Architecture & Documentation Technique
+## Les chiffres, sans enjolivement
+
+### Nombre de paramètres — mesuré
+
+| Composant | Paramètres |
+|---|---|
+| `porte_visuelle` (147 → 64) | 9 408 |
+| `porte_auditive` (130 → 64) | 8 320 |
+| `hippocampe` (128 → 64) | 8 192 |
+| `fusion_memoire` (128 → 64) | 8 192 |
+| `integrateur_bio` (100 → 64) — 5 sens + homéostasie | 6 400 |
+| `generateur_attente` (72 → 64) — modèle du monde JEPA | 4 608 |
+| `generateur_attente_audio` (72 → 64) | 4 608 |
+| `analyseur` (64 → 64) | 4 096 |
+| `tete_motrice` (64 → 8) — C1 | 512 |
+| `tete_vocale` (64 → 8) | 512 |
+| `tete_requete` (64 → 5) — routage C3 | 320 |
+| `cortex_prefrontal` (64 → 1) — C2 | 64 |
+| **Total** | **55 232** (0,21 Mo en fp32) |
+
+### Face aux baselines MiniGrid — **la thèse ne tient PAS sur la taille**
+
+| Architecture | Paramètres | Rapport |
+|---|---|---|
+| `rl-starter-files` CNN acteur-critique | 19 384 | Naulthène est **2,85× plus lourd** |
+| PPO `MlpPolicy` (défaut SB3) | 27 784 | Naulthène est **1,99× plus lourd** |
+| `rl-starter-files` CNN + LSTM | 52 664 | Naulthène est à **1,05×** — parité |
+
+**Naulthène n'est pas plus léger qu'un baseline RL standard.** C'est écrit noir sur blanc parce
+que le calcul est à un `grep` de n'importe quel lecteur.
+
+Deux nuances, mesurées et non rhétoriques :
+
+1. **La comparaison n'est pas à périmètre égal.** 24 768 de ces paramètres (45 %) achètent ce
+   qu'aucun baseline MiniGrid n'a : un hémisphère audio/vocal (13 440), un modèle du monde JEPA
+   (4 608), un intégrateur biologique à 5 sens (6 400), un port exocortex (320). Le **cœur
+   strictement comparable pèse 30 464 paramètres** — 1,57× un CNN, 0,58× un CNN+LSTM.
+2. **Toute affirmation d'efficience exige une comparaison à budget égal**, et cette expérience
+   n'a pas été menée.
+
+### Performance sur la tâche — **actuellement bloquée**
+
+| Métrique | Valeur (run de 1300 jours) |
+|---|---|
+| Niveau de cursus atteint | **2 / 15** (`Empty-8x8`) |
+| Taux de victoire sur la vie | **1,69 %** |
+| Jours depuis la dernière victoire | 678 |
+
+Un PPO standard résout `Empty-8x8` en quelques milliers d'épisodes. **Naulthène, non.**
+
+Le [diagnostic](docs/dia_Aout_2026.md) isole pourquoi, et **aucun des cinq bloquants n'est
+cognitif** : patience plafonnée à 120 ticks contre 256 pour MiniGrid lui-même (taux de réussite
+atteignable 4,7 % contre 21,0 %), saut de difficulté ×10 au niveau 2, espérance d'épisode à
+**−1,06**, 4 actions sur 7 inertes sur une pièce vide, et une ère de cursus qui double les
+épisodes perdants.
+
+### Ablation sensorielle — le test de l'unification ✅ **mesuré**
+
+13 lésions × 5 niveaux, 600 épisodes par lésion, graine fixée 1789, sur un cerveau **pré-v37** de
+5000 jours (marge à 95 % : ±2,3 pts par niveau).
+
+| Lésion | Succès | Δ vs témoin |
+|---|---|---|
+| **C2 coupé** (`force_planification = 0`) | **10,67 %** | **+6,17 pts** |
+| *Témoin (intact)* | *4,50 %* | *—* |
+| Ouïe neutralisée | 4,50 % | ±0,00 |
+| Odorat neutralisé (+ clinotaxie) | 4,50 % | ±0,00 |
+| Goût neutralisé | 4,50 % | ±0,00 |
+| Exo-Sens neutralisé | 4,50 % | ±0,00 |
+| **Vue neutralisée** | **4,00 %** | −0,50 |
+| Mémoire de travail figée | 4,00 % | −0,50 |
+| Vecteur bio entièrement neutralisé | 3,83 % | −0,67 |
+| Mémoire spatiale vidée par épisode | 3,67 % | −0,83 |
+| Mémoire épisodique à zéro | 3,50 % | −1,00 |
+| Toucher neutralisé | 3,17 % | −1,33 |
+
+**Ce que cela confirme.** La dégradation est gracieuse : **aveugler l'agent ne coûte que 0,50
+point**, aucune lésion ne provoque de plantage. Chaque sens peut être retiré et l'agent continue
+de tourner par le **même chemin de code** — c'est la thèse de l'unification, et elle tient.
+
+**Ce que cela contredit.** Deux résultats vont contre l'architecture actuelle :
+
+- **Couper C2 double le taux de succès** (4,50 % → 10,67 %). Le système délibératif n'est pas
+  seulement inutile : il est *activement nuisible* à ce stade. L'effet vient presque entièrement
+  d'`Empty-8x8` (**1,7 % → 22,5 %**, +20,8 pts).
+- **Retirer la vue coûte moins que retirer le toucher** (−0,50 contre −1,33), sur une tâche de
+  navigation visuelle. Ce n'est pas de la multimodalité robuste, c'est une vue sous-exploitée.
+
+### Empreinte mémoire — ✅ **mesurée**
+
+| Composant | Taille |
+|---|---|
+| Poids (fp32) | **0,211 Mo** |
+| État de l'optimiseur Adam | 0,419 Mo |
+| Buffers de plasticité (myéline, traces, normes de naissance) | 1,054 Mo |
+| **Total en mémoire (entraînement)** | **1,683 Mo** |
+| Checkpoint sur disque | 1,58 Mo |
+
+Tourne sur `mps` (Apple Silicon) aujourd'hui. Les buffers de plasticité coûtent **5× les poids
+eux-mêmes** — c'est le prix du cycle jour/nuit, et une cible d'optimisation réelle.
+
+---
+
+## 📖 Documentation technique de référence
+
+> Tout ce qui suit est la documentation narrative complète : architecture détaillée, formules
+> d'homéostasie, tableaux de paliers, et le **journal des mises à jour de la v7 à la v37**.
+
+---
+
+## Naulthène AGI — Architecture & Documentation Technique
 
 > **Agent Cognitif Autonome Hybride (RL + JEPA + Mémoire Épisodique + Bio-Homéostasie)**
 > *Un modèle d'apprentissage universel guidé par le développement cognitif, la plasticité neuro-mimétique et le libre arbitre.*
