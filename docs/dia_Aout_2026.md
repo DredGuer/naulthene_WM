@@ -33,6 +33,13 @@
 **Aucun de ces cinq bloquants n'est cognitif.** Toutes les mécaniques du cerveau fonctionnent
 (§3) — c'est l'environnement d'exercice qui rend la réussite statistiquement inatteignable.
 
+> ⚠️ **Un sixième candidat, à vérifier en priorité (Q0)** : le banc d'ablation mesure que
+> **couper C2 fait passer le taux de succès de 4,50 % à 10,67 %**, et sur `Empty-8x8` de
+> **1,7 % à 22,5 %** (+20,8 pts, marge ±2,3). Si ce résultat tient sur un cerveau v37, alors C2
+> n'est pas seulement inutile à ce stade — il est **activement nuisible**, et il devient le
+> bloquant prioritaire. La mesure date d'un cerveau **pré-v37**, donc antérieure à l'équilibrage
+> C1/C2 : **rejouer le banc est le test le moins cher et le plus informatif du moment.**
+
 ### Défauts connus, non corrigés
 
 | # | Défaut | Impact |
@@ -47,6 +54,7 @@
 
 | # | Question | Test qui trancherait |
 |---|---|---|
+| **Q0** | **C2 nuit-il activement ?** Le banc d'ablation (pré-v37, 5000 j, 600 ép./lésion) mesure **4,50 % avec C2 → 10,67 % sans C2**, dont `Empty-8x8` **1,7 % → 22,5 %** (+20,8 pts, marge ±2,3). | **Rejouer le banc sur un cerveau v37** — le résultat précède l'équilibrage C1/C2 et pourrait avoir changé. S'il tient, c'est le bloquant **B0**, prioritaire sur tous les autres |
 | **Q1** | Le guidage ×3,0 nuit-il aux victoires ? | Ablation à graine fixée, guidage figé à 1,0, 300 jours |
 | **Q2** | L'erreur JEPA qui remonte : bénin ou dégradation ? | Comparer à dimension de bus constante |
 | **Q3** | L'accord C1/C2 peut-il se stabiliser ? | Indissociable du blocage — c'est un thermomètre, pas un levier |

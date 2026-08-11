@@ -108,39 +108,80 @@ inert on empty rooms, and a curriculum era that doubles losing episodes.
 
 ---
 
-## What the benchmark must show
+## Benchmarks
 
-The three tables below are the ones that would turn the thesis into a result. **They are empty
-because the experiments have not been run.**
+### 1. Sensory ablation — the unification test ✅ **measured**
 
-### 1. Parameter efficiency at equal performance
+The central prediction of a unified vector space: removing a sense should degrade performance
+*gracefully*, with **no code path change and no fallback logic**. Measured with
+[`banc_ablation.py`](src/naulthene/instruments/banc_ablation.py) — 13 lesions × 5 levels
+(`Empty-8x8`, `DoorKey-6x6`, `Unlock`, `MemoryS7`, `MultiRoom-N4-S5`), 600 episodes per lesion,
+fixed seed 1789, on a **5000-day pre-v37 brain** — the bench predates the C1/C2 rebalancing and
+should be re-run on a v37 brain. 95 % margin of error: **±2.3 pts** per level (120 episodes).
+
+| Lesion | Success | Δ vs intact |
+|---|---|---|
+| **C2 severed** (`planning_force = 0`) | **10.67 %** | **+6.17 pts** |
+| *Intact (control)* | *4.50 %* | *—* |
+| Hearing removed | 4.50 % | ±0.00 |
+| Smell removed (+ klinotaxis) | 4.50 % | ±0.00 |
+| Taste removed | 4.50 % | ±0.00 |
+| Exo-sense removed (8 dims) | 4.50 % | ±0.00 |
+| C2 myopic (horizon 1 only) | 4.50 % | ±0.00 |
+| **Vision removed** (obs zeroed) | **4.00 %** | −0.50 |
+| Working memory frozen | 4.00 % | −0.50 |
+| Entire bio vector zeroed | 3.83 % | −0.67 |
+| Spatial memory cleared each episode | 3.67 % | −0.83 |
+| Episodic context zeroed | 3.50 % | −1.00 |
+| Touch removed | 3.17 % | −1.33 |
+
+**What this supports.** Graceful degradation is real: **blinding the agent costs 0.50 points**,
+and no lesion causes a crash or a collapse. Every sense can be removed and the agent keeps
+running through the same code path — that is the unification claim, and it holds.
+
+**What this contradicts.** Two results cut against the architecture as it stands:
+
+- **Severing C2 more than doubles the success rate** (4.50 % → 10.67 %). The deliberative system
+  is not merely idle — it is *actively harmful* at this stage. The effect is driven almost
+  entirely by `Empty-8x8` (**1.7 % → 22.5 %**, +20.8 pts, far beyond the ±2.3 pt margin) and is
+  positive but small on the other four levels.
+- **Removing vision costs less than removing touch** (−0.50 vs −1.33). On a visual navigation
+  task, that is not a sign of robust multimodality; it is a sign that vision is under-exploited.
+
+Both are consistent with the [diagnostic](docs/dia_Aout_2026.md): the agent has not yet learned a
+policy worth planning over.
+
+### 2. Memory footprint — ✅ **measured for Naulthène**, baseline pending
+
+| Component | Size |
+|---|---|
+| Weights (fp32) | **0.211 MB** |
+| Adam optimizer state | 0.419 MB |
+| Plasticity buffers (myelin, traces, birth norms) | 1.054 MB |
+| **Total in memory (training)** | **1.683 MB** |
+| Checkpoint on disk | 1.58 MB |
+
+Runs on `mps` (Apple Silicon) today. The plasticity buffers cost **5× the weights themselves** —
+the price of the day/night cycle, and a real target for optimization.
+
+| Agent | Training peak | Inference | Checkpoint |
+|---|---|---|---|
+| PPO CNN (`rl-starter-files`) | — | — | — |
+| **Naulthène** | **1.683 MB** | **0.211 MB** | **1.58 MB** |
+
+### 3. Parameter efficiency at equal performance — ⏳ **not run**
+
+This is the table that would decide whether the architecture is *efficient* or merely
+*different*. It requires training PPO baselines on the same levels — not yet done.
 
 | Agent | Params | `Empty-8x8` success | `DoorKey-5x5` success | Episodes to 80 % |
 |---|---|---|---|---|
 | PPO CNN (`rl-starter-files`) | 19,384 | — | — | — |
 | PPO + LSTM | 52,664 | — | — | — |
-| **Naulthène** | **55,232** | — | — | — |
+| **Naulthène** | **55,232** | **4.50 %** (ablation bench) / **1.69 %** (lifetime) | — | never reached |
 
-### 2. Memory footprint
-
-| Agent | Training peak | Inference | Checkpoint |
-|---|---|---|---|
-| PPO CNN | — | — | — |
-| **Naulthène** | — | — | 1.58 MB |
-
-### 3. Sensory ablation — the unification test
-
-The claim is that removing a sense degrades performance gracefully, with no code path change.
-[`banc_ablation.py`](src/naulthene/instruments/banc_ablation.py) already runs 13 lesions across 5
-levels; the numbers below are what it should produce.
-
-| Lesion | Success rate | Δ vs intact |
-|---|---|---|
-| Intact | — | — |
-| No vision | — | — |
-| No hearing | — | — |
-| No smell | — | — |
-| No C2 (planning) | — | — |
+> Naulthène's own numbers are filled in. Until the baseline row is too, the comparison proves
+> nothing — a reader still cannot tell an elegant architecture from an underperforming one.
 
 ---
 
