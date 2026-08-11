@@ -26,9 +26,13 @@ Le projet est organisé en **package Python** sous `src/naulthene/`, avec un dos
 
 ```
 21. AGI/                          racine du dépôt (CWD de lancement de tous les scripts)
-├── LICENSE, NOTICE               licence Apache 2.0 et attribution — voir readme.md
-├── readme.md                     documentation narrative de référence (table des matières,
-│                                   historique des versions, description scientifique du modèle)
+├── LICENSE, NOTICE               licence Apache 2.0 et attribution — voir readme_fr.md
+├── readme.md                     VITRINE en anglais — la thèse (espace vectoriel unifié), les
+│                                   chiffres de comparaison aux baselines RL, l'état du blocage.
+│                                   C'est la page d'accueil GitHub : la garder courte et factuelle
+├── readme_fr.md                  documentation narrative de référence en français (table des
+│                                   matières, historique des versions v7→v37, description
+│                                   scientifique du modèle) — c'est ici que vont les détails
 ├── CLAUDE.md                     ce fichier
 ├── .gitignore
 │
@@ -96,7 +100,7 @@ Le cœur de référence est `src/naulthene/cerveau/colab.py` (ex-`agi_google_col
    - 3b. Détecteurs génériques actifs sur n'importe quel niveau : `DetecteurFranchissementPortes`, `DetecteurProgresPersonnel`
 4. **Exécution & Cursus** : configuration W&B, hyperparamètres (dopamine, planification, rêve adaptatif), programme des niveaux (`PROGRAMME` — 15 depuis la v35.0, 5 dans `colab.py`), boucle principale jour/tick
 
-Voir le [README](readme.md) pour la description narrative complète (formules d'homéostasie, tableau des 7 paliers, architecture cognitico-biologique en diagramme ASCII).
+Voir le [README](readme_fr.md) pour la description narrative complète (formules d'homéostasie, tableau des 7 paliers, architecture cognitico-biologique en diagramme ASCII).
 
 Tous les imports entre modules du package sont des **chemins absolus de package** (`from naulthene.cerveau.noyau import ...`, `import naulthene.audio.professeur_gemma as pg`) — jamais d'imports relatifs à plat. Tout script se lance depuis la **racine du dépôt** avec `PYTHONPATH=src` et l'option `-m` (voir [Essential Commands](#essential-commands)) ; les chemins `.brain` par défaut sont relatifs à cette racine (`brains/naulthene_*.brain`).
 
@@ -106,9 +110,9 @@ En plus du script de référence `colab.py`, le projet dispose d'une copie de tr
 
 - **Deux différences permanentes avec `colab.py`** : détection du device `cuda`/`mps`/`cpu` (au lieu de `cuda`/`cpu` seul) et un `jours_totaux` ajustable localement pour des runs de test plus courts que les 400 jours de Colab
 - **C'est le terrain d'essai des mécaniques expérimentales** (actuellement v18.0 Architecture Homéostatique Biologique, v19.0 Métabolisme 20/80 & Forage 80/20, et toute mécanique suivante tant qu'elle n'a pas été validée sur un run long) — ces versions vivent **uniquement** dans ce fichier tant qu'elles ne sont pas explicitement portées sur `colab.py`. Exceptions notables : `exocortex/` (v28.0) et `cerveau/bus_sensoriel.py` (v29.0) sont des modules **versionnés** dans git, même si la mécanique qui les consomme n'existe pour l'instant que dans `noyau.py`
-- Le fichier n'étant pas versionné, toute modification doit être documentée dans `readme.md`/`docs/CHANGELOG.md` avec la mention explicite **"expérimental"** et l'avertissement qu'elle ne vit que dans `noyau.py` — ne jamais laisser croire qu'une mécanique expérimentale est déjà dans le script de référence
+- Le fichier n'étant pas versionné, toute modification doit être documentée dans `readme_fr.md`/`docs/CHANGELOG.md` avec la mention explicite **"expérimental"** et l'avertissement qu'elle ne vit que dans `noyau.py` — ne jamais laisser croire qu'une mécanique expérimentale est déjà dans le script de référence
 - Avant de porter une mécanique validée vers `colab.py`, vérifier qu'elle est cohérente avec toute l'évolution parallèle qu'a pu subir le script de référence entre-temps (les deux fichiers peuvent diverger sur plusieurs versions)
-- Setup local : voir [Démarrage Rapide](readme.md#démarrage-rapide) dans le README (venv Python 3.12, `pip install torch gymnasium minigrid wandb numpy`, `wandb login`, puis `WANDB_MODE=offline PYTHONPATH=src python -m naulthene.cerveau.noyau` ou en direct sans la variable une fois connecté)
+- Setup local : voir [Démarrage Rapide](readme_fr.md#démarrage-rapide) dans le README (venv Python 3.12, `pip install torch gymnasium minigrid wandb numpy`, `wandb login`, puis `WANDB_MODE=offline PYTHONPATH=src python -m naulthene.cerveau.noyau` ou en direct sans la variable une fois connecté)
 
 ## Before Modifying Code
 
@@ -134,7 +138,7 @@ En plus du script de référence `colab.py`, le projet dispose d'une copie de tr
 - Vérifier si la modification touche au **flux mnésique** (`_memoriser_si_saillant`, `rappel_le_plus_marquant`, `enregistrer_evenement`, `SEUIL_SAILLANCE_MEMOIRE`, `SOUVENIRS_CONFIRMATIONS_REFERENCE`, `DIM_RAPPEL_MARQUANT`) : cinq invariants v36.0. (1) **Rien n'est expliqué en dur** — le cerveau ne sait pas ce qu'est une clé ni une pomme. Les étiquettes de souvenirs sont dérivées de l'API MiniGrid et restent **opaques** : il ne doit exister nulle part de table du type `lave = danger` ou `clé = utile`. La valeur d'un type est **apprise** (moyenne des chocs dans `valence`), jamais déclarée — c'est ce qui distingue ce mécanisme d'un système expert. (2) **Pas de routeur centralisé** — les mémoires ne sont pas des destinations qu'un aiguilleur choisit, elles **sont** les filtres, en parallèle. Un routeur unique en amont serait un goulot et un point de défaillance ; le chantier consiste à enrichir le flux, jamais à le centraliser. (3) **La récurrence produit de l'abstraction** : un doublon n'est jamais jeté, il incrémente `confirmations` et affine `valence`. Avant la v36.0, 98,6 % du flux était rejeté par déduplication — c'était la matière première de l'abstraction mise à la poubelle. (4) **L'oubli est un archivage post-abstraction** : l'éviction retire le repère le **moins confirmé** (à égalité, le plus ancien), jamais le plus ancien tout court. Une régularité du monde survit, un accident se dégrade. (5) Le neutre du rappel marquant est **`[0.5, 0.0]`**, jamais `[0.0, 0.0]` : une valence à 0.0 signifierait « le pire souvenir possible » et rendrait l'agent craintif partout où il n'a rien vécu (même piège que la clinotaxie v32.0)
 - Vérifier si la modification touche à l'**érosion nocturne** (`cycle_sommeil`, `PLANCHER_POIDS_VITAL`, `FRACTION_NORME_MIN_COUCHE`, `norme_naissance`) : deux invariants v34.0-fix1/fix2, posés après un bug qui a rendu un cerveau **entièrement aveugle et sourd** (8 couches sur 11 à zéro exact après 1500 nuits). (1) L'érosion est **géométrique** (`base *= 1 − λ(1 − myéline)`) et la myéline ne peut venir **que** du gradient : un agent sans récompense ne myélinise rien, donc s'érode à taux plein et meurt en ~121 nuits. Le plancher vital est ce qui l'en empêche — ne jamais le retirer « parce qu'il ne sert jamais » : mesuré, **6 couches sur 11 y sont collées** sur un run réel. (2) `norme_naissance` ne doit **jamais rétrécir** : `agrandir()` recopie des poids déjà érodés, donc la norme du tenseur agrandi peut être plus petite que l'originale — d'où le `torch.maximum`. Sans lui, chaque neurogenèse divisait la protection par ~7 et le correctif s'auto-annulait. ⚠️ `SEUIL_CRISTAL = 0.80` n'a **jamais** été franchi (myéline réelle max mesurée : **0.0038**) : la Cristallisation Souple v26.0 ne s'est enclenchée sur aucun cerveau du dépôt — ne pas s'appuyer dessus comme protection. **Trois invariants supplémentaires en v37.0**, posés après un bug qui rendait l'apprentissage des deux têtes de décision *mathématiquement impossible* : (3) **le plancher vital ne doit jamais devenir un plafond** — la remontée est `torch.clamp(norme_plancher / norme_apres, min=1.0)`, jamais une renormalisation sèche à `norme_plancher`. La v34.0 ramenait la couche à *exactement* 10 % depuis la norme post-érosion, ce qui effaçait chaque nuit tout ce que le gradient venait de consolider (mesuré sur `tete_motrice` : 0,319490 → +0,0139 d'annexe → **0,319490**, au millionième). (4) **La myéline doit être rafraîchie en tête de `cycle_sommeil`**, jamais seulement dans `forward()` : la séquence nocturne est `apprendre_journee` (step) → `rever` (step) → `cycle_sommeil`, et aucun `forward` n'a lieu entre le dernier pas d'optimiseur et l'érosion — la myéline qui protège une couche ignorait donc systématiquement tout ce qu'elle venait d'apprendre (mesuré : **0.000000 exact** sur `tete_motrice` et `cortex_prefrontal` après 600 jours). L'invariant « la myéline ne vient que du gradient » est **intact** : seul le *moment* de la lecture change. (5) **L'échelle de la myéline est RELATIVE à la couche** (`echelle_myeline`, 3ᵉ quartile de `myeline_M`), jamais absolue — `q_ref = 1.0` supposait une myéline d'ordre 1 alors qu'elle vaut ~0,002, soit une échelle **500× trop grande** : `myeline_norm` restait collée à 0 et *toute* couche s'érodait au taux plein, myélinisée ou non. Prendre le **quantile et non le maximum** : normaliser par le max fait porter l'échelle par une seule synapse extrême et écrase les 99 % restantes (mesuré : p50 = 0,027, p99 = 1,000). C'est exactement le défaut de `SEUIL_CRISTAL` — une échelle absolue posée a priori, jamais confrontée à une mesure. ⚠️ **La norme d'une couche est un mauvais indicateur d'apprentissage** : `tete_motrice` reste à 10,00 % en norme tout en modifiant **7,43 % de ses poids en 5 nuits** (cosinus 0,9972) — sa consolidation fait *baisser* la norme parce que le gradient corrige les poids au lieu de les grossir. Toujours vérifier la direction (cosinus), pas seulement la magnitude
 - Vérifier si la modification touche à la **rétrocompatibilité des `.brain`** (`persistance.py`) : la règle générale est **greffe par recopie, jamais par exclusion**. Exclure une couche sur mismatch de forme la fait renaître à neuf et détruit des centaines de jours d'acquis (bug v24.0-fix4, symptôme : bouche silencieuse dans l'Arène). Les deux greffes existantes — `_greffer_action_supplementaire` (7→8 actions, v28.0) et `_greffer_vecteur_bio_etendu` (vecteur bio 16→24, v29.0) — sont le modèle à suivre ; le filtre d'exclusion ne reste qu'en trappe de secours pour les mismatchs qu'on ne sait pas greffer
-- Après toute modification des hyperparamètres de la section 4, vérifier la cohérence avec le [README](readme.md) (tableau `config.py` narratif, formules) et mettre à jour la documentation si les valeurs divergent
+- Après toute modification des hyperparamètres de la section 4, vérifier la cohérence avec le [README](readme_fr.md) (tableau `config.py` narratif, formules) et mettre à jour la documentation si les valeurs divergent
 - Ce script est prévu pour tourner sur GPU si disponible (`DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")`) — ne pas supposer un device fixe, toujours passer par `DEVICE` ou `.to(DEVICE)`
 
 ## Essential Commands
@@ -198,7 +202,7 @@ WANDB_MODE=offline PYTHONPATH=src python -m naulthene.salles_de_classe.cursus_de
 
 `wandb.init(project="Naulthene-AGI", ...)` demande une session W&B active (login `wandb login` au préalable, ou variable d'environnement `WANDB_API_KEY`) — sans clé configurée, W&B tombe en mode anonyme ou local selon la config de l'environnement.
 
-Il n'y a ni linter ni suite de tests automatisés configurés. Toute vérification passe par l'observation des logs console (progression de palier, teneur en dopamine, thermostat de neurogenèse) et des courbes du tableau de bord W&B (voir [Modèle de Données & Métriques W&B](readme.md#modèle-de-données--métriques-wb) dans le README).
+Il n'y a ni linter ni suite de tests automatisés configurés. Toute vérification passe par l'observation des logs console (progression de palier, teneur en dopamine, thermostat de neurogenèse) et des courbes du tableau de bord W&B (voir [Modèle de Données & Métriques W&B](readme_fr.md#modèle-de-données--métriques-wb) dans le README).
 
 ## Git Workflow
 
@@ -219,7 +223,7 @@ seuil de déclenchement**.
 - Ne créer un commit que si l'utilisateur le demande explicitement
 - Toujours créer un nouveau commit plutôt qu'un `--amend`, sauf demande contraire
 - Ne jamais `push --force`, `reset --hard` ou sauter les hooks (`--no-verify`) sans autorisation explicite
-- Un commit qui modifie `src/naulthene/cerveau/colab.py` de façon significative (nouvelle mécanique, changement d'hyperparamètre structurant, nouvelle section) doit s'accompagner de la mise à jour de `docs/CHANGELOG.md` et, si le changement est narrativement significatif, de `readme.md` — voir [Maintenance du Changelog](#maintenance-du-changelog)
+- Un commit qui modifie `src/naulthene/cerveau/colab.py` de façon significative (nouvelle mécanique, changement d'hyperparamètre structurant, nouvelle section) doit s'accompagner de la mise à jour de `docs/CHANGELOG.md` et, si le changement est narrativement significatif, de `readme_fr.md` — voir [Maintenance du Changelog](#maintenance-du-changelog)
 
 ## Maintenance du Changelog
 
@@ -260,16 +264,36 @@ qu'il est simplement « vieux ». Un cadrage archivé reste précieux : il garde
 qu'une idée déjà évaluée soit réintroduite sans connaître l'argument qui l'avait rejetée.
 
 Procédure : `git mv` (jamais `mv` seul — l'historique du fichier est précieux), puis **corriger
-tous les liens entrants**. Attention : ces documents sont référencés depuis `readme.md`,
+tous les liens entrants**. Attention : ces documents sont référencés depuis `readme_fr.md`,
 `CLAUDE.md`, les autres docs **et les docstrings du code source** (`bus_sensoriel.py`,
 `hemisphere_audio.py`, `professeur_gemma.py`, `lecons_vocales.py`, `client_professeur.py`,
 `daemon_cerveau.py`, `irm_cerveau.py`). Vérifier ensuite qu'aucun lien ne pointe dans le vide.
 
-### 2. `readme.md`
+### 2. `readme_fr.md`
 
 - Mettre à jour la ligne `#Version actuelle N.` en tête de `src/naulthene/cerveau/colab.py` si la version change
 - Ajouter une nouvelle section "Nouveautés vX.X — Titre" en haut du Journal des Mises à Jour si le changement est significatif (feat / fix majeur), et mettre à jour la table des matières en conséquence
 - Ne pas toucher aux sections narratives (architecture, formules) pour des commits `docs` / `chore` mineurs
+
+### 2bis. `readme.md` (la vitrine anglaise)
+
+`readme.md` est la **page d'accueil GitHub**, en anglais, volontairement courte. Elle n'a pas
+vocation à suivre chaque version — elle porte la **thèse** du projet (tous les paramètres dans un
+espace vectoriel unifié) et les **chiffres qui la rendent falsifiable**.
+
+Ne la mettre à jour que si l'un de ces trois éléments bouge :
+
+1. **Le nombre de paramètres** (tableau par couche, total, comparaison aux baselines RL). Le
+   recompter réellement, jamais l'estimer : `sum(p.numel() for p in agent.parameters())`.
+2. **L'état du blocage** (niveau atteint, taux de victoire, jours sans victoire).
+3. **Les tableaux de benchmark vides** — dès qu'une mesure existe, elle y entre.
+
+⚠️ **Ne jamais y écrire une supériorité non mesurée.** Le README affirme explicitement que
+Naulthène est **2,85× plus lourd** qu'un PPO CNN standard (55 232 contre 19 384 paramètres) et
+qu'il **ne résout pas** `Empty-8x8`. Ces chiffres sont vérifiables en cinq minutes par n'importe
+quel lecteur ; les enjoliver coûterait toute la crédibilité du dépôt. La thèse défendable est
+**l'unification** (une seule règle de plasticité, un seul bus, ajout de sens additif), pas la
+légèreté — celle-ci reste à démontrer par un benchmark à budget égal.
 
 ### Règles de versioning
 
@@ -280,4 +304,4 @@ tous les liens entrants**. Attention : ces documents sont référencés depuis `
 | `fix` mineur / `refactor` / `docs` | même version + suffixe | 14.0-fix1, 14.0-docs |
 | `chore` / `style` | pas d'incrément | - |
 
-Le script de référence `src/naulthene/cerveau/colab.py` est actuellement en version **17** (voir `readme.md`, table des matières et journal des mises à jour). `src/naulthene/cerveau/noyau.py` porte en plus toutes les mécaniques expérimentales non encore portées sur `colab.py` (actuellement jusqu'à **v37.0/v37.1** — l'Équilibre C1/C2 & la Distillation Sélective — en passant par v36.0 le Flux Enrichi & l'Abstraction par Récurrence, v35.0/v35.1 le Cursus Progressif à 15 niveaux, le Guidage Dégressif & le Filet de Sécurité, v34.0-fix1/fix2 le correctif d'Extinction Synaptique, v32.0 l'Odorat Topologique & la Clinotaxie, v31.0/v31.1 la Mémoire Proportionnelle, le Rêve Invariant d'Échelle & la Déduplication Mnésique, en passant par v18.0 Architecture Homéostatique Biologique, v22 Hémisphère Auditif & Vocal, v27.x École de la Parole, v28.0 Cascade C1→C2→C3 & Port Exocortex, v29.0/v29.1 Bus Sensoriel & télémétrie des 5 sens, v30.0/v30.1 Odorat Dynamique, Exo-Sens & instrumentation, voir [Variante Locale de Test](#variante-locale-de-test-mac--srcnaulthenecerveaunoyaupy) et `readme.md`/`docs/CHANGELOG.md` pour le détail) — toute nouvelle mécanique testée localement suit la même échelle de version que le script de référence, marquée `-experimental` tant qu'elle n'y est pas portée. Poursuivre sur cette échelle entière (+1.0 pour la prochaine mécanique majeure) sauf décision contraire de l'utilisateur.
+Le script de référence `src/naulthene/cerveau/colab.py` est actuellement en version **17** (voir `readme_fr.md`, table des matières et journal des mises à jour). `src/naulthene/cerveau/noyau.py` porte en plus toutes les mécaniques expérimentales non encore portées sur `colab.py` (actuellement jusqu'à **v37.0/v37.1** — l'Équilibre C1/C2 & la Distillation Sélective — en passant par v36.0 le Flux Enrichi & l'Abstraction par Récurrence, v35.0/v35.1 le Cursus Progressif à 15 niveaux, le Guidage Dégressif & le Filet de Sécurité, v34.0-fix1/fix2 le correctif d'Extinction Synaptique, v32.0 l'Odorat Topologique & la Clinotaxie, v31.0/v31.1 la Mémoire Proportionnelle, le Rêve Invariant d'Échelle & la Déduplication Mnésique, en passant par v18.0 Architecture Homéostatique Biologique, v22 Hémisphère Auditif & Vocal, v27.x École de la Parole, v28.0 Cascade C1→C2→C3 & Port Exocortex, v29.0/v29.1 Bus Sensoriel & télémétrie des 5 sens, v30.0/v30.1 Odorat Dynamique, Exo-Sens & instrumentation, voir [Variante Locale de Test](#variante-locale-de-test-mac--srcnaulthenecerveaunoyaupy) et `readme_fr.md`/`docs/CHANGELOG.md` pour le détail) — toute nouvelle mécanique testée localement suit la même échelle de version que le script de référence, marquée `-experimental` tant qu'elle n'y est pas portée. Poursuivre sur cette échelle entière (+1.0 pour la prochaine mécanique majeure) sauf décision contraire de l'utilisateur.

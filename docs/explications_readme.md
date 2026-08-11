@@ -1,6 +1,6 @@
 # Naulthène AGI — Comprendre l'algorithme en profondeur
 
-Ce document explique **comment** et **pourquoi** le cerveau `AGI_Naulthene` fonctionne, avec les vraies formules mathématiques et les vrais noms de variables du code (référence : `src/naulthene/cerveau/colab.py` v17 ; les mécaniques expérimentales additionnelles de `src/naulthene/cerveau/noyau.py`, jusqu'à la v29.1, sont signalées explicitement). Il complète le [readme.md](../readme.md) narratif par un niveau de détail algorithmique et mathématique complet.
+Ce document explique **comment** et **pourquoi** le cerveau `AGI_Naulthene` fonctionne, avec les vraies formules mathématiques et les vrais noms de variables du code (référence : `src/naulthene/cerveau/colab.py` v17 ; les mécaniques expérimentales additionnelles de `src/naulthene/cerveau/noyau.py`, jusqu'à la v29.1, sont signalées explicitement). Il complète le [readme.md](../readme_fr.md) narratif par un niveau de détail algorithmique et mathématique complet.
 
 ---
 
@@ -574,7 +574,7 @@ Dès `palier_cible >= 5` (Viser la Porte), le **Mode Libre** s'active : le guida
 | v31.0 (expérimental) | La Mémoire Proportionnelle (`capacite = dim_bus × 12 × (1+déficit)`) & le Rêve Invariant d'Échelle (référence de richesse normalisée par `empreinte_enfance`) | Supprimer deux biais : un plafond mnésique arbitraire qui saturait, et un `%_reve` qui s'effondrait mécaniquement quand le cerveau grandissait (60 % → 15 %) |
 | v30.1 (expérimental) | Instrumentation avant calibrage — 8 clés `Memoire_*`/`Sursaut_*`, invariance comportementale prouvée par empreinte à graine fixée | Mesurer avant de rendre adaptatives deux constantes arbitraires (`capacite_max=200`, `EXTENSION_PATIENCE_SURSAUT=50`) : remplacer un chiffre arbitraire par une formule arbitraire ne vaut pas mieux |
 
-Voir [CHANGELOG.md](CHANGELOG.md) pour le détail commit par commit et [readme.md](../readme.md) pour la description narrative complète de chaque version.
+Voir [CHANGELOG.md](CHANGELOG.md) pour le détail commit par commit et [readme.md](../readme_fr.md) pour la description narrative complète de chaque version.
 
 ---
 
@@ -856,4 +856,4 @@ Au-dessus de 0.5 l'agent se rapproche, en dessous il s'éloigne. C'est ce qui d�
 
 ---
 
-*Document généré à partir d'une lecture directe du code source (`src/naulthene/cerveau/colab.py` v17, `src/naulthene/cerveau/noyau.py` jusqu'à v32.0) — voir [readme.md](../readme.md) pour la documentation narrative complète et [CLAUDE.md](../CLAUDE.md) pour les règles de maintenance du projet.*
+*Document généré à partir d'une lecture directe du code source (`src/naulthene/cerveau/colab.py` v17, `src/naulthene/cerveau/noyau.py` jusqu'à v32.0) — voir [readme.md](../readme_fr.md) pour la documentation narrative complète et [CLAUDE.md](../CLAUDE.md) pour les règles de maintenance du projet.*

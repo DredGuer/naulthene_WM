@@ -4,7 +4,7 @@ d'apprentissage autonome, MiniGrid + parole.
 
 Ce module ne vit que dans l'écosystème local de test (voir CLAUDE.md, section
 "Variante Locale de Test"), pas encore porté sur `agi_google_colab.py`. Voir les plans
-v23.0/v24.0 et `readme.md` (section "Le Cursus Développemental par Ères") pour le
+v23.0/v24.0 et `readme_fr.md` (section "Le Cursus Développemental par Ères") pour le
 contexte narratif complet.
 
 v24.0 — persistance (préalable à la Phase 2 "Arène & Démo Live") : jusqu'ici ce script

@@ -3,7 +3,7 @@ L'Arène Visuelle (V24.0, expérimental) — le rendu de la Démo Live.
 
 Ce module ne vit que dans l'écosystème local de test (voir CLAUDE.md, section
 "Variante Locale de Test"), pas encore porté sur `agi_google_colab.py`. Voir le plan
-v24.0 et `readme.md` (section "L'Arène & Démo Live") pour le contexte narratif complet.
+v24.0 et `readme_fr.md` (section "L'Arène & Démo Live") pour le contexte narratif complet.
 
 Pur module de RENDU (pygame) — aucune dépendance au réseau de neurones ni au moteur
 MiniGrid. Il reçoit une image déjà rendue (`etat.env.render()`, `render_mode="rgb_array"`)

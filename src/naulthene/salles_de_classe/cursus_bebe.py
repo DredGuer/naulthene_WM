@@ -4,7 +4,7 @@ ticks) d'apprentissage 100% auto-supervisé avant tout signal de récompense ext
 
 Ce module ne vit que dans l'écosystème local de test (voir CLAUDE.md, section
 "Variante Locale de Test"), pas encore porté sur `agi_google_colab.py`. Voir
-`readme.md` (section "Nouveautés v25.0 — Le Cerveau Bébé Développemental") pour le
+`readme_fr.md` (section "Nouveautés v25.0 — Le Cerveau Bébé Développemental") pour le
 contexte narratif complet et `CHANGELOG.md` pour le détail technique du commit.
 
 Distinct du Cursus Développemental par Ères (v23.0, `cursus_developpemental.py`,

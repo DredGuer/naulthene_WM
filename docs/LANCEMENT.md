@@ -10,7 +10,7 @@ voir §6ter), le Port Exocortex C3 (`src/naulthene/exocortex/`, v28.0-expérimen
 le Bus Sensoriel des 5 sens (`src/naulthene/cerveau/bus_sensoriel.py`, v29.0-expérimental, voir
 §9), l'Exo-Sens — le 6ᵉ sens (v30.0-expérimental, voir §10) et les métriques de calibrage
 (v30.1, voir §11), et l'Odorat Topologique & la Clinotaxie (v32.0-expérimental, voir §13).
-Voir `readme.md` pour l'architecture complète, `CHANGELOG.md` pour
+Voir `readme_fr.md` pour l'architecture complète, `CHANGELOG.md` pour
 l'historique des versions, et [Old_Archive_rmd/](Old_Archive_rmd/) pour les documents de
 conception historiques.
 
@@ -226,7 +226,7 @@ relancer `daemon_cerveau.py` plus tard, il reprendra exactement où il en était
 Contrairement aux sections 1-5 (qui utilisent la Cuve/daemon), ce mode ne passe **pas** par
 `daemon_cerveau.py` — c'est un script **standalone** qui pilote directement un cerveau. Il
 alterne automatiquement MiniGrid le matin et apprentissage vocal l'après-midi, sur 3 ères de
-difficulté croissante (voir `readme.md`, section "Le Cursus Développemental par Ères").
+difficulté croissante (voir `readme_fr.md`, section "Le Cursus Développemental par Ères").
 
 ⚠️ **Cerveau séparé** : `cursus_developpemental.py` charge/sauvegarde un fichier dédié
 `brains/naulthene_cursus.brain` — distinct de `brains/naulthene_v21.brain` utilisé par la Cuve.
@@ -279,7 +279,7 @@ Comme le Cursus par Ères (§6), ce mode ne passe **pas** par `daemon_cerveau.py
 script **standalone** (`src/naulthene/salles_de_classe/cursus_bebe.py`, v25.0/v26.0,
 expérimental) qui pilote directement un cerveau à travers **4 ans (1440 jours subjectifs ×
 3600 ticks/jour)** découpés en 5 phases d'âge, avec récompense externe masquée pendant les 240
-premiers jours (voir `readme.md`, section "Nouveautés v25.0 — Le Cerveau Bébé Développemental").
+premiers jours (voir `readme_fr.md`, section "Nouveautés v25.0 — Le Cerveau Bébé Développemental").
 
 ⚠️ **Cerveau séparé** : `cursus_bebe.py` charge/sauvegarde un fichier dédié
 `brains/naulthene_bb.brain` — distinct à la fois de `brains/naulthene_v21.brain` (Cuve) et de
@@ -366,7 +366,7 @@ nouvellement greffés" du tableau de dépannage en fin de document.
 Comme les deux cursus précédents (§6, §6bis), ce mode ne passe **pas** par `daemon_cerveau.py`
 — c'est un script **standalone** (`src/naulthene/salles_de_classe/cursus_parole.py`) qui pilote
 directement un cerveau à travers **900 jours subjectifs × 800 ticks**, découpés en 3 phases
-pédagogiques (voir `readme.md`, section "Nouveautés v27.0 — L'École de la Parole & Synesthésie") :
+pédagogiques (voir `readme_fr.md`, section "Nouveautés v27.0 — L'École de la Parole & Synesthésie") :
 
 | Phase | Jours | Nom | Ce qui change |
 |-------|-------|-----|----------------|

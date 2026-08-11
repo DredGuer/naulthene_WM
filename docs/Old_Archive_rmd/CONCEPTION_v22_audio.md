@@ -1,6 +1,6 @@
 # CONCEPTION — V22 : L'Hémisphère Auditif & Vocal (expérimental)
 
-> ✅ **Implémenté et corrigé** (voir `readme.md` section "🗣️ L'Hémisphère Auditif &
+> ✅ **Implémenté et corrigé** (voir `readme_fr.md` section "🗣️ L'Hémisphère Auditif &
 > Vocal", `CHANGELOG.md` entrées `[22.0-experimental]` et `[22.1-experimental]`). Ce
 > document reste comme trace de la conception initiale ; deux décisions ont été
 > **tranchées différemment** de ce qui était recommandé ici après une correction de

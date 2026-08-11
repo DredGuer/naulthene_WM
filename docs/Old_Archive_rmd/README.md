@@ -46,6 +46,6 @@ qu'aucun document « à jour » ne raconte. C'est précisément leur valeur : é
 
 Un document rejoint cette archive quand sa mécanique est **livrée et documentée ailleurs** —
 jamais parce qu'il est « vieux ». Déplacer avec `git mv` (l'historique est précieux) et corriger
-les liens entrants : ces documents sont référencés depuis `readme.md`, `CLAUDE.md`, les autres
+les liens entrants : ces documents sont référencés depuis `readme_fr.md`, `CLAUDE.md`, les autres
 docs **et le code source** (docstrings de `bus_sensoriel.py`, `hemisphere_audio.py`,
 `professeur_gemma.py`…). Vérifier après déplacement qu'aucun lien ne pointe dans le vide.

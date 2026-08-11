@@ -56,7 +56,7 @@ def lancer_corps_artificiel(host="127.0.0.1", port=9999, duree_ticks=2000, delai
     interrompu = False
     try:
         while continu or i < duree_ticks:
-            # Paquet de perception au format du protocole (voir readme.md, section
+            # Paquet de perception au format du protocole (voir readme_fr.md, section
             # "Le Nerf Optique") — vision vide/heartbeat dans cette itération, voir
             # la note d'honnêteté architecturale en tête de fichier.
             perception = {

@@ -3,7 +3,7 @@
 Ce document explique, en langage clair, **comment Naulthène apprend au fil du temps** : les
 commandes pour lancer chaque parcours, combien de temps ça prend, ce que chaque palier signifie
 concrètement, et comment lire les logs/W&B pour suivre la progression. C'est le complément
-pratique de [readme.md](../readme.md) (vision d'ensemble et formules) et
+pratique de [readme.md](../readme_fr.md) (vision d'ensemble et formules) et
 [docs/explications_readme.md](explications_readme.md) (détail algorithmique) — ici, l'angle
 est **"je veux lancer un run et comprendre ce qui se passe"**.
 

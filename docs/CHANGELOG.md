@@ -1,6 +1,6 @@
 # Changelog — Naulthène AGI
 
-Historique des évolutions du projet, commit par commit. Voir [readme.md](../readme.md) pour la documentation narrative complète et [CLAUDE.md](../CLAUDE.md) pour les règles de maintenance de ce fichier.
+Historique des évolutions du projet, commit par commit. Voir [readme.md](../readme_fr.md) pour la documentation narrative complète et [CLAUDE.md](../CLAUDE.md) pour les règles de maintenance de ce fichier.
 
 ---
 
@@ -545,7 +545,7 @@ n'est pas significative — un 0.0 laisserait croire à un échec mesuré).
 | `src/naulthene/cerveau/persistance.py` | remappage du niveau par `env_id`, sauvegarde/restauration de `historique_episodes_niveau` |
 | `CLAUDE.md` | nouvel invariant « `PROGRAMME` du cursus » (4 points) + invariant « érosion nocturne » (v34) |
 | `docs/Parcourt_readme.md` | §6 réécrit (15 niveaux, 2 voies, remappage), §6bis marqué livré |
-| `readme.md` | mention du cursus à 15 niveaux |
+| `readme_fr.md` | mention du cursus à 15 niveaux |
 
 ⚠️ **`noyau.py` uniquement** (terrain d'essai, gitignoré) — `colab.py` garde ses 5 niveaux.
 
@@ -1153,7 +1153,7 @@ et le Doctorat n'a que 1490 jours derrière lui.
 |-----------------|------------|
 | `docs/Old_Archive_rmd/CONCEPTION_v33_memoire_emotionnelle.md` | **Archivé** (`git mv`), bandeau expliquant que la prémisse est infirmée et ce qui reste valable (le `abs()` qui détruit la valence, les options écartées, les risques) ; 4 liens entrants corrigés |
 | `docs/Old_Archive_rmd/README.md` | Entrée d'index avec statut « jamais ouverte — prémisse infirmée » |
-| `docs/CHANGELOG.md`, `readme.md`, `docs/LANCEMENT.md` | Cette entrée + résultats du run |
+| `docs/CHANGELOG.md`, `readme_fr.md`, `docs/LANCEMENT.md` | Cette entrée + résultats du run |
 
 **Ce qui reste acquis de ce cycle** : trois instruments de mesure livrés et validés
 (`ChronometreJalonsDoorKey`, `QUETE_AUTO_EN_MODE_LIBRE`, chronologie des victoires), tous
@@ -1563,7 +1563,7 @@ Le document archivé reçoit un bandeau explicite listant ce qui y est dépassé
 |-----------------|------------|
 | `docs/Old_Archive_rmd/EXPLICATIONS_v29_sens.md` | Déplacé (`git mv`), bandeau « ARCHIVÉ », liens sortants recalculés d'un cran |
 | `docs/explications_readme.md` | §15 rendu autoportant (voir ci-dessus) + §15.6bis |
-| `readme.md`, `CLAUDE.md`, `docs/LANCEMENT.md`, `docs/Parcourt_readme.md`, `docs/CHANGELOG.md`, `docs/Old_Archive_rmd/{README,CONCEPTION_v30_exo_sens}.md` | 7 références entrantes corrigées ; `docs/` ne compte plus que **4 documents vivants** |
+| `readme_fr.md`, `CLAUDE.md`, `docs/LANCEMENT.md`, `docs/Parcourt_readme.md`, `docs/CHANGELOG.md`, `docs/Old_Archive_rmd/{README,CONCEPTION_v30_exo_sens}.md` | 7 références entrantes corrigées ; `docs/` ne compte plus que **4 documents vivants** |
 
 **Validation** : 100 % des liens markdown du dépôt résolvent (4 vivants + 7 archivés) ; sanity run
 120 ticks + nuit OK (52 clés) ; aucun code touché.
@@ -1724,7 +1724,7 @@ connaître l'argument qui l'avait rejetée.
 | `AMELIORATION_V1.md` | 🟡 Partiellement réalisée (§A.5 Cristallisation Souple seule) |
 | `1440_JOURS_NAULTHENE_V1.md` | 📊 Analyse de run |
 
-⚠️ **Piège traité** : ces documents étaient référencés depuis `readme.md`, `CLAUDE.md`, les autres
+⚠️ **Piège traité** : ces documents étaient référencés depuis `readme_fr.md`, `CLAUDE.md`, les autres
 docs **et sept modules du code source** (docstrings de `bus_sensoriel.py`, `hemisphere_audio.py`,
 `professeur_gemma.py`, `lecons_vocales.py`, `client_professeur.py`, `daemon_cerveau.py`,
 `irm_cerveau.py`). Déplacement par `git mv` (historique préservé, visible en `R` dans le statut),
@@ -1738,7 +1738,7 @@ markdown internes du dépôt résolvent**.
 |-----------------|------------|
 | `docs/Old_Archive_rmd/README.md` | **Nouveau.** Explique le critère d'archivage, liste le contenu avec le statut de chaque mécanique, rappelle où trouver l'état courant, et documente la procédure (`git mv` + correction des liens, y compris dans le code) |
 | `docs/LANCEMENT.md` | En-tête V21-V29 → **V21-V30** (l'Exo-Sens §10 et les métriques de calibrage §11 manquaient) ; §9a : la légende de l'odorat décrivait encore la rampe linéaire à 4 cases, remplacée par l'atténuation exponentielle ; **2 lignes de dépannage** citaient `PORTEE_ODORAT=4` comme comportement actuel — corrigées |
-| `readme.md` | Nouvelle section **v30.1** (elle manquait alors que la version est livrée) + entrée de table des matières ; encadré « État du dépôt » étendu à la v30.1 |
+| `readme_fr.md` | Nouvelle section **v30.1** (elle manquait alors que la version est livrée) + entrée de table des matières ; encadré « État du dépôt » étendu à la v30.1 |
 | `docs/explications_readme.md` | §12 « v7 → v29 » → **« v7 → v30 »** (le titre était déjà en retard sur sa propre table) + 2 lignes d'évolutions (v30.0, v30.1) ; **§15.7** (Odorat Dynamique & Exo-Sens) et **§15.8** (instrumentation) ; glossaire : `PORTEE_ODORAT` marquée « plus utilisée », ajout de `LAMBDA_ODORAT`, `SEUIL_COUPURE_ODORAT`, `DIM_EXO`, `PERIODE_PERCEPTION_EXO` |
 | `CLAUDE.md` | Arborescence `docs/` refaite (vivants vs archive) ; nouvelle section **« Archivage documentaire »** dans *Maintenance du Changelog*, avec l'avertissement que le code source référence ces documents |
 
@@ -1904,7 +1904,7 @@ que le document de cadrage `docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md` (au
 
 | Fichier modifié | Changement |
 |-----------------|------------|
-| `readme.md` | Encadré « État du dépôt » ; nouvelle section v29.1 (absente jusqu'ici) ; section v30.0 explicitement marquée **en cours de conception** ; 2 entrées de table des matières |
+| `readme_fr.md` | Encadré « État du dépôt » ; nouvelle section v29.1 (absente jusqu'ici) ; section v30.0 explicitement marquée **en cours de conception** ; 2 entrées de table des matières |
 | `CLAUDE.md` | Nouvelle sous-section « État des branches » dans *Git Workflow* ; `docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md` ajouté à l'arborescence |
 | `docs/CHANGELOG.md` | Cette entrée |
 | `docs/LANCEMENT.md`, `docs/Parcourt_readme.md`, `docs/explications_readme.md` | Références de version harmonisées (v29.1) et renvoi vers le cadrage v30 |
@@ -2020,7 +2020,7 @@ La fusion `logits_instinct + valeurs_simulees * force_planification` reste **str
 
 **3. La distillation C2 → C1 : auditée, pas réimplémentée**
 
-Le document de conception présente la distillation comme « la pièce maîtresse ». L'audit de cette version confirme qu'elle est **déjà entièrement réalisée** par le cycle de vie existant de `NaultheneLinearSynaptique` : `annexe_weight` accumule le gradient diurne (C2 guide l'expérience) → `cycle_sommeil()` le consolide dans `base_weight` (C2 → C1) → la Cristallisation Souple (v26.0) fige définitivement les synapses les plus myélinisées. Aucun code ajouté ; la boucle est documentée dans `readme.md` plutôt que dupliquée.
+Le document de conception présente la distillation comme « la pièce maîtresse ». L'audit de cette version confirme qu'elle est **déjà entièrement réalisée** par le cycle de vie existant de `NaultheneLinearSynaptique` : `annexe_weight` accumule le gradient diurne (C2 guide l'expérience) → `cycle_sommeil()` le consolide dans `base_weight` (C2 → C1) → la Cristallisation Souple (v26.0) fige définitivement les synapses les plus myélinisées. Aucun code ajouté ; la boucle est documentée dans `readme_fr.md` plutôt que dupliquée.
 
 **4. Rétrocompatibilité des `.brain` — greffe par recopie, jamais par exclusion**
 
@@ -2036,7 +2036,7 @@ Nouvelle fonction `_greffer_vecteur_bio_etendu`, appelée **en amont** du filtre
 | `docs/Old_Archive_rmd/EXPLICATIONS_v29_sens.md` | **Nouveau.** Document explicatif dédié en 11 sections : le problème résolu, la hiérarchie des 5 sens, le détail du Bus Sensoriel (formules du toucher/odorat/goût), pourquoi les sens faibles restent hors de la cible JEPA, l'identité C1/C2, la boucle de distillation (avec table de correspondance note de conception ↔ code existant), JEPA comme Intuition globale, la greffe des `.brain`, les 2 options **volontairement écartées** et pourquoi, la table des 13 validations, le glossaire des constantes. |
 | `docs/explications_readme.md` | Nouvelle §15 (résumé algorithmique en 5 sous-sections, renvoi vers le document dédié) + entrée dans la table des matières + pied de page mis à jour (v28.0 → v29.0). |
 | `docs/LANCEMENT.md` | En-tête V21-V28 → V21-V29 + encadré « rien à configurer ». Note de greffe `👃` en §1. Nouvelle **§9** (observer les 5 sens en direct, vérifier la hiérarchie, tester la greffe sur une copie de `.brain`, ce que la v29.0 ne change pas). 4 nouvelles lignes de dépannage. |
-| `readme.md` | Section « Nouveautés v29.0 » + entrée `3s.` dans la table des matières + diagramme d'architecture cognitico-biologique refait (les 5 sens en entrée, blocs C1/C2 nommés, flèche de distillation) + 3 nouvelles sous-sections d'architecture (Bus Sensoriel & hiérarchie, JEPA comme Intuition, boucle de distillation). |
+| `readme_fr.md` | Section « Nouveautés v29.0 » + entrée `3s.` dans la table des matières + diagramme d'architecture cognitico-biologique refait (les 5 sens en entrée, blocs C1/C2 nommés, flèche de distillation) + 3 nouvelles sous-sections d'architecture (Bus Sensoriel & hiérarchie, JEPA comme Intuition, boucle de distillation). |
 | `CLAUDE.md` | `bus_sensoriel.py` et `EXPLICATIONS_v29_sens.md` ajoutés à l'arborescence ; §2 renommée « C1 (Réflexe) & C2 (Néo-Cortex) » ; 2 puces d'aperçu (C1/C2 nommés, Bus Sensoriel) ; **3 nouveaux garde-fous** dans *Before Modifying Code* (invariants du Bus Sensoriel/vecteur bio, frontière C1/C2 sans court-circuit, greffe par recopie jamais par exclusion) ; version expérimentale de référence 28.0 → 29.0. |
 
 **Validation** (aucun test automatisé dans ce projet — vérifications manuelles exécutées avant livraison) :
@@ -2064,12 +2064,12 @@ Nouvelle fonction `_greffer_vecteur_bio_etendu`, appelée **en amont** du filtre
 `git mv Parcourt_readme.md docs/Parcourt_readme.md` (historique préservé). Tous les liens
 relatifs internes au fichier corrigés (`../readme.md` pour remonter à la racine, chemins courts
 vers `CHANGELOG.md`/`LANCEMENT.md`/`explications_readme.md` désormais dans le même dossier).
-`readme.md` et `CLAUDE.md` mis à jour pour pointer vers `docs/Parcourt_readme.md`.
+`readme_fr.md` et `CLAUDE.md` mis à jour pour pointer vers `docs/Parcourt_readme.md`.
 
 | Fichier modifié | Changement |
 |-----------------|------------|
 | `docs/Parcourt_readme.md` | Déplacé depuis la racine (`git mv`), liens internes corrigés pour le nouvel emplacement. |
-| `readme.md` | Liens mis à jour : `Parcourt_readme.md` → `docs/Parcourt_readme.md`. |
+| `readme_fr.md` | Liens mis à jour : `Parcourt_readme.md` → `docs/Parcourt_readme.md`. |
 | `CLAUDE.md` | Entrée déplacée de la liste des fichiers racine vers la description du dossier `docs/`. |
 
 ---
@@ -2086,16 +2086,16 @@ vers `CHANGELOG.md`/`LANCEMENT.md`/`explications_readme.md` désormais dans le m
 
 **Demande utilisateur : un document unique, à la racine, qui explique de façon vulgarisée et exhaustive TOUT le fonctionnement des 4 parcours d'entraînement (Cursus par Ères, Cerveau Bébé, Cursus de la Parole, la Cuve) — commandes de lancement copier-collables, durée en jours et en ticks/jour de chacun, détail complet des 5 niveaux MiniGrid, des 7 paliers DoorKey, des 19 paliers vocaux, Mode Guidé/Libre, patience adaptative, et un rappel explicite qu'aucune progression ne régresse actuellement. Rédigé à partir d'une lecture directe du code (`noyau.py`, les 3 scripts de `salles_de_classe/`), pas de mémoire — toutes les valeurs (ticks/jour, seuils, poids de choc) vérifiées contre les constantes réelles.**
 
-Nouveau fichier `Parcourt_readme.md`, à la racine du dépôt (comme `readme.md`) plutôt que dans
+Nouveau fichier `Parcourt_readme.md`, à la racine du dépôt (comme `readme_fr.md`) plutôt que dans
 `docs/` — c'est un guide pratique de premier niveau ("je veux lancer un run"), complémentaire à
 `docs/LANCEMENT.md` (guide opérationnel technique, options CLI complètes) et
-`docs/explications_readme.md` (détail algorithmique/mathématique). Référencé depuis `readme.md`
+`docs/explications_readme.md` (détail algorithmique/mathématique). Référencé depuis `readme_fr.md`
 (table des matières + lien en tête de la Vue d'Ensemble) et `CLAUDE.md` (arborescence).
 
 | Fichier modifié | Changement |
 |-----------------|------------|
 | `Parcourt_readme.md` | **Nouveau.** 14 sections : vue d'ensemble des 4 parcours, détail par cursus (commande, rythme ticks/jour, phases/ères), les 5 niveaux MiniGrid, les 7 paliers DoorKey, les 19 paliers vocaux, Mode Guidé/Libre, patience adaptative, absence de régression, emplacement des `.brain`, lecture annotée d'un bilan de nuit, FAQ. |
-| `readme.md` | Entrée `3t.` dans la table des matières pointant vers `Parcourt_readme.md` ; lien de renvoi ajouté juste après le tableau des 5 niveaux dans la Vue d'Ensemble. |
+| `readme_fr.md` | Entrée `3t.` dans la table des matières pointant vers `Parcourt_readme.md` ; lien de renvoi ajouté juste après le tableau des 5 niveaux dans la Vue d'Ensemble. |
 | `CLAUDE.md` | `Parcourt_readme.md` ajouté à l'arborescence *Architecture* (fichiers racine). |
 
 **Validation** : toutes les valeurs numériques du document (ticks/jour par cursus : 400/3600/800 ; seuils DoorKey 2+2 ; seuils vocaux 0.15→0.45 ; `PATIENCE_MIN/MAX` 50/350 ; `FORCE_PLANIFICATION_GUIDE/LIBRE` 0.5/0.85 ; `SEUIL_PALIER_MODE_LIBRE=5` ; `JOUR_FIN_MASQUAGE_EXTERNE=240`) vérifiées par grep direct sur `noyau.py` et les 3 scripts de cursus avant rédaction, aucune valeur inventée ou approximée.
@@ -2334,7 +2334,7 @@ Nouveau fichier `Parcourt_readme.md`, à la racine du dépôt (comme `readme.md`
 | `src/naulthene/cerveau/noyau.py` | `NaultheneLinearSynaptique.__init__` : 2 nouveaux buffers (`myeline_cumul`, `cristallisee`). `cycle_sommeil()` : nouvelle Étape 3.5 (accumulation inter-nuits + cliquet de cristallisation) et érosion (Étape 3) plancher-protégée par une falaise sigmoïde plutôt qu'un plancher rigide. `agrandir()` : les 2 nouveaux buffers suivent le même triptyque resize/copie-par-segment que `myeline_M`/`trace_activation` (nouvelles dimensions nées à `0`/`False`). 3 nouvelles constantes module (`ALPHA_CRISTAL`, `SEUIL_CRISTAL`, `K_RAIDEUR_CRISTAL`). `forward()` et `fortification_dopaminergique()` inchangées — garantit par construction la règle dissymétrique (le gradient diurne sur `annexe_weight` reste identique, cristallisée ou non). |
 | `docs/Old_Archive_rmd/AMELIORATION_V1.md` | §A.5 mis à jour pour refléter la falaise sigmoïde implémentée (remplace le plancher rigide de la proposition initiale) ; glossaire §G : `MYELINE_MIN_CRISTAL` remplacé par `K_RAIDEUR_CRISTAL = 10.0` |
 | `docs/explications_readme.md` | Nouvelle section §8.5 « Cristallisation Souple » (formules exactes, extrait de code, règle dissymétrique) ; table §12 et glossaire §13 mis à jour (v26.0, `ALPHA_CRISTAL`/`SEUIL_CRISTAL`/`K_RAIDEUR_CRISTAL`) |
-| `readme.md` | Nouvelle entrée « Nouveautés v26.0 (expérimental, §A.5 seul) » en tête du Journal des Mises à Jour + entrée table des matières `3x` |
+| `readme_fr.md` | Nouvelle entrée « Nouveautés v26.0 (expérimental, §A.5 seul) » en tête du Journal des Mises à Jour + entrée table des matières `3x` |
 
 **Validation** : script de vérification manuel isolé (pas de suite de tests automatisée dans ce projet) — cristallisation asymétrique confirmée (la synapse sollicitée bascule `cristallisee=True` vers la nuit 40 sur 80 simulées, l'inactive reste `False`), falaise sigmoïde confirmée (une synapse cristallisée résiste nettement mieux à l'érosion qu'une synapse juste sous le seuil, 0.987 vs 0.950 de rétention sur un cycle), zéro synapse fantôme confirmé (une synapse jamais cristallisée est élaguée en 89 nuits, temps fini), règle dissymétrique confirmée (`backward()` produit un gradient non nul sur `annexe_weight` même aux positions cristallisées), `agrandir()` confirmé préservant l'historique sans hallucination de cristallisation sur les nouvelles dimensions.
 
@@ -2350,13 +2350,13 @@ Nouveau fichier `Parcourt_readme.md`, à la racine du dépôt (comme `readme.md`
 | **Catégorie** | refactor + docs |
 | **Impact** | Fonctionnel (imports, arborescence) + Documentation/Légal |
 
-**Le projet passe d'un ensemble de scripts plats à la racine à un vrai package Python `src/naulthene/`, organisé en sous-modules thématiques suivant le vocabulaire du projet : `cerveau/` (noyau.py ex-`agi_local_test.py`, colab.py ex-`agi_google_colab.py`, persistance.py), `salles_de_classe/` (cursus_bebe.py, cursus_developpemental.py), `cuve/` (daemon_cerveau.py, client_corps.py, client_professeur.py), `audio/` (hemisphere_audio.py, lecons_vocales.py, professeur_gemma.py), `instruments/` (arene_visuelle.py, lancer_arene.py, irm_cerveau.py). Tous les imports inter-modules sont passés en chemins de package absolus (`from naulthene.cerveau.noyau import ...`). Les cerveaux cristallisés (`*.brain`) sont rangés dans `brains/`, la documentation complémentaire dans `docs/` — `readme.md` reste à la racine (aux côtés de `LICENSE`/`NOTICE`/`CLAUDE.md`) pour rester immédiatement visible. En parallèle, le fichier `NOTICE` est renforcé : au-delà de la simple demande d'attribution, il précise explicitement (en s'appuyant sur la Section 4(d) de la licence Apache 2.0) qu'Adrien Nault doit être crédité comme auteur original du concept et de l'architecture Naulthène AGI dans toute redistribution, usage public, publication ou œuvre dérivée — pas seulement dans le code source.**
+**Le projet passe d'un ensemble de scripts plats à la racine à un vrai package Python `src/naulthene/`, organisé en sous-modules thématiques suivant le vocabulaire du projet : `cerveau/` (noyau.py ex-`agi_local_test.py`, colab.py ex-`agi_google_colab.py`, persistance.py), `salles_de_classe/` (cursus_bebe.py, cursus_developpemental.py), `cuve/` (daemon_cerveau.py, client_corps.py, client_professeur.py), `audio/` (hemisphere_audio.py, lecons_vocales.py, professeur_gemma.py), `instruments/` (arene_visuelle.py, lancer_arene.py, irm_cerveau.py). Tous les imports inter-modules sont passés en chemins de package absolus (`from naulthene.cerveau.noyau import ...`). Les cerveaux cristallisés (`*.brain`) sont rangés dans `brains/`, la documentation complémentaire dans `docs/` — `readme_fr.md` reste à la racine (aux côtés de `LICENSE`/`NOTICE`/`CLAUDE.md`) pour rester immédiatement visible. En parallèle, le fichier `NOTICE` est renforcé : au-delà de la simple demande d'attribution, il précise explicitement (en s'appuyant sur la Section 4(d) de la licence Apache 2.0) qu'Adrien Nault doit être crédité comme auteur original du concept et de l'architecture Naulthène AGI dans toute redistribution, usage public, publication ou œuvre dérivée — pas seulement dans le code source.**
 
 | Fichier modifié | Changement |
 |-----------------|------------|
 | `src/naulthene/**/*.py` (tous) | Déplacement en package (`git mv`), réécriture de tous les imports locaux en chemins de package absolus, chemins `.brain` par défaut pointant vers `brains/` |
 | `.gitignore` | Chemins mis à jour vers `brains/*.brain` et `src/naulthene/cerveau/noyau.py` |
-| `readme.md` | Reste à la racine du dépôt ; formulation d'attribution durcie en tête de document |
+| `readme_fr.md` | Reste à la racine du dépôt ; formulation d'attribution durcie en tête de document |
 | `docs/CHANGELOG.md`, `docs/explications_readme.md`, `docs/LANCEMENT.md`, `docs/Old_Archive_rmd/AMELIORATION_V1.md` | Liens relatifs corrigés vers la nouvelle arborescence (`../readme.md`, `../CLAUDE.md`, `../LICENSE`, `../NOTICE`) |
 | `CLAUDE.md` | Section Architecture réécrite pour décrire le package ; commandes de lancement mises à jour (`PYTHONPATH=src python -m naulthene....`) |
 | `NOTICE` | Attribution renforcée : exigence explicite de citer Adrien Nault comme auteur du concept/architecture original, dans tout usage public (pas seulement redistribution de code), avec référence à la Section 4(d) de la licence |
@@ -2946,4 +2946,4 @@ Nouveau fichier `Parcourt_readme.md`, à la racine du dépôt (comme `readme.md`
 
 ---
 
-*Note : les entrées v7.0 à v14.0 ont été reconstituées à partir du journal narratif de [readme.md](../readme.md) lors de la mise en place initiale de ce changelog (2026-07-22) — les hash de commit réels n'étaient pas disponibles rétroactivement (dépôt git non initialisé jusqu'à cette date). Toute nouvelle entrée à partir de maintenant doit renseigner un hash réel.*
+*Note : les entrées v7.0 à v14.0 ont été reconstituées à partir du journal narratif de [readme.md](../readme_fr.md) lors de la mise en place initiale de ce changelog (2026-07-22) — les hash de commit réels n'étaient pas disponibles rétroactivement (dépôt git non initialisé jusqu'à cette date). Toute nouvelle entrée à partir de maintenant doit renseigner un hash réel.*

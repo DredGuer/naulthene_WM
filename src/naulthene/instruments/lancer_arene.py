@@ -3,7 +3,7 @@ L'Arène & Démo Live (V24.0, expérimental) — observer un cerveau entraîné 
 
 Ce module ne vit que dans l'écosystème local de test (voir CLAUDE.md, section
 "Variante Locale de Test"), pas encore porté sur `agi_google_colab.py`. Voir le plan
-v24.0 et `readme.md` (section "L'Arène & Démo Live") pour le contexte narratif complet.
+v24.0 et `readme_fr.md` (section "L'Arène & Démo Live") pour le contexte narratif complet.
 
 Charge un `.brain` existant (par défaut `naulthene_cursus.brain`, produit par
 `cursus_developpemental.py` — mais n'importe quel `.brain`, y compris

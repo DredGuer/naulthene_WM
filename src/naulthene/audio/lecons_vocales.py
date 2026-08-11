@@ -4,7 +4,7 @@ Développemental par Ères.
 
 Ce module ne vit que dans l'écosystème local de test (voir CLAUDE.md, section
 "Variante Locale de Test"), pas encore porté sur `agi_google_colab.py`. Voir le plan
-v23.0 et `readme.md` (section "Le Cursus Développemental par Ères") pour le contexte.
+v23.0 et `readme_fr.md` (section "Le Cursus Développemental par Ères") pour le contexte.
 
 Jusqu'à la v22.1, toute la génération de référence audio (dire un mot via `say`, le
 convertir en MFCC) vivait côté CLIENT (`client_professeur.py`), pilotée manuellement

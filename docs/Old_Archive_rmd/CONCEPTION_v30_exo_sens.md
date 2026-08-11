@@ -242,7 +242,7 @@ les plugs existants (`PlugNul`, `PlugSimule`, `PlugHTTP`).
 | `src/naulthene/cerveau/persistance.py` | Vérifier que `_greffer_vecteur_bio_etendu` gère 24 → 32 sans modification (elle est écrite de façon générique — à confirmer par test) |
 | `src/naulthene/exocortex/port_c3.py` | Faire évoluer `ReponseC3` pour porter un vecteur perceptif, en restant rétrocompatible avec les 3 plugs existants |
 | `src/naulthene/exocortex/plugs/` | `PlugMemoireAugmentee` (local, déterministe) ; vérifier que `PlugHTTP` couvre bien Ollama/RAG/API par simple configuration |
-| `docs/` | `CHANGELOG.md`, `readme.md`, `LANCEMENT.md`, `Parcourt_readme.md`, `explications_readme.md`, et ce document |
+| `docs/` | `CHANGELOG.md`, `readme_fr.md`, `LANCEMENT.md`, `Parcourt_readme.md`, `explications_readme.md`, et ce document |
 
 ### Ordre d'exécution
 

@@ -7,7 +7,7 @@ en arrière-plan indéfiniment et héberge le cerveau (`AGI_Naulthene` + tout so
 biologique/curriculum, voir `EtatCognitif` dans agi_local_test.py) au-delà de la durée
 de vie d'un seul process d'entraînement.
 
-Métabolisme à 3 états (voir readme.md, section "Le Cerveau Persistant en Cuve") :
+Métabolisme à 3 états (voir readme_fr.md, section "Le Cerveau Persistant en Cuve") :
 
   1. L'Éveil (connexion active) : `_vivre_connexion` traite un tick complet par
      paquet réseau reçu — la faim augmente, les synapses s'activent, la LTP opère.
@@ -35,7 +35,7 @@ nuit" ET "seuil de ticks" plutôt que choisir l'un ou l'autre.
     jauge biologique ne bouge et aucune synapse ne s'érode — le métabolisme s'arrête
     net, protection contre la famine hors connexion.
 
-⚠️ Limite assumée de cette itération (voir readme.md et le plan v21.0) : le VRAI code
+⚠️ Limite assumée de cette itération (voir readme_fr.md et le plan v21.0) : le VRAI code
 de `traiter_tick`/`step_metabolisme`/`DetecteurRessourcesBiologiques` lit les internes
 MiniGrid (`env.unwrapped.agent_pos`, `.grid`, positions des `Ball` Nourriture/Eau) pour
 la biologie et la mémoire spatiale. Un client purement "pixels + action" ne peut pas
