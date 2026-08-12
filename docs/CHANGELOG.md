@@ -4,6 +4,79 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [recherche] - 2026-08-12
+
+### L'apprentissage plutôt que le cerveau — la révision espacée fait ×4,5 sur les victoires
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | docs (recherche expérimentale) |
+| **Impact** | **Documentation** — aucun changement de code |
+
+Neuf runs de 1200 jours menés le 12/08, tous par **surcharge en mémoire** depuis le
+scratchpad. `src/naulthene/` n'a reçu **aucune modification**.
+
+**📋 Carnet complet** : [`recherche_bug_or_not_bug.md`](recherche_bug_or_not_bug.md)
+
+**🔬 Les 4 axes de conciliation (A1–A4)**
+
+| Run | Repères | Conf. | Palier | Victoires |
+|---|---|---|---|---|
+| BASE | 739 | 54 | 3/3 ✅ | 3 |
+| A1 (C2 profond) | 685 | 67 | 3/3 ✅ | 3 |
+| **A3 (patience ∝ √surface)** | 586 | 27 | **5/5** ✅ | 5 |
+| A1+A2+A3 | 25 | 3264 | 0/5 ❌ | 4 |
+
+**A3 franchit un cursus de 6 paliers depuis la naissance.** Le seul changement par rapport
+au run raté : la patience étirée sur `patience_jour` (le budget réel, `noyau.py:4856`) et
+non `patience_base_jour` (la valeur *loguée*, `noyau.py:4139`). Sur une grande carte, **le
+temps d'exploration est une ressource au même titre que la mémoire**.
+
+**🔬 H12/H13/H14 — l'apprentissage (hypothèses utilisateur)**
+
+| Run | Palier | Victoires | Repères | Conf. |
+|---|---|---|---|---|
+| Témoin | 2/5 | 2 | 131 | 294 |
+| H13 grâce mnésique | 3/5 | 3 | 118 | 110 |
+| H14 entrelacement | 4/5 | 4 | 383 | 47 |
+| **H13 + H14** | **5/5** ✅ | **9** | **605** | **18** |
+| H12 rotation forcée | 1/5 | 2 | 689 | 49 |
+
+**Trois résultats structurants :**
+
+1. **Les deux mécanismes se combinent** (+1 et +2 paliers séparément, **+3 paliers et ×4,5
+   victoires** ensemble) — une première, la combinaison H11+H09 ayant échoué la veille.
+   H14 produit la nouveauté, H13 l'empêche d'être effacée à la naissance.
+
+2. **Le « moment de bascule »** : toutes les conditions gagnantes stagnent **700 à 900
+   jours** avant de décoller. ⚠️ Ce plateau est **indiscernable de l'échec** diagnostiqué
+   depuis le début du projet — le run de 600 jours fondateur aurait été coupé 200 jours
+   avant le décollage. **Aucun run de moins de 1000 jours ne peut conclure à un blocage.**
+
+3. **La largeur mnésique ne suffit pas** : H12 produit 689 repères (record du projet) et ne
+   franchit rien. Ni la largeur ni la profondeur ne comptent — seule **la nouveauté qui
+   revient sur du connu**.
+
+**Cause mécanique identifiée** (`noyau.py:2389`) : l'éviction retire le repère au
+`confirmations` **minimal**. Un repère neuf naît à 1, il est donc **toujours** le minimum,
+donc évincé immédiatement. **L'oubli tue la nouveauté au profit de l'habitude.** La règle
+v36.0 est juste sur le principe mais crée un cliquet — même défaut de forme que
+`norme_naissance` (v34.0-fix2) et `reference_choc_dopamine` (v37.1-fix1) : *une référence
+qui suit sa propre dérive ne borne plus rien.*
+
+⚠️ **Rien n'est porté dans `src/`.** Les constantes (10 nuits de grâce, 20 % de révision)
+sont de l'**inné arbitraire**, ce que [CLAUDE.md](../CLAUDE.md) interdit. Elles ont répondu
+à « l'effet existe-t-il ? » ; elles doivent maintenant **dériver du vécu** (plasticité du
+moment pour la grâce, fragilité mesurée de la compétence pour la révision).
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `docs/recherche_bug_or_not_bug.md` | A1–A4, H12/H13/H14, le moment de bascule, la frontière inné/acquis |
+| `docs/CHANGELOG.md` | cette entrée |
+
+---
+
 ## [recherche] - 2026-08-11
 
 ### Campagne d'investigation « bug or not bug » — 7 hypothèses testées, aucune ligne de `src/` modifiée

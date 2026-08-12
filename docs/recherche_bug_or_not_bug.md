@@ -546,7 +546,263 @@ une surcharge de constante. `agrandir()` sait faire croître, rien ne sait rétr
 | A3 | — | — | ✅ | l'effet du lissage seul |
 | A1+A2+A3 | ✅ | ✅ | ✅ | la conciliation complète |
 
-🔬 **Runs en cours** — résultats à consigner.
+#### Un bug du banc d'essai, trouvé avant l'analyse (12/08)
+
+La première salve a été interrompue à ~550 jours par un redémarrage de session. En
+reprenant, une relecture du code a montré que **A3 n'avait jamais reçu sa patience
+élargie** : le script étirait `etat.patience_base_jour`, qui n'est que la valeur
+**loguée** (`noyau.py:4139`, commentaire « capturée avant tout étirement par Sursaut,
+pour le log »). Le budget réellement consommé par le test d'abandon est
+`etat.patience_jour` (`noyau.py:4856`).
+
+A3 a donc tourné 567 jours en recevant les **grandes cartes avec le budget d'une 5×5** —
+soit l'exact inverse de l'axe testé. C'est aussi l'explication la plus simple de son
+retard (palier 2/5 quand BASE et A1 étaient à 3/3).
+
+Conséquence sur le protocole : **A3 repart de zéro** sur un cerveau neuf (les 567 jours
+sont conservés en `.bak` mais écartés de l'analyse — mélanger deux conditions dans une
+même courbe la rendrait illisible), tandis que BASE, A1 et A1+A2+A3 **reprennent** leurs
+cerveaux. L'asymétrie est notée ici pour que personne ne compare plus tard des âges
+différents sans le savoir.
+
+> Leçon de méthode, la même qu'en H10 tentative 1 : **vérifier que le levier agit bien sur
+> la variable que le noyau lit**, pas sur son homonyme d'affichage. Un test qui ne teste
+> rien ressemble en tout point à un test qui échoue.
+
+#### Signal précoce, avant même la fin des runs
+
+Sur les ~550 premiers jours de la salve interrompue :
+
+| Run | Jour | Palier atteint |
+|---|---|---|
+| BASE | 553 | **3/3** (16×16) |
+| A1 | 550 | **3/3** (16×16) |
+| A3 | 567 | 2/3 *(patience buguée, run écarté)* |
+| A1+A2+A3 | 518 | **0/5** ← bloqué au départ |
+
+**A2 bloque tout.** Le double verrou (taux ≥ 35 % **ET** confirmations ≥ 50) n'a jamais
+laissé passer une seule promotion en 518 jours. À vérifier sur le run complet : si les
+confirmations moyennes plafonnent sous 50, le verrou est inatteignable par construction —
+ce serait un seuil en dur déguisé en critère de consolidation, exactement ce que le projet
+s'interdit.
+
+#### Résultats des 4 runs (12/08)
+
+| Run | Repères | Conf. moy | Palier | Victoires | Jour |
+|---|---|---|---|---|---|
+| BASE | 739 | 54 | 3/3 ✅ | 3 | 1253 |
+| A1 (C2 profond) | 685 | 67 | 3/3 ✅ | 3 | 1250 |
+| **A3 (patience corrigée)** | 586 | 27 | **5/5** ✅ | 5 | 1200 |
+| A1+A2+A3 | **25** | **3264** | **0/5** ❌ | 4 | 1218 |
+
+**✅ A3 est le meilleur résultat du projet à ce jour** — cursus à 6 paliers franchi de bout
+en bout depuis la naissance, promotions aux jours 175, 269, 326, 632 et 921. La
+progression est *régulière* (pas un coup de chance) et l'espacement croissant des
+promotions est le signe d'une difficulté qui monte réellement.
+
+Le seul changement par rapport au run raté : **la patience étirée sur la bonne variable**.
+Le lissage des paliers (10×10, 12×12) sans le budget de temps ne servait à rien ; avec, il
+franchit tout. La leçon dépasse le test : sur une grande carte, **le temps d'exploration
+est une ressource au même titre que la mémoire**.
+
+**❌ A1 n'a rien changé** (685 repères / palier 3, contre 739 / palier 3 pour BASE). Le C2
+profond n'a produit aucun écart mesurable. Attention à ne pas le déclarer inutile trop
+vite : le ratio C1/C2 était déjà revenu à ~0,6× depuis les correctifs v37, donc C2 n'était
+plus écrasé — la couche cachée corrige un goulot **expressif** dont rien ne prouve encore
+qu'il soit le facteur limitant.
+
+**❌ A2 est le blocage, et pas pour la raison supposée.** J'avais écrit plus haut que le
+verrou « confirmations ≥ 50 » risquait d'être inatteignable. **C'est faux, mesuré** :
+A1+A2+A3 atteint **3264 confirmations de moyenne**, 65× le seuil. Le verrou n'a jamais
+bloqué sur les confirmations.
+
+#### La vraie découverte : largeur ≠ profondeur mnésique
+
+En rassemblant tous les runs, la séparation est **parfaite, sans une exception** :
+
+| Run | Repères | Conf. moy | Palier |
+|---|---|---|---|
+| A1+A2+A3 | 25 | 3264 | 0/5 ❌ |
+| H11 surproduction | 25 | 1788 | 0/3 ❌ |
+| A3fix | 586 | 27 | 5/5 ✅ |
+| A1 | 685 | 67 | 3/3 ✅ |
+| BASE | 739 | 54 | 3/3 ✅ |
+
+- **Peu de repères, massivement re-confirmés** (23–25) ⇒ **jamais** de promotion
+- **Beaucoup de repères, peu confirmés** (586–739) ⇒ cursus franchi
+
+Le chiffre « H11 = 1460 confirmations » consigné la nuit précédente était juste mais **lu à
+l'envers** : ce n'était pas une mémoire riche, c'était **25 souvenirs relus 1788 fois
+chacun**. H11 ne gagne pas parce qu'il a compris ; il gagne parce qu'il a sur-appris UNE
+configuration. Il n'est pas savant, il est **obsessionnel**.
+
+C'est exactement l'intuition de l'utilisateur — « un cerveau qui revoit en boucle les mêmes
+choses sans jamais de nouveauté se meurt de bêtise » — retrouvée par la mesure.
+
+⚠️ **Le fait le plus dérangeant du projet** : les gagnants sont les ignorants. H11 fait
+**18 victoires avec 25 repères**, les explorateurs en font **3 avec 700 repères**. La
+récompense de MiniGrid **paie l'obsession** : 18 victoires est un optimum local très
+profond, trouvé par le système, pas contre lui.
+
+---
+
+## H12 / H13 / H14 — l'apprentissage plutôt que le cerveau *(hypothèses utilisateur)*
+
+> « La taille est un facteur d'intelligence, seulement si l'organisation interne est
+> bonne. Je pense que plus que le cerveau, l'apprentissage est aussi important. »
+
+### La cause mécanique, trouvée dans le code
+
+`noyau.py:2389` évince le repère au `confirmations` **minimal**. Un repère neuf naît à
+`confirmations: 1` — il est donc **toujours le minimum**, donc évincé **immédiatement**,
+écrasé par des souvenirs 1788× plus établis.
+
+**L'oubli tue systématiquement la nouveauté au profit de l'habitude.** H11 n'a pas 25
+repères parce qu'il explore peu : parce que tout ce qu'il découvre est effacé à la
+naissance. La règle v36.0 (« l'oubli retire le moins abstrait ») est juste sur le principe
+mais crée un **cliquet** : plus un souvenir est ancien, plus il est protégé, donc plus il
+se re-confirme, donc plus il est protégé.
+
+C'est le même défaut de forme que `norme_naissance` (v34.0-fix2) et
+`reference_choc_dopamine` (v37.1-fix1) : **une référence qui suit sa propre dérive ne borne
+plus rien.**
+
+### Les trois tests
+
+| # | Hypothèse | Mécanisme testé |
+|---|---|---|
+| **H13** | grâce mnésique | un repère de moins de 10 nuits est **inévinçable** |
+| **H14** | entrelacement | 20 % des jours rejouent un palier **déjà franchi** |
+| **H12** | rotation forcée | le niveau change tous les 100 j **sans promotion** |
+
+**H13** applique le « ne rien enlever les premiers temps » de l'utilisateur à l'échelle du
+*souvenir* : une période de consolidation avant d'entrer en compétition. Biologiquement
+fondé — un souvenir récent est protégé pendant sa consolidation, pas jugé sur son
+ancienneté d'usage.
+
+**H14** est l'*interleaved practice*, l'un des effets les mieux établis en sciences de
+l'apprentissage (révision espacée et mélangée > blocs massés). Le cursus actuel est
+purement **bloqué** : un niveau franchi disparaît à jamais, aucun mécanisme ne le rejoue.
+
+**H12** sépare deux lectures concurrentes du découplage : si la largeur mnésique apparaît
+quand le monde change **sans** promotion, c'est le changement de monde qui la crée (et la
+largeur est une *conséquence* de la progression, pas sa cause). Si elle n'apparaît pas,
+c'est le bus 64 lui-même qui produit l'obsession — et le coupable est **A4** : naître large
+**sans jamais élaguer**.
+
+### Sur les constantes — la frontière inné / acquis
+
+> Question de l'utilisateur : « où s'arrête l'inné, où commence l'apprentissage ? »
+
+Dans ce projet la réponse est nette : **l'inné pose des MÉCANISMES, jamais des NIVEAUX.**
+
+| Inné (écrit dans le code) | Acquis (valeur numérique vécue) |
+|---|---|
+| l'architecture (C1, C2, JEPA, bus unifié) | les poids, la myéline |
+| les *règles* de plasticité, d'homéostasie, d'oubli | les repères, leur `valence` |
+| la structure des sens | `reference_choc_dopamine` |
+
+`reference_choc_dopamine` est l'exemple canonique : le même choc de 0,1 vaut **100 % pour
+un débutant et 11,4 % pour le même agent devenu expert**.
+
+⚠️ **`NUITS_DE_GRACE = 10` et `PROBA_ENTRELACEMENT = 0.20` sont donc de l'inné arbitraire**
+— exactement ce que CLAUDE.md interdit. Ils sont en **dur assumé**, et uniquement pour
+répondre à « l'effet existe-t-il ? ». S'il existe, ils devront dériver de quelque chose de
+vécu (la plasticité du moment pour la grâce ; la *fragilité mesurée* de la compétence pour
+la révision, plutôt qu'un pourcentage fixe). C'est la méthode du projet : **instrumenter et
+mesurer avant de rendre adaptatif**, ne jamais remplacer un chiffre arbitraire par une
+formule arbitraire.
+
+### Résultats — 5 runs de 1200 jours (12/08)
+
+Tous avec le correctif de patience A3, tous partis de la naissance.
+
+| Run | Palier | Victoires | Repères | Conf. moy |
+|---|---|---|---|---|
+| Témoin | 2/5 | 2 | 131 | 294 |
+| H13 grâce seule | 3/5 | 3 | 118 | 110 |
+| H14 entrelacement seul | 4/5 | 4 | 383 | 47 |
+| **H13 + H14** | **5/5** ✅ | **9** | **605** | **18** |
+| H12 rotation forcée | 1/5 * | 2 | 689 | 49 |
+
+\* trompeur : la rotation fait *visiter* les 6 paliers sans jamais les mériter ; le niveau
+final n'est qu'une position dans le cycle.
+
+### ✅ Les deux mécanismes se COMBINENT — une première dans ce carnet
+
+H13 seul : **+1 palier**. H14 seul : **+2 paliers**. Ensemble : **+3 paliers et 9 victoires**
+(contre 2 pour le témoin, ×4,5).
+
+Ce n'est pas additif, c'est **multiplicatif** — et c'est notable parce que la combinaison
+précédente avait **échoué** : H11+H09 donnait 3 victoires au lieu des 21 espérées.
+
+La raison est mécanique et se dit en une phrase : **H14 produit de la nouveauté (le monde
+change), H13 l'empêche d'être effacée à la naissance.** Séparément, chacun est bridé par ce
+qui manque à l'autre — H14 génère des repères neufs que l'éviction tue aussitôt ; H13
+protège des repères neufs qu'un monde figé ne produit jamais.
+
+C'est exactement la formulation de l'utilisateur : *« il faut de la diversité, mais en même
+temps de la redondance »*.
+
+### 🔑 Le « moment de bascule » — le fait le plus important de la journée
+
+| Run | 1ʳᵉˢ promotions | Plateau | Reprise |
+|---|---|---|---|
+| H13+H14 | j.66, j.68 | **742 jours** | j.810, 857, 987 |
+| H14 | j.94, j.136 | **751 jours** | j.887, 893 |
+| H13 | j.45 | **914 jours** | j.959, 1112 |
+
+Toutes les conditions gagnantes suivent la même forme : deux promotions rapides, **un
+plateau de 700 à 900 jours**, puis un décollage.
+
+⚠️ **Ce plateau est indiscernable de l'échec qu'on diagnostique depuis le début du projet.**
+Le run de 600 jours qui a lancé toute cette investigation aurait été coupé **200 jours avant
+le décollage** — et conclu « bloqué au niveau 2 ». Le diagnostic « l'agent stagne » a
+peut-être été porté, à plusieurs reprises, sur des runs simplement **trop courts**.
+
+C'est la réponse à la question de l'utilisateur — *« laisser la connaissance s'accumuler
+(je ne sais pas à quel point) »* : **~800 jours**, et rien avant ne l'annonce.
+
+Conséquence de méthode : **aucun run de moins de 1000 jours ne peut conclure à un blocage.**
+
+### ❌ H12 réfute « la largeur mnésique suffit »
+
+H12 produit la mémoire la plus large de tous les runs du projet (**689 repères**) et ne
+franchit rien. C'est la réfutation directe d'une hypothèse formulée plus tôt dans la
+journée (« la promotion fabrique la diversité, la largeur serait une conséquence »).
+
+Les deux sens sont faux :
+
+- Peu de repères sur-confirmés (25) ⇒ pas de progression *(H11, A1+A2+A3)*
+- **Beaucoup de repères ⇒ pas de progression non plus** *(H12, 689 repères)*
+
+Ce qui compte n'est donc **ni la largeur ni la profondeur**, mais **de la nouveauté qui
+revient sur du connu**. Un monde qui change en permanence (H12) est aussi stérile qu'un
+monde qui ne change jamais (H11). La révision — revenir sur un palier **déjà franchi** —
+est le seul mécanisme qui produise les deux à la fois.
+
+### Réserves
+
+- **Un seul run par condition.** L'écart témoin → H13+H14 (2 → 9 victoires) dépasse
+  largement la marge de variance mesurée en H10 (3 vs 7, « aucun écart sous 4 victoires
+  n'est significatif »), donc l'effet principal tient. Mais l'écart H13 seul vs H14 seul
+  (3 vs 4) est **dans le bruit** et ne doit pas être interprété.
+- **Les constantes restent de l'inné arbitraire** (10 nuits, 20 %). Elles ont répondu à
+  « l'effet existe-t-il ? » — oui. Elles doivent maintenant dériver du vécu.
+
+🔬 **Réplication lancée le 12/08 à 14h45** : H13+H14 sur 3 graines (101, 202, 303) **et 3
+témoins sur les mêmes graines**. Sans les témoins appariés, un bon résultat pourrait n'être
+qu'un tirage favorable. Note technique : `noyau.py:48-49` fixe torch/numpy à 42 **au
+chargement du module** — les graines sont donc réécrites *après* l'import, sinon les trois
+répétitions seraient strictement identiques.
+
+### À méditer plus tard *(idées utilisateur, non testées)*
+
+- **Les siestes** : un cycle de consolidation *intra*-journée, en plus du sommeil nocturne.
+- **Corréler l'énergie et la capacité d'apprentissage** : manger plus ⇒ apprendre plus. Le
+  socle existe déjà (satiété, hydratation, `deficit_bio`) et module déjà la capacité
+  mnésique — mais **pas** le taux d'apprentissage lui-même. Piste cohérente avec le coût
+  énergétique réel du cerveau (50 % de l'énergie de l'enfant à 5 ans).
 
 ---
 
