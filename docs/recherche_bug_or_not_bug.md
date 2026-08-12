@@ -41,7 +41,9 @@ D'où le titre de ce carnet.
 | H8 | Le problème est la NOTATION | 🟡 **MIXTE** | Pas plus de victoires, mais **×36 de consolidation** sans sanction |
 | H9 | Le seuil de promotion est inadapté | ⏳ **NON TESTÉE** | 60 % sur 48 configurations ≠ 60 % sur 1 configuration |
 | H10 | La sévérité doit décroître avec l'âge | 🟡 **NON CONCLUANT** | Gradient obtenu, 3 victoires — dans la variance ; protocole défaillant |
-| H11 | **Surproduction initiale** (foisonner avant d'élaguer) | 🔬 **EN COURS** | Le cerveau humain crée 1M synapses/s AVANT l'élagage |
+| H11 | **Surproduction initiale** (foisonner avant d'élaguer) | ✅ **CONFIRMÉE** | Bus 64 à la naissance → **18 victoires** contre 7 |
+| H9 (testée) | **Le seuil de promotion** | ✅ **CONFIRMÉE** | 25 %/1 vict. → **cursus franchi de bout en bout**, une première |
+| A1 | C2 est une fonction de valeur **linéaire** | 🔬 **EN COURS** | Projection dim_bus→1 sans couche cachée |
 
 ---
 
@@ -421,7 +423,130 @@ Trois runs de **1200 jours** lancés en parallèle :
 Tous sur le cursus DoorKey adaptatif (H6, la meilleure base). 1200 jours au lieu de 800 pour
 dépasser la variance observée.
 
-🔬 **Runs en cours** — résultats à consigner demain.
+### Résultats — runs de 1200 jours (nuit du 11 au 12 août)
+
+| | H11 surproduction | H09 seuil | H11+H09 |
+|---|---|---|---|
+| Victoires / 1200 j | **18** | 3 | 3 |
+| **Palier final** | 0/3 | **3/3** ✅ | **3/3** ✅ |
+| Confirmations mémoire | **1460** | 28 | 174 |
+| Accord C1/C2 | 0,00008 | 0,029 | **0,639** |
+| Synapses mortes | 0 | 0 | 0 |
+
+**Répartition des victoires (par 150 jours) :**
+
+```
+H11 surprod   4  0  0  2  3  5  3  1   = 18   ← accélère jusqu'au jour 900
+H09 promo     0  0  1  0  2  0  0  0   =  3
+H11+H09       0  1  0  0  0  0  0  2   =  3
+```
+
+### ✅ H11 — la surproduction initiale fonctionne
+
+Naître à 64 dimensions au lieu de 16 donne **18 victoires contre 7** pour l'adaptatif de
+référence, et **1460 confirmations mémoire**. C'est le meilleur total de toute la campagne
+DoorKey, et la courbe monte jusqu'au jour 900.
+
+Le fait biologique se transpose : *foisonner d'abord, élaguer ensuite*. L'agent élaguait
+sans avoir jamais foisonné.
+
+### ✅ H9 — le seuil de promotion était bien le verrou
+
+```
+jour 417 → DoorKey 6×6
+jour 648 → DoorKey 8×8
+jour 651 → DoorKey 16×16   ← cursus terminé
+```
+
+**Première fois du projet qu'un cursus est franchi de bout en bout.** Passer de
+« 60 % / 2 victoires consécutives » à « 25 % / 1 victoire » suffit — aucun des sept runs
+précédents n'avait franchi une seule promotion.
+
+### 🔴 Le découplage : gagner ≠ progresser
+
+Les deux effets **ne se combinent pas** : H11+H09 donne 3 victoires, pas 21.
+
+| Run | Profil |
+|---|---|
+| H11 | **Le Savant** — gagne beaucoup (18), mémorise énormément (1460), ne monte jamais de niveau |
+| H09 | **Le Franchisseur** — monte tout le cursus, mais 3 victoires et 28 confirmations |
+
+H11 accumule 18 victoires **réparties**, jamais consécutives ni concentrées : il ne
+déclenche donc aucune promotion. H09 monte sur des coups de chance sans avoir consolidé.
+
+**Gagner et progresser sont deux régimes distincts**, et aucun run n'a réussi les deux.
+
+---
+
+## A1 à A4 — Les quatre axes de conciliation *(formulés par l'utilisateur)*
+
+### A1 — Le goulot de C2 : une correction factuelle et une confirmation
+
+> Formulation initiale : *« `cortex_prefrontal` est resté figé à 64 paramètres »*
+
+❌ **Factuellement inexact** : `cortex_prefrontal = NaultheneLinearSynaptique(dim_bus, 1)`.
+Il vaut `dim_bus × 1`, donc il a bien suivi 16 → 64 → 96 paramètres.
+
+✅ **Mais l'intuition tient, et plus fortement** : c'est une **projection LINÉAIRE vers un
+scalaire**, sans aucune couche cachée.
+
+```
+C2 = cortex_prefrontal : (1, 64)  → une somme pondérée, aucune non-linéarité
+C1 = tete_motrice      : (8, 64)  → 8× plus de paramètres
+```
+
+**C2 ne peut exprimer que des fonctions de valeur linéaires** : « chaque dimension du bus
+contribue proportionnellement », jamais « cette *combinaison* d'états est bonne, celle-là
+non ».
+
+Cela explique enfin trois mesures qui restaient sans cause :
+
+| Mesure v37 | Explication par la linéarité |
+|---|---|
+| Amplitude de C2 constante (2,10 ± 0,02) sur 3 cartes | une projection linéaire d'un état normalisé donne toujours la même échelle |
+| `argmax(C2)` figé sur une action, 400 ticks/400 | le rollout produit des états proches, une fonction linéaire les ordonne identiquement |
+| Couper C2 **double** le taux de succès | un évaluateur linéaire sur un espace non linéaire est pire que pas d'évaluateur |
+
+**Test** : `CortexProfond` — `dim_bus → dim_bus//2 → 1` avec ReLU, greffé par recopie des
+poids appris (jamais de reset), interface plastique complète (`cycle_sommeil`,
+`fortification_dopaminergique`, `agrandir`).
+
+### A2 — La promotion hybride
+
+H09 promeut sur un coup de chance : 25 % de réussite ou **une seule** victoire suffit. D'où
+28 confirmations mémoire seulement — l'agent monte sans avoir compris.
+
+**Test** : double verrou — `taux ≥ 35 %` **ET** `confirmations ≥ 50`. La voie « série de
+victoires » est neutralisée (`VICTOIRES_REQUISES = 99`), pour qu'aucun coup de chance ne
+puisse promouvoir seul.
+
+### A3 — La gradation des espaces
+
+Le saut `8×8` (36 cases intérieures) → `16×16` (196 cases) multiplie la surface par **5,4**.
+
+**Test** : deux paliers intermédiaires enregistrés dynamiquement (`DoorKey-10x10` = 64 cases,
+`DoorKey-12x12` = 100 cases) — ils n'existent pas dans MiniGrid, mais `DoorKeyEnv(size=N)`
+les accepte. Plus une **patience indexée sur la surface** (`×√(surface/9)`), pour que
+l'exploration d'un monde 5× plus grand ne soit pas coupée au même nombre de ticks qu'un 5×5.
+
+### A4 — L'élagage développemental
+
+H11 naît large (64) et le reste. Biologiquement, la surproduction est **suivie** d'un
+élagage : −1 à −2 % de matière grise par an à l'adolescence.
+
+⏳ **Non testé** : la neuro-régression (réduire `dim_bus`) est un chantier structurel, pas
+une surcharge de constante. `agrandir()` sait faire croître, rien ne sait rétrécir.
+
+### Protocole des 4 runs (1200 jours chacun)
+
+| Run | A1 | A2 | A3 | Ce qu'il isole |
+|---|---|---|---|---|
+| BASE | — | — | — | témoin (bus 64, promo 35 %) |
+| A1 | ✅ | — | — | l'effet du C2 profond seul |
+| A3 | — | — | ✅ | l'effet du lissage seul |
+| A1+A2+A3 | ✅ | ✅ | ✅ | la conciliation complète |
+
+🔬 **Runs en cours** — résultats à consigner.
 
 ---
 
