@@ -4,6 +4,54 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [recherche] - 2026-08-12 (nuit, 2) — ablation sensorielle
+
+### 🔴 Le toucher porte 75 % de la performance ; l'odorat et le goût ne servent à rien
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | docs (recherche expérimentale) |
+| **Impact** | **Documentation** — aucun changement de code |
+
+12 runs de 600 jours (4 conditions × 3 graines, **témoins appariés**), par surcharge en
+mémoire. `src/naulthene/` intact, **Exo-Sens jamais amputé** (invariant v30.0 (2) :
+`num_actions` reste à 8, `ACTION_DEMANDER` masquée).
+
+| Condition | g11 | g22 | g33 | Moyenne | σ | Écarts appariés |
+|---|---|---|---|---|---|---|
+| **TÉMOIN** | 2 | 3 | 3 | **2,67** | 0,47 | — |
+| chimie coupée | 5 | 1 | 1 | 2,33 | 1,89 | +3, −2, −2 |
+| **toucher coupé** | 0 | 1 | 1 | **0,67** | 0,47 | **−2, −2, −2** |
+| mémoire coupée | 2 | 0 | 4 | 2,00 | 1,63 | 0, −3, +1 |
+
+**Le toucher est le seul sens démontré nécessaire** : −2 victoires sur **3 graines sur 3**,
+σ identique au témoin. C'est le premier effet reproductible de toute l'investigation. Il
+porte `objet_en_main` — sur DoorKey, *savoir qu'on tient la clé* est l'information la plus
+décisive, et c'est la seule que la vue ne donne pas.
+
+**La chimie ne sert à rien** (écart 0,33, signes incohérents) : le sens n'est pas cassé —
+l'odorat topologique v32.0 calcule correctement — il est **inutile dans ce monde**. L'agent
+voit déjà ce qu'il sent.
+
+**Mémoire : non concluant** (signe variable selon la graine).
+
+**Critère de conception qui en découle** : *un sens n'est utile que s'il apporte une
+information qu'aucun autre canal ne donne*. Rendre un sens obligatoire ne se décrète pas
+dans le capteur — cela se construit dans le monde, en **retirant à la vue** ce qu'on veut
+confier à l'odorat.
+
+⚠️ Coupure faite à la **valeur neutre, jamais à zéro** : clinotaxie → 0.5 (invariant v32.0
+(3)), rappel marquant → [0.5, 0.0] (invariant v36.0 (5)). Mettre zéro aurait mesuré un
+agent *craintif*, pas *indifférent*.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `docs/notes/recherche_bug_or_not_bug.md` | H15, protocole et résultats d'ablation |
+| `docs/CHANGELOG.md` | cette entrée |
+
+---
+
 ## [recherche] - 2026-08-12 (nuit)
 
 ### 🔬 La variance est la découverte — les 5 leviers tombent, l'agent franchit quand même
@@ -52,7 +100,7 @@ réparation du cerveau et la cohérence du cursus — pas les raffinements d'app
 
 | Fichier modifié | Changement |
 |-----------------|------------|
-| `docs/recherche_bug_or_not_bug.md` | verrouillage, analyse de variance, bémol utilisateur mesuré |
+| `docs/notes/recherche_bug_or_not_bug.md` | verrouillage, analyse de variance, bémol utilisateur mesuré |
 | `docs/CHANGELOG.md` | cette entrée |
 
 ---
@@ -109,7 +157,7 @@ répliquée sur ≥3 graines avec témoins appariés, avant publication et non a
 
 | Fichier modifié | Changement |
 |-----------------|------------|
-| `docs/recherche_bug_or_not_bug.md` | réfutation, sections barrées mais conservées, erreur de méthode |
+| `docs/notes/recherche_bug_or_not_bug.md` | réfutation, sections barrées mais conservées, erreur de méthode |
 | `docs/CHANGELOG.md` | cette entrée |
 
 ---
@@ -127,7 +175,7 @@ répliquée sur ≥3 graines avec témoins appariés, avant publication et non a
 Neuf runs de 1200 jours menés le 12/08, tous par **surcharge en mémoire** depuis le
 scratchpad. `src/naulthene/` n'a reçu **aucune modification**.
 
-**📋 Carnet complet** : [`recherche_bug_or_not_bug.md`](recherche_bug_or_not_bug.md)
+**📋 Carnet complet** : [`recherche_bug_or_not_bug.md`](notes/recherche_bug_or_not_bug.md)
 
 **🔬 Les 4 axes de conciliation (A1–A4)**
 
@@ -182,7 +230,7 @@ moment pour la grâce, fragilité mesurée de la compétence pour la révision).
 
 | Fichier modifié | Changement |
 |-----------------|------------|
-| `docs/recherche_bug_or_not_bug.md` | A1–A4, H12/H13/H14, le moment de bascule, la frontière inné/acquis |
+| `docs/notes/recherche_bug_or_not_bug.md` | A1–A4, H12/H13/H14, le moment de bascule, la frontière inné/acquis |
 | `docs/CHANGELOG.md` | cette entrée |
 
 ---
@@ -204,7 +252,7 @@ logique ?**
 Toutes les constantes ont été **surchargées en mémoire** depuis un script isolé du scratchpad.
 `src/naulthene/` n'a reçu aucune modification.
 
-**📋 Carnet complet** : [`recherche_bug_or_not_bug.md`](recherche_bug_or_not_bug.md) — 11
+**📋 Carnet complet** : [`recherche_bug_or_not_bug.md`](notes/recherche_bug_or_not_bug.md) — 11
 hypothèses, protocoles, mesures, et les erreurs de diagnostic commises.
 
 **🔬 RÉSULTATS DES SEPT RUNS (800 jours chacun)**
@@ -361,7 +409,7 @@ recalibrage reste possible (−29 % après 2000 jours de monde pauvre — soit b
   s'accordent pas durablement. Le pic à 100 % observé en cours de run était une oscillation, pas
   une tendance.
 - ~~**Le rêve est quasi inexistant** : `Pourcentage_Reve` à 0,1 % sur les 600 jours~~
-  ❌ **AFFIRMATION FAUSSE, corrigée le 2026-08-08** (voir [dia_Aout_2026.md](dia_Aout_2026.md) §2.2).
+  ❌ **AFFIRMATION FAUSSE, corrigée le 2026-08-08** (voir [dia_Aout_2026.md](notes/dia_Aout_2026.md) §2.2).
   `Pourcentage_Reve` est logué comme une **fraction** (`0,177`) mais affiché suivi d'un `%` — la
   valeur réelle est **17,7 %**, pas 0,177 %. Vérifié : `Nb_Reves / Pourcentage_Reve = 398 ≈
   len(memoire_moyen_terme)` sur 400 ticks. **Le rêve rejoue 15-18 % de la journée et fonctionne.**
@@ -381,7 +429,7 @@ recalibrage reste possible (−29 % après 2000 jours de monde pauvre — soit b
 | **Impact** | **Fonctionnel** — la distillation v37.0 passe de plate à pondérée |
 
 Issu d'une remarque de l'utilisateur sur la v37.0. Détail :
-[`CHANTIER_v37_equilibre_c1_c2.md §5bis`](CHANTIER_v37_equilibre_c1_c2.md).
+[`CHANTIER_v37_equilibre_c1_c2.md §5bis`](notes/CHANTIER_v37_equilibre_c1_c2.md).
 
 **🔴 LE DÉFAUT**
 
@@ -458,7 +506,7 @@ vitesse de suivi de la référence), jamais des seuils de décision.
 | **Impact** | **Critique** — trois bugs rendaient l'apprentissage des deux têtes de décision *mathématiquement impossible* |
 
 Chantier complet et traçabilité des options écartées :
-[`CHANTIER_v37_equilibre_c1_c2.md`](CHANTIER_v37_equilibre_c1_c2.md).
+[`CHANTIER_v37_equilibre_c1_c2.md`](notes/CHANTIER_v37_equilibre_c1_c2.md).
 
 **🔴 CE QUI ÉTAIT CASSÉ** (mesuré sur `070820261310_V36_600_RMD.brain`, 600 jours)
 
@@ -1168,7 +1216,7 @@ renforcerait ce biais.
 | Fichier modifié | Changement |
 |-----------------|------------|
 | `src/naulthene/cerveau/noyau.py` | 14 compteurs dans `_reinitialiser_buffers_journee`, accumulation en lecture seule dans `traiter_tick`, `_compter_ressources_grille()` (1×/épisode), ligne console `Calibrage v34`, 14 clés `Calibrage_*` inconditionnelles |
-| `docs/CONCEPTION_v34_fatigue_mortalite.md` | cadrage complet + section « Étape 0 livrée » avec les mesures |
+| `docs/notes/CONCEPTION_v34_fatigue_mortalite.md` | cadrage complet + section « Étape 0 livrée » avec les mesures |
 
 ---
 
@@ -1237,7 +1285,7 @@ planification longue a un sens — c'est ce que le banc complet (65 cellules) do
 |---|---|
 | `src/naulthene/instruments/banc_ablation.py` | **nouveau** — 13 lésions × 5 niveaux, copie par cellule, diagnostic C1/C2, publication W&B |
 | `docs/LANCEMENT.md` | **§15** — lancement, catalogue des lésions, grille de lecture |
-| `docs/les_sens_combinatoire.md` | **§9 bis** — disponibilité réelle des sens mesurée sur ce run |
+| `docs/notes/les_sens_combinatoire.md` | **§9 bis** — disponibilité réelle des sens mesurée sur ce run |
 
 Treize lésions, en deux familles : **sens** (vue, ouïe, toucher, odorat, goût, Exo-Sens,
 vecteur bio entier) et **cognition** (C2 coupé, C2 myope, épisodique, spatiale,

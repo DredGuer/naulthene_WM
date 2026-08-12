@@ -1439,7 +1439,7 @@ Vérifier la **direction** (similarité cosinus), pas seulement la magnitude.
 | `Distillation_Reference_Choc` | **Monter** avec la maturation : l'agent devient progressivement plus difficile à impressionner |
 
 Contexte complet, causes mesurées et options écartées :
-[CHANTIER_v37_equilibre_c1_c2.md](CHANTIER_v37_equilibre_c1_c2.md).
+[CHANTIER_v37_equilibre_c1_c2.md](notes/CHANTIER_v37_equilibre_c1_c2.md).
 
 ---
 

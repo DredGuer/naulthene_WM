@@ -24,14 +24,14 @@ et le même `nn.Module` devrait continuer de tourner — parce que rien à l'int
 
 **⚠️ Cela ne fonctionne pas encore.** L'agent est bloqué au niveau 2 d'un cursus de 15 niveaux et
 n'a plus gagné depuis 678 jours simulés. Ce dépôt documente une architecture **en cours de
-développement**, y compris [tout ce qui est cassé](docs/dia_Aout_2026.md) et chaque erreur de
+développement**, y compris [tout ce qui est cassé](docs/notes/dia_Aout_2026.md) et chaque erreur de
 diagnostic commise en chemin. À lire comme un carnet de recherche, pas comme un système livré.
 
 *Direction long terme : une intelligence généraliste qui tourne sur une puce Apple Silicon, sans
 datacenter.*
 
 > 🇬🇧 **[English README →](readme.md)** — la vitrine, en anglais.
-> 🩺 **[Diagnostic complet du système →](docs/dia_Aout_2026.md)** — run de 1300 jours : ce qui
+> 🩺 **[Diagnostic complet du système →](docs/notes/dia_Aout_2026.md)** — run de 1300 jours : ce qui
 > marche, ce qui bloque, ce qui reste inconnu.
 > 📊 **[Expériences en direct sur Weights & Biases →](https://wandb.ai/naultadrien123-nvnc/Naulthene-AGI)**
 > — tous les runs, toutes les courbes, échecs compris.
@@ -88,7 +88,7 @@ Deux nuances, mesurées et non rhétoriques :
 
 Un PPO standard résout `Empty-8x8` en quelques milliers d'épisodes. **Naulthène, non.**
 
-Le [diagnostic](docs/dia_Aout_2026.md) isole pourquoi, et **aucun des cinq bloquants n'est
+Le [diagnostic](docs/notes/dia_Aout_2026.md) isole pourquoi, et **aucun des cinq bloquants n'est
 cognitif** : patience plafonnée à 120 ticks contre 256 pour MiniGrid lui-même (taux de réussite
 atteignable 4,7 % contre 21,0 %), saut de difficulté ×10 au niveau 2, espérance d'épisode à
 **−1,06**, 4 actions sur 7 inertes sur une pièce vide, et une ère de cursus qui double les
@@ -249,7 +249,7 @@ Pour un historique complet commit par commit, consultez [docs/CHANGELOG.md](docs
 > [docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md](docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md) pour le cadrage et les
 > arbitrages.
 
-> 🩺 **Diagnostic complet du système (2026-08-08)** — [docs/dia_Aout_2026.md](docs/dia_Aout_2026.md),
+> 🩺 **Diagnostic complet du système (2026-08-08)** — [docs/notes/dia_Aout_2026.md](docs/notes/dia_Aout_2026.md),
 > adossé à un run de **1300 jours**. Toutes les mécaniques cognitives fonctionnent et sont
 > chiffrées (plasticité, rêve, C1/C2, mémoire, sens, vocal) ; le blocage du cursus tient à **trois
 > facteurs non cognitifs** — un saut de difficulté ×10 au niveau 2, une patience deux fois plus
@@ -346,7 +346,7 @@ sur **aucun tick** (0 %), chacun votant une action *constante*, avec un ratio d'
 Deux instruments de diagnostic **en lecture seule** accompagnent le chantier :
 `sonde_c1_c2.py` (rapport de force entre les deux voix) et `sonde_poids.py` (santé synaptique
 couche par couche). Détail complet, options écartées et mesures qui les ont écartées :
-[docs/CHANTIER_v37_equilibre_c1_c2.md](docs/CHANTIER_v37_equilibre_c1_c2.md).
+[docs/notes/CHANTIER_v37_equilibre_c1_c2.md](docs/notes/CHANTIER_v37_equilibre_c1_c2.md).
 
 ### 🧠 Nouveautés v36.0 (expérimental) — Le Flux Enrichi & l'Abstraction par Récurrence (2026-08-07)
 

@@ -11,7 +11,7 @@
 > plafonne au niveau 2/15 depuis 678 jours simulés.
 >
 > Documents liés : [`dia_Aout_2026.md`](dia_Aout_2026.md) (diagnostic système),
-> [`CHANGELOG.md`](CHANGELOG.md) (historique des versions).
+> [`CHANGELOG.md`](../CHANGELOG.md) (historique des versions).
 
 ---
 
@@ -1004,6 +1004,181 @@ raffinements d'apprentissage testés ensuite.
   socle existe déjà (satiété, hydratation, `deficit_bio`) et module déjà la capacité
   mnésique — mais **pas** le taux d'apprentissage lui-même. Piste cohérente avec le coût
   énergétique réel du cerveau (50 % de l'énergie de l'enfant à 5 ans).
+
+---
+
+## H15 — Les sens sont-ils utilisés ? *(campagne d'ablation, 12/08 soir)*
+
+### Ce que 77 runs W&B ont montré
+
+Analyse de l'historique complet (197 Mo, runs ≥ 300 jours ; 53 stubs écartés, ~25 des 135
+métriques réellement creusées — le vocal, le Port C3 et le calibrage métabolique restent
+inexplorés).
+
+**1. ✅ La v37 a réparé le cerveau — le seul effet massif de toute l'histoire du projet**
+
+| Synapses mortes (max/run) | Médiane | Max |
+|---|---|---|
+| Avant les correctifs (n=30) | **13 769** | 77 169 |
+| Après (n=47) | **0** | 77 729 |
+
+**2. 🔴 Les sens sont branchés, mais inertes dans la décision**
+
+Taux d'approche olfactive (0,50 = pile ou face), 17 runs de 1200 jours :
+
+| Fenêtre | Taux |
+|---|---|
+| j.1-100 | 0,54 |
+| j.500-600 | 0,57 |
+| j.1100-1200 | 0,55 |
+
+**Évolution médiane sur 1200 jours : +0,013.** Un apprentissage réel donnerait +0,10 à
++0,30. Corrélations avec les victoires : odorat **+0,13**, toucher **+0,32**, rappel
+mnésique **−0,09** (négatif). La mémoire retrouve ses souvenirs (97-99 % de rappel réussi,
+proximité 0,79) — ils n'influencent pas les décisions.
+
+L'odorat topologique v32 (BFS, portes qui fuient, clinotaxie) est calculé *correctement* :
+le signal est propre et injecté. L'hypothèse est que `integrateur_bio` n'apprend jamais à
+le **lire**, parce que dans MiniGrid l'agent **voit déjà ce qu'il sent** — sentir une clé
+qu'on voit n'apporte aucune information. Le sens serait **inutile, pas cassé**.
+
+**3. ⚠️ Le cursus est plat — agrandir la carte ne rend pas la tâche plus difficile**
+
+19 runs, délai médian pour franchir chaque palier :
+
+| Transition | Surface départ | Délai médian |
+|---|---|---|
+| 5×5 → 6×6 | 9 cases | 91 j |
+| 6×6 → 8×8 | 16 | **58 j** |
+| 8×8 → 10×10 | 36 | 109 j |
+| 10×10 → 12×12 | 64 | 85 j |
+| 12×12 → 16×16 | 100 | 130 j |
+
+**La surface est multipliée par 11, le délai par 1,4** — et le 6×6 → 8×8 est le plus
+*rapide* de tous. L'échelle spatiale n'est donc pas un axe de difficulté pour cet agent :
+il fait la même chose partout. Cela explique pourquoi les cinq leviers du 12/08 n'ont rien
+produit — ils réglaient la difficulté d'un axe qui n'en est pas un.
+
+⚠️ Corollaire : **une victoire n'est pas comparable d'un run à l'autre.** Les runs les plus
+« rapides » (27 j/victoire) sont ceux qui restent sur les niveaux faciles.
+
+### Bilan d'étape *(formulé par l'utilisateur)*
+
+> - **Sous-exploitation de la multimodalité** : les sens sont actuellement inactifs dans la
+>   prise de décision, alors que leur couplage est censé consolider l'apprentissage et
+>   l'abstraction de l'environnement.
+> - **Inadéquation de MiniGrid** : les règles discrètes ne fournissent pas des signaux
+>   physiques suffisamment riches pour orienter naturellement les déplacements de l'agent.
+> - **Perspectives** : enrichir l'environnement avec des contraintes physiques et
+>   sensorielles réelles (odeurs, bruits, obstacles) ; réintroduire une **présence parentale
+>   durable** pour étayer l'apprentissage à long terme.
+
+Ce bilan est cohérent avec les trois mesures ci-dessus. Il reste une **hypothèse** tant que
+l'ablation ne l'a pas confirmée : une corrélation faible peut aussi signifier un canal utile
+mais redondant. Seule la coupure tranche.
+
+### Protocole d'ablation
+
+4 conditions × 3 graines (11, 22, 33) × 600 jours, **témoins appariés sur les mêmes
+graines** — le protocole imposé par la leçon de variance de la journée.
+
+| Condition | Tranches neutralisées |
+|---|---|
+| **TÉMOIN** | aucune (référence) |
+| **chimie** | odorat + goût + clinotaxie |
+| **toucher** | contact, portage, orientation |
+| **mémoire** | rappel marquant + rappel spatial |
+
+La coupure agit sur `vecteur_bio` (36 dims, disposition append-only stable depuis la v29.0,
+`noyau.py:367`), en forçant chaque tranche à sa **valeur NEUTRE, jamais à zéro** :
+
+- clinotaxie → **0.5** (invariant v32.0 (3) : 0.0 signifie « éloignement maximal »)
+- rappel marquant → **[0.5, 0.0]** (invariant v36.0 (5) : une valence à 0.0 signifie « le
+  pire souvenir possible » et rendrait l'agent craintif partout)
+
+Mettre zéro mesurerait un effet qui n'existe pas — l'agent deviendrait *fuyant*, pas
+*indifférent*. Le sens reste **calculé** (la télémétrie `Sens_*` demeure comparable entre
+conditions), mais sa valeur n'atteint jamais `integrateur_bio`.
+
+⚠️ **L'Exo-Sens n'est PAS amputé** (décision utilisateur explicite, conforme à l'invariant
+v30.0 (2)) : `num_actions` reste à 8, `ACTION_DEMANDER` reste masquée à `-inf`, et 4 `.brain`
+du dépôt sont déjà à 8 actions. Aucune ligne de `src/naulthene/` n'est modifiée — tout passe
+par surcharge en mémoire.
+
+**Prédiction à falsifier** : si couper la chimie ne change rien (écart < 1 victoire, mêmes
+paliers), l'odorat et le goût sont démontrés **inutiles dans MiniGrid** — et le chantier
+suivant porte sur le **monde**, pas sur le sens.
+
+### Résultats — 12 runs de 600 jours (12/08, 20h05 → 21h15)
+
+| Condition | g11 | g22 | g33 | Moyenne | σ | Écarts appariés |
+|---|---|---|---|---|---|---|
+| **TÉMOIN** | 2 | 3 | 3 | **2,67** | 0,47 | — |
+| chimie coupée | 5 | 1 | 1 | 2,33 | 1,89 | +3, −2, −2 |
+| **toucher coupé** | 0 | 1 | 1 | **0,67** | 0,47 | **−2, −2, −2** |
+| mémoire coupée | 2 | 0 | 4 | 2,00 | 1,63 | 0, −3, +1 |
+
+### 🔴 Le toucher est le seul sens démontré nécessaire
+
+**−2 victoires sur les 3 graines, sans une exception.** C'est le **premier effet de toute
+cette investigation qui va dans le même sens sur toutes les graines**, avec un écart-type
+identique à celui du témoin (0,47) — donc sans l'explosion de variance qui a invalidé tous
+les résultats précédents.
+
+Couper le toucher fait chuter l'agent de 2,67 à 0,67 victoire : **−75 % de performance**.
+Cohérent avec la corrélation W&B qui plaçait déjà le toucher en tête (+0,32 contre +0,13
+pour l'odorat).
+
+L'explication est mécanique : le toucher porte `contact_frontal` et surtout
+**`objet_en_main`**. Sur DoorKey, *savoir qu'on tient la clé* est l'information la plus
+décisive de la tâche. Ce n'est pas un sens exotique — c'est de la **proprioception**, et
+c'est la seule modalité qui renseigne sur un **état interne que la vue ne montre pas**.
+
+### ✅ La chimie (odorat + goût) ne sert à rien — hypothèse utilisateur confirmée
+
+**2,33 contre 2,67**, écart de 0,33 victoire, très en-dessous du bruit. Les écarts appariés
+sont incohérents (+3, −2, −2) et σ explose à 1,89. Le run le plus performant de toute la
+campagne (5 victoires, g11) est même un run **sans odorat**.
+
+C'est la confirmation directe du bilan d'étape : *les règles discrètes de MiniGrid ne
+fournissent pas des signaux physiques suffisamment riches*. **L'agent voit déjà ce qu'il
+sent** — l'odorat ne fait que redire ce que l'œil montre, et un canal redondant n'a aucune
+raison d'être appris.
+
+⚠️ Le sens n'est **pas cassé** : l'odorat topologique v32.0 calcule un signal correct
+(BFS, portes qui fuient, clinotaxie). Il est **inutile dans ce monde**. La distinction est
+capitale pour la suite : le chantier porte sur **l'environnement**, pas sur le capteur.
+
+### ⚠️ La mémoire — non concluant
+
+Écarts appariés 0, −3, +1 : le **signe change selon la graine**. Moyenne 2,00 contre 2,67,
+mais σ = 1,63. Aucune conclusion possible sur 3 graines — et il ne faut pas répéter
+l'erreur du matin en appelant cela un effet.
+
+### Le critère qui en ressort pour la conception
+
+Ce qui distingue le toucher des deux autres canaux tient en une phrase :
+
+> **Un sens n'est utile que s'il apporte une information qu'aucun autre canal ne donne.**
+
+- Le toucher renseigne sur un **état interne** (je porte / je ne porte pas) → utilisé.
+- L'odorat renseigne sur une **position** que la vue donne déjà → ignoré.
+- La mémoire spatiale renseigne sur des **lieux** que la vue redonne à chaque tick → ambigu.
+
+Conséquence pour l'étape suivante : un monde qui exige l'odorat doit rendre la source
+**invisible**, pas seulement odorante. Rendre un sens obligatoire ne se décrète pas dans le
+capteur — cela se construit dans le monde, en **retirant à la vue** ce qu'on veut confier à
+l'odorat.
+
+### Ce que cette campagne ne dit pas
+
+- **600 jours, pas 1200.** Les runs de la veille ont montré que certaines conditions ne se
+  séparent qu'après le jour 800 ; un effet tardif de la chimie resterait invisible ici.
+- **3 graines.** La règle posée le matin même exige ≥ 8 graines pour un écart d'une
+  victoire. L'effet du toucher (−2 sur 3/3, σ nul) dépasse ce seuil ; ceux de la chimie et
+  de la mémoire, non.
+- **Aucune interaction testée.** Couper deux sens ensemble pourrait révéler une redondance
+  (l'agent compense l'odorat par la vue, mais peut-être pas s'il perd les deux).
 
 ---
 

@@ -21,7 +21,7 @@ Ce qu'il faut lire :
 
 Diagnostic de référence, cerveau `070820261310_V36_600_RMD.brain` : **6 couches sur 12**
 collées au plancher vital, dont `tete_motrice` et `cortex_prefrontal` — les deux têtes de
-décision. `annexe = 0` partout. Voir `docs/CHANTIER_v37_equilibre_c1_c2.md` §2.2 et §3.
+décision. `annexe = 0` partout. Voir `docs/notes/CHANTIER_v37_equilibre_c1_c2.md` §2.2 et §3.
 
 Usage :
     PYTHONPATH=src python -m naulthene.instruments.sonde_poids <brain>

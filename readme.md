@@ -22,14 +22,14 @@ nothing in it names "grid", "key" or "door".
 
 **⚠️ It does not work yet.** The agent is stuck at level 2 of a 15-level curriculum and has not
 won in 678 simulated days. This repository documents an architecture under active development,
-including [everything that is broken](docs/dia_Aout_2026.md) and every diagnostic mistake made
+including [everything that is broken](docs/notes/dia_Aout_2026.md) and every diagnostic mistake made
 along the way. Read it as a research log, not a released system.
 
 *Long-term direction: a generalist intelligence that runs on a single Apple Silicon chip, with no
 datacenter.*
 
 > 🇫🇷 **[Miroir français complet →](readme_fr.md)** (architecture, formules, changelog v7 → v37)
-> 🩺 **[System diagnostic, August 2026 →](docs/dia_Aout_2026.md)** (1300-day run: what works,
+> 🩺 **[System diagnostic, August 2026 →](docs/notes/dia_Aout_2026.md)** (1300-day run: what works,
 > what is blocked, what remains unknown)
 > 📊 **[Live experiments on Weights & Biases →](https://wandb.ai/naultadrien123-nvnc/Naulthene-AGI)**
 > (every run, every curve, including the failures)
@@ -118,7 +118,7 @@ Two caveats, both measurable rather than rhetorical:
 
 A standard PPO solves `Empty-8x8` in a few thousand episodes. **Naulthène currently does not.**
 
-The [diagnostic](docs/dia_Aout_2026.md) isolates why, and none of the five blockers is cognitive:
+The [diagnostic](docs/notes/dia_Aout_2026.md) isolates why, and none of the five blockers is cognitive:
 patience capped at 120 ticks against MiniGrid's own 256 (reachable success rate 4.7 % vs 21.0 %),
 a ×10 difficulty jump at level 2, an episode expected value of **−1.06**, four of seven actions
 inert on empty rooms, and a curriculum era that doubles losing episodes.
@@ -165,7 +165,7 @@ running through the same code path — that is the unification claim, and it hol
 - **Removing vision costs less than removing touch** (−0.50 vs −1.33). On a visual navigation
   task, that is not a sign of robust multimodality; it is a sign that vision is under-exploited.
 
-Both are consistent with the [diagnostic](docs/dia_Aout_2026.md): the agent has not yet learned a
+Both are consistent with the [diagnostic](docs/notes/dia_Aout_2026.md): the agent has not yet learned a
 policy worth planning over.
 
 ### 2. Memory footprint — ✅ **measured for Naulthène**, baseline pending
@@ -253,7 +253,7 @@ base       *= clamp(birth_norm × 0.10 / ‖base‖, min=1.0)  # vital floor, ne
 ```
 
 Each of those three `v37.0-fix` markers is a bug that made learning **mathematically impossible**
-and went undetected for hundreds of simulated days. See the [diagnostic](docs/dia_Aout_2026.md)
+and went undetected for hundreds of simulated days. See the [diagnostic](docs/notes/dia_Aout_2026.md)
 §9 for the full list of diagnostic errors, measured and corrected.
 
 ### Repository layout
@@ -336,7 +336,7 @@ lever is patience: 120 → 256 ticks moves reachable success from 4.7 % to 21.0 
 
 **Then — cross-modal binding.** All senses already enter the same bus simultaneously, including
 inactive ones. The design document
-([`docs/les_sens_combinatoire.md`](docs/les_sens_combinatoire.md)) covers the ten sensory pairs
+([`docs/notes/les_sens_combinatoire.md`](docs/notes/les_sens_combinatoire.md)) covers the ten sensory pairs
 and the hard constraint: **the system must keep working with a single sense**, accepting that
 survival odds drop with each one lost.
 
@@ -363,4 +363,4 @@ What that means concretely:
   says so.
 
 Everything that is broken is written down, including the diagnostic errors made along the way.
-[**Read the diagnostic**](docs/dia_Aout_2026.md) — it is more useful than this README.
+[**Read the diagnostic**](docs/notes/dia_Aout_2026.md) — it is more useful than this README.
