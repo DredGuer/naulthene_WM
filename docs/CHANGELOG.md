@@ -4,7 +4,60 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
-## [recherche] - 2026-08-12 (soir)
+## [recherche] - 2026-08-12 (nuit)
+
+### 🔬 La variance est la découverte — les 5 leviers tombent, l'agent franchit quand même
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | docs (recherche expérimentale) |
+| **Impact** | **Documentation** — annule la conclusion des deux entrées précédentes |
+
+Le verrouillage de la patience ∝ √surface (3 graines + 3 témoins appariés) **échoue** :
+écarts appariés **+2, −1, +1**. Le levier gagne une fois, perd une fois.
+
+Et surtout, **la même condition ne se reproduit pas elle-même** : 6 runs à réglages
+strictement identiques donnent 5, 5, 5, 4, 4, 5. L'écart-type nul des trois premiers, que
+l'entrée précédente présentait comme la marque d'un effet robuste, était **un accident de
+trois graines**.
+
+**Aucun des 5 leviers testés le 12/08 ne produit d'effet reproductible** (patience, grâce
+mnésique, entrelacement, C2 profond, promotion hybride).
+
+**Le bémol de l'utilisateur, mesuré** — *« l'agent ne reproduit pas le même comportement de
+départ, qui s'amplifie avec le temps ? »* :
+
+| Affirmation | Verdict |
+|---|---|
+| le départ n'est pas reproductible | ✅ **confirmé** — à j.50 : 0,0,0,1,2,2 |
+| ça s'amplifie avec le temps | ❌ **réfuté** — c'est l'inverse |
+
+σ passe de 0,76 (j.50) à **1,11** (j.400-600) puis retombe à **0,47** (j.1200). **Les
+trajectoires divergent, l'état final converge** — bon signe pour l'architecture : l'agent
+apprend quelque chose de stable au lieu de subir son tirage initial.
+
+⚠️ **Conséquence de méthode : la mauvaise variable était mesurée.** Comparer des *totaux de
+victoires* sur des courbes qui reconvergent revient à comparer les points d'arrivée d'un
+processus qui les égalise. Il faut comparer des **vitesses** (jour de première promotion,
+pente), dans la fenêtre j.400-600 où σ est maximal, et sur **≥8 graines** — 3 ne suffisent
+pas.
+
+**🎯 Ce qui reste debout** : l'agent franchit le cursus de 6 paliers dans **11 runs sur 12**,
+toutes conditions confondues. Le blocage historique (« niveau 2/15 depuis 678 jours »)
+n'apparaît dans **aucun** de ces runs. Ce qui a changé n'est aucun levier testé, mais ce qui
+leur est **commun** : les correctifs **v37** (érosion, myéline, plancher vital) et un
+**cursus DoorKey progressif à 6 paliers** au lieu de 15 niveaux hétérogènes. C'est-à-dire la
+réparation du cerveau et la cohérence du cursus — pas les raffinements d'apprentissage.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `docs/recherche_bug_or_not_bug.md` | verrouillage, analyse de variance, bémol utilisateur mesuré |
+| `docs/CHANGELOG.md` | cette entrée |
+
+---
+
+## [recherche] - 2026-08-12 (soir) — ⛔ CONCLUSION RÉFUTÉE, voir l'entrée ci-dessus
 
 ### ⛔ Réfutation — la révision espacée ne se réplique pas ; le seul levier est la patience
 
@@ -39,7 +92,7 @@ qui franchissent le cursus complet (A3fix + 3 témoins) :
 
 | Levier | Runs | Verdict |
 |---|---|---|
-| **Patience ∝ √surface** | 4/4 | ✅ **confirmé** |
+| ~~**Patience ∝ √surface**~~ | ~~4/4~~ | ⛔ **réfuté le soir même** (+2/−1/+1 en apparié) |
 | Grâce mnésique (H13) | 1/3 | ❌ non reproduit |
 | Entrelacement (H14) | 1/3 | ❌ non reproduit |
 | C2 profond (A1) | 0/1 | ❌ aucun effet |

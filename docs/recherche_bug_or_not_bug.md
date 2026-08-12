@@ -844,7 +844,7 @@ témoins) est `--patience-surface`.
 
 | Levier | Runs | Verdict |
 |---|---|---|
-| **Patience ∝ √surface** | 4/4 | ✅ **confirmé** |
+| ~~**Patience ∝ √surface**~~ | ~~4/4~~ | ⛔ **réfuté le soir même** (+2/−1/+1 en apparié) |
 | Grâce mnésique (H13) | 1/3 | ❌ non reproduit |
 | Entrelacement (H14) | 1/3 | ❌ non reproduit |
 | C2 profond (A1) | 0/1 | ❌ aucun effet |
@@ -875,9 +875,127 @@ significatif »). Deux fautes distinctes :
 Règle qui en découle : **toute condition annoncée comme un effet doit être répliquée sur ≥3
 graines avec témoins appariés, avant publication et non après.**
 
-🔬 **Verrouillage lancé le 12/08 à 17h05** : patience ∝ √surface sur 3 nouvelles graines
-(404, 505, 606) **contre 3 runs sans patience sur les mêmes graines** — le seul protocole
-qui isole vraiment ce levier.
+### ⛔ Verrouillage de la patience — le dernier levier tombe aussi
+
+Patience ∝ √surface sur 3 nouvelles graines (404, 505, 606) **contre 3 runs sans patience
+sur les mêmes graines**.
+
+| Graine | Avec patience | Sans patience | Écart apparié |
+|---|---|---|---|
+| 404 | 4 vict. / pal. 4 | 2 / 2 | **+2** |
+| 505 | 4 / 4 | 5 / 5 | **−1** |
+| 606 | 5 / 5 | 4 / 4 | **+1** |
+| **Moyenne** | **4,33** (σ 0,47) | **3,67** (σ 1,25) | +0,67 |
+
+**+2, −1, +1** : le levier gagne une fois, perd une fois. L'écart moyen est très en-dessous
+du seuil de significativité du carnet.
+
+Le point décisif est ailleurs — **la même condition ne se reproduit pas elle-même** :
+
+| 6 runs, réglages *strictement identiques* | Victoires |
+|---|---|
+| témoins de l'après-midi (g101, 202, 303) | 5, 5, 5 |
+| verrouillage (g404, 505, 606) | 4, 4, 5 |
+
+L'écart-type nul des trois premiers (5/5/5), que j'avais présenté le matin même comme
+**la marque d'un effet robuste**, était un **accident de trois graines**.
+
+**Aucun des cinq leviers testés le 12/08 ne produit d'effet reproductible.**
+
+---
+
+## 🔬 La variance elle-même — la vraie découverte de la journée
+
+> **Bémol de l'utilisateur (12/08, soir)** : *« ça ne peut pas être reproductible, car
+> l'agent ne reproduit pas à l'identique sur tous les runs exactement le même comportement
+> de départ, qui s'amplifie avec le temps ? »*
+
+Le bémol contient **deux affirmations distinctes**. Mesurées séparément sur les 6 runs à
+réglages identiques, **la première est vraie, la seconde est fausse** — et c'est l'inverse
+qui se produit.
+
+### ✅ « Le comportement de départ n'est pas reproductible » — CONFIRMÉ
+
+Victoires cumulées, 6 runs strictement identiques, seule la graine change :
+
+| Graine | j.50 | j.100 | j.200 | j.400 | j.800 | j.1200 |
+|---|---|---|---|---|---|---|
+| 101 | **2** | 2 | 2 | 2 | 5 | 5 |
+| 202 | 0 | 1 | 1 | 3 | 4 | 5 |
+| 303 | 1 | 1 | 1 | 1 | 3 | 5 |
+| 404 | 0 | 0 | 1 | 3 | 3 | 4 |
+| 505 | 0 | 1 | 1 | 1 | 4 | 4 |
+| 606 | 0 | 0 | 0 | 0 | 3 | 5 |
+
+À 50 jours : **0, 0, 0, 1, 2, 2**. Les trajectoires divergent dès le départ.
+
+### ❌ « Ça s'amplifie avec le temps » — RÉFUTÉ, c'est l'inverse
+
+| Jour | Valeurs | σ | Étendue |
+|---|---|---|---|
+| 50 | 2,0,1,0,0,0 | 0,76 | 2 |
+| 200 | 2,1,1,1,1,0 | 0,58 | 2 |
+| **400** | 2,3,1,3,1,0 | **1,11** | **3** |
+| **600** | 4,3,1,3,2,1 | **1,11** | **3** |
+| 800 | 5,4,3,3,4,3 | 0,75 | 2 |
+| **1200** | 5,5,5,4,4,5 | **0,47** | **1** |
+
+La dispersion **monte** jusqu'au jour 400-600 puis **redescend**. À 1200 jours, les six runs
+tiennent dans un intervalle de **1 victoire**. Le run parti à 0 (g606) finit à 5 ; celui
+parti à 2 (g101) finit à 5 aussi.
+
+**Les trajectoires divergent, l'état final converge.**
+
+### Ce que ça change
+
+1. **Le résultat final EST reproductible** (4-5 victoires, 6 runs sur 6) ; c'est le
+   **chemin** qui ne l'est pas. La conclusion du bémol (« donc rien n'est reproductible »)
+   ne suit donc pas — mais sa prémisse était juste, et elle explique tous les faux positifs
+   de la journée.
+
+2. **C'est un bon signe pour l'architecture** : un agent dont les trajectoires divergent
+   mais dont l'état final converge **apprend** quelque chose de stable, au lieu de subir son
+   tirage initial. Une divergence qui s'amplifierait (l'hypothèse du bémol) signalerait au
+   contraire un système chaotique, où le hasard initial déciderait de tout.
+
+3. **⚠️ Je mesurais la mauvaise variable.** Comparer des *totaux de victoires* entre
+   conditions, sur des courbes qui divergent puis reconvergent, revient à comparer les
+   points d'arrivée d'un processus qui les égalise — donc à **jeter précisément
+   l'information qui distinguerait les conditions**. Les 4,33 vs 3,67 mesuraient surtout du
+   bruit de milieu de course.
+
+   Ce qu'il faudrait comparer : des **vitesses** — jour de la première promotion, pente de
+   progression, aire sous la courbe — et non des états finaux.
+
+4. **La fenêtre de mesure utile se situe autour du jour 400-600**, là où σ est maximal.
+   C'est là qu'un effet réel serait visible ; à 1200 jours, la convergence l'a effacé.
+
+### Conséquence sur la puissance statistique
+
+Avec σ ≈ 1,1 au point le plus dispersé, détecter un écart d'une victoire exige **8 à 10
+graines par condition** (~12 h de calcul par condition sur cette machine). **3 graines ne
+suffisent pas** — c'était encore trop optimiste, malgré la règle posée le matin même.
+
+> **Règle définitive du carnet** : sur ce système, un effet ne s'établit ni sur un run
+> (erreur du matin), ni sur trois (erreur du soir), mais sur **≥8 graines appariées, mesuré
+> sur une vitesse et non sur un total, dans la fenêtre où la variance est maximale**.
+
+### Ce qui reste debout, et ce n'est pas rien
+
+**L'agent franchit le cursus de 6 paliers dans 11 runs sur 12**, toutes conditions
+confondues (paliers atteints : 2 à 5, moyenne ≈ 4).
+
+Le blocage historique — *« niveau 2 sur 15 depuis 678 jours »* — **n'apparaît dans aucun de
+ces runs**. Ce qui a changé n'est aucun des cinq leviers testés, mais ce qui leur est
+**commun** :
+
+- les correctifs **v37** (érosion géométrique, myéline rafraîchie en tête de
+  `cycle_sommeil`, échelle de myéline relative, plancher vital qui n'est plus un plafond) ;
+- un cursus **DoorKey progressif à 6 paliers** (une seule compétence change entre deux
+  paliers voisins) au lieu du `PROGRAMME` à 15 niveaux hétérogènes.
+
+C'est-à-dire : **la réparation du cerveau et la cohérence du cursus** — pas les
+raffinements d'apprentissage testés ensuite.
 
 ### À méditer plus tard *(idées utilisateur, non testées)*
 
@@ -942,8 +1060,11 @@ en parallèle dans les mêmes conditions.
 | « Le plateau de 800 jours est une loi de maturation » | ❌ SUR-GÉNÉRALISÉ | Il n'existe que dans la famille H13/H14 ; les témoins franchissent tout sans plateau |
 | « Le verrou de confirmations d'A2 est inatteignable » | ❌ FAUX | Mesuré à **3264**, soit 65× le seuil. A2 bloque, mais pour une autre raison |
 | « La promotion fabrique la diversité mnésique » | ❌ RÉFUTÉ | H12 produit 689 repères (record) **sans** aucune progression |
+| « La patience ∝ √surface est le levier confirmé 4/4 » | ❌ **RÉFUTÉ le soir même** | Apparié sur 3 graines : +2, −1, +1. Le 4/4 était 4 tirages favorables |
+| « σ = 0,00 sur 3 témoins prouve un effet robuste » | ❌ FAUX | Accident de 3 graines : les 3 suivantes, réglages identiques, donnent 4, 4, 5 |
+| « La divergence entre runs s'amplifie avec le temps » | ❌ INVERSÉ | σ culmine à j.400-600 (1,11) puis **retombe** à 0,47 — les runs convergent |
 
-**Dix erreurs en une investigation.** Elles sont toutes consignées parce que chacune a coûté du
+**Treize erreurs en une investigation.** Elles sont toutes consignées parce que chacune a coûté du
 temps, et qu'aucune ne doit être refaite.
 
 Les cinq dernières partagent **une même cause** : conclure depuis **un seul run**. Les cinq
