@@ -273,11 +273,18 @@ def main():
                                        formants_cibles=formants, mode_perception=mode)
                 if infos["action"] is not None:
                     derniere_action = infos["action"]
-                try:                      # 2a.4 — l'agent explore-t-il, ou tourne-t-il ?
-                    e = _grille_de(etat.env)
-                    cases.add((int(e.agent_pos[0]), int(e.agent_pos[1])))
-                except Exception:
-                    pass
+                # 2a.4 — l'agent explore-t-il, ou tourne-t-il en rond ?
+                # ⚠️ N'échantillonner que pendant la phase MINIGRID : l'après-midi est
+                # vocal (`_perception_du_tick`, ère « alternance »), l'agent n'est alors
+                # pas dans la grille et `agent_pos` reste figée. La première version
+                # comptait les 400 ticks et donnait une médiane de 2 cases dans LES DEUX
+                # conditions — une métrique morte, qui ne pouvait rien départager.
+                if mode == "minigrid":
+                    try:
+                        e = _grille_de(etat.env)
+                        cases.add((int(e.agent_pos[0]), int(e.agent_pos[1])))
+                    except Exception:
+                        pass
 
             log = N.executer_nuit(etat)
             sv = etat.memoire_episodique_spatiale.souvenirs

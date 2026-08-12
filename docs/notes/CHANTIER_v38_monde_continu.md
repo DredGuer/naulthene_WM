@@ -272,7 +272,58 @@ si l'autre se réactive. Montrer la pomme sans le son → l'embedding auditif s'
 | Date | Étape | Résultat |
 |---|---|---|
 | 2026-08-12 | Ouverture, vérification de faisabilité | Continuité, écriture dynamique, parent : **tous faisables**. Occlusion **déjà présente** (correction d'une erreur de diagnostic) |
-| | 2a — continuité | 🔬 en cours |
+| 2026-08-12 | 2a — piège trouvé au smoke test | Continuité naïve ⇒ tâche triviale (3 états absorbants). Corrigé par le réarmement de tâche |
+| 2026-08-13 | 2a — 3 premières graines | **69 victoires sur g22** (record projet : 22). Mais 1 et 3 sur les autres ⇒ relance sur 3 graines de plus |
 | | 2b — permanence des sens | ⏳ |
 | | 2c — parent physique | ⏳ |
 | | 2d — liage | ⏳ |
+
+---
+
+## 7. Résultats de l'étape 2a
+
+### 7.1 Première salve (graines 11, 22, 33)
+
+| | g11 | g22 | g33 | Moyenne |
+|---|---|---|---|---|
+| **Continu** | 1 vict. / niv. 1 | **69 / niv. 5** | 3 / niv. 3 | **24,3** |
+| **Témoin** | 3 / niv. 3 | 1 / niv. 1 | 2 / niv. 2 | **2,0** |
+
+Écarts appariés : **−2, +68, +1**. Un seul run porte tout l'effet.
+
+⚠️ **Ne pas conclure « ×12 » sur cette base.** C'est exactement la forme du « ×4,5 » annoncé
+puis réfuté le 12/08. La moyenne est portée par un point unique.
+
+### 7.2 Mais la graine 22 n'est pas du bruit
+
+L'analyse détaillée montre un comportement **qualitativement nouveau**, qu'aucun run du
+projet n'avait produit :
+
+```
+promotions : jours 11, 48, 65, 103, 239        → cursus complet en 239 jours
+victoires  : niv.1 ×1, niv.2 ×1, niv.3 ×1, niv.4 ×1, niv.5 ×65
+```
+
+**65 des 69 victoires sont sur `DoorKey-16x16` — la carte la plus dure — de façon soutenue
+du jour 239 au jour 600.** Intervalles entre victoires en fin de run : `[5, 41, 1, 1, 5, 10,
+1, 1]` — l'agent gagne parfois deux jours d'affilée.
+
+Ce n'est pas une série chanceuse sur un niveau facile : c'est une **maîtrise entretenue de
+la carte la plus difficile**, sur 361 jours. Le record antérieur du projet était de 22
+victoires en 1300 jours, toutes sur des niveaux faciles.
+
+**Lecture honnête** : la continuité **rend possible** quelque chose qui ne l'était pas, mais
+ne le **déclenche pas de façon fiable**. C'est un plafond qui se lève, pas un plancher qui
+monte.
+
+### 7.3 Une métrique cassée, corrigée
+
+`Continu_Cases_Distinctes_Jour` donnait une **médiane de 2 dans les deux conditions** —
+métrique morte, incapable de rien départager.
+
+Cause : l'échantillonnage portait sur les 400 ticks de la journée, alors que **les 200 de
+l'après-midi sont vocaux** (`_perception_du_tick`, ère « alternance »). L'agent n'est alors
+pas dans la grille et `agent_pos` reste figée.
+
+Corrigé : l'échantillonnage est conditionné à `mode == "minigrid"`. La question 2a.4
+(« l'agent reste-t-il coincé ? ») reste **sans réponse** sur la première salve.

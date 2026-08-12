@@ -56,3 +56,8 @@ docs/notes/evals/
 # `docs/notes/`, ce qui excluait silencieusement chaque nouveau carnet — les fichiers
 # déjà suivis restaient tracés, les nouveaux disparaissaient sans avertissement.
 # Ne pas revenir à `docs/notes/` : n'ignorer que les sous-dossiers de sorties générées.
+
+# Fichiers temporaires de sauvegarde des cerveaux (PersistanceAnatomique ecrit un
+# .tmp puis renomme). Un `git add -A` lance pendant une sauvegarde echouait sur un
+# .tmp deja disparu — vu le 2026-08-13.
+*.brain.tmp
