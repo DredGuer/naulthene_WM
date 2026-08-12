@@ -4,7 +4,64 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
-## [recherche] - 2026-08-12
+## [recherche] - 2026-08-12 (soir)
+
+### ⛔ Réfutation — la révision espacée ne se réplique pas ; le seul levier est la patience
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | docs (recherche expérimentale) |
+| **Impact** | **Documentation** — annule la conclusion de l'entrée précédente |
+
+L'entrée ci-dessous (`7fb4c02`) annonçait « ×4,5 sur les victoires » pour H13+H14. **Ce
+résultat est réfuté.** Rejoué sur 3 graines avec témoins appariés :
+
+| | g101 | g202 | g303 | Moyenne | σ |
+|---|---|---|---|---|---|
+| **H13+H14** | 7 / 5 pal. | 2 / 2 | 1 / 1 | **3,3** | 2,62 |
+| **Témoin** | 5 / 5 | 5 / 5 | 5 / 5 | **5,0** | **0,00** |
+
+Le témoin fait **mieux** et franchit le cursus **3 fois sur 3**. Le ×4,5 était un artefact
+d'un seul run — la graine 101 le reproduit (7 victoires), ce qui montre le piège : sur n=1
+on ne voit pas qu'on a tiré la queue de la distribution.
+
+**La grâce mnésique produit l'obsession au lieu de l'empêcher** : g303 finit à 63 repères /
+427 confirmations, l'exact profil de H11. Protéger un repère neuf lui laisse le temps de se
+re-confirmer, donc de devenir inévinçable *par le haut*. Le cliquet n'a pas été supprimé,
+il a été **alimenté**.
+
+**Le « plateau de 800 jours » tombe aussi** : les témoins franchissent tout sans plateau. Il
+appartenait à la famille H13/H14, ce n'était pas une loi de maturation.
+
+**🎯 Le seul levier qui survit — la patience ∝ √surface**, seul ingrédient commun aux 4 runs
+qui franchissent le cursus complet (A3fix + 3 témoins) :
+
+| Levier | Runs | Verdict |
+|---|---|---|
+| **Patience ∝ √surface** | 4/4 | ✅ **confirmé** |
+| Grâce mnésique (H13) | 1/3 | ❌ non reproduit |
+| Entrelacement (H14) | 1/3 | ❌ non reproduit |
+| C2 profond (A1) | 0/1 | ❌ aucun effet |
+| Promotion hybride (A2) | 0/1 | ❌ bloque tout |
+
+**Le blocage n'était ni la mémoire, ni C2, ni le seuil de promotion : c'était le temps
+d'exploration.** L'agent recevait le même budget de ticks sur 196 cases que sur 9 — il
+n'échouait pas par incapacité, **il était coupé avant d'avoir fini**.
+
+**Erreur de méthode à ne pas répéter** : « ×4,5 » a été annoncé comme solide en citant, dans
+la même page, la règle qui l'interdisait (H10 : « aucun écart sous 4 victoires n'est
+significatif »). Règle qui en découle : **toute condition annoncée comme un effet doit être
+répliquée sur ≥3 graines avec témoins appariés, avant publication et non après.**
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `docs/recherche_bug_or_not_bug.md` | réfutation, sections barrées mais conservées, erreur de méthode |
+| `docs/CHANGELOG.md` | cette entrée |
+
+---
+
+## [recherche] - 2026-08-12 (matin) — ⛔ CONCLUSION RÉFUTÉE, voir l'entrée ci-dessus
 
 ### L'apprentissage plutôt que le cerveau — la révision espacée fait ×4,5 sur les victoires
 

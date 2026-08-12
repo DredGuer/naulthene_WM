@@ -728,7 +728,13 @@ Tous avec le correctif de patience A3, tous partis de la naissance.
 \* trompeur : la rotation fait *visiter* les 6 paliers sans jamais les mériter ; le niveau
 final n'est qu'une position dans le cycle.
 
-### ✅ Les deux mécanismes se COMBINENT — une première dans ce carnet
+> ⛔ **TOUT CE QUI SUIT, JUSQU'À LA SECTION « RÉPLICATION », A ÉTÉ RÉFUTÉ LE 12/08 AU SOIR.**
+> Conservé intact — la règle du carnet est que rien n'est effacé. Voir
+> [la réplication sur 3 graines](#-réplication-sur-3-graines--le-résultat-est-réfuté) :
+> le témoin fait **mieux** (5,0 victoires contre 3,3) et franchit le cursus **3 fois sur 3**.
+> Les conclusions ci-dessous reposaient sur **un seul run par condition**.
+
+### ~~✅ Les deux mécanismes se COMBINENT~~ — RÉFUTÉ
 
 H13 seul : **+1 palier**. H14 seul : **+2 paliers**. Ensemble : **+3 paliers et 9 victoires**
 (contre 2 pour le témoin, ×4,5).
@@ -744,7 +750,7 @@ protège des repères neufs qu'un monde figé ne produit jamais.
 C'est exactement la formulation de l'utilisateur : *« il faut de la diversité, mais en même
 temps de la redondance »*.
 
-### 🔑 Le « moment de bascule » — le fait le plus important de la journée
+### ~~🔑 Le « moment de bascule »~~ — RÉFUTÉ (le plateau n'appartient qu'à H13/H14)
 
 | Run | 1ʳᵉˢ promotions | Plateau | Reprise |
 |---|---|---|---|
@@ -790,11 +796,88 @@ est le seul mécanisme qui produise les deux à la fois.
 - **Les constantes restent de l'inné arbitraire** (10 nuits, 20 %). Elles ont répondu à
   « l'effet existe-t-il ? » — oui. Elles doivent maintenant dériver du vécu.
 
-🔬 **Réplication lancée le 12/08 à 14h45** : H13+H14 sur 3 graines (101, 202, 303) **et 3
-témoins sur les mêmes graines**. Sans les témoins appariés, un bon résultat pourrait n'être
-qu'un tirage favorable. Note technique : `noyau.py:48-49` fixe torch/numpy à 42 **au
-chargement du module** — les graines sont donc réécrites *après* l'import, sinon les trois
-répétitions seraient strictement identiques.
+---
+
+## ⛔ Réplication sur 3 graines — le résultat est RÉFUTÉ
+
+H13+H14 rejoué sur 3 graines (101, 202, 303) **avec 3 témoins appariés sur les mêmes
+graines**. Note technique : `noyau.py:48-49` fixe torch/numpy à 42 **au chargement du
+module** ; les graines sont donc réécrites *après* l'import, sinon les trois répétitions
+seraient strictement identiques.
+
+| | g101 | g202 | g303 | Moyenne | σ |
+|---|---|---|---|---|---|
+| **H13+H14** | 7 vict. / 5 pal. | 2 / 2 | 1 / 1 | **3,3 / 2,7** | 2,62 |
+| **Témoin** | 5 / 5 | 5 / 5 | 5 / 5 | **5,0 / 5,0** | **0,00** |
+
+**Le témoin fait mieux, et il franchit le cursus complet 3 fois sur 3 avec un écart-type de
+zéro.** Le « ×4,5 » annoncé le matin était un **artefact d'un seul run** — la graine 101
+reproduit d'ailleurs le bon résultat (7 victoires), ce qui montre précisément le piège :
+sur n=1, on ne voit pas qu'on a tiré la queue de la distribution.
+
+### La signature mémoire s'inverse
+
+| Run | Repères | Conf. moy |
+|---|---|---|
+| H13+H14 g202 | 156 | 211 |
+| H13+H14 g303 | **63** | **427** |
+
+C'est l'exact profil obsessionnel de H11 (25 repères / 1788 conf.). **La grâce mnésique a
+PRODUIT l'obsession au lieu de l'empêcher** — l'inverse du mécanisme supposé. Protéger un
+repère neuf de l'éviction lui laisse le temps de se re-confirmer, donc de devenir
+inévinçable *par le haut* une fois la grâce expirée. Le cliquet n'a pas été supprimé, il a
+été **alimenté**.
+
+### Ce que la réfutation emporte avec elle
+
+- **Le « moment de bascule » (plateau de 700-900 j) tombe** : les témoins franchissent tout
+  **sans plateau**. Ce plateau appartenait à la famille H13/H14, il n'est pas une loi de
+  maturation de l'agent. C'était une sur-généralisation depuis trois courbes parentes.
+- **« La révision est le seul mécanisme qui produise les deux à la fois »** : non démontré.
+- Reste vrai en revanche : **un run court ne peut pas conclure**, puisque la variance entre
+  graines va de 1 à 7 victoires sur une condition identique.
+
+### 🎯 Le seul levier qui survit : la patience ∝ √surface
+
+Le seul ingrédient **commun aux 4 runs qui franchissent le cursus complet** (A3fix + les 3
+témoins) est `--patience-surface`.
+
+| Levier | Runs | Verdict |
+|---|---|---|
+| **Patience ∝ √surface** | 4/4 | ✅ **confirmé** |
+| Grâce mnésique (H13) | 1/3 | ❌ non reproduit |
+| Entrelacement (H14) | 1/3 | ❌ non reproduit |
+| C2 profond (A1) | 0/1 | ❌ aucun effet |
+| Promotion hybride (A2) | 0/1 | ❌ bloque tout |
+
+**Le blocage du projet n'était ni la mémoire, ni C2, ni le seuil de promotion : c'était le
+temps d'exploration.** L'agent recevait le même budget de ticks sur une carte de 196 cases
+que sur une de 9. Il n'échouait pas par incapacité — **il était coupé avant d'avoir fini**.
+
+C'est cohérent avec la mesure BFS du carnet (marge ×10,9 sur `DoorKey-5x5`) : la marge est
+confortable sur une petite carte et devient négative en grandissant, sans que rien dans le
+code ne s'en aperçoive.
+
+### Erreur de méthode commise ici — à ne pas répéter
+
+J'ai annoncé « ×4,5 sur les victoires » comme un résultat solide **en citant, dans la même
+page, la règle qui l'interdisait** (H10 : « aucun écart sous 4 victoires n'est
+significatif »). Deux fautes distinctes :
+
+1. **n=1 présenté comme une conclusion.** L'écart 2 → 9 dépassait le seuil de H10, mais ce
+   seuil portait sur la *variance entre graines* — il ne pouvait pas être appliqué à un run
+   unique dont la variance était, par construction, inconnue.
+2. **Un signal précoce lu à travers la théorie.** À 140 jours, les témoins étaient devant ;
+   je l'ai *expliqué* (« la protection coûte cher au début, ça paiera après le plateau »)
+   au lieu de le prendre pour ce qu'il était — les témoins étaient devant parce qu'ils
+   étaient **meilleurs**, et ils le sont restés 1060 jours de plus.
+
+Règle qui en découle : **toute condition annoncée comme un effet doit être répliquée sur ≥3
+graines avec témoins appariés, avant publication et non après.**
+
+🔬 **Verrouillage lancé le 12/08 à 17h05** : patience ∝ √surface sur 3 nouvelles graines
+(404, 505, 606) **contre 3 runs sans patience sur les mêmes graines** — le seul protocole
+qui isole vraiment ce levier.
 
 ### À méditer plus tard *(idées utilisateur, non testées)*
 
@@ -854,9 +937,18 @@ en parallèle dans les mêmes conditions.
 | « Le rêve détruit le cerveau » | ❌ FAUX | Corrélation **négative** (−0,22) : le rêve protège |
 | « Le Goal est introuvable sur DoorKey » | ❌ FAUX | Il est bien trouvé ; c'est `_quete_auto_active` qui coupe le détecteur |
 | « La patience de 120 est insuffisante en soi » | ❌ IMPRÉCIS | Marge ×10,9 sur l'optimal BFS ; le problème est le taux atteignable |
+| « A3 est en retard, le lissage ne sert à rien » | ❌ FAUX | Le banc d'essai étirait `patience_base_jour` (valeur *loguée*) au lieu de `patience_jour` (budget réel). A3 n'avait jamais été testé — corrigé, il franchit 5/5 |
+| « La révision espacée fait ×4,5 sur les victoires » | ❌ **RÉFUTÉ** | **n=1.** Répliqué sur 3 graines : témoin 5,0 vs H13+H14 3,3. Voir [la réplication](#-réplication-sur-3-graines--le-résultat-est-réfuté) |
+| « Le plateau de 800 jours est une loi de maturation » | ❌ SUR-GÉNÉRALISÉ | Il n'existe que dans la famille H13/H14 ; les témoins franchissent tout sans plateau |
+| « Le verrou de confirmations d'A2 est inatteignable » | ❌ FAUX | Mesuré à **3264**, soit 65× le seuil. A2 bloque, mais pour une autre raison |
+| « La promotion fabrique la diversité mnésique » | ❌ RÉFUTÉ | H12 produit 689 repères (record) **sans** aucune progression |
 
-**Cinq erreurs en une investigation.** Elles sont toutes consignées parce que chacune a coûté du
+**Dix erreurs en une investigation.** Elles sont toutes consignées parce que chacune a coûté du
 temps, et qu'aucune ne doit être refaite.
+
+Les cinq dernières partagent **une même cause** : conclure depuis **un seul run**. Les cinq
+premières venaient d'une mauvaise lecture d'une métrique ; celles-ci viennent d'une lecture
+correcte d'un échantillon trop petit — plus insidieux, parce que le chiffre était juste.
 
 ---
 
@@ -874,6 +966,21 @@ Ce qui reste robuste malgré cette variance, parce que l'écart est d'un autre o
 | Accord C1/C2, sanction faible en fin de parcours | 0,29 → 0,86 (**×3**) | ✅ |
 | Courbe témoin qui s'éteint vs DoorKey qui accélère | 0 vs 4-5 victoires en 2e moitié | ✅ |
 | Écarts de victoires entre runs DoorKey (3 à 7) | dans la variance | ❌ |
+
+**Mise à jour du 12/08 — la variance est pire que ne le disait H10.** Une condition unique
+(H13+H14) rejouée sur 3 graines donne **1, 2 et 7 victoires** : un facteur **×7** entre deux
+exécutions du *même* protocole. Le seuil de H10 (« moins de 4 victoires d'écart n'est pas un
+signal ») était donc encore **trop permissif**.
+
+Règle applicable à tout ce carnet, désormais :
+
+> **Aucun run unique ne peut établir un effet.** Une condition ne compte que répliquée sur
+> **≥3 graines avec témoins appariés sur les mêmes graines**. Un témoin sur une autre graine
+> ne vaut rien : il compare deux tirages, pas deux conditions.
+
+Ce que la réplication a rendu **plus** solide, à l'inverse : le témoin franchit le cursus
+complet **3 fois sur 3, écart-type 0,00**. Un effet reproductible se reconnaît à ça — pas à
+l'amplitude d'un seul run, mais à la **faiblesse de sa variance**.
 
 ---
 
