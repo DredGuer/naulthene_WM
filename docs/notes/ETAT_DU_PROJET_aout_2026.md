@@ -8,7 +8,8 @@
 > **Ce document ne remplace pas** : [CHANGELOG.md](../CHANGELOG.md) reste la référence
 > factuelle version par version, [recherche_bug_or_not_bug.md](recherche_bug_or_not_bug.md)
 > le carnet d'investigation, [CHANTIER_v38_monde_continu.md](CHANTIER_v38_monde_continu.md)
-> le détail du chantier en cours.
+> le détail du chantier en cours. Les **propositions de solutions** qui découlent de cet
+> état des lieux sont dans [AVIS_ET_PROPOSITIONS_aout_2026.md](AVIS_ET_PROPOSITIONS_aout_2026.md).
 
 ---
 
