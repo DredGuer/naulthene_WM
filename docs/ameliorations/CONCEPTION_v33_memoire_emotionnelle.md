@@ -27,7 +27,7 @@
 > tissu synaptique), et les **risques identifiés** (§6).
 >
 > Pour l'état courant : [../../readme.md](../../readme.md),
-> [../CHANGELOG.md](../CHANGELOG.md), [../LANCEMENT.md](../LANCEMENT.md).
+> [../CHANGELOG.md](../fonctionnement/CHANGELOG.md), [../LANCEMENT.md](../fonctionnement/LANCEMENT.md).
 
 > **Statut d'origine : PROPOSITION — aucune ligne de code écrite.**
 > Document de cadrage soumis à arbitrage utilisateur. Il précise ce qui est proposé, ce
@@ -335,7 +335,7 @@ faire **sciemment**, et démontrer qu'elle fait *mieux*, pas seulement *différe
 | `src/naulthene/cerveau/noyau.py` | 0-6 | calcul de valence, `importance`, `rever()`, `fortifier_synapses`, compteurs, bilan, clés W&B |
 | `src/naulthene/cerveau/persistance.py` | 2, 5, 6 | migration `souvenirs_spatiaux`, greffe `vecteur_bio` |
 | `src/naulthene/cerveau/bus_sensoriel.py` | 6 | empreinte perceptive compacte (reste **pur numpy**, n'importe jamais `noyau.py`) |
-| `docs/CHANGELOG.md`, `readme_fr.md` | toutes | mention **expérimental** obligatoire (vit uniquement dans `noyau.py`) |
+| `docs/fonctionnement/CHANGELOG.md`, `readme_fr.md` | toutes | mention **expérimental** obligatoire (vit uniquement dans `noyau.py`) |
 
 ---
 

@@ -1,6 +1,6 @@
 # Naulthène AGI — Comprendre l'algorithme en profondeur
 
-Ce document explique **comment** et **pourquoi** le cerveau `AGI_Naulthene` fonctionne, avec les vraies formules mathématiques et les vrais noms de variables du code (référence : `src/naulthene/cerveau/colab.py` v17 ; les mécaniques expérimentales additionnelles de `src/naulthene/cerveau/noyau.py`, jusqu'à la v29.1, sont signalées explicitement). Il complète le [readme.md](../readme_fr.md) narratif par un niveau de détail algorithmique et mathématique complet.
+Ce document explique **comment** et **pourquoi** le cerveau `AGI_Naulthene` fonctionne, avec les vraies formules mathématiques et les vrais noms de variables du code (référence : `src/naulthene/cerveau/colab.py` v17 ; les mécaniques expérimentales additionnelles de `src/naulthene/cerveau/noyau.py`, jusqu'à la v29.1, sont signalées explicitement). Il complète le [readme.md](../../readme_fr.md) narratif par un niveau de détail algorithmique et mathématique complet.
 
 ---
 
@@ -574,7 +574,7 @@ Dès `palier_cible >= 5` (Viser la Porte), le **Mode Libre** s'active : le guida
 | v31.0 (expérimental) | La Mémoire Proportionnelle (`capacite = dim_bus × 12 × (1+déficit)`) & le Rêve Invariant d'Échelle (référence de richesse normalisée par `empreinte_enfance`) | Supprimer deux biais : un plafond mnésique arbitraire qui saturait, et un `%_reve` qui s'effondrait mécaniquement quand le cerveau grandissait (60 % → 15 %) |
 | v30.1 (expérimental) | Instrumentation avant calibrage — 8 clés `Memoire_*`/`Sursaut_*`, invariance comportementale prouvée par empreinte à graine fixée | Mesurer avant de rendre adaptatives deux constantes arbitraires (`capacite_max=200`, `EXTENSION_PATIENCE_SURSAUT=50`) : remplacer un chiffre arbitraire par une formule arbitraire ne vaut pas mieux |
 
-Voir [CHANGELOG.md](CHANGELOG.md) pour le détail commit par commit et [readme.md](../readme_fr.md) pour la description narrative complète de chaque version.
+Voir [CHANGELOG.md](CHANGELOG.md) pour le détail commit par commit et [readme.md](../../readme_fr.md) pour la description narrative complète de chaque version.
 
 ---
 
@@ -634,7 +634,7 @@ Voir [CHANGELOG.md](CHANGELOG.md) pour le détail commit par commit et [readme.m
 
 ## 14. La Cascade C1 → C2 → C3 & le Port Exocortex (expérimental)
 
-> ⚠️ **Statut expérimental** : vit dans `src/naulthene/cerveau/noyau.py` et le sous-package versionné `src/naulthene/exocortex/`, pas encore porté sur `agi_google_colab.py`. Voir [docs/CHANGELOG.md](CHANGELOG.md) (entrée v28.0-experimental) pour le détail commit par commit.
+> ⚠️ **Statut expérimental** : vit dans `src/naulthene/cerveau/noyau.py` et le sous-package versionné `src/naulthene/exocortex/`, pas encore porté sur `agi_google_colab.py`. Voir [docs/fonctionnement/CHANGELOG.md](CHANGELOG.md) (entrée v28.0-experimental) pour le détail commit par commit.
 
 ### 14.1 Principe : un troisième cerveau, jamais dans le chemin critique
 
@@ -683,7 +683,7 @@ if valeur_cumulee.std() > 1e-6:
 
 ### 14.4 Isolation et repli — la trappe de secours
 
-`PortC3.canal_emission` enveloppe chaque appel de plug dans un `try/except` large : aucune panne externe (réseau, timeout, format invalide) ne remonte jamais au noyau. Un plug qui échoue est mis en cooldown (`COOLDOWN_PLUG_ECHEC=200` ticks) plutôt que réinterrogé à chaque tick — la leçon retenue du seul précédent d'appel externe du projet, `professeur_gemma.py` (§ voir `docs/CHANGELOG.md` v28.0), qui n'a ni health-check ni cache d'indisponibilité et peut faire payer jusqu'à 60s de timeout par appel. Sans réponse (bus vide ou plug en échec), l'action a tout de même été jouée « à vide » : l'agent a payé `COUT_REQUETE_C3` sans bénéfice, et la curiosité intrinsèque (`DetecteurCuriositeJEPA`, §2.4) ainsi que le Sursaut de Volonté restent la réponse de repli — ils n'ont jamais été conditionnés à la présence de C3.
+`PortC3.canal_emission` enveloppe chaque appel de plug dans un `try/except` large : aucune panne externe (réseau, timeout, format invalide) ne remonte jamais au noyau. Un plug qui échoue est mis en cooldown (`COOLDOWN_PLUG_ECHEC=200` ticks) plutôt que réinterrogé à chaque tick — la leçon retenue du seul précédent d'appel externe du projet, `professeur_gemma.py` (§ voir `docs/fonctionnement/CHANGELOG.md` v28.0), qui n'a ni health-check ni cache d'indisponibilité et peut faire payer jusqu'à 60s de timeout par appel. Sans réponse (bus vide ou plug en échec), l'action a tout de même été jouée « à vide » : l'agent a payé `COUT_REQUETE_C3` sans bénéfice, et la curiosité intrinsèque (`DetecteurCuriositeJEPA`, §2.4) ainsi que le Sursaut de Volonté restent la réponse de repli — ils n'ont jamais été conditionnés à la présence de C3.
 
 ### 14.5 Le registre d'assimilation
 
@@ -701,7 +701,7 @@ $$
 w_{evenement} = 1 - \big(1 - W_{visuel} \cdot w_{visuel}\big)\big(1 - W_{vocal} \cdot w_{vocal}\big)\big(1 - W_{C3} \cdot w_{C3}\big), \qquad W_{C3} = \text{POIDS\_DOPAMINE\_C3} = 0.5
 $$
 
-Toujours bornée dans $[0,1]$ par construction, toujours rétrocompatible à l'identique si $w_{C3}=0$. Le choc dopaminergique qui en résulte appelle déjà `fortifier_synapses` (LTP par tick, §8.3) et majore `micro_boost_ancrage`, donc l'importance du souvenir dans `memoire_moyen_terme` — ce souvenir sera rejoué en priorité la nuit par l'échantillonnage pondéré de `rever()` (§10.2). Aucune perte supervisée dédiée n'est ajoutée : l'assimilation passe entièrement par les mécaniques homéostatiques déjà existantes, jamais par un nouveau canal de gradient — cohérent avec la contrainte "pas de Transformer, pas de signal supervisé externe dans la politique" du plan v26.0 (`docs/Old_Archive_rmd/AMELIORATION_V1.md`).
+Toujours bornée dans $[0,1]$ par construction, toujours rétrocompatible à l'identique si $w_{C3}=0$. Le choc dopaminergique qui en résulte appelle déjà `fortifier_synapses` (LTP par tick, §8.3) et majore `micro_boost_ancrage`, donc l'importance du souvenir dans `memoire_moyen_terme` — ce souvenir sera rejoué en priorité la nuit par l'échantillonnage pondéré de `rever()` (§10.2). Aucune perte supervisée dédiée n'est ajoutée : l'assimilation passe entièrement par les mécaniques homéostatiques déjà existantes, jamais par un nouveau canal de gradient — cohérent avec la contrainte "pas de Transformer, pas de signal supervisé externe dans la politique" du plan v26.0 (`docs/ameliorations/AMELIORATION_V1.md`).
 
 ### 14.6 Rétrocompatibilité des `.brain` — la greffe par recopie
 
@@ -717,7 +717,7 @@ Passer de 7 à 8 actions change la **forme** de `tete_motrice` (sortie), `genera
 >
 > 📖 Cette section couvre les v29 à v31. Le document de conception d'origine de la v29
 > (schémas détaillés, table des 13 validations d'époque) est archivé dans
-> **[Old_Archive_rmd/EXPLICATIONS_v29_sens.md](Old_Archive_rmd/EXPLICATIONS_v29_sens.md)** — utile
+> **[ameliorations_appliquees/EXPLICATIONS_v29_sens.md](../ameliorations_appliquees/EXPLICATIONS_v29_sens.md)** — utile
 > pour le *pourquoi* historique, mais ses chiffres (24 dims, odorat linéaire) sont dépassés.
 
 ### 15.1 Les 5 sens et leur hiérarchie de coût
@@ -794,9 +794,9 @@ Le filtre historique **excluait** la couche, qui renaissait à neuf — c'est le
 
 La v29.0 câblait les sens dans la décision sans les instrumenter — corrigé en v29.1 par 7 clés W&B (`Sens_Bus_Actif`, `Sens_Toucher_Contact_Ratio`, `Sens_Toucher_Portage_Ratio`, `Sens_Odorat_Moyen`/`_Max`/`_Ticks_Actifs_Ratio`, `Sens_Gout_Ticks_Actifs`) et une ligne au bilan de nuit. Purement observationnel : jamais relu par la décision ni le gradient.
 
-Premier diagnostic livré par cette télémétrie : **l'odorat sature sur les petites cartes** (97,6 % de couverture sur `Empty-8x8`, 100 % sur `DoorKey-6x6` avec `PORTEE_ODORAT=4`), donc il y porte peu d'information. Constat documenté, constante **inchangée** — l'arbitrage (portée réduite vs normalisation par taille de carte) appartient à l'auteur. Détail complet en [EXPLICATIONS_v29_sens.md](Old_Archive_rmd/EXPLICATIONS_v29_sens.md) §12.
+Premier diagnostic livré par cette télémétrie : **l'odorat sature sur les petites cartes** (97,6 % de couverture sur `Empty-8x8`, 100 % sur `DoorKey-6x6` avec `PORTEE_ODORAT=4`), donc il y porte peu d'information. Constat documenté, constante **inchangée** — l'arbitrage (portée réduite vs normalisation par taille de carte) appartient à l'auteur. Détail complet en [EXPLICATIONS_v29_sens.md](../ameliorations_appliquees/EXPLICATIONS_v29_sens.md) §12.
 
-C'est devenu le **chantier 1 de la v30.0**, désormais **livrée** — voir §15.7 ci-dessous et [CONCEPTION_v30_exo_sens.md](Old_Archive_rmd/CONCEPTION_v30_exo_sens.md) pour le cadrage et les options écartées.
+C'est devenu le **chantier 1 de la v30.0**, désormais **livrée** — voir §15.7 ci-dessous et [CONCEPTION_v30_exo_sens.md](../ameliorations_appliquees/CONCEPTION_v30_exo_sens.md) pour le cadrage et les options écartées.
 
 ### 15.6bis Deux options volontairement ÉCARTÉES (et pourquoi)
 
@@ -856,4 +856,4 @@ Au-dessus de 0.5 l'agent se rapproche, en dessous il s'éloigne. C'est ce qui d�
 
 ---
 
-*Document généré à partir d'une lecture directe du code source (`src/naulthene/cerveau/colab.py` v17, `src/naulthene/cerveau/noyau.py` jusqu'à v32.0) — voir [readme.md](../readme_fr.md) pour la documentation narrative complète et [CLAUDE.md](../CLAUDE.md) pour les règles de maintenance du projet.*
+*Document généré à partir d'une lecture directe du code source (`src/naulthene/cerveau/colab.py` v17, `src/naulthene/cerveau/noyau.py` jusqu'à v32.0) — voir [readme.md](../../readme_fr.md) pour la documentation narrative complète et [CLAUDE.md](../../CLAUDE.md) pour les règles de maintenance du projet.*

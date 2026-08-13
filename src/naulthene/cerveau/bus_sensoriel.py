@@ -6,7 +6,7 @@ Ce module ne contient AUCUN réseau de neurones et n'importe jamais `naulthene.c
 dépendance au cerveau). Il ne fait qu'une chose : lire le monde MiniGrid et le traduire
 en signaux normalisés, prêts à être consommés par le cerveau.
 
-Motivation (voir docs/Old_Archive_rmd/Maj_V29_readme.md) : jusqu'en v28.0, l'agent avait deux sens
+Motivation (voir docs/ameliorations_appliquees/Maj_V29_readme.md) : jusqu'en v28.0, l'agent avait deux sens
 « gourmands » (la vue via `porte_visuelle`, l'ouïe via `porte_auditive`) qui possédaient
 chacun leur propre couche synaptique, et rien d'autre. Les trois sens restants de la
 hiérarchie biologique — toucher, odorat, goût — n'existaient nulle part, alors qu'ils

@@ -22,17 +22,27 @@ jour/nuit qui consolide ou oublie. Remplacez le berceau par une caméra, un micr
 et le même `nn.Module` devrait continuer de tourner — parce que rien à l'intérieur ne nomme
 « grille », « clé » ou « porte ».
 
-**⚠️ Cela ne fonctionne pas encore.** L'agent est bloqué au niveau 2 d'un cursus de 15 niveaux et
-n'a plus gagné depuis 678 jours simulés. Ce dépôt documente une architecture **en cours de
-développement**, y compris [tout ce qui est cassé](docs/notes/dia_Aout_2026.md) et chaque erreur de
-diagnostic commise en chemin. À lire comme un carnet de recherche, pas comme un système livré.
+**⚠️ Cela ne fonctionne pas encore.** L'agent franchit **1 à 5 paliers sur 6** selon la graine
+aléatoire — une **variance ×69 entre deux runs identiques**. Huit mécaniques cognitives ont été
+testées ; huit ont échoué. Les deux seuls leviers qui aient jamais marché sont des propriétés du
+*monde*, pas du cerveau.
+
+**⚠️ Et le banc d'essai lui-même était biaisé.** Une revue de code des 13-14 août a montré que
+jusqu'à **une carte sur deux** était gagnable **sans la clé** — l'agent passait un examen truqué.
+Corrigé ; la tâche est alors devenue **50× plus dure** (réussite d'une politique aléatoire sur
+`8x8` : 15,3 % → 0,3 %), donc les résultats antérieurs ne sont **pas comparables** aux suivants.
+Récit complet : [revue de code](docs/recherche/REVUE_CODE_v39_aout_2026.md).
+
+À lire comme un carnet de recherche, pas comme un système livré. Tout ce qui est cassé est écrit,
+y compris [chaque erreur de diagnostic](docs/recherche/recherche_bug_or_not_bug.md) — 15 à ce jour.
 
 *Direction long terme : une intelligence généraliste qui tourne sur une puce Apple Silicon, sans
 datacenter.*
 
 > 🇬🇧 **[English README →](readme.md)** — la vitrine, en anglais.
-> 🩺 **[Diagnostic complet du système →](docs/notes/dia_Aout_2026.md)** — run de 1300 jours : ce qui
+> 🩺 **[Diagnostic complet du système →](docs/recherche/dia_Aout_2026.md)** — run de 1300 jours : ce qui
 > marche, ce qui bloque, ce qui reste inconnu.
+> 🗂️ **[Index de la documentation →](docs/INDEX.md)** — quelle question mène à quel document
 > 📊 **[Expériences en direct sur Weights & Biases →](https://wandb.ai/naultadrien123-nvnc/Naulthene-AGI)**
 > — tous les runs, toutes les courbes, échecs compris.
 
@@ -80,15 +90,19 @@ Deux nuances, mesurées et non rhétoriques :
 
 ### Performance sur la tâche — **actuellement bloquée**
 
-| Métrique | Valeur (run de 1300 jours) |
+| Métrique | Valeur |
 |---|---|
-| Niveau de cursus atteint | **2 / 15** (`Empty-8x8`) |
-| Taux de victoire sur la vie | **1,69 %** |
-| Jours depuis la dernière victoire | 678 |
+| Paliers franchis | **1 à 5 sur 6**, selon la graine |
+| Variance entre runs identiques | **×69** (1 à 69 victoires) |
+| Mécaniques cognitives ayant amélioré quoi que ce soit | **0 sur 8 testées** |
+| Leviers qui ont marché | **2 — tous deux des propriétés du monde** |
 
 Un PPO standard résout `Empty-8x8` en quelques milliers d'épisodes. **Naulthène, non.**
 
-Le [diagnostic](docs/notes/dia_Aout_2026.md) isole pourquoi, et **aucun des cinq bloquants n'est
+⚠️ Chiffres obtenus **avant** la découverte du biais du banc d'essai (voir l'avertissement en
+tête). Ils sont conservés pour mémoire, pas comme référence.
+
+Le [diagnostic](docs/recherche/dia_Aout_2026.md) isole pourquoi, et **aucun des cinq bloquants n'est
 cognitif** : patience plafonnée à 120 ticks contre 256 pour MiniGrid lui-même (taux de réussite
 atteignable 4,7 % contre 21,0 %), saut de difficulté ×10 au niveau 2, espérance d'épisode à
 **−1,06**, 4 actions sur 7 inertes sur une pièce vide, et une ère de cursus qui double les
@@ -162,7 +176,7 @@ eux-mêmes** — c'est le prix du cycle jour/nuit, et une cible d'optimisation r
 1. [Vue d'Ensemble du Projet](https://www.google.com/search?q=%23vue-densemble-du-projet)
 2. [Journal des Mises à Jour (Changelog)](https://www.google.com/search?q=%23journal-des-mises-%C3%A0-jour)
 3. [Plan d'Action](https://www.google.com/search?q=%23plan-daction)
-3a. **[Parcourt_readme.md — Guide Complet du Système de Cursus](docs/Parcourt_readme.md)** (commandes de lancement, jours/ticks par parcours, détail des paliers, FAQ)
+3a. **[Parcourt_readme.md — Guide Complet du Système de Cursus](docs/fonctionnement/Parcourt_readme.md)** (commandes de lancement, jours/ticks par parcours, détail des paliers, FAQ)
 3b. [🎓 Conclusion du cycle v33 — Le cursus est terminé, le blocage n'existait pas](#-conclusion-du-cycle-v33--le-cursus-est-terminé-le-blocage-nexistait-pas-2026-08-05)
 3c. [Nouveautés v33.0 étapes 0 → 0.6 (expérimental) — Chronométrie des Jalons, Ablation Inversée & Chronologie des Victoires](#nouveautés-v330-étapes-0--06-expérimental--la-chronométrie-des-jalons-le-test-dablation-inversée--la-chronologie-des-victoires-2026-08-04)
 3d. [Nouveautés v32.0 (expérimental) — L'Odorat Topologique & la Clinotaxie](#nouveautés-v320-expérimental--lodorat-topologique--la-clinotaxie-2026-08-03)
@@ -232,7 +246,7 @@ L'agent évolue à travers un cursus scolaire modélisé sous forme d'environnem
 * **Doctorat** : Planification à très long horizon à travers de multiples sous-objectifs (`MultiRoom-N4-S5`).
 
 📖 **Envie de lancer un run et de comprendre concrètement ce qui se passe (commandes, jours,
-ticks par jour, paliers, FAQ) ?** Voir **[docs/Parcourt_readme.md](docs/Parcourt_readme.md)** —
+ticks par jour, paliers, FAQ) ?** Voir **[docs/fonctionnement/Parcourt_readme.md](docs/fonctionnement/Parcourt_readme.md)** —
 le guide pratique complet des 4 parcours d'entraînement (Cursus par Ères, Cerveau Bébé, Cursus de
 la Parole, la Cuve).
 
@@ -240,16 +254,16 @@ la Parole, la Cuve).
 
 ## 📜 Journal des Mises à Jour
 
-Pour un historique complet commit par commit, consultez [docs/CHANGELOG.md](docs/CHANGELOG.md).
+Pour un historique complet commit par commit, consultez [docs/fonctionnement/CHANGELOG.md](docs/fonctionnement/CHANGELOG.md).
 
 > 📍 **État du dépôt (2026-08-02)** — la branche `master` intègre les versions **v28.0** (Port
 > Exocortex C3), **v29.0** (Bus Sensoriel & identité C1/C2) et **v29.1** (télémétrie des 5 sens).
 > Les **v30.0** (« l'Exo-Sens »), **v30.1** (instrumentation) **v31.0** (Mémoire
 > Proportionnelle) et **v31.1** (Déduplication Mnésique) sont **implémentées et validées** sur la branche `feat/v30-exo-sens`, en attente de merge — voir
-> [docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md](docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md) pour le cadrage et les
+> [docs/ameliorations_appliquees/CONCEPTION_v30_exo_sens.md](docs/ameliorations_appliquees/CONCEPTION_v30_exo_sens.md) pour le cadrage et les
 > arbitrages.
 
-> 🩺 **Diagnostic complet du système (2026-08-08)** — [docs/notes/dia_Aout_2026.md](docs/notes/dia_Aout_2026.md),
+> 🩺 **Diagnostic complet du système (2026-08-08)** — [docs/recherche/dia_Aout_2026.md](docs/recherche/dia_Aout_2026.md),
 > adossé à un run de **1300 jours**. Toutes les mécaniques cognitives fonctionnent et sont
 > chiffrées (plasticité, rêve, C1/C2, mémoire, sens, vocal) ; le blocage du cursus tient à **trois
 > facteurs non cognitifs** — un saut de difficulté ×10 au niveau 2, une patience deux fois plus
@@ -346,7 +360,7 @@ sur **aucun tick** (0 %), chacun votant une action *constante*, avec un ratio d'
 Deux instruments de diagnostic **en lecture seule** accompagnent le chantier :
 `sonde_c1_c2.py` (rapport de force entre les deux voix) et `sonde_poids.py` (santé synaptique
 couche par couche). Détail complet, options écartées et mesures qui les ont écartées :
-[docs/notes/CHANTIER_v37_equilibre_c1_c2.md](docs/notes/CHANTIER_v37_equilibre_c1_c2.md).
+[docs/ameliorations_appliquees/CHANTIER_v37_equilibre_c1_c2.md](docs/ameliorations_appliquees/CHANTIER_v37_equilibre_c1_c2.md).
 
 ### 🧠 Nouveautés v36.0 (expérimental) — Le Flux Enrichi & l'Abstraction par Récurrence (2026-08-07)
 
@@ -403,10 +417,10 @@ restait auparavant bloqué à vie.
 
 **Rétrocompatibilité** : `niveau_actuel` étant un index, un ancien `.brain` est **remappé par
 `env_id`** (`🔀 Niveau remappé : index 4 → 14`) — vérifié nuit complète incluse sur deux
-cerveaux réels. Voir [docs/Parcourt_readme.md §6](docs/Parcourt_readme.md) et
-[docs/CHANGELOG.md](docs/CHANGELOG.md).
+cerveaux réels. Voir [docs/fonctionnement/Parcourt_readme.md §6](docs/fonctionnement/Parcourt_readme.md) et
+[docs/fonctionnement/CHANGELOG.md](docs/fonctionnement/CHANGELOG.md).
 
-> ⚠️ **Uniquement dans `noyau.py`** (terrain d'essai local, gitignoré) — `colab.py` conserve
+> ⚠️ **Uniquement dans `noyau.py`** (terrain d'essai local, versionné depuis la v39.0) — `colab.py` conserve
 > ses 5 niveaux.
 
 ### 🩺 Nouveautés v34.0-fix1/fix2 (expérimental) — L'Extinction Synaptique (2026-08-06)
@@ -460,7 +474,7 @@ réellement — très lentement.**
 
 **Le chantier Valence & Replay Orienté est donc clos sans avoir été ouvert** : il aurait
 traité un problème qui n'existe pas. Son cadrage est archivé dans
-[docs/Old_Archive_rmd/CONCEPTION_v33_memoire_emotionnelle.md](docs/Old_Archive_rmd/CONCEPTION_v33_memoire_emotionnelle.md)
+[docs/ameliorations/CONCEPTION_v33_memoire_emotionnelle.md](docs/ameliorations/CONCEPTION_v33_memoire_emotionnelle.md)
 — il garde la trace des options écartées et de leurs raisons, et reste la référence si une
 refonte de la mémoire devait être envisagée un jour (notamment le constat que
 `abs(recompense_interne)` détruit la valence dans le calcul d'`importance`).
@@ -476,7 +490,7 @@ signal de nature différente — un manque de **capacité**, non de temps.
 
 ### Nouveautés v33.0 étapes 0 → 0.6 (expérimental) — La Chronométrie des Jalons, le Test d’Ablation Inversée & la Chronologie des Victoires (2026-08-04)
 
-> ⚠️ **Statut expérimental** : vit uniquement dans `src/naulthene/cerveau/noyau.py` (gitignoré), pas encore porté sur `src/naulthene/cerveau/colab.py`.
+> ⚠️ **Statut expérimental** : vit uniquement dans `src/naulthene/cerveau/noyau.py` (versionné depuis la v39.0), pas encore porté sur `src/naulthene/cerveau/colab.py`.
 
 Cette version ne livre **aucune mécanique cognitive** : elle livre les deux instruments qui
 doivent décider de la suivante. C'est l'application stricte de la méthode posée en v30.1 —
@@ -527,7 +541,7 @@ rétablit donc le gradient manquant sur le dernier segment, pour établir la cau
 ⚠️ C'est un **instrument de diagnostic, pas une mécanique** : s'il débloque le Palier 7, il doit
 être remis à `False`. La vraie solution doit émerger de la mémoire (valence + replay orienté),
 jamais d'une béquille permanente — voir
-[docs/Old_Archive_rmd/CONCEPTION_v33_memoire_emotionnelle.md](docs/Old_Archive_rmd/CONCEPTION_v33_memoire_emotionnelle.md).
+[docs/ameliorations/CONCEPTION_v33_memoire_emotionnelle.md](docs/ameliorations/CONCEPTION_v33_memoire_emotionnelle.md).
 
 **Garantie de non-régression** : les deux étapes sont purement observationnelles. L'empreinte MD5
 des 400 actions à graine fixée est **identique** avec et sans elles (`6573f2fd045d`, vérifié par
@@ -562,7 +576,7 @@ que soit le gain de la v33. Aucun correctif appliqué — arbitrage en attente.
 
 ### Nouveautés v32.0 (expérimental) — L'Odorat Topologique & la Clinotaxie (2026-08-03)
 
-> ⚠️ **Statut expérimental** : vit dans `src/naulthene/cerveau/noyau.py` (gitignoré), `bus_sensoriel.py` et `persistance.py`, pas encore porté sur `src/naulthene/cerveau/colab.py`.
+> ⚠️ **Statut expérimental** : vit dans `src/naulthene/cerveau/noyau.py` (versionné depuis la v39.0), `bus_sensoriel.py` et `persistance.py`, pas encore porté sur `src/naulthene/cerveau/colab.py`.
 
 La v30.0 avait donné à l'odorat la bonne **forme** (atténuation exponentielle). Cette version lui
 donne la bonne **géométrie**, et surtout apprend au cerveau à le *lire*.
@@ -691,11 +705,11 @@ calibrer ensuite**.
   journée est **identique** avant et après. La télémétrie ne touche ni la décision, ni le gradient,
   ni la dopamine.
 
-📖 Comment lire ces courbes et quoi en conclure : [docs/LANCEMENT.md](docs/LANCEMENT.md) §11.
+📖 Comment lire ces courbes et quoi en conclure : [docs/fonctionnement/LANCEMENT.md](docs/fonctionnement/LANCEMENT.md) §11.
 
 ### Nouveautés v30.0 (expérimental) — L'Unification & l'Extensibilité : l'Odorat Dynamique & l'Exo-Sens (2026-08-02)
 
-> ⚠️ **Statut expérimental** : vit dans `src/naulthene/cerveau/noyau.py` (gitignored, terrain d'essai local), `bus_sensoriel.py`, `persistance.py` et `src/naulthene/exocortex/`, pas encore porté sur `src/naulthene/cerveau/colab.py`. Cadrage complet et décisions dans [docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md](docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md).
+> ⚠️ **Statut expérimental** : vit dans `src/naulthene/cerveau/noyau.py` (gitignored, terrain d'essai local), `bus_sensoriel.py`, `persistance.py` et `src/naulthene/exocortex/`, pas encore porté sur `src/naulthene/cerveau/colab.py`. Cadrage complet et décisions dans [docs/ameliorations_appliquees/CONCEPTION_v30_exo_sens.md](docs/ameliorations_appliquees/CONCEPTION_v30_exo_sens.md).
 
 Concrétise le pivot amorcé par la v29 : l'Exocortex **C3** cesse d'être un « 3ᵉ cerveau » pour
 devenir un **6ᵉ sens exogène**, et l'odorat retrouve son rôle de boussole de proximité.
@@ -764,7 +778,7 @@ laissé qu'un unique avertissement console, noyé dans les logs.
 
 > ⚠️ **Statut expérimental** : vit dans `src/naulthene/cerveau/noyau.py` (gitignored, terrain d'essai local), le nouveau module **versionné** `src/naulthene/cerveau/bus_sensoriel.py` et `src/naulthene/cerveau/persistance.py`, pas encore porté sur `src/naulthene/cerveau/colab.py`.
 
-Trois chantiers issus de [docs/Old_Archive_rmd/Maj_V29_readme.md](docs/Old_Archive_rmd/Maj_V29_readme.md) : donner à Naulthène **les cinq sens** au lieu de deux, **nommer explicitement** la frontière C1/C2 déjà présente dans le code, et **auditer** la boucle de distillation C2 → C1 — qui, elle, n'avait pas besoin d'être écrite.
+Trois chantiers issus de [docs/ameliorations_appliquees/Maj_V29_readme.md](docs/ameliorations_appliquees/Maj_V29_readme.md) : donner à Naulthène **les cinq sens** au lieu de deux, **nommer explicitement** la frontière C1/C2 déjà présente dans le code, et **auditer** la boucle de distillation C2 → C1 — qui, elle, n'avait pas besoin d'être écrite.
 
 * **La hiérarchie des 5 sens, et son coût.** Tous les sens ne se valent pas en gourmandise énergétique, mais c'est la **combinaison de leur diversité** qui fait émerger une compréhension du monde. Jusqu'en v28.0, l'agent n'avait que ses deux sens gourmands — la vue (`porte_visuelle`, 147 dims) et l'ouïe (`porte_auditive`, 130 dims MFCC), chacun avec sa porte synaptique dédiée. Le nouveau module `bus_sensoriel.py` ajoute les trois sens manquants, qui sont justement les moins coûteux à calculer et les plus directement liés à la survie :
 
@@ -790,7 +804,7 @@ Trois chantiers issus de [docs/Old_Archive_rmd/Maj_V29_readme.md](docs/Old_Archi
 
 * **v29.1 — les sens rendus observables.** La v29.0 câblait les 5 sens dans la décision mais n'en instrumentait aucun : impossible, sur un run de 300 jours, de répondre à « l'odorat a-t-il jamais servi ? ». Sept métriques W&B (`Sens_*`) et une ligne au bilan de nuit comblent ce trou — dont `Sens_Bus_Actif`, qui rend visible une désactivation silencieuse du bus. Premier diagnostic livré immédiatement : **l'odorat sature sur les petites cartes** (97,6 % de couverture sur `Empty-8x8`, 100 % sur `DoorKey-6x6`), donc y porte peu d'information. Constat documenté, `PORTEE_ODORAT` **inchangée** — l'arbitrage appartient à l'auteur.
 
-📖 **Documentation dédiée** : **[docs/Old_Archive_rmd/EXPLICATIONS_v29_sens.md](docs/Old_Archive_rmd/EXPLICATIONS_v29_sens.md)** — le document explicatif complet de cette version (formules, schémas, table des 13 validations, options écartées et pourquoi, glossaire des constantes). Voir aussi [docs/CHANGELOG.md](docs/CHANGELOG.md) (entrée v29.0-experimental) pour le détail commit par commit, [docs/explications_readme.md](docs/explications_readme.md) §15 pour le résumé algorithmique, et [docs/LANCEMENT.md](docs/LANCEMENT.md) §9 pour observer les 5 sens en direct.
+📖 **Documentation dédiée** : **[docs/ameliorations_appliquees/EXPLICATIONS_v29_sens.md](docs/ameliorations_appliquees/EXPLICATIONS_v29_sens.md)** — le document explicatif complet de cette version (formules, schémas, table des 13 validations, options écartées et pourquoi, glossaire des constantes). Voir aussi [docs/fonctionnement/CHANGELOG.md](docs/fonctionnement/CHANGELOG.md) (entrée v29.0-experimental) pour le détail commit par commit, [docs/fonctionnement/explications_readme.md](docs/fonctionnement/explications_readme.md) §15 pour le résumé algorithmique, et [docs/fonctionnement/LANCEMENT.md](docs/fonctionnement/LANCEMENT.md) §9 pour observer les 5 sens en direct.
 
 ### Nouveautés v28.0 (expérimental) — La Cascade C1→C2→C3 & le Port Exocortex (2026-07-30)
 
@@ -804,7 +818,7 @@ Ouvre le Cœur Organique fermé [C1 (réflexe/instinct) + C2 (raison/JEPA)], 100
 * **L'assimilation réutilise la mécanique existante, sans ouvrir de nouveau canal de gradient.** Une réponse C3 acceptée devient un 3ème canal du "OU doux" v27.0 (dopamine), déclenche le même LTP par tick (`fortifier_synapses`) que tout autre événement marquant, et majore l'importance du souvenir pour qu'il soit rejoué en priorité la nuit — sans introduire de perte supervisée externe dans la politique.
 * **La rétrocompatibilité des `.brain` existants**, le principal risque technique de cette version : passer à 8 actions change la forme de plusieurs couches (`tete_motrice`, `generateur_attente`, `generateur_attente_audio`). Une greffe par recopie partielle (et non par exclusion) préserve au bit près les 7 actions déjà apprises sur tout cerveau existant, la 8ème naissant à une initialisation atténuée — validé sur les trois `.brain` réels du dépôt, dont `naulthene_parole.brain` (300 jours, palier vocal 19/19).
 
-Voir [docs/CHANGELOG.md](docs/CHANGELOG.md) (entrée v28.0-experimental) pour le détail technique complet et [docs/explications_readme.md](docs/explications_readme.md) pour la description algorithmique de la cascade et du protocole du bus.
+Voir [docs/fonctionnement/CHANGELOG.md](docs/fonctionnement/CHANGELOG.md) (entrée v28.0-experimental) pour le détail technique complet et [docs/fonctionnement/explications_readme.md](docs/fonctionnement/explications_readme.md) pour la description algorithmique de la cascade et du protocole du bus.
 
 ### Nouveautés v27.6 (expérimental) — L'École de la Parole & Synesthésie (2026-07-27/28)
 
@@ -819,7 +833,7 @@ Referme trois écarts entre l'hémisphère audio (v22.0-v26.0) et une vraie acqu
 * **Nouveau cursus dédié** : `salles_de_classe/cursus_parole.py` (`naulthene_parole.brain`), 900 jours × 800 ticks en 3 phases — Imprégnation totale (le professeur nomme systématiquement, corrige même quand l'agent a bon), Autonomie guidée (bascule matin/après-midi entre synesthésie et curriculum, guidage décroissant), Émancipation (synesthésie + syntagmes toute la journée, professeur presque silencieux).
 * **Correctifs de restitution dans l'Arène** : la lecture audio en direct se chevauchait à chaque tick (10/s), produisant un crépitement continu indépendant du niveau d'apprentissage — la lecture est désormais espacée (~1.8s entre deux vocalisations, v27.2-27.3), laissant chaque son se terminer avant le suivant.
 
-Voir [docs/CHANGELOG.md](docs/CHANGELOG.md) (entrées v27.0 à v27.6) pour le détail technique complet, et [docs/LANCEMENT.md](docs/LANCEMENT.md) pour le guide de lancement (enregistrement de la voix, commande du cursus).
+Voir [docs/fonctionnement/CHANGELOG.md](docs/fonctionnement/CHANGELOG.md) (entrées v27.0 à v27.6) pour le détail technique complet, et [docs/fonctionnement/LANCEMENT.md](docs/fonctionnement/LANCEMENT.md) pour le guide de lancement (enregistrement de la voix, commande du cursus).
 
 ### Nouveautés v26.0 (expérimental) — L'Arène augmentée (mini-IRM + télémétrie complète) (2026-07-27)
 
@@ -835,14 +849,14 @@ Garantie de non-altération inchangée : tout ajout reste de la lecture pure (`t
 
 ### Nouveautés v26.0 (expérimental, §A.5 seul) — Cristallisation Souple (2026-07-27)
 
-> ⚠️ **Statut expérimental** : vit uniquement dans `agi_local_test.py` (`NaultheneLinearSynaptique`), pas encore porté sur `agi_google_colab.py`. Premier chantier implémenté du plan v26.0 « Le Parent remplace le Programme » ([docs/Old_Archive_rmd/AMELIORATION_V1.md](docs/Old_Archive_rmd/AMELIORATION_V1.md)) — les autres chantiers (§A.1-A.4 durcissement JEPA, §B Parent Universel, §C rappel hippocampique, §D voix humaine) restent à l'état de proposition.
+> ⚠️ **Statut expérimental** : vit uniquement dans `agi_local_test.py` (`NaultheneLinearSynaptique`), pas encore porté sur `agi_google_colab.py`. Premier chantier implémenté du plan v26.0 « Le Parent remplace le Programme » ([docs/ameliorations/AMELIORATION_V1.md](docs/ameliorations/AMELIORATION_V1.md)) — les autres chantiers (§A.1-A.4 durcissement JEPA, §B Parent Universel, §C rappel hippocampique, §D voix humaine) restent à l'état de proposition.
 
 Protège de l'érosion nocturne les synapses matures — sollicitées fortement et régulièrement sur plusieurs nuits — sans jamais geler leur apprentissage diurne. Une seconde trace `myeline_cumul` accumule la myélinisation nuit après nuit (même patron de relaxation exponentielle que partout dans le projet, `ALPHA_CRISTAL = 0.95`) ; au-delà de `SEUIL_CRISTAL = 0.80`, la synapse devient `cristallisee` (cliquet à sens unique, jamais réversible).
 
 * **Correctif « Falaise » sigmoïde** : plutôt qu'un plancher d'érosion rigide en tout-ou-rien, la protection d'une synapse cristallisée est une transition continue — `p_protection = sigmoid(K_RAIDEUR_CRISTAL * (myeline_cumul - SEUIL_CRISTAL))`, `K_RAIDEUR_CRISTAL = 10.0` — plus fidèle au principe du projet (régulation dynamique continue, jamais de règle en dur). Une synapse très éprouvée voit son érosion nocturne tendre vers zéro (ancrage indestructible des fondamentaux) ; une synapse jamais cristallisée s'érode normalement et finit élaguée en temps fini (zéro synapse fantôme).
 * **Règle dissymétrique sommeil ≠ gradient** : la protection n'agit que sur l'érosion nocturne (`cycle_sommeil`). Le gradient diurne (`annexe_weight`, rétropropagation) reste **totalement inchangé**, cristallisée ou non — une synapse cristallisée continue d'apprendre et de se réviser si le monde change (nouvelle couleur de porte, nouvel angle), elle est juste protégée de mourir de silence pendant qu'elle ne sert pas.
 
-Voir [docs/explications_readme.md §8.5](docs/explications_readme.md#85-cristallisation-souple-expérimental-agi_local_testpy-uniquement-v260) pour le détail algorithmique complet.
+Voir [docs/fonctionnement/explications_readme.md §8.5](docs/fonctionnement/explications_readme.md#85-cristallisation-souple-expérimental-agi_local_testpy-uniquement-v260) pour le détail algorithmique complet.
 
 ### Nouveautés v25.0 (expérimental) — Le Cerveau Bébé Développemental (0→4 ans) (2026-07-24)
 
@@ -869,7 +883,7 @@ Toutes les nouvelles mécaniques sont **additives et neutres par défaut** (`mas
 
 ### Correctifs v24.0-fix1 à fix5 (expérimental) — École de Rattrapage Vocal & silence de l'Arène (2026-07-23/24)
 
-> ⚠️ **Statut expérimental** : cinq correctifs successifs sur `agi_local_test.py`, `cursus_developpemental.py`, `persistance.py`, `lancer_arene.py`, tous découverts sur des runs réels (1000 jours puis relances). Détail complet dans [CHANGELOG.md](docs/CHANGELOG.md).
+> ⚠️ **Statut expérimental** : cinq correctifs successifs sur `agi_local_test.py`, `cursus_developpemental.py`, `persistance.py`, `lancer_arene.py`, tous découverts sur des runs réels (1000 jours puis relances). Détail complet dans [CHANGELOG.md](docs/fonctionnement/CHANGELOG.md).
 
 Après le premier run complet de 1000 jours du Cursus Développemental, inspection du `.brain` obtenu : **aucune promotion vocale en 1000 jours**, `porte_auditive` à norme exactement zéro — l'oreille n'avait strictement rien appris. Quatre bugs en cascade, chacun découvert en corrigeant le précédent :
 
@@ -1000,9 +1014,9 @@ Trois défauts détectés à la revue de la v22.0 (dont un critique) et corrigé
 ## 🛠️ Plan d'Action
 
 Le plan de développement se lit aujourd'hui à travers trois documents complémentaires :
-[docs/Parcourt_readme.md](docs/Parcourt_readme.md) (guide pratique des 4 parcours d'entraînement),
-[docs/Old_Archive_rmd/AMELIORATION_V1.md](docs/Old_Archive_rmd/AMELIORATION_V1.md) (pistes d'évolution de l'architecture) et
-[docs/CHANGELOG.md](docs/CHANGELOG.md) (ce qui a déjà été livré, version par version).
+[docs/fonctionnement/Parcourt_readme.md](docs/fonctionnement/Parcourt_readme.md) (guide pratique des 4 parcours d'entraînement),
+[docs/ameliorations/AMELIORATION_V1.md](docs/ameliorations/AMELIORATION_V1.md) (pistes d'évolution de l'architecture) et
+[docs/fonctionnement/CHANGELOG.md](docs/fonctionnement/CHANGELOG.md) (ce qui a déjà été livré, version par version).
 
 > *Note : ce paragraphe renvoyait auparavant à un fichier `plan_creat.md` qui n'a jamais existé
 > dans le dépôt — lien mort corrigé en v29.1.*
@@ -1416,7 +1430,7 @@ Un `.brain` antérieur à la v22.0 n'a pas `porte_auditive`/`tete_vocale`/`gener
 
 ### 8. v27.0-27.6 : de la table théorique à une voix réelle sur 8 dimensions, et une dopamine unifiée
 
-Plusieurs évolutions successives ferment les plus gros écarts entre cet hémisphère et une vraie acquisition du langage. **La cible n'est plus théorique, et couvre les 8 paramètres, pas seulement 2** : la table statique `VOYELLES_CIBLES` a été entièrement retirée (v27.6) — la cible vient TOUJOURS d'une analyse acoustique dynamique d'un enregistrement réel, soit la banque vocale de l'utilisateur (`voix/<mot>/*.wav`, voir [§ Démarrage Rapide](#-démarrage-rapide)) si elle existe, soit la référence `say` elle-même sinon. À l'origine (v27.0), seuls F1/F2 étaient extraits (analyse LPC) et appris ; un diagnostic sur un cerveau de 300 jours a montré que les 6 autres paramètres (f0, F3, durée, amplitude, largeurs de bande) restaient figés à leur valeur de naissance quel que soit le temps d'entraînement — la perte MSE de `tete_vocale` ne portait jamais que sur F1/F2. v27.6 étend l'extraction (pitch-tracking par autocorrélation pour f0, mesure directe pour durée/amplitude, F3 récupéré du même calcul LPC) et la perte contraint désormais dynamiquement toutes les dimensions effectivement fournies par la cible. La récompense se mélange en plus d'une distance spectrale MFCC↔MFCC entre le son réellement synthétisé et les prises de référence — l'agent est enfin noté et entraîné sur ce qu'il entend réellement, pas sur une abstraction à 2 nombres. **Le mot vient de ce que l'agent voit, de façon stabilisée** : `LecteurCaseFrontale` lit la case devant l'agent (mur/porte/clé/but/vide, puis des syntagmes couleur+objet) pour désigner la cible vocale — la fusion vision+audio du tronc cérébral (§1) devient une vraie association sémantique. Depuis v27.4, la cible ne change qu'après ~20 ticks consécutifs devant le même objet, pour éviter qu'elle ne change aussi vite que le regard de l'agent. **La dopamine des deux hémisphères s'unifie, et décroît avec la maîtrise** : le canal visuel et le canal vocal ne s'écrasent plus mutuellement (`max()`) mais se renforcent via une agrégation probabiliste bornée. Depuis v27.5, la contribution dopaminergique du canal vocal décroît linéairement avec le palier déjà atteint — un mot déjà maîtrisé ne shoote plus la dopamine au même niveau qu'un mot neuf. Voir [Nouveautés v27.6](#nouveautés-v276-expérimental--lécole-de-la-parole--synesthésie-2026-07-2728) et [docs/Old_Archive_rmd/CONCEPTION_v22_audio.md §8](docs/Old_Archive_rmd/CONCEPTION_v22_audio.md) pour le détail complet.
+Plusieurs évolutions successives ferment les plus gros écarts entre cet hémisphère et une vraie acquisition du langage. **La cible n'est plus théorique, et couvre les 8 paramètres, pas seulement 2** : la table statique `VOYELLES_CIBLES` a été entièrement retirée (v27.6) — la cible vient TOUJOURS d'une analyse acoustique dynamique d'un enregistrement réel, soit la banque vocale de l'utilisateur (`voix/<mot>/*.wav`, voir [§ Démarrage Rapide](#-démarrage-rapide)) si elle existe, soit la référence `say` elle-même sinon. À l'origine (v27.0), seuls F1/F2 étaient extraits (analyse LPC) et appris ; un diagnostic sur un cerveau de 300 jours a montré que les 6 autres paramètres (f0, F3, durée, amplitude, largeurs de bande) restaient figés à leur valeur de naissance quel que soit le temps d'entraînement — la perte MSE de `tete_vocale` ne portait jamais que sur F1/F2. v27.6 étend l'extraction (pitch-tracking par autocorrélation pour f0, mesure directe pour durée/amplitude, F3 récupéré du même calcul LPC) et la perte contraint désormais dynamiquement toutes les dimensions effectivement fournies par la cible. La récompense se mélange en plus d'une distance spectrale MFCC↔MFCC entre le son réellement synthétisé et les prises de référence — l'agent est enfin noté et entraîné sur ce qu'il entend réellement, pas sur une abstraction à 2 nombres. **Le mot vient de ce que l'agent voit, de façon stabilisée** : `LecteurCaseFrontale` lit la case devant l'agent (mur/porte/clé/but/vide, puis des syntagmes couleur+objet) pour désigner la cible vocale — la fusion vision+audio du tronc cérébral (§1) devient une vraie association sémantique. Depuis v27.4, la cible ne change qu'après ~20 ticks consécutifs devant le même objet, pour éviter qu'elle ne change aussi vite que le regard de l'agent. **La dopamine des deux hémisphères s'unifie, et décroît avec la maîtrise** : le canal visuel et le canal vocal ne s'écrasent plus mutuellement (`max()`) mais se renforcent via une agrégation probabiliste bornée. Depuis v27.5, la contribution dopaminergique du canal vocal décroît linéairement avec le palier déjà atteint — un mot déjà maîtrisé ne shoote plus la dopamine au même niveau qu'un mot neuf. Voir [Nouveautés v27.6](#nouveautés-v276-expérimental--lécole-de-la-parole--synesthésie-2026-07-2728) et [docs/ameliorations_appliquees/CONCEPTION_v22_audio.md §8](docs/ameliorations_appliquees/CONCEPTION_v22_audio.md) pour le détail complet.
 
 ---
 

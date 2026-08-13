@@ -3,7 +3,7 @@
 > ✅ **Statut : IMPLÉMENTÉE ET VALIDÉE** (2026-08-02, branche `feat/v30-exo-sens`).
 > Ce document reste le cadrage d'origine — il conserve la trace des arbitrages, y compris des
 > options **écartées** et pourquoi. Pour ce qui a réellement été livré et les validations
-> exécutées, voir [CHANGELOG.md](../CHANGELOG.md), entrée `[30.0-experimental]`.
+> exécutées, voir [CHANGELOG.md](../fonctionnement/CHANGELOG.md), entrée `[30.0-experimental]`.
 >
 > **Deux arbitrages tranchés par l'utilisateur après ce cadrage**, qui remplacent ce qui était
 > alors « point ouvert » : l'odorat suit une **atténuation exponentielle** `exp(-0.8·d)` (et non

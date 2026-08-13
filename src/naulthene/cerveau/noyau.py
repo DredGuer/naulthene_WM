@@ -453,7 +453,7 @@ DIM_VOCALE = 8                 # sortie de tete_vocale (la BOUCHE) : f0, F1, F2,
 #   C2 (LE NÉO-CORTEX, lourd) : le modèle du monde JEPA (generateur_attente) et la
 #      simulation mentale multi-horizons (simuler_futur_et_planifier). Il ne reçoit
 #      JAMAIS le flux sensoriel brut — toujours l'état DÉJÀ COMPRESSÉ par C1 (pensee_bio),
-#      exactement comme dans le schéma de docs/Old_Archive_rmd/Maj_V29_readme.md.
+#      exactement comme dans le schéma de docs/ameliorations_appliquees/Maj_V29_readme.md.
 #
 # Ce découpage est une RESTRUCTURATION PURE (décision utilisateur explicite, v29.0) :
 # C2 continue d'être sollicité à chaque tick comme avant, et le comportement d'un cerveau
@@ -3112,7 +3112,7 @@ COEFF_ENTROPIE_LIBRE = 0.06
 
 # --- v37.0 : L'ÉQUILIBRE C1 / C2 ---
 #
-# Diagnostic complet dans `docs/CHANTIER_v37_equilibre_c1_c2.md`. En trois lignes : sur le
+# Diagnostic complet dans `docs/ameliorations_appliquees/CHANTIER_v37_equilibre_c1_c2.md`. En trois lignes : sur le
 # cerveau V36 (600 jours), C1 et C2 n'étaient d'accord sur AUCUN tick (accord 0 %, sur les
 # niveaux maîtrisés comme sur le niveau bloquant), chacun votant une action constante. Le
 # ratio d'amplitude C2/C1 allait de 9,9× à 22,1× — non par supériorité de C2, mais parce
@@ -3229,7 +3229,7 @@ TAUX_DISTILLATION_C1 = 0.05        # Mesure 3 — poids de l'auto-distillation C
 # débloque le Palier 7, la nature exacte du blocage est prouvée (rareté du signal) —
 # et il doit ensuite être REMIS À False pour garder le défi intact, la vraie solution
 # devant émerger de la mémoire (v33 : valence + replay orienté), jamais d'une béquille
-# permanente. Voir docs/CONCEPTION_v33_memoire_emotionnelle.md §5.1.
+# permanente. Voir docs/ameliorations/CONCEPTION_v33_memoire_emotionnelle.md §5.1.
 #
 # False = comportement strictement identique à la v32.0 (invariant de non-régression).
 QUETE_AUTO_EN_MODE_LIBRE = False
@@ -3340,7 +3340,7 @@ FACTEUR_NOUVEAUTE_VOCALE_MIN = 0.1  # au dernier palier : 10% de l'effet dopamin
 ACTION_ENV_NEUTRE_C3 = 6      # action MiniGrid "done" (Actions.done) — substituée à
                                # env.step() quand ACTION_DEMANDER est jouée : la seule
                                # action réellement neutre du jeu (agent immobile, déjà
-                               # documentée comme telle dans docs/CHANGELOG.md v27.4),
+                               # documentée comme telle dans docs/fonctionnement/CHANGELOG.md v27.4),
                                # jamais une action inventée.
 COUT_REQUETE_C3 = 0.01        # pénalité en recompense_interne à chaque ACTION_DEMANDER —
                                # même ordre de grandeur que PENALITE_STAGNATION_BASE.
@@ -3749,7 +3749,7 @@ def plafond_reve_bebe(jour: int) -> float:
 # (imprégnation totale / autonomie guidée / émancipation), voir cursus_parole.py pour
 # le détail complet de ce qui change à chaque phase.
 TICKS_PAR_JOUR_PAROLE = 800   # > 400 OBLIGATOIRE : apprendre_journee ne se déclenche
-                               # QU'APRÈS ticks_par_jour ticks accumulés (docs/LANCEMENT.md,
+                               # QU'APRÈS ticks_par_jour ticks accumulés (docs/fonctionnement/LANCEMENT.md,
                                # piège historique n°5 — moins de 400 ticks = aucun
                                # apprentissage). 800 laisse 400 ticks à CHACUNE des deux
                                # moitiés de la journée, garantissant que même une phase à
@@ -4063,7 +4063,7 @@ class EtatCognitif:
         # valeurs n'est lue par penser(), par le gradient ou par la dopamine : elles ne
         # font que compter ce qui se passe déjà, pour CALIBRER avant d'écrire la moindre
         # mécanique (doctrine v30.1, et leçon v33 : une prémisse non mesurée coûte un
-        # cycle entier). Voir docs/CONCEPTION_v34_fatigue_mortalite.md §5, Étape 0.
+        # cycle entier). Voir docs/ameliorations/CONCEPTION_v34_fatigue_mortalite.md §5, Étape 0.
         #
         # ⚠️ Tous ces compteurs DOIVENT rester ici : un compteur journalier créé par
         # getattr(etat, "...", 0) sans remise à zéro cumulerait depuis la naissance
@@ -4297,7 +4297,7 @@ def _compter_ressources_grille(etat) -> int:
     réellement sur la carte de l'épisode qui commence.
 
     C'est la mesure BLOQUANTE du chantier v34 (voir
-    docs/CONCEPTION_v34_fatigue_mortalite.md §7.4) : les cartes MultiRoom du Doctorat
+    docs/ameliorations/CONCEPTION_v34_fatigue_mortalite.md §7.4) : les cartes MultiRoom du Doctorat
     n'ont ni nourriture ni eau (odorat mesuré à 0,0 % des ticks, r_bio à 0,000). Rendre
     l'agent MORTEL sur une carte sans ressource, ce serait le condamner d'office, quelle
     que soit sa compétence — donc il faut connaître ce chiffre AVANT d'écrire la mort.
@@ -5029,7 +5029,7 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
     # L'action réellement transmise à env.step() est TOUJOURS une des 7 actions
     # MiniGrid : quand ACTION_DEMANDER est choisie, on substitue l'action "done" (6),
     # seule action réellement neutre du jeu MiniGrid (déjà documentée comme telle dans
-    # docs/CHANGELOG.md v27.4 — agent immobile, aucun effet sur l'environnement) —
+    # docs/fonctionnement/CHANGELOG.md v27.4 — agent immobile, aucun effet sur l'environnement) —
     # préserve les invariants d'env.step (agent_pos, murs, etc.) sans jamais inventer
     # un pas d'environnement fictif.
     #
@@ -6314,7 +6314,7 @@ def executer_nuit(etat, plafond_reve=None):
     # --- v37.0 : L'ÉQUILIBRE C1/C2 ---
     # Conditionnelles : un jour sans tick moteur (vocal pur) ne doit pas logger de zéros.
     # `Arbitrage_Ratio_C2C1` et `Arbitrage_Accord` sont les deux courbes qui valident (ou
-    # invalident) le chantier — voir docs/CHANTIER_v37_equilibre_c1_c2.md §6.
+    # invalident) le chantier — voir docs/ameliorations_appliquees/CHANTIER_v37_equilibre_c1_c2.md §6.
     if n_arb > 0:
         log_wandb["Arbitrage_Amplitude_C1"] = amp_c1
         log_wandb["Arbitrage_Amplitude_C2"] = amp_c2

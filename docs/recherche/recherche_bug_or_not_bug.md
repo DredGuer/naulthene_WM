@@ -11,7 +11,7 @@
 > plafonne au niveau 2/15 depuis 678 jours simulés.
 >
 > Documents liés : [`dia_Aout_2026.md`](dia_Aout_2026.md) (diagnostic système),
-> [`CHANGELOG.md`](../CHANGELOG.md) (historique des versions).
+> [`CHANGELOG.md`](../fonctionnement/CHANGELOG.md) (historique des versions).
 
 ---
 
@@ -53,7 +53,7 @@ D'où le titre de ce carnet.
 ## H17 — Ce qui distingue g22 : il a mémorisé le but *(signal fort)*
 
 > Analyse des `.brain` de la campagne 2a, coût de calcul **nul**.
-> Proposition P2.b de [AVIS_ET_PROPOSITIONS_aout_2026.md](AVIS_ET_PROPOSITIONS_aout_2026.md),
+> Proposition P2.b de [AVIS_ET_PROPOSITIONS_aout_2026.md](../ameliorations/AVIS_ET_PROPOSITIONS_aout_2026.md),
 > devenue la seule piste ouverte sur la variance après la réfutation de H16.
 
 ### Le point de départ
@@ -385,7 +385,7 @@ but n'est qu'un symptôme » — pas de la supposer acquise.
 ## H16 — La loterie d'amorçage *(RÉFUTÉE — et c'était mon hypothèse)*
 
 > Analyse rétrospective sur les **142 runs W&B existants**, coût de calcul **nul**.
-> Proposition P2.a de [AVIS_ET_PROPOSITIONS_aout_2026.md](AVIS_ET_PROPOSITIONS_aout_2026.md).
+> Proposition P2.a de [AVIS_ET_PROPOSITIONS_aout_2026.md](../ameliorations/AVIS_ET_PROPOSITIONS_aout_2026.md).
 
 ### L'hypothèse
 
@@ -450,7 +450,7 @@ c'est attribuer à la trajectoire d'un agent ce qui appartient à son protocole.
    donc rien à « sauver » par une intervention précoce, et toute mécanique de type
    « garantir une première victoire tôt » viserait un problème inexistant.
 2. **La variance ×69 reste inexpliquée.** Elle ne vient pas de l'amorçage. La piste
-   suivante est [P2.b](AVIS_ET_PROPOSITIONS_aout_2026.md#p2--dompter-la-variance-sans-la-tuer)
+   suivante est [P2.b](../ameliorations/AVIS_ET_PROPOSITIONS_aout_2026.md#p2--dompter-la-variance-sans-la-tuer)
    (l'étude de g22), désormais la seule ouverte.
 3. **Mesurer tôt ne sert à rien.** Un run évalué à j.200 n'annonce pas son résultat à
    j.1200 — l'espoir d'écourter les campagnes en jugeant sur les 200 premiers jours est mort

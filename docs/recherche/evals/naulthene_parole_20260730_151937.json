@@ -1,0 +1,64 @@
+{
+  "fichier_brain": "brains/naulthene_parole.brain",
+  "date_evaluation": "2026-07-30T13:19:37.391417+00:00",
+  "jour_cerveau_au_moment_du_test": 700,
+  "dim_bus_au_moment_du_test": 48,
+  "teneur_dopamine_au_moment_du_test": 0.8172187268499155,
+  "niveau_actuel_cursus_au_moment_du_test": 1,
+  "nb_episodes_par_niveau": 20,
+  "seed_base": 0,
+  "resultats": [
+    {
+      "niveau_index": 0,
+      "env_id": "MiniGrid-Empty-8x8-v0",
+      "nom_classe": "Primaire (Mouvement basique)",
+      "episodes": 20,
+      "seed_base": 0,
+      "taux_victoire": 0.0,
+      "victoires": 0,
+      "ticks_moyen_si_victoire": null
+    },
+    {
+      "niveau_index": 1,
+      "env_id": "MiniGrid-DoorKey-6x6-v0",
+      "nom_classe": "Collège (Logique Simple)",
+      "episodes": 20,
+      "seed_base": 0,
+      "taux_victoire": 0.0,
+      "victoires": 0,
+      "ticks_moyen_si_victoire": null,
+      "palier_doorkey_moyen": 4.0,
+      "palier_doorkey_max": 6
+    },
+    {
+      "niveau_index": 2,
+      "env_id": "MiniGrid-Unlock-v0",
+      "nom_classe": "Lycée (Manipulation Avancée)",
+      "episodes": 20,
+      "seed_base": 0,
+      "taux_victoire": 0.0,
+      "victoires": 0,
+      "ticks_moyen_si_victoire": null
+    },
+    {
+      "niveau_index": 3,
+      "env_id": "MiniGrid-MemoryS7-v0",
+      "nom_classe": "Université (Mémoire Épisodique)",
+      "episodes": 20,
+      "seed_base": 0,
+      "taux_victoire": 0.05,
+      "victoires": 1,
+      "ticks_moyen_si_victoire": 45.0
+    },
+    {
+      "niveau_index": 4,
+      "env_id": "MiniGrid-MultiRoom-N4-S5-v0",
+      "nom_classe": "Doctorat (Planification Longue)",
+      "episodes": 20,
+      "seed_base": 0,
+      "taux_victoire": 0.0,
+      "victoires": 0,
+      "ticks_moyen_si_victoire": null
+    }
+  ]
+}

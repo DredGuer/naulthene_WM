@@ -3,7 +3,7 @@
 > **Statut** : diagnostic terminé, équilibrage **implémenté et validé sur 600 jours** —
 > l'équilibre C1/C2 tient (ratio 0,57-1,09 contre 9,9-22,1× avant), mais **le cursus reste
 > bloqué** (niveau 2/15). L'équilibre était une condition nécessaire, pas suffisante. Verdict
-> complet en §6bis. **Suite du diagnostic dans [dia_Aout_2026.md](dia_Aout_2026.md)** (run de
+> complet en §6bis. **Suite du diagnostic dans [dia_Aout_2026.md](../recherche/dia_Aout_2026.md)** (run de
 > 1300 jours) : le blocage tient à **trois facteurs composés** — un saut de difficulté ×10 entre
 > `Empty-6x6` et `Empty-8x8` (taux de réussite aléatoire 38,2 % → 3,8 %), une patience (120)
 > inférieure à la moitié du budget natif MiniGrid (256), et une économie de récompense dont
@@ -415,7 +415,7 @@ plus lente), même remède que `norme_naissance` en v34.0-fix2.
 ### Ce que ce run ne dit pas, et qu'il faut isoler
 
 - ~~**Le rêve est quasi inexistant** : `Pourcentage_Reve` à **0,1 %**~~ ❌ **FAUX — corrigé le
-  2026-08-08** ([dia_Aout_2026.md](dia_Aout_2026.md) §2.2). La valeur est une **fraction**
+  2026-08-08** ([dia_Aout_2026.md](../recherche/dia_Aout_2026.md) §2.2). La valeur est une **fraction**
   affichée avec un `%` en trop : le rêve rejoue en réalité **15-18 %** de la journée (70 rêves
   par nuit en fin de run) et **fonctionne**. Les nuits sans rêve du début sont réelles mais
   disparaissent après le jour 400.
@@ -426,7 +426,7 @@ plus lente), même remède que `norme_naissance` en v34.0-fix2.
 L'équilibre C1/C2 était **une condition nécessaire, pas suffisante**. Les quatre bugs de fond
 (plancher-plafond, timing de la myéline, échelle absolue, normalisation conditionnelle) sont
 corrigés et validés. Mais le blocage du cursus persiste, et il faut maintenant chercher ailleurs
-— le run de 1300 jours ([dia_Aout_2026.md](dia_Aout_2026.md)) a tranché : le blocage est
+— le run de 1300 jours ([dia_Aout_2026.md](../recherche/dia_Aout_2026.md)) a tranché : le blocage est
 **les conditions d'exercice**, pas une mécanique cognitive — saut de difficulté ×10 au niveau 2,
 patience deux fois trop courte, et espérance de −1,06 par épisode.
 
@@ -473,9 +473,9 @@ patience deux fois trop courte, et espérance de −1,06 par épisode.
 | 2026-08-08 | **Run 600 j (`8wequiqg`)** | Ratio **0,57-1,09** stable ✅ ; accord **29-75 % oscillant** 🟡 ; **niveau 2/15**, aucune victoire après le jour 288 ❌ |
 | 2026-08-08 | Bug trouvé PAR ce run | `reference_choc_dopamine` symétrique s'effondre de **−57 %** quand l'agent cesse de gagner ; crédit ×7 (10 % → 69 %) |
 | 2026-08-08 | v37.1-fix1 — le cliquet | Simulation du scénario exact : dérive **−71,3 % → −4,4 %**, crédit **87,2 % → 26,1 %** ; principe débutant/expert préservé (×8,8) |
-| 2026-08-08 | ~~Anomalie du rêve~~ | ❌ **Erreur de diagnostic** : fraction lue comme un pourcentage. Le rêve rejoue **15-18 %** de la journée et fonctionne — voir [dia_Aout_2026.md](dia_Aout_2026.md) §2.2 |
+| 2026-08-08 | ~~Anomalie du rêve~~ | ❌ **Erreur de diagnostic** : fraction lue comme un pourcentage. Le rêve rejoue **15-18 %** de la journée et fonctionne — voir [dia_Aout_2026.md](../recherche/dia_Aout_2026.md) §2.2 |
 | 2026-08-08 | **Run 1300 j (`ous47258`)** — v37.1-fix1 | Cliquet validé (dérive **−7,4 %** sur 2× plus long) ; **1 couche au plancher contre 5** ; mais **niveau 2/15**, 678 j sans victoire |
-| 2026-08-08 | Cause du blocage identifiée | **Trois facteurs composés, aucun cognitif** : saut de difficulté ×10 (`Empty-6x6` 38,2 % → `Empty-8x8` 3,8 % en politique aléatoire) ; patience 120 contre 256 natifs (4,7 % → 21,0 % de réussite atteignable) ; espérance **−1,06** par épisode. Diagnostic complet : [dia_Aout_2026.md](dia_Aout_2026.md) |
+| 2026-08-08 | Cause du blocage identifiée | **Trois facteurs composés, aucun cognitif** : saut de difficulté ×10 (`Empty-6x6` 38,2 % → `Empty-8x8` 3,8 % en politique aléatoire) ; patience 120 contre 256 natifs (4,7 % → 21,0 % de réussite atteignable) ; espérance **−1,06** par épisode. Diagnostic complet : [dia_Aout_2026.md](../recherche/dia_Aout_2026.md) |
 
 ### Note sur `tete_motrice` restée à 10,00 %
 

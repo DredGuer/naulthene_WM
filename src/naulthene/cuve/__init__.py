@@ -6,5 +6,5 @@ La Cuve — cerveau persistant en client-serveur (V21.0, expérimental).
 - `client_corps` : client jetable pilotant la Cuve via MiniGrid.
 - `client_professeur` : client jetable pour les leçons de parole ponctuelles.
 
-Voir docs/LANCEMENT.md pour le guide de lancement complet.
+Voir docs/fonctionnement/LANCEMENT.md pour le guide de lancement complet.
 """

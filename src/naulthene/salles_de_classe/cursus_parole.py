@@ -4,7 +4,7 @@ jours × 800 ticks d'acquisition du langage ancré dans la vision (grounding).
 
 Ce module ne vit que dans l'écosystème local de test (voir CLAUDE.md, section
 "Variante Locale de Test"), pas encore porté sur `agi_google_colab.py`. Voir
-`docs/CHANGELOG.md` (entrée v27.0) et `readme_fr.md` pour le contexte narratif complet.
+`docs/fonctionnement/CHANGELOG.md` (entrée v27.0) et `readme_fr.md` pour le contexte narratif complet.
 
 Distinct du Cursus par Ères (v23.0, `cursus_developpemental.py`) et du Cerveau Bébé
 (v25.0, `cursus_bebe.py`) : les trois paradigmes ne partagent JAMAIS le même cerveau —

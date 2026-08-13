@@ -460,5 +460,5 @@ codée en dur, donc contraire à la doctrine.
 | Résultats bruts du diagnostic | `brains/ablations/resultats_complet.json`, `comparaison_700j.json` |
 | Homéostasie, jauges, `calculer_deficit`, effort 20/80 | `explications_readme.md` |
 | Invariants du `vecteur_bio` (append-only), dopamine, rêve adaptatif | `CLAUDE.md` |
-| Leçon « prémisse non mesurée » | `Old_Archive_rmd/CONCEPTION_v33_memoire_emotionnelle.md` |
+| Leçon « prémisse non mesurée » | `ameliorations/CONCEPTION_v33_memoire_emotionnelle.md` |
 | Liage multimodal des sens (chantier parallèle) | `les_sens_combinatoire.md` |

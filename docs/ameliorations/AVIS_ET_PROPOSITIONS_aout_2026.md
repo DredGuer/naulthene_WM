@@ -3,7 +3,7 @@
 > **Nature du document** : carnet de recherche, non normatif. Il contient deux choses :
 > l'**avis complet** rendu sur le projet après la campagne des 11-13 août, et les
 > **propositions de solutions** aux problèmes identifiés dans
-> [ETAT_DU_PROJET_aout_2026.md](ETAT_DU_PROJET_aout_2026.md).
+> [ETAT_DU_PROJET_aout_2026.md](../recherche/ETAT_DU_PROJET_aout_2026.md).
 >
 > **La règle du jeu, posée par l'utilisateur** : *« Zéro limite, mais la seule condition :
 > rien ne doit être écrit en dur si ça peut émerger. »* Chaque proposition est donc jugée
@@ -52,8 +52,8 @@
 
 Peu de dépôts — y compris académiques — conservent les hypothèses réfutées, les treize
 erreurs de diagnostic et les options écartées *avec leurs raisons*.
-[recherche_bug_or_not_bug.md](recherche_bug_or_not_bug.md), les tableaux « écarté et
-pourquoi » du [chantier v37](CHANTIER_v37_equilibre_c1_c2.md), le README qui affirme
+[recherche_bug_or_not_bug.md](../recherche/recherche_bug_or_not_bug.md), les tableaux « écarté et
+pourquoi » du [chantier v37](../ameliorations_appliquees/CHANTIER_v37_equilibre_c1_c2.md), le README qui affirme
 lui-même que le projet est 2,85× plus lourd qu'un PPO et que couper C2 double le succès :
 c'est du **capital de crédibilité** que 95 % des projets « AGI » n'ont pas. Le jour où
 Naulthène montrera un résultat positif, il sera cru — précisément parce qu'il a documenté
@@ -196,7 +196,7 @@ Quatre volets, du moins cher au plus ambitieux :
 ### P2.a Exploiter les données qui existent déjà — ❌ **FAIT, HYPOTHÈSE RÉFUTÉE**
 
 > Exécutée le 13/08 sur les 142 runs W&B. Résultat complet :
-> [recherche_bug_or_not_bug.md § H16](recherche_bug_or_not_bug.md).
+> [recherche_bug_or_not_bug.md § H16](../recherche/recherche_bug_or_not_bug.md).
 
 L'hypothèse était : *une victoire précoce lance le cercle vertueux, son absence laisse le
 cerveau au plancher.* **Elle est fausse.**
@@ -217,7 +217,7 @@ d'écourter les campagnes est mort avec cette hypothèse.
 ### P2.b Étudier g22 au lieu de le moyenner — ✅ **FAIT, RÉSULTAT INATTENDU**
 
 > Exécutée le 13/08 sur les 12 `.brain` de la campagne 2a. Résultat complet :
-> [recherche_bug_or_not_bug.md § H17-H18](recherche_bug_or_not_bug.md).
+> [recherche_bug_or_not_bug.md § H17-H18](../recherche/recherche_bug_or_not_bug.md).
 
 **Le cerveau de g22 est structurellement banal** — 26,5× plus de victoires que ses frères,
 mais norme synaptique 1,02×, myéline 1,04×, référence de choc 1,00×. Ni la neurogenèse ni
@@ -894,6 +894,88 @@ le stockage ne changera rien.
 
 ---
 
+## P17 — La gaussienne d'apprentissage : le cursus comme distribution *(utilisateur, 14/08)*
+
+> **La formulation qui rend P15 implémentable — et qui respecte « rien en dur ».**
+> C'est la meilleure réponse à la question que j'avais laissée ouverte : le retour en
+> arrière doit-il être *déclenché* ou *émerger* ? Réponse : ni l'un ni l'autre — il est
+> **tiré au sort**.
+
+### Ce que l'utilisateur décrit
+
+> *« Quand tu grandis, au début tu testes de façon purement aléatoire, mais tous tes tests
+> évoluent grâce à des victoires aléatoires. Tu peux avancer et revenir 100 ou 1000 fois
+> dessus, il n'y a pas de règle, jusqu'à ce que ton cerveau comprenne le pattern. »*
+>
+> *« Tu fais 3×3 vingt fois, puis 4×4 cinq fois, puis 3×3 deux fois, comme ça
+> aléatoirement — mais tant que le 3×3 n'est pas réussi, tu ne vas pas au-delà du 5×5,
+> sauf exceptionnellement. »*
+>
+> *« Tu peux le présenter sous forme de gaussienne : chaque étape à valider est en haut
+> de la courbe, jusqu'à ce qu'elle soit acquise. »*
+
+### Pourquoi c'est la bonne structure
+
+Le cursus actuel est un **pointeur** : `niveau_actuel` est un entier, on joue ce niveau et
+rien d'autre. La gaussienne le remplace par une **distribution de probabilité** :
+
+```
+     probabilité de jouer ce palier
+              ▲
+              │        ╱▔╲            ← le palier à valider est au SOMMET
+              │      ╱     ╲
+              │   ╱           ╲       ← les paliers acquis restent visités
+              │ ╱               ╲__   ← les paliers trop durs sont rares,
+              └─┴──┴──┴──┴──┴──┴──┴─►    jamais impossibles (« exceptionnel »)
+                3×3 4×4 5×5 6×6 8×8
+```
+
+Trois propriétés tombent **gratuitement**, sans un seul `if` :
+
+| Propriété voulue | Comment elle émerge |
+|---|---|
+| **Retours en arrière réguliers** | la queue gauche de la gaussienne — aucun déclencheur |
+| **« Pas au-delà du 5×5 tant que le 3×3 n'est pas acquis »** | le sommet ne se déplace que quand la maîtrise monte |
+| **« Sauf exceptionnellement »** | la queue droite est fine, jamais nulle |
+
+Et le déplacement du sommet est lui-même **dérivé, jamais posé** : il suit le taux de
+maîtrise mesuré (viser 80-100 %, cf. P15), exactement comme `reference_choc_dopamine`
+suit ce que l'agent a vécu. Rien n'est écrit en dur — c'est un **niveau**, pas un seuil.
+
+### Ce que ça corrige, concrètement
+
+`base g11` (mesuré, campagne v3739) : promu au palier 1 au **jour 4** sur une victoire
+chanceuse, puis **396 jours de stagnation**. Le cliquet l'a poussé sur un terrain qu'il ne
+maîtrisait pas, sans aucun moyen de revenir consolider.
+
+Avec une gaussienne, ce même agent aurait continué à jouer le palier 0 la plupart du temps,
+et n'aurait glissé vers le 1 qu'à mesure que sa maîtrise du 0 montait.
+
+### Le lien avec le reste du projet
+
+- **Fil « le monde, pas le cerveau »** : on ne change rien à l'agent, on change la façon
+  dont le monde lui présente les tâches.
+- **Fil de la saturation** (7ᵉ occurrence) : un taux de réussite à 0 % ou à 100 % ne porte
+  aucune information. La gaussienne maintient l'agent dans la zone où il apprend.
+- **P14** (promotion par croissance) et **P15** disent la même chose sous deux angles : le
+  passage d'un palier au suivant est aujourd'hui trop brutal.
+- C'est aussi, mot pour mot, la **zone proximale de développement** de Vygotski — obtenue
+  ici par une intuition sur la variance, pas par citation.
+
+### Ce qui reste à trancher avant de coder
+
+| Question | Pourquoi elle compte |
+|---|---|
+| Largeur de la gaussienne (σ) | trop étroite = cliquet déguisé ; trop large = l'agent joue au hasard |
+| σ fixe ou dérivé ? | cohérence avec la règle : il devrait suivre la **variance de maîtrise** |
+| Que devient `niveau_actuel` dans le `.brain` ? | c'est un entier aujourd'hui ; il devient une position continue → **greffe `persistance`** |
+
+⚠️ **Rétrocompatibilité** : `niveau_actuel` est un INDEX sérialisé dans tous les `.brain`
+existants. Le passage à une position continue exige une greffe par recopie (règle du
+projet), sous peine de rétrograder silencieusement tous les cerveaux.
+
+---
+
 # Partie III — L'ordre proposé
 
 L'ordre découle des dépendances et de la leçon « une brique à la fois, jamais empilées » :
@@ -948,7 +1030,7 @@ Par respect des réfutations déjà payées — chacune a coûté des runs :
 ---
 
 *Document arrêté au 13 août 2026. Il prolonge
-[ETAT_DU_PROJET_aout_2026.md](ETAT_DU_PROJET_aout_2026.md) (l'état des lieux) et
-[CHANTIER_v38_monde_continu.md](CHANTIER_v38_monde_continu.md) (les mesures). Rien de ce
+[ETAT_DU_PROJET_aout_2026.md](../recherche/ETAT_DU_PROJET_aout_2026.md) (l'état des lieux) et
+[CHANTIER_v38_monde_continu.md](../ameliorations_appliquees/CHANTIER_v38_monde_continu.md) (les mesures). Rien de ce
 qui précède n'est implémenté ni validé : ce sont des propositions, à soumettre une par une
 à la même méthode qui a réfuté les précédentes.*

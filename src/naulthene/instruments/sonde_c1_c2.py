@@ -25,7 +25,7 @@ l'agent est entraîné par REINFORCE et n'a donc jamais expérimenté son mode d
 
 Diagnostic de référence, cerveau `070820261310_V36_600_RMD.brain` (600 jours, bus 64) :
 ratio 9,9× à 22,1× selon l'environnement, accord **0 %** partout, argmax constant des
-deux côtés. Voir `docs/notes/CHANTIER_v37_equilibre_c1_c2.md` §2.1.
+deux côtés. Voir `docs/ameliorations_appliquees/CHANTIER_v37_equilibre_c1_c2.md` §2.1.
 
 Usage :
     PYTHONPATH=src python -m naulthene.instruments.sonde_c1_c2 <brain> <env_id> [ticks]

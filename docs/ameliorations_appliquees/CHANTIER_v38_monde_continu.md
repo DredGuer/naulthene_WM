@@ -11,7 +11,7 @@
 
 ## 1. Pourquoi ce chantier — la correction qui l'a déclenché
 
-L'ablation sensorielle du 12/08 ([recherche_bug_or_not_bug.md](recherche_bug_or_not_bug.md)
+L'ablation sensorielle du 12/08 ([recherche_bug_or_not_bug.md](../recherche/recherche_bug_or_not_bug.md)
 §H15) a montré que **couper l'odorat et le goût ne change rien** (2,33 victoires contre 2,67
 pour le témoin, signes incohérents). J'en avais tiré une règle :
 
@@ -91,7 +91,7 @@ problème n'a jamais été le champ de vision — c'est la discontinuité tempor
 > On pourra **valider que le liage fonctionne**. On ne pourra **jamais prouver que c'est un
 > concept** plutôt qu'une table de correspondance apparence→nom.
 
-C'est déjà écrit dans [les_sens_combinatoire.md](les_sens_combinatoire.md) §7.6. Aucune
+C'est déjà écrit dans [les_sens_combinatoire.md](../ameliorations/les_sens_combinatoire.md) §7.6. Aucune
 quantité de code ne contourne cette limite — elle appartient à l'environnement. Elle est
 posée ici pour qu'elle ne soit pas redécouverte dans trois semaines comme une surprise.
 
@@ -207,14 +207,14 @@ et **nomme** (émet le son associé à l'objet qu'il montre, **au tick où il le
 
 **Pourquoi c'est la pièce manquante** : `Cooc_Vue_Ouie = 0` aujourd'hui — le professeur parle
 *ou* l'agent regarde, **jamais les deux sur le même tick**
-([les_sens_combinatoire.md](les_sens_combinatoire.md) §9). Tant que c'est le cas, **aucune
+([les_sens_combinatoire.md](../ameliorations/les_sens_combinatoire.md) §9). Tant que c'est le cas, **aucune
 association vue↔son ne peut se former**, quel que soit le monde.
 
 Le parent résout la synchronisation **par construction** : il est *dans* le monde, donc ce
 qu'il nomme est visible au moment où il le nomme.
 
 **Le cadrage v34 s'applique intégralement**
-([CONCEPTION_v34_fatigue_mortalite.md](CONCEPTION_v34_fatigue_mortalite.md) §3) : les quatre
+([CONCEPTION_v34_fatigue_mortalite.md](../ameliorations/CONCEPTION_v34_fatigue_mortalite.md) §3) : les quatre
 gestes sont **montrer, nourrir, cajoler, protéger**, et *« montrer »* est le geste principal,
 pas un appoint. Le sevrage doit être **mérité, jamais daté** — dérivé de `empreinte_enfance`,
 qui est déjà une mesure continue de maturité.
@@ -431,7 +431,7 @@ Aucune brique nouvelle n'est nécessaire : le parent nomme en synthétisant.
 ### 9.3 Pourquoi c'est la vraie pièce manquante
 
 `Cooc_Vue_Ouie = 0` aujourd'hui. Le professeur parle **ou** l'agent regarde, jamais les deux
-au même tick ([les_sens_combinatoire.md](les_sens_combinatoire.md) §9). Tant que c'est le
+au même tick ([les_sens_combinatoire.md](../ameliorations/les_sens_combinatoire.md) §9). Tant que c'est le
 cas, **aucune association vue↔son ne peut se former**, quel que soit le monde.
 
 Le parent résout la synchronisation **par construction** : il est *dans* la grille, donc ce
@@ -440,7 +440,7 @@ qu'il nomme est visible au moment où il le nomme.
 ### 9.4 Les gestes retenus
 
 Repris du cadrage v34 §3.2
-([CONCEPTION_v34_fatigue_mortalite.md](CONCEPTION_v34_fatigue_mortalite.md)), où *« montrer »*
+([CONCEPTION_v34_fatigue_mortalite.md](../ameliorations/CONCEPTION_v34_fatigue_mortalite.md)), où *« montrer »*
 est explicitement le geste principal, pas un appoint :
 
 | Geste | Implémentation |
@@ -667,7 +667,7 @@ La norme du bus change, donc l'échelle d'activation de tout l'aval (`hippocampe
 qu'aucun signal ne l'indique.
 
 C'est exactement le défaut annoncé dans
-[les_sens_combinatoire.md](les_sens_combinatoire.md) §4.3 (« absent » et « nul » sont
+[les_sens_combinatoire.md](../ameliorations/les_sens_combinatoire.md) §4.3 (« absent » et « nul » sont
 indistinguables), jamais corrigé depuis.
 
 Ici, le silence devient un son de **très faible amplitude**, donc perçu : distance mesurée au
@@ -688,7 +688,7 @@ Chaque émission varie autour de son prototype (`VARIANCE_TIMBRE = 0.04`) :
 Les types restent distinguables **malgré** la variance — condition pour qu'il y ait quelque
 chose à *généraliser* plutôt qu'une table à mémoriser. Sans cela, l'agent ne peut construire
 qu'une correspondance exacte, indiscernable d'un concept (limite posée en
-[les_sens_combinatoire.md](les_sens_combinatoire.md) §7.6 pour la vision — que j'avais
+[les_sens_combinatoire.md](../ameliorations/les_sens_combinatoire.md) §7.6 pour la vision — que j'avais
 reproduite dans le canal auditif **alors que rien ne m'y obligeait** : le son, contrairement
 aux pixels, je le fabrique).
 
@@ -861,5 +861,5 @@ in-batch contiennent des paires qui devraient être positives.
 connaissances négatives que positives — ce qui reste une avancée, à condition de ne pas
 présenter le reste comme un succès.
 
-> Voir [ETAT_DU_PROJET_aout_2026.md](ETAT_DU_PROJET_aout_2026.md) pour la synthèse générale,
+> Voir [ETAT_DU_PROJET_aout_2026.md](../recherche/ETAT_DU_PROJET_aout_2026.md) pour la synthèse générale,
 > les forces et faiblesses du projet, et les priorités qui en découlent.

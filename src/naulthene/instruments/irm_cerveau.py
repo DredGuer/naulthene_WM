@@ -3,7 +3,7 @@ L'IRM du Cerveau (V25.x, expérimental) — scanner d'activation en direct.
 
 Ce module ne vit que dans l'écosystème local de test (voir CLAUDE.md, section
 "Variante Locale de Test"), pas encore porté sur `agi_google_colab.py`. Écrit en
-réponse au diagnostic de `docs/Old_Archive_rmd/1440_JOURS_NAULTHENE_V1.md` (§3, "effondrement lent du
+réponse au diagnostic de `docs/recherche/1440_JOURS_NAULTHENE_V1.md` (§3, "effondrement lent du
 modèle du monde JEPA") : ce document décrivait par les CHIFFRES (Erreur_JEPA → 0.0000,
 Pourcentage_Reve → 0.38%, Teneur_Dopamine → 2.4) un collapse de représentation, sans
 jamais montrer VISUELLEMENT quelles dimensions du bus latent s'éteignent. Ce scanner

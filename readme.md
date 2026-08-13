@@ -20,16 +20,26 @@ abstracts by repetition, and a day/night cycle that consolidates or forgets. Swa
 camera, a microphone and a motor bus, and the same `nn.Module` should keep running — because
 nothing in it names "grid", "key" or "door".
 
-**⚠️ It does not work yet.** The agent is stuck at level 2 of a 15-level curriculum and has not
-won in 678 simulated days. This repository documents an architecture under active development,
-including [everything that is broken](docs/notes/dia_Aout_2026.md) and every diagnostic mistake made
-along the way. Read it as a research log, not a released system.
+**⚠️ It does not work yet.** The agent clears 1 to 5 levels out of 6 depending on the random
+seed — a **×69 variance between two identical runs**. Eight cognitive mechanisms have been
+tested; eight failed. The only two levers that ever worked are properties of the *world*, not
+of the brain.
+
+**⚠️ And the benchmark itself was biased.** A code review on 13-14 August found that up to
+**one map in two** was solvable without the key — the agent was passing a rigged exam. Fixed;
+the task then became **50× harder** (random-policy success on `8x8`: 15.3 % → 0.3 %), so
+prior results are **not comparable** to future ones. Full account:
+[code review](docs/recherche/REVUE_CODE_v39_aout_2026.md).
+
+Read this as a research log, not a released system. Everything broken is written down,
+including [every diagnostic mistake](docs/recherche/recherche_bug_or_not_bug.md) — 15 of them so far.
 
 *Long-term direction: a generalist intelligence that runs on a single Apple Silicon chip, with no
 datacenter.*
 
-> 🇫🇷 **[Miroir français complet →](readme_fr.md)** (architecture, formules, changelog v7 → v37)
-> 🩺 **[System diagnostic, August 2026 →](docs/notes/dia_Aout_2026.md)** (1300-day run: what works,
+> 🗂️ **[Documentation index →](docs/INDEX.md)** — which question leads to which document
+> 🇫🇷 **[Miroir français complet →](readme_fr.md)** (architecture, formules, changelog v7 → v39)
+> 🩺 **[System diagnostic, August 2026 →](docs/recherche/dia_Aout_2026.md)** (1300-day run: what works,
 > what is blocked, what remains unknown)
 > 📊 **[Live experiments on Weights & Biases →](https://wandb.ai/naultadrien123-nvnc/Naulthene-AGI)**
 > (every run, every curve, including the failures)
@@ -110,15 +120,19 @@ Two caveats, both measurable rather than rhetorical:
 
 ### Task performance — **currently blocked**
 
-| Metric | Value (1300-day run) |
+| Metric | Value |
 |---|---|
-| Curriculum level reached | **2 / 15** (`Empty-8x8`) |
-| Lifetime win rate | **1.69 %** |
-| Days since last win | 678 |
+| Curriculum levels cleared | **1 to 5 out of 6**, depending on seed |
+| Variance between identical runs | **×69** (1 to 69 wins) |
+| Cognitive mechanisms that improved anything | **0 out of 8 tested** |
+| Levers that did work | **2 — both properties of the world** |
 
 A standard PPO solves `Empty-8x8` in a few thousand episodes. **Naulthène currently does not.**
 
-The [diagnostic](docs/notes/dia_Aout_2026.md) isolates why, and none of the five blockers is cognitive:
+⚠️ Figures obtained *before* the benchmark bias was found (see the warning above). They are
+kept for the record, not as a baseline.
+
+The [diagnostic](docs/recherche/dia_Aout_2026.md) isolates why, and none of the five blockers is cognitive:
 patience capped at 120 ticks against MiniGrid's own 256 (reachable success rate 4.7 % vs 21.0 %),
 a ×10 difficulty jump at level 2, an episode expected value of **−1.06**, four of seven actions
 inert on empty rooms, and a curriculum era that doubles losing episodes.
@@ -165,7 +179,7 @@ running through the same code path — that is the unification claim, and it hol
 - **Removing vision costs less than removing touch** (−0.50 vs −1.33). On a visual navigation
   task, that is not a sign of robust multimodality; it is a sign that vision is under-exploited.
 
-Both are consistent with the [diagnostic](docs/notes/dia_Aout_2026.md): the agent has not yet learned a
+Both are consistent with the [diagnostic](docs/recherche/dia_Aout_2026.md): the agent has not yet learned a
 policy worth planning over.
 
 ### 2. Memory footprint — ✅ **measured for Naulthène**, baseline pending
@@ -253,7 +267,7 @@ base       *= clamp(birth_norm × 0.10 / ‖base‖, min=1.0)  # vital floor, ne
 ```
 
 Each of those three `v37.0-fix` markers is a bug that made learning **mathematically impossible**
-and went undetected for hundreds of simulated days. See the [diagnostic](docs/notes/dia_Aout_2026.md)
+and went undetected for hundreds of simulated days. See the [diagnostic](docs/recherche/dia_Aout_2026.md)
 §9 for the full list of diagnostic errors, measured and corrected.
 
 ### Repository layout
@@ -268,9 +282,10 @@ src/naulthene/
 └── instruments/    read-only probes: ablation bench, C1/C2, weights, gradients, reward
 ```
 
-> ⚠️ `src/naulthene/cerveau/noyau.py` — the local experimental core carrying every mechanic from
-> v34 to v37 — is **gitignored**. This repository holds the documentation, `persistance.py` and
-> the instruments; **the v34–v37 mechanics themselves live only on the author's machine.**
+> ✅ **Since v39 (14 Aug 2026), `src/naulthene/cerveau/noyau.py` is versioned.** It carries every
+> mechanic from v34 to v39 and used to be gitignored — four months of work in a single copy on a
+> single disk. It remains the *experimental* core (`colab.py` is still the reference script), but
+> an accident no longer erases it.
 
 ---
 
@@ -288,7 +303,7 @@ PYTHONPATH=src python -m naulthene.instruments.sonde_c1_c2 <brain> <env_id>
 PYTHONPATH=src python -m naulthene.instruments.sonde_poids <brain>
 ```
 
-Full command reference and troubleshooting: [docs/LANCEMENT.md](docs/LANCEMENT.md).
+Full command reference and troubleshooting: [docs/fonctionnement/LANCEMENT.md](docs/fonctionnement/LANCEMENT.md).
 
 ### Following the experiments
 
@@ -336,7 +351,7 @@ lever is patience: 120 → 256 ticks moves reachable success from 4.7 % to 21.0 
 
 **Then — cross-modal binding.** All senses already enter the same bus simultaneously, including
 inactive ones. The design document
-([`docs/notes/les_sens_combinatoire.md`](docs/notes/les_sens_combinatoire.md)) covers the ten sensory pairs
+([`docs/ameliorations/les_sens_combinatoire.md`](docs/ameliorations/les_sens_combinatoire.md)) covers the ten sensory pairs
 and the hard constraint: **the system must keep working with a single sense**, accepting that
 survival odds drop with each one lost.
 
@@ -354,8 +369,8 @@ validation is by W&B curves, console logs and read-only probes.
 What that means concretely:
 
 - The agent is **blocked at level 2 of 15**, and has not won in 678 simulated days.
-- The **v34–v37 mechanics are not in this repository** (`noyau.py` is gitignored) — the
-  documentation, `persistance.py` and the instruments are.
+- The **v34–v39 mechanics are now in this repository** (`noyau.py` was versioned on 14 Aug 2026,
+  closing the project's #1 structural risk).
 - Two of three benchmark tables are filled; the one that matters most (equal-budget comparison
   against PPO) **has not been run**.
 - The thesis defended here is **unification**, which is measured. Lightness is *not* yet
@@ -363,4 +378,4 @@ What that means concretely:
   says so.
 
 Everything that is broken is written down, including the diagnostic errors made along the way.
-[**Read the diagnostic**](docs/notes/dia_Aout_2026.md) — it is more useful than this README.
+[**Read the diagnostic**](docs/recherche/dia_Aout_2026.md) — it is more useful than this README.

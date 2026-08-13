@@ -57,7 +57,7 @@ LANCEMENT
     PYTHONPATH=src python -m naulthene.instruments.banc_ablation \\
         --brain brains/ablations/REFERENCE_5000j.brain --lesions temoin,c2_coupe
 
-Voir `docs/LANCEMENT.md` pour le guide complet et `docs/notes/les_sens_combinatoire.md` §7
+Voir `docs/fonctionnement/LANCEMENT.md` pour le guide complet et `docs/ameliorations/les_sens_combinatoire.md` §7
 pour les décisions que ce banc doit éclairer.
 """
 

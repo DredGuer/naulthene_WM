@@ -41,7 +41,7 @@ jamais promu au Lycée). La voix a progressé beaucoup plus vite que le déplace
 Avant v27.5, un score vocal élevé continuait à shooter la dopamine au même niveau qu'un
 agent débutant, même après la maîtrise complète du curriculum vocal — ce qui maintenait
 artificiellement `teneur_dopamine`/`plasticite_base` hauts sans pousser l'agent à progresser
-sur MiniGrid. `facteur_nouveaute_vocale` (voir `docs/CHANGELOG.md [27.5-experimental]`) fait
+sur MiniGrid. `facteur_nouveaute_vocale` (voir `docs/fonctionnement/CHANGELOG.md [27.5-experimental]`) fait
 décroître la contribution dopaminergique du canal vocal avec la maîtrise déjà acquise (100%
 à un mot neuf → 10% à un mot maîtrisé), pour laisser une vraie place motivationnelle au reste
 du cursus.

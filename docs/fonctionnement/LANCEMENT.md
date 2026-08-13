@@ -108,7 +108,7 @@ PYTHONPATH=src python -m naulthene.cuve.daemon_cerveau --port 9999 --brain brain
 - Ressuscite ton cerveau existant (tick_absolu, dopamine, curriculum, souvenirs intacts).
 - Si c'est la première connexion depuis la V22, tu verras des messages de greffe :
   `🌱 Hémisphères nouvellement greffés` et `🔄 integrateur_bio exclu du chargement` —
-  normal, une fois seulement (voir `docs/Old_Archive_rmd/CONCEPTION_v22_audio.md` §11 pour le détail).
+  normal, une fois seulement (voir `docs/ameliorations_appliquees/CONCEPTION_v22_audio.md` §11 pour le détail).
 - **Depuis la v29.0**, un `.brain` antérieur affiche en plus, une seule fois,
   `👃 integrateur_bio greffé de N à M dims d'entrée (+8 : toucher/odorat/goût)` — la couche
   n'est **plus jamais exclue** dans ce cas, elle est greffée par recopie et **tous les acquis
@@ -342,7 +342,7 @@ précédentes). Relance simplement la même commande pour reprendre.
 Depuis v26.0, `NaultheneLinearSynaptique.cycle_sommeil()` (dans `noyau.py`, non versionné —
 voir `CLAUDE.md`, section "Variante Locale de Test") protège de l'érosion nocturne les synapses
 sollicitées fortement et régulièrement sur plusieurs nuits (`myeline_cumul`, cliquet
-`cristallisee`, falaise sigmoïde `K_RAIDEUR_CRISTAL` — voir `docs/explications_readme.md` §8.5
+`cristallisee`, falaise sigmoïde `K_RAIDEUR_CRISTAL` — voir `docs/fonctionnement/explications_readme.md` §8.5
 pour le détail algorithmique). Cette mécanique est **transparente en usage normal** — aucune
 nouvelle option de ligne de commande, elle s'applique automatiquement à chaque `cycle_sommeil`
 sur un cerveau `naulthene_bb.brain` existant comme sur un cerveau neuf, sans distinction dans
@@ -438,7 +438,7 @@ série) — recalculées tick par tick sur le MÊME cerveau que celui qui joue d
 pygame pur (pas de fenêtre matplotlib séparée, qui serait fragile à faire cohabiter avec pygame
 sur macOS). Pour un diagnostic plus poussé (heatmap de myélinisation, courbe de variance),
 utiliser `irm_cerveau.py` séparément (voir sa propre commande de lancement dans
-[Architecture](../CLAUDE.md#architecture)).
+[Architecture](../../CLAUDE.md#architecture)).
 
 ⚠️ **Prérequis** : il faut un `.brain` à observer — lance d'abord le Cursus (section 6) pendant
 au moins une nuit pour produire `brains/naulthene_cursus.brain`, ou utilise directement le
@@ -600,7 +600,7 @@ print('OK — aucune exception, le plug est passé en cooldown automatiquement')
 
 Si tu as un ancien `.brain` créé avant cette version (7 actions), le charger avec
 `PersistanceAnatomique.charger_ou_naitre()` déclenche automatiquement la greffe par recopie
-(`_greffer_action_supplementaire`, voir `docs/CHANGELOG.md` v28.0) — **jamais besoin d'y
+(`_greffer_action_supplementaire`, voir `docs/fonctionnement/CHANGELOG.md` v28.0) — **jamais besoin d'y
 toucher manuellement**. Le message `🖐️  <couche> greffé(e) de 7 à 8 actions` s'affiche une seule
 fois, au premier chargement ; les acquis existants (7 actions) sont préservés au bit près, la
 8ème naît vierge. Pour vérifier sur une COPIE d'un cerveau existant (ne jamais tester sur
@@ -693,7 +693,7 @@ gout     | faible   |   2 dims | JEPA=False | vecteur_bio → integrateur_bio
 `JEPA=False` sur les trois sens faibles est **voulu** : ils entrent par `integrateur_bio`, juste
 avant la décision, donc ils n'entrent **jamais** dans ce que le modèle du monde doit prédire. Un
 cerveau déjà entraîné sur des centaines de jours ne voit donc pas sa physique visuelle perturbée
-(voir `docs/Old_Archive_rmd/EXPLICATIONS_v29_sens.md` §4).
+(voir `docs/ameliorations_appliquees/EXPLICATIONS_v29_sens.md` §4).
 
 ### 9c. Recharger un `.brain` pré-v29.0 — vérifier la greffe automatique
 
@@ -1152,7 +1152,7 @@ posteriori :
 ⚠️ **Remettre `QUETE_AUTO_EN_MODE_LIBRE = False` après la mesure.** Ce drapeau rétablit
 artificiellement le gradient manquant vers le But : s'il débloque le Palier 7, il **prouve** la
 nature du blocage, il ne le **résout** pas. La vraie solution doit émerger de la mémoire —
-voir [CONCEPTION_v33_memoire_emotionnelle.md](Old_Archive_rmd/CONCEPTION_v33_memoire_emotionnelle.md).
+voir [CONCEPTION_v33_memoire_emotionnelle.md](../ameliorations/CONCEPTION_v33_memoire_emotionnelle.md).
 
 ### 14c. Ce que le run de 700 jours a déjà établi
 
@@ -1439,7 +1439,7 @@ Vérifier la **direction** (similarité cosinus), pas seulement la magnitude.
 | `Distillation_Reference_Choc` | **Monter** avec la maturation : l'agent devient progressivement plus difficile à impressionner |
 
 Contexte complet, causes mesurées et options écartées :
-[CHANTIER_v37_equilibre_c1_c2.md](notes/CHANTIER_v37_equilibre_c1_c2.md).
+[CHANTIER_v37_equilibre_c1_c2.md](../ameliorations_appliquees/CHANTIER_v37_equilibre_c1_c2.md).
 
 ---
 

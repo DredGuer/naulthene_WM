@@ -37,7 +37,7 @@ Deux conséquences pour la rédaction de toute doc, tout commit, toute descripti
 - Ne jamais présenter le projet comme un solveur MiniGrid, ni comme un système livré.
 - Ne jamais masquer l'état réel : l'agent est **bloqué au niveau 2 sur 15** et n'a pas gagné
   depuis 678 jours simulés. L'échec fait partie du carnet de recherche et se documente
-  (voir `docs/notes/dia_Aout_2026.md`).
+  (voir `docs/recherche/dia_Aout_2026.md`).
 
 ## Architecture
 
@@ -93,32 +93,24 @@ Le projet est organisé en **package Python** sous `src/naulthene/`, avec un dos
 │   │   └── recherche_aout2026/     v34→v37 (8 cerveaux) et, dans son sous-dossier, les 70 cerveaux
 │   │                               de la campagne d'ablation/hypothèses du 11-12 août 2026
 │   └── ablations/                  résultats JSON du banc d'ablation
-└── docs/                         DOCUMENTS VIVANTS uniquement (4) :
-    │                               CHANGELOG.md — historique version par version, la référence
-    │                               factuelle ; LANCEMENT.md — toutes les commandes et le dépannage ;
-    │                               Parcourt_readme.md — guide vulgarisé des 4 parcours ;
-    │                               explications_readme.md — détail algorithmique et mathématique
-    │                               (dont §15 : Bus Sensoriel, identité C1/C2, Exo-Sens)
-    ├── notes/                    CARNETS DE RECHERCHE — documents de travail vivants mais non
-    │                               normatifs : ils racontent une investigation en cours, avec ses
-    │                               hypothèses réfutées. Ne jamais y chercher l'état courant du
-    │                               système (c'est le rôle du CHANGELOG), mais TOUJOURS les
-    │                               consulter avant de relancer une piste déjà explorée.
-    │                               recherche_bug_or_not_bug.md — carnet d'investigation sur le
-    │                               blocage du cursus (H1→H15, ablations sensorielles) ; rien n'y
-    │                               est jamais effacé, un test raté est une donnée ;
-    │                               dia_Aout_2026.md — diagnostic complet (run 1300 j) ;
-    │                               CHANTIER_v37_equilibre_c1_c2.md — l'équilibre C1/C2 ;
-    │                               CONCEPTION_v34_fatigue_mortalite.md — cadrage fatigue/mort ;
-    │                               les_sens_combinatoire.md — cadrage du liage multimodal ;
-    │                               evals/ — sorties JSON de `evaluer_cerveau.py`
-    └── Old_Archive_rmd/          documents historiques : conceptions dont la mécanique est livrée
-                                    (CONCEPTION_v22_audio, CONCEPTION_v30_exo_sens, Maj_V29_readme,
-                                    EXPLICATIONS_v29_sens),
-                                    plans partiellement réalisés (AMELIORATION_V1) et analyses de run.
-                                    Précieux car ils gardent la trace des options ÉCARTÉES et de leurs
-                                    raisons — mais ne jamais s'y référer pour l'état courant. Voir son
-                                    README.md pour la convention d'archivage
+└── docs/                         DOCUMENTATION — 4 dossiers, un rôle chacun.
+    │                               👉 POINT D'ENTRÉE : docs/INDEX.md (dit où chercher)
+    ├── INDEX.md                  la carte : quelle question → quel document
+    ├── fonctionnement/           NORMATIF — fait autorité sur l'état courant
+    │                               CHANGELOG.md (référence factuelle version par version),
+    │                               LANCEMENT.md (commandes, dépannage), Parcourt_readme.md,
+    │                               explications_readme.md (détail algorithmique, §15 sens)
+    ├── recherche/                ENQUÊTES — non normatif, mais à consulter AVANT toute
+    │                               idée neuve : recherche_bug_or_not_bug.md (H1→H18, les
+    │                               hypothèses réfutées), dia_Aout_2026.md (diagnostic),
+    │                               ETAT_DU_PROJET_aout_2026.md, REVUE_CODE_v39_aout_2026.md
+    │                               (les 6 défauts trouvés), evals/ (sorties JSON)
+    ├── ameliorations/            IDÉES proposées, PAS encore validées :
+    │                               AVIS_ET_PROPOSITIONS_aout_2026.md (P1→P16),
+    │                               les_sens_combinatoire.md, CONCEPTION_v34, v33
+    └── ameliorations_appliquees/ LIVRÉ dans le code — garde la trace des options
+                                    ÉCARTÉES et de leurs raisons : CHANTIER_v37, v38,
+                                    CONCEPTION_v22_audio, v30_exo_sens, EXPLICATIONS_v29
 ```
 
 Le cœur de référence est `src/naulthene/cerveau/colab.py` (ex-`agi_google_colab.py`, pensé pour tourner sur Google Colab). Structure interne (sections numérotées par des commentaires `# --- N. ... ---`) :
@@ -148,7 +140,7 @@ En plus du script de référence `colab.py`, le projet dispose d'une copie de tr
 
 - **Deux différences permanentes avec `colab.py`** : détection du device `cuda`/`mps`/`cpu` (au lieu de `cuda`/`cpu` seul) et un `jours_totaux` ajustable localement pour des runs de test plus courts que les 400 jours de Colab
 - **C'est le terrain d'essai des mécaniques expérimentales** (actuellement v18.0 Architecture Homéostatique Biologique, v19.0 Métabolisme 20/80 & Forage 80/20, et toute mécanique suivante tant qu'elle n'a pas été validée sur un run long) — ces versions vivent **uniquement** dans ce fichier tant qu'elles ne sont pas explicitement portées sur `colab.py`. Exceptions notables : `exocortex/` (v28.0) et `cerveau/bus_sensoriel.py` (v29.0) sont des modules **versionnés** dans git, même si la mécanique qui les consomme n'existe pour l'instant que dans `noyau.py`
-- Toute modification doit être documentée dans `readme_fr.md`/`docs/CHANGELOG.md` avec la mention explicite **"expérimental"** et l'avertissement qu'elle ne vit que dans `noyau.py` — ne jamais laisser croire qu'une mécanique expérimentale est déjà dans le script de référence. Le fichier est désormais versionné (v39.0), mais cela ne le promeut **pas** au rang de référence : la distinction noyau (essai) / colab (référence) reste entière
+- Toute modification doit être documentée dans `readme_fr.md`/`docs/fonctionnement/CHANGELOG.md` avec la mention explicite **"expérimental"** et l'avertissement qu'elle ne vit que dans `noyau.py` — ne jamais laisser croire qu'une mécanique expérimentale est déjà dans le script de référence. Le fichier est désormais versionné (v39.0), mais cela ne le promeut **pas** au rang de référence : la distinction noyau (essai) / colab (référence) reste entière
 - Avant de porter une mécanique validée vers `colab.py`, vérifier qu'elle est cohérente avec toute l'évolution parallèle qu'a pu subir le script de référence entre-temps (les deux fichiers peuvent diverger sur plusieurs versions)
 - Setup local : voir [Démarrage Rapide](readme_fr.md#démarrage-rapide) dans le README (venv Python 3.12, `pip install torch gymnasium minigrid wandb numpy`, `wandb login`, puis `WANDB_MODE=offline PYTHONPATH=src python -m naulthene.cerveau.noyau` ou en direct sans la variable une fois connecté)
 
@@ -165,7 +157,7 @@ En plus du script de référence `colab.py`, le projet dispose d'une copie de tr
 - Vérifier si la modification touche au **rêve adaptatif** (`pourcentage_reve`, `POURCENTAGE_REVE_MIN`, `PLAGE_REVE_MAX`, `IMPORTANCE_REFERENCE_REVE`, `TAILLE_MIN_REVE`) : ne pas réintroduire une taille de batch fixe — le principe explicite du projet est que le pourcentage rejoué émerge de la plasticité et de la richesse de la journée, jamais d'une constante externe
 - Vérifier si la modification touche au **Port Exocortex C3** (`src/naulthene/exocortex/`, `port_c3`, `tete_requete`, `ACTION_DEMANDER`) : l'invariant non négociable est qu'**aucun plug enregistré ⇒ comportement bit-identique à avant v28.0** — l'action `ACTION_DEMANDER` doit rester masquée à `-inf` dans `penser()` tant qu'aucun plug n'est disponible, et `PortC3.canal_emission` doit capturer TOUTE exception d'un plug (jamais de fuite vers le noyau). Ne jamais coder de déclenchement sur seuil d'incertitude pour appeler C3 — c'est un choix appris par REINFORCE (décision utilisateur explicite), pas un `if`. Toute modification touchant `num_actions` doit vérifier que `persistance._greffer_action_supplementaire` reste cohérente (greffe par recopie, jamais par exclusion, sur `tete_motrice`/`generateur_attente`/`generateur_attente_audio`/`actions_eye`) — sinon les `.brain` existants perdent leur tête motrice au chargement
 - Vérifier si la modification touche au **Bus Sensoriel / vecteur bio** (`src/naulthene/cerveau/bus_sensoriel.py`, `DIM_VECTEUR_BIO`, `DIM_TOUCHER`, `DIM_CHIMIE`, `obtenir_vecteur_bio`) : trois invariants v29.0. (1) `bus_sensoriel.py` reste **pur numpy** et n'importe **jamais** `noyau.py` — c'est ce qui garantit l'absence de cycle d'import, même discipline que `exocortex/port_c3.py`. (2) Toute nouvelle dimension du vecteur bio s'ajoute **EN QUEUE**, jamais au milieu : l'ordre de concaténation de `obtenir_vecteur_bio` est un contrat partagé avec `BusSensoriel.interpreter` et avec `persistance._greffer_vecteur_bio_etendu`, qui recopie les N premières colonnes d'un ancien `.brain` — une insertion au milieu décalerait silencieusement tous les acquis. (3) Les sens faibles (toucher, odorat, goût) n'entrent **jamais** dans `bus_latent` : ils passent par `integrateur_bio`, donc restent hors de la cible JEPA (`perte_jepa` compare toujours le bus prédit au bus réel de la **vision seule**). Ne pas leur donner de porte synaptique sommée dans le tronc cérébral sans demande explicite de l'utilisateur
-- Vérifier si la modification touche à la **frontière C1/C2** (`_executer_c1_reflexe`, `_solliciter_c2_neocortex`, `penser`) : le découpage v29.0 est une **restructuration pure** (décision utilisateur explicite) — C2 est sollicité à chaque tick, exactement comme avant, et l'arbitrage `logits_instinct + valeurs_simulees * force_planification` est inchangé depuis la v13.0. Ne **pas** y introduire de court-circuit conditionnel ("C1 saute C2 s'il est confiant") sans demande explicite : ce serait un déclenchement sur seuil codé en dur dans le chemin de décision, de la même nature que ce que ce fichier interdit déjà pour l'appel à C3. C2 ne doit par ailleurs jamais recevoir autre chose que l'état déjà compressé par C1 (`pensee_bio`) — jamais l'observation brute, jamais l'environnement. **Quatre invariants v37.0** (chantier `docs/notes/CHANTIER_v37_equilibre_c1_c2.md`), posés après la mesure que C1 et C2 n'étaient d'accord sur **aucun tick** (0 %, y compris sur les niveaux maîtrisés), chacun votant une action constante, avec un ratio d'amplitude de 9,9× à 22,1× : (1) **le gain de C1 est un facteur SCALAIRE à double sens** (`GAIN_C1_MIN/MAX`) — il règle le VOLUME de la voix, jamais l'OPINION : les rapports entre les 7 logits doivent rester rigoureusement intacts. La borne haute n'est pas décorative : sans elle, une fois les têtes débloquées, la distillation renforce C1 plus vite que C2 et le ratio **s'inverse à 0,21×** (mesuré sur 30 jours). (2) **`VIGUEUR_MIN_C1` est DÉRIVÉE, jamais posée** : `(AMPLITUDE_C2_NORMALISEE × FORCE_PLANIFICATION_LIBRE) / RATIO_C1C2_VISE`. Le 2,1 est l'amplitude d'un z-score sur 7 actions, vérifiée empiriquement sur trois environnements — ne pas le remplacer par un chiffre rond. (3) **La normalisation de C2 est INCONDITIONNELLE** : l'ancien `if std > 1e-6` laissait `valeur_cumulee` à son échelle brute (~1e-7) sous le seuil, soit un C2 **numériquement éteint** qui disparaissait de la fusion sans aucun signal (observé : des journées entières à `C2=0.000`). « C2 hésite entre des branches proches » ≠ « C2 n'a pas d'avis ». (4) **L'auto-distillation C2 → C1 exige `.detach()` sur la cible** — sans lui le gradient remonte dans le rollout et C2 apprend à se rendre *prévisible* plutôt que juste ; vérifier que `cortex_prefrontal` reçoit bien **0,00000000** par ce canal. **v37.1 — la distillation est SÉLECTIVE** (`_ponderer_distillation`, `reference_choc_dopamine`, `chocs_dopamine_journee`) : C1 n'automatise que ce qui a marché. Trois invariants. (a) Le crédit **s'arrête aux frontières d'épisode** (`dones`) — créditer un tick de l'épisode précédent pour une réussite du suivant serait une superstition, l'agent ayant été téléporté entre les deux. (b) La moyenne est **pondérée**, dénominateur = somme des poids : une journée entièrement stérile ne distille **rien**, au lieu de distiller uniformément du bruit. (c) **`reference_choc_dopamine` est un NIVEAU, jamais un SEUIL** — il n'existe aucune règle « si choc > X, imiter » : le crédit est continu et proportionnel, et l'échelle qui juge un choc « fort » est dérivée de ce que **cet agent** a lui-même vécu (mesuré : le même choc de 0,1 vaut **100 % pour un débutant et 11,4 % pour le même agent devenu expert**). Ne jamais remplacer ce niveau par une constante : c'est l'exemple de référence du principe « rien n'est en dur, les niveaux évoluent avec l'âge et les habitudes ». (d) **v37.1-fix1 — cette référence est un CLIQUET : montée rapide, descente ~50× plus lente** (`INERTIE_OUBLI_REFERENCE_CHOC`). Ne **jamais** revenir à une moyenne glissante symétrique : mesuré sur 600 jours, quand l'agent cesse de gagner il ne reste que des micro-chocs, la référence descend **vers eux** (0,2149 → 0,0932, −57 %) et, le crédit valant `choc / référence`, le même événement médiocre crédite de plus en plus (10 % → 69 %, ×7). L'agent devenait **de plus en plus facile à impressionner** — l'inverse exact du principe — et C1 distillait 70 % de bruit. La protection « une journée stérile ne distille rien » n'y suffit pas : la journée n'est jamais *stérile*, elle est *médiocre*. C'est le défaut de `norme_naissance` (v34.0-fix2) à l'identique — une référence qui suit la décroissance ne borne plus rien. La descente doit rester **non nulle** (un monde durablement plus pauvre doit pouvoir recalibrer), mais sur des centaines de nuits, jamais sur une saison creuse. ⚠️ Ne **pas** réintroduire « l'échelle de C2 porte sa confiance » (réinjecter `indecision_c2` après normalisation) sans lire §5.6 du chantier : implémentée deux fois, mesurée deux fois, échouée deux fois (échelle absolue → éteint C2 à 0,01× ; échelle relative → sature à la borne, effet net nul). Tant que `cortex_prefrontal` est au plancher vital, C2 n'a aucune confiance variable à exprimer. ⚠️ Ne **pas** rendre `force_planification` fonction de l'incertitude (entropie de C1, erreur JEPA) sans un run long montrant `Arbitrage_Ratio_C2C1` **stagnant** : c'est un déclenchement sur seuil déguisé en formule continue (une sigmoïde reste un `if` avec une pente), le signal d'entrée n'existe pas (`indecision_c2` varie de **1,00×** entre min et max sur 300 ticks), et surtout le ratio est déjà passé de 22× à 0,6× **sans aucun pilotage**, par la seule maturation synaptique une fois les bugs d'érosion corrigés. La décroissance de l'écoute de C2 avec la maturité doit **émerger**, jamais être formulée
+- Vérifier si la modification touche à la **frontière C1/C2** (`_executer_c1_reflexe`, `_solliciter_c2_neocortex`, `penser`) : le découpage v29.0 est une **restructuration pure** (décision utilisateur explicite) — C2 est sollicité à chaque tick, exactement comme avant, et l'arbitrage `logits_instinct + valeurs_simulees * force_planification` est inchangé depuis la v13.0. Ne **pas** y introduire de court-circuit conditionnel ("C1 saute C2 s'il est confiant") sans demande explicite : ce serait un déclenchement sur seuil codé en dur dans le chemin de décision, de la même nature que ce que ce fichier interdit déjà pour l'appel à C3. C2 ne doit par ailleurs jamais recevoir autre chose que l'état déjà compressé par C1 (`pensee_bio`) — jamais l'observation brute, jamais l'environnement. **Quatre invariants v37.0** (chantier `docs/ameliorations_appliquees/CHANTIER_v37_equilibre_c1_c2.md`), posés après la mesure que C1 et C2 n'étaient d'accord sur **aucun tick** (0 %, y compris sur les niveaux maîtrisés), chacun votant une action constante, avec un ratio d'amplitude de 9,9× à 22,1× : (1) **le gain de C1 est un facteur SCALAIRE à double sens** (`GAIN_C1_MIN/MAX`) — il règle le VOLUME de la voix, jamais l'OPINION : les rapports entre les 7 logits doivent rester rigoureusement intacts. La borne haute n'est pas décorative : sans elle, une fois les têtes débloquées, la distillation renforce C1 plus vite que C2 et le ratio **s'inverse à 0,21×** (mesuré sur 30 jours). (2) **`VIGUEUR_MIN_C1` est DÉRIVÉE, jamais posée** : `(AMPLITUDE_C2_NORMALISEE × FORCE_PLANIFICATION_LIBRE) / RATIO_C1C2_VISE`. Le 2,1 est l'amplitude d'un z-score sur 7 actions, vérifiée empiriquement sur trois environnements — ne pas le remplacer par un chiffre rond. (3) **La normalisation de C2 est INCONDITIONNELLE** : l'ancien `if std > 1e-6` laissait `valeur_cumulee` à son échelle brute (~1e-7) sous le seuil, soit un C2 **numériquement éteint** qui disparaissait de la fusion sans aucun signal (observé : des journées entières à `C2=0.000`). « C2 hésite entre des branches proches » ≠ « C2 n'a pas d'avis ». (4) **L'auto-distillation C2 → C1 exige `.detach()` sur la cible** — sans lui le gradient remonte dans le rollout et C2 apprend à se rendre *prévisible* plutôt que juste ; vérifier que `cortex_prefrontal` reçoit bien **0,00000000** par ce canal. **v37.1 — la distillation est SÉLECTIVE** (`_ponderer_distillation`, `reference_choc_dopamine`, `chocs_dopamine_journee`) : C1 n'automatise que ce qui a marché. Trois invariants. (a) Le crédit **s'arrête aux frontières d'épisode** (`dones`) — créditer un tick de l'épisode précédent pour une réussite du suivant serait une superstition, l'agent ayant été téléporté entre les deux. (b) La moyenne est **pondérée**, dénominateur = somme des poids : une journée entièrement stérile ne distille **rien**, au lieu de distiller uniformément du bruit. (c) **`reference_choc_dopamine` est un NIVEAU, jamais un SEUIL** — il n'existe aucune règle « si choc > X, imiter » : le crédit est continu et proportionnel, et l'échelle qui juge un choc « fort » est dérivée de ce que **cet agent** a lui-même vécu (mesuré : le même choc de 0,1 vaut **100 % pour un débutant et 11,4 % pour le même agent devenu expert**). Ne jamais remplacer ce niveau par une constante : c'est l'exemple de référence du principe « rien n'est en dur, les niveaux évoluent avec l'âge et les habitudes ». (d) **v37.1-fix1 — cette référence est un CLIQUET : montée rapide, descente ~50× plus lente** (`INERTIE_OUBLI_REFERENCE_CHOC`). Ne **jamais** revenir à une moyenne glissante symétrique : mesuré sur 600 jours, quand l'agent cesse de gagner il ne reste que des micro-chocs, la référence descend **vers eux** (0,2149 → 0,0932, −57 %) et, le crédit valant `choc / référence`, le même événement médiocre crédite de plus en plus (10 % → 69 %, ×7). L'agent devenait **de plus en plus facile à impressionner** — l'inverse exact du principe — et C1 distillait 70 % de bruit. La protection « une journée stérile ne distille rien » n'y suffit pas : la journée n'est jamais *stérile*, elle est *médiocre*. C'est le défaut de `norme_naissance` (v34.0-fix2) à l'identique — une référence qui suit la décroissance ne borne plus rien. La descente doit rester **non nulle** (un monde durablement plus pauvre doit pouvoir recalibrer), mais sur des centaines de nuits, jamais sur une saison creuse. ⚠️ Ne **pas** réintroduire « l'échelle de C2 porte sa confiance » (réinjecter `indecision_c2` après normalisation) sans lire §5.6 du chantier : implémentée deux fois, mesurée deux fois, échouée deux fois (échelle absolue → éteint C2 à 0,01× ; échelle relative → sature à la borne, effet net nul). Tant que `cortex_prefrontal` est au plancher vital, C2 n'a aucune confiance variable à exprimer. ⚠️ Ne **pas** rendre `force_planification` fonction de l'incertitude (entropie de C1, erreur JEPA) sans un run long montrant `Arbitrage_Ratio_C2C1` **stagnant** : c'est un déclenchement sur seuil déguisé en formule continue (une sigmoïde reste un `if` avec une pente), le signal d'entrée n'existe pas (`indecision_c2` varie de **1,00×** entre min et max sur 300 ticks), et surtout le ratio est déjà passé de 22× à 0,6× **sans aucun pilotage**, par la seule maturation synaptique une fois les bugs d'érosion corrigés. La décroissance de l'écoute de C2 avec la maturité doit **émerger**, jamais être formulée
 - Vérifier si la modification touche à l'**Exo-Sens** (`DIM_EXO`, `percevoir_exogene`, `_rafraichir_perception_exogene`, `PERIODE_PERCEPTION_EXO`, `ReponseC3.perception`) : quatre invariants v30.0. (1) L'Exo-Sens est une **perception continue**, jamais une action ni un déclenchement — ne **pas** y réintroduire de seuil (« si l'erreur JEPA monte, interroger C3 ») : c'est ce que le projet a refusé trois fois (v28 pour l'appel à C3, v29 pour le court-circuit C1→C2, v30 pour cette boucle d'attention). L'attention accordée aux 8 dims doit émerger de la myélinisation de `integrateur_bio`. (2) `ACTION_DEMANDER` reste masquée à `-inf` **en permanence** et `num_actions` reste à 8 — la colonne est dormante mais jamais amputée (4 `.brain` du dépôt sont à 8 actions). (3) `percevoir_exogene` **clippe toujours** dans [0,1] et rejette un vecteur de mauvaise taille : un service externe n'est pas maîtrisé, et une dimension hors échelle écraserait `integrateur_bio`. Un Exo-Sens invalide ne doit **jamais** désactiver les 5 sens physiques (avertissement séparé, voir `_avertir_exo`). (4) Le bus n'est interrogé qu'un tick sur `PERIODE_PERCEPTION_EXO` avec mise en cache — un plug HTTP à 100 ms-30 s rendrait sinon impraticable un run de 120 000 ticks
 - **Toute nouvelle mécanique observable doit être instrumentée dans le même commit** (leçon de la v29.1) : un compteur remis à zéro dans `_reinitialiser_buffers_journee`, accumulé dans `traiter_tick`, puis agrégé dans `executer_nuit` (ligne du bilan console **et** clé dans le dict `log_wandb` retourné). Sans cela, la mécanique est invisible sur un run long et son utilité réelle indémontrable — la v29.0 avait livré les 5 sens sans aucune télémétrie, écart corrigé en v29.1. Deux règles : ne jamais créer un compteur journalier par `getattr(etat, "...", 0)` sans l'ajouter à `_reinitialiser_buffers_journee` (piège du bug `score_vocal_jour` v27.0, où la « moyenne du jour » cumulait depuis la naissance), et rendre les clés **conditionnelles** quand la mécanique peut être inactive (voir les blocs `Sens_*` et C3), plutôt que de logger des zéros trompeurs
 - Vérifier si la modification touche à la **capacité mnésique** (`MemoireEpisodiqueSpatiale.ajuster_capacite`, `SOUVENIRS_PAR_DIM`, `capacite_plancher`) ou au **facteur de richesse du rêve** (`reference_richesse`, `empreinte_enfance`) : trois invariants v31.0. (1) La capacité est recalculée **une fois par nuit**, jamais par tick — une capacité fluctuante rendrait la FIFO illisible et le diagnostic impossible. (2) Elle ne descend **jamais** sous `capacite_plancher` (200) et, si elle rétrécit, la troncature se fait **par l'AVANT** (`pop(0)`, les plus anciens partent) — tronquer par la fin jetterait les souvenirs les plus frais, les plus utiles au rappel. (3) Un souvenir spatial est un **repère**, jamais un journal d'événements : `enregistrer_evenement` **déduplique** sur `(pos, type)` en rafraîchissant le tick, et la capacité est bornée par la taille du monde (`DENSITE_MAX_PAR_CASE`) — un `.brain` réel contenait 91 % de doublons avant ce correctif. (4) `reference_richesse` doit rester proportionnelle à `empreinte_enfance` : sans cela, `%_reve` s'effondre mécaniquement quand le cerveau grandit (mesuré : 60 % à dim_bus=16 → 15 % à dim_bus=96). Attention à ne pas sur-corriger : une part de la baisse de rêve sur un cerveau mature est **saine** (l'erreur JEPA chute parce que l'agent comprend mieux son monde) — ne jamais compenser ce signal-là
@@ -190,7 +182,7 @@ pip install torch gymnasium minigrid wandb numpy
 PYTHONPATH=src python -m naulthene.cerveau.colab
 ```
 
-Autres points d'entrée du même écosystème (voir [Architecture](#architecture) et [docs/LANCEMENT.md](docs/LANCEMENT.md) pour le guide complet) :
+Autres points d'entrée du même écosystème (voir [Architecture](#architecture) et [docs/fonctionnement/LANCEMENT.md](docs/fonctionnement/LANCEMENT.md) pour le guide complet) :
 
 ```bash
 PYTHONPATH=src python -m naulthene.cerveau.noyau                              # terrain d'essai local (Mac)
@@ -251,7 +243,7 @@ Il n'y a ni linter ni suite de tests automatisés configurés. Toute vérificati
 | Branche | Contenu | État |
 |---|---|---|
 | `master` | v28.0 (Port Exocortex C3) + v29.0 (Bus Sensoriel & identité C1/C2) + v29.1 (télémétrie des 5 sens) | intégrée, poussée |
-| `feat/v30-exo-sens` | v30.0 — l'Exo-Sens (C3 en 6ᵉ sens, odorat dynamique exponentiel) | **implémentée et validée**, en attente de merge — voir `docs/Old_Archive_rmd/CONCEPTION_v30_exo_sens.md` |
+| `feat/v30-exo-sens` | v30.0 — l'Exo-Sens (C3 en 6ᵉ sens, odorat dynamique exponentiel) | **implémentée et validée**, en attente de merge — voir `docs/ameliorations_appliquees/CONCEPTION_v30_exo_sens.md` |
 | `feat/v28-exocortex-c3` | branche d'origine des v28/v29, désormais mergée dans `master` | conservée pour l'historique |
 
 Le travail en cours se fait sur `feat/v30-exo-sens`, rebasée sur `master`. Décisions structurantes
@@ -263,13 +255,13 @@ seuil de déclenchement**.
 - Ne créer un commit que si l'utilisateur le demande explicitement
 - Toujours créer un nouveau commit plutôt qu'un `--amend`, sauf demande contraire
 - Ne jamais `push --force`, `reset --hard` ou sauter les hooks (`--no-verify`) sans autorisation explicite
-- Un commit qui modifie `src/naulthene/cerveau/colab.py` de façon significative (nouvelle mécanique, changement d'hyperparamètre structurant, nouvelle section) doit s'accompagner de la mise à jour de `docs/CHANGELOG.md` et, si le changement est narrativement significatif, de `readme_fr.md` — voir [Maintenance du Changelog](#maintenance-du-changelog)
+- Un commit qui modifie `src/naulthene/cerveau/colab.py` de façon significative (nouvelle mécanique, changement d'hyperparamètre structurant, nouvelle section) doit s'accompagner de la mise à jour de `docs/fonctionnement/CHANGELOG.md` et, si le changement est narrativement significatif, de `readme_fr.md` — voir [Maintenance du Changelog](#maintenance-du-changelog)
 
 ## Maintenance du Changelog
 
 **OBLIGATOIRE** : à chaque commit modifiant `src/naulthene/cerveau/colab.py` de façon significative, mettre à jour les fichiers suivants.
 
-### 1. `docs/CHANGELOG.md`
+### 1. `docs/fonctionnement/CHANGELOG.md`
 
 Ajouter une entrée **en haut du fichier** (juste après l'introduction) avec ce format :
 
@@ -295,40 +287,36 @@ Ajouter une entrée **en haut du fichier** (juste après l'introduction) avec ce
 
 Utiliser le hash court réel du commit (`git rev-parse --short HEAD`) une fois le commit créé. Si l'entrée est rédigée avant le commit correspondant, renseigner temporairement `N/A — en attente du commit de cette version` puis la corriger après coup.
 
-### 3bis. Carnets de recherche (`docs/notes/`, depuis 2026-08-12)
+### 3bis. Les quatre dossiers de `docs/` (réorganisés le 2026-08-14)
 
-Trois destinations, trois natures — ne pas les confondre :
+**Point d'entrée : [`docs/INDEX.md`](docs/INDEX.md)** — il dit quelle question mène à quel
+document. Tout nouveau document doit y être ajouté, sinon il sera oublié.
 
 | Dossier | Nature | Fait autorité sur l'état courant ? |
 |---|---|---|
-| `docs/` | documents **normatifs** (CHANGELOG, LANCEMENT, explications) | ✅ oui |
-| `docs/notes/` | **carnets de recherche** — investigations en cours, hypothèses réfutées | ❌ non |
-| `docs/Old_Archive_rmd/` | documents **historiques**, mécanique livrée ailleurs | ❌ non |
+| `docs/fonctionnement/` | **normatif** (CHANGELOG, LANCEMENT, explications) | ✅ oui |
+| `docs/recherche/` | **enquêtes** — investigations, hypothèses réfutées | ❌ non |
+| `docs/ameliorations/` | **idées** proposées, non validées | ❌ non |
+| `docs/ameliorations_appliquees/` | **livré** dans le code | 🟡 partiellement |
 
-Un carnet de `docs/notes/` est **vivant mais non normatif** : il raconte une investigation,
-conserve les hypothèses réfutées et les erreurs de diagnostic. **Ne jamais y chercher l'état
-courant du système** — c'est le rôle du CHANGELOG. Mais **toujours le consulter avant de
-relancer une piste** : c'est ce qui évite de retester une idée déjà écartée, et de refaire
-une erreur de méthode déjà consignée.
+Un document de `recherche/` est **vivant mais non normatif** : il raconte une
+investigation, conserve les hypothèses réfutées et les erreurs de diagnostic. **Ne jamais
+y chercher l'état courant** — c'est le rôle du CHANGELOG. Mais **toujours le consulter
+avant de relancer une piste** : c'est ce qui évite de retester une idée déjà écartée.
 
-Même procédure que ci-dessous : `git mv` (jamais `mv` seul) et correction de **tous** les
-liens entrants — README (FR **et** EN, règle de miroir), `CLAUDE.md`, les autres docs, **et
-les docstrings du code source** (`instruments/banc_ablation.py`, `sonde_c1_c2.py`,
-`sonde_poids.py`, `evaluer_cerveau.py` notamment).
+`ameliorations_appliquees/` garde la trace des options **ÉCARTÉES** et de leurs raisons,
+ce qu'aucun document à jour ne raconte — c'est ce qui évite qu'une idée déjà rejetée soit
+réintroduite sans connaître l'argument qui l'avait écartée.
 
-### 3. Archivage documentaire (`docs/Old_Archive_rmd/`, depuis v30.1)
+Procédure de déplacement : `git mv` (jamais `mv` seul) et correction de **tous** les liens
+entrants — README (FR **et** EN, règle de miroir), `CLAUDE.md`, les autres docs, **et les
+docstrings du code source**. Vérifier ensuite qu'aucun lien ne pointe dans le vide.
 
-`docs/` ne contient que des **documents vivants** (4 aujourd'hui). Un document rejoint
-`docs/Old_Archive_rmd/` quand sa mécanique est **livrée et documentée ailleurs** — jamais parce
-qu'il est simplement « vieux ». Un cadrage archivé reste précieux : il garde la trace des options
-**écartées** et de leurs raisons, ce qu'aucun document à jour ne raconte, et c'est ce qui évite
-qu'une idée déjà évaluée soit réintroduite sans connaître l'argument qui l'avait rejetée.
+### 3. Où ranger un document
 
-Procédure : `git mv` (jamais `mv` seul — l'historique du fichier est précieux), puis **corriger
-tous les liens entrants**. Attention : ces documents sont référencés depuis `readme_fr.md`,
-`CLAUDE.md`, les autres docs **et les docstrings du code source** (`bus_sensoriel.py`,
-`hemisphere_audio.py`, `professeur_gemma.py`, `lecons_vocales.py`, `client_professeur.py`,
-`daemon_cerveau.py`, `irm_cerveau.py`). Vérifier ensuite qu'aucun lien ne pointe dans le vide.
+Un document rejoint `ameliorations_appliquees/` quand sa mécanique est **livrée et
+documentée ailleurs** — jamais parce qu'il est simplement « vieux ». Une idée non encore
+testée reste dans `ameliorations/`. Voir §3bis pour les quatre dossiers et la procédure.
 
 ### 2. `readme_fr.md`
 
@@ -388,4 +376,4 @@ corps réel envisageable. Ne jamais présenter le projet comme un système livr�
 | `fix` mineur / `refactor` / `docs` | même version + suffixe | 14.0-fix1, 14.0-docs |
 | `chore` / `style` | pas d'incrément | - |
 
-Le script de référence `src/naulthene/cerveau/colab.py` est actuellement en version **17** (voir `readme_fr.md`, table des matières et journal des mises à jour). `src/naulthene/cerveau/noyau.py` porte en plus toutes les mécaniques expérimentales non encore portées sur `colab.py` (actuellement jusqu'à **v37.0/v37.1** — l'Équilibre C1/C2 & la Distillation Sélective — en passant par v36.0 le Flux Enrichi & l'Abstraction par Récurrence, v35.0/v35.1 le Cursus Progressif à 15 niveaux, le Guidage Dégressif & le Filet de Sécurité, v34.0-fix1/fix2 le correctif d'Extinction Synaptique, v32.0 l'Odorat Topologique & la Clinotaxie, v31.0/v31.1 la Mémoire Proportionnelle, le Rêve Invariant d'Échelle & la Déduplication Mnésique, en passant par v18.0 Architecture Homéostatique Biologique, v22 Hémisphère Auditif & Vocal, v27.x École de la Parole, v28.0 Cascade C1→C2→C3 & Port Exocortex, v29.0/v29.1 Bus Sensoriel & télémétrie des 5 sens, v30.0/v30.1 Odorat Dynamique, Exo-Sens & instrumentation, voir [Variante Locale de Test](#variante-locale-de-test-mac--srcnaulthenecerveaunoyaupy) et `readme_fr.md`/`docs/CHANGELOG.md` pour le détail) — toute nouvelle mécanique testée localement suit la même échelle de version que le script de référence, marquée `-experimental` tant qu'elle n'y est pas portée. Poursuivre sur cette échelle entière (+1.0 pour la prochaine mécanique majeure) sauf décision contraire de l'utilisateur.
+Le script de référence `src/naulthene/cerveau/colab.py` est actuellement en version **17** (voir `readme_fr.md`, table des matières et journal des mises à jour). `src/naulthene/cerveau/noyau.py` porte en plus toutes les mécaniques expérimentales non encore portées sur `colab.py` (actuellement jusqu'à **v37.0/v37.1** — l'Équilibre C1/C2 & la Distillation Sélective — en passant par v36.0 le Flux Enrichi & l'Abstraction par Récurrence, v35.0/v35.1 le Cursus Progressif à 15 niveaux, le Guidage Dégressif & le Filet de Sécurité, v34.0-fix1/fix2 le correctif d'Extinction Synaptique, v32.0 l'Odorat Topologique & la Clinotaxie, v31.0/v31.1 la Mémoire Proportionnelle, le Rêve Invariant d'Échelle & la Déduplication Mnésique, en passant par v18.0 Architecture Homéostatique Biologique, v22 Hémisphère Auditif & Vocal, v27.x École de la Parole, v28.0 Cascade C1→C2→C3 & Port Exocortex, v29.0/v29.1 Bus Sensoriel & télémétrie des 5 sens, v30.0/v30.1 Odorat Dynamique, Exo-Sens & instrumentation, voir [Variante Locale de Test](#variante-locale-de-test-mac--srcnaulthenecerveaunoyaupy) et `readme_fr.md`/`docs/fonctionnement/CHANGELOG.md` pour le détail) — toute nouvelle mécanique testée localement suit la même échelle de version que le script de référence, marquée `-experimental` tant qu'elle n'y est pas portée. Poursuivre sur cette échelle entière (+1.0 pour la prochaine mécanique majeure) sauf décision contraire de l'utilisateur.

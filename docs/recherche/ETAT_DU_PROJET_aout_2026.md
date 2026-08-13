@@ -5,11 +5,11 @@
 > [diagnostic d'août](dia_Aout_2026.md) (run de 1300 jours) et intègre les quatre jours de
 > campagne expérimentale des 11-13 août.
 >
-> **Ce document ne remplace pas** : [CHANGELOG.md](../CHANGELOG.md) reste la référence
+> **Ce document ne remplace pas** : [CHANGELOG.md](../fonctionnement/CHANGELOG.md) reste la référence
 > factuelle version par version, [recherche_bug_or_not_bug.md](recherche_bug_or_not_bug.md)
-> le carnet d'investigation, [CHANTIER_v38_monde_continu.md](CHANTIER_v38_monde_continu.md)
+> le carnet d'investigation, [CHANTIER_v38_monde_continu.md](../ameliorations_appliquees/CHANTIER_v38_monde_continu.md)
 > le détail du chantier en cours. Les **propositions de solutions** qui découlent de cet
-> état des lieux sont dans [AVIS_ET_PROPOSITIONS_aout_2026.md](AVIS_ET_PROPOSITIONS_aout_2026.md).
+> état des lieux sont dans [AVIS_ET_PROPOSITIONS_aout_2026.md](../ameliorations/AVIS_ET_PROPOSITIONS_aout_2026.md).
 
 ---
 
@@ -110,7 +110,7 @@ Indépendants des runs, et ils valent d'être portés dans `src/` :
 1. **`obs_auditive=None` ne produit pas un silence** (`noyau.py:548-552`) : le terme
    **disparaît** de la somme du bus latent. La norme change, donc l'échelle d'activation de
    tout l'aval. Le cerveau ne perçoit pas le calme — **il perd le canal**, sans signal.
-   Défaut annoncé dans [les_sens_combinatoire.md](les_sens_combinatoire.md) §4.3, jamais
+   Défaut annoncé dans [les_sens_combinatoire.md](../ameliorations/les_sens_combinatoire.md) §4.3, jamais
    corrigé.
 2. **`Pourcentage_Reve` est affiché avec un `%` en trop** : la valeur est une fraction. A
    causé une erreur de diagnostic propagée dans deux documents.

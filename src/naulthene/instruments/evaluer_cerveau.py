@@ -8,7 +8,7 @@ observent un cerveau EN DIRECT sur le niveau où il en est dans son cursus, mais
 outil ne mesure "ce cerveau sait-il encore faire le Primaire, maintenant qu'il est
 censé savoir faire l'Université ?" — la question de la rétention/l'oubli catalogique
 (érosion nocturne insuffisamment cristallisée sur un vieux niveau, §8 de
-docs/explications_readme.md).
+docs/fonctionnement/explications_readme.md).
 
 Principe : charger un `.brain` en lecture seule, forcer temporairement son
 environnement sur UN niveau donné du `PROGRAMME` (indépendamment du niveau réel où le

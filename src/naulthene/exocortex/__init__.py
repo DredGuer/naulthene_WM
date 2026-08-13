@@ -18,6 +18,6 @@ sa curiosité intrinsèque déjà existante (voir `noyau.DetecteurCuriositeJEPA`
   défaut = toujours absent, `PlugSimule` pour les crash-tests, `PlugHTTP` = backend
   générique JSON/HTTP pour brancher n'importe quel service tiers).
 
-Voir docs/CHANGELOG.md (entrée v28.0-experimental) et docs/explications_readme.md §14
+Voir docs/fonctionnement/CHANGELOG.md (entrée v28.0-experimental) et docs/fonctionnement/explications_readme.md §14
 pour le détail de la cascade de décision C1 → C2 → C3.
 """

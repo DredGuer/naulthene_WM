@@ -7,7 +7,7 @@
 > **d'instrumenter avant de concevoir**.
 >
 > Origine : discussion du 2026-08-05, pendant le run de 10 000 jours. Fait suite à la
-> clôture du cycle v33 (voir `Old_Archive_rmd/CONCEPTION_v33_memoire_emotionnelle.md`),
+> clôture du cycle v33 (voir `ameliorations/CONCEPTION_v33_memoire_emotionnelle.md`),
 > dont la leçon centrale est : **une prémisse non mesurée coûte un cycle entier**.
 
 ---
@@ -595,7 +595,7 @@ canaux vides.
 |---|---|
 | Hiérarchie des 5 sens, identité C1/C2, Exo-Sens | `explications_readme.md` §15 |
 | Invariants du Bus Sensoriel (pur numpy, append-only, sens faibles hors JEPA) | `CLAUDE.md` |
-| Formules d'origine du toucher/odorat/goût, options écartées v29 | `Old_Archive_rmd/EXPLICATIONS_v29_sens.md` ⚠️ chiffres dépassés |
-| Pivot de C3 en 6ᵉ sens, options écartées v30 | `Old_Archive_rmd/CONCEPTION_v30_exo_sens.md` |
+| Formules d'origine du toucher/odorat/goût, options écartées v29 | `ameliorations_appliquees/EXPLICATIONS_v29_sens.md` ⚠️ chiffres dépassés |
+| Pivot de C3 en 6ᵉ sens, options écartées v30 | `ameliorations_appliquees/CONCEPTION_v30_exo_sens.md` |
 | Séparation des pertes JEPA vision/audio (« empoisonnement du JEPA ») | `CHANGELOG.md`, v22.1 |
-| Leçon méthodologique « prémisse non mesurée » | `Old_Archive_rmd/CONCEPTION_v33_memoire_emotionnelle.md` |
+| Leçon méthodologique « prémisse non mesurée » | `ameliorations/CONCEPTION_v33_memoire_emotionnelle.md` |

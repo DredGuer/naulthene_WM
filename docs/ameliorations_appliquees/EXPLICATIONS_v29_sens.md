@@ -7,10 +7,10 @@
 > restent hors de la cible JEPA (§4), l'identité C1/C2 (§5), la boucle de distillation (§6) et
 > les deux options **écartées** (§9).
 >
-> ➡️ **Pour l'état courant**, voir [explications_readme.md](../explications_readme.md) §15 (résumé
-> algorithmique à jour), [CHANGELOG.md](../CHANGELOG.md) et [LANCEMENT.md](../LANCEMENT.md).
+> ➡️ **Pour l'état courant**, voir [explications_readme.md](../fonctionnement/explications_readme.md) §15 (résumé
+> algorithmique à jour), [CHANGELOG.md](../fonctionnement/CHANGELOG.md) et [LANCEMENT.md](../fonctionnement/LANCEMENT.md).
 
-Document explicatif complet de la v29.0, rédigé à partir d'une lecture directe du code livré. Pour l'historique commit par commit voir [CHANGELOG.md](../CHANGELOG.md) (entrée `[29.0-experimental]`), pour la narration générale [readme.md](../../readme.md), et pour la note de conception d'origine [Maj_V29_readme.md](Maj_V29_readme.md).
+Document explicatif complet de la v29.0, rédigé à partir d'une lecture directe du code livré. Pour l'historique commit par commit voir [CHANGELOG.md](../fonctionnement/CHANGELOG.md) (entrée `[29.0-experimental]`), pour la narration générale [readme.md](../../readme.md), et pour la note de conception d'origine [Maj_V29_readme.md](Maj_V29_readme.md).
 
 ---
 
@@ -386,4 +386,4 @@ La télémétrie v29.1 est précisément l'instrument qui permet de trancher **s
 
 ---
 
-*Document rédigé à partir d'une lecture directe du code livré (`src/naulthene/cerveau/bus_sensoriel.py`, `noyau.py` v29, `persistance.py`) — voir [readme.md](../../readme.md) pour la documentation narrative complète, [CHANGELOG.md](../CHANGELOG.md) pour l'historique commit par commit, et [CLAUDE.md](../../CLAUDE.md) pour les règles de maintenance du projet.*
+*Document rédigé à partir d'une lecture directe du code livré (`src/naulthene/cerveau/bus_sensoriel.py`, `noyau.py` v29, `persistance.py`) — voir [readme.md](../../readme.md) pour la documentation narrative complète, [CHANGELOG.md](../fonctionnement/CHANGELOG.md) pour l'historique commit par commit, et [CLAUDE.md](../../CLAUDE.md) pour les règles de maintenance du projet.*
