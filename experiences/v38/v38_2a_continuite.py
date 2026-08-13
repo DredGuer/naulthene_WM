@@ -120,6 +120,28 @@ def _rearmer_tache(env, rng):
     e = _grille_de(env)
     ax, ay = int(e.agent_pos[0]), int(e.agent_pos[1])
 
+    def _zone_sans_porte(grille_env, depart):
+        """Cases atteignables depuis `depart` SANS franchir de porte (BFS).
+
+        Sert à garantir l'invariant de DoorKey : le but doit rester de l'autre côté de
+        la porte. Une porte verrouillée est traitée comme un mur — c'est exactement ce
+        qu'elle est pour un agent sans clé.
+        """
+        g = grille_env.grid
+        vus = {depart}
+        pile = [depart]
+        while pile:
+            x, y = pile.pop()
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                n = (x + dx, y + dy)
+                if not (0 <= n[0] < g.width and 0 <= n[1] < g.height) or n in vus:
+                    continue
+                if type(g.get(*n)).__name__ in ("Wall", "Door"):
+                    continue
+                vus.add(n)
+                pile.append(n)
+        return vus
+
     def _cases_libres(exclure_agent=True):
         return [(x, y) for x in range(1, e.grid.width - 1)
                 for y in range(1, e.grid.height - 1)
@@ -136,8 +158,45 @@ def _rearmer_tache(env, rng):
     libres = _cases_libres()
     if not libres:
         return False
-    dmax = max(abs(x - ax) + abs(y - ay) for x, y in libres)
-    lointaines = [p for p in libres if abs(p[0] - ax) + abs(p[1] - ay) >= dmax * 0.5]
+
+    # --- v39-fix (R5) : LE BUT DOIT RESTER DERRIÈRE LA PORTE ---
+    #
+    # 🔴 CE QUE ÇA CORRIGE (mesuré par BFS, portes verrouillées infranchissables) :
+    #
+    #     MiniGrid natif (le témoin)   :   0 / 180 cartes solvables sans la clé (0 %)
+    #     Réarmement 2a (le continu)   :  86 / 360 cartes solvables sans la clé (24 %)
+    #
+    #     et le taux CROÎT avec la taille :
+    #       5×5 → 7,3 %   6×6 → 26,7 %   8×8 → 36,7 %   16×16 → 48,7 %
+    #
+    # La sélection ne regardait que la DISTANCE, jamais de quel CÔTÉ de la porte. Or
+    # l'agent démarre dans la pièce fermée : un but reposé dans cette même pièce rend la
+    # clé et la porte inutiles — l'agent marche jusqu'au but. Le témoin, lui, jouait un
+    # `reset()` natif, donc 0 % de cartes triviales : **les deux conditions ne jouaient
+    # pas la même tâche**, et le biais favorisait systématiquement la condition testée.
+    #
+    # Le réarmement traitait déjà trois états absorbants (clé en main, porte ouverte,
+    # souvenirs figés) — mais pas la TOPOLOGIE. On avait vérifié que la tâche était
+    # toujours *armée* ; jamais qu'elle était toujours *la même tâche*.
+    #
+    # La correction : ne retenir que les cases INATTEIGNABLES sans franchir une porte.
+    # C'est la définition même de DoorKey, et elle est vérifiable mécaniquement plutôt
+    # qu'énoncée dans une docstring (leçon des trois défauts R1/R4/R5, tous des
+    # invariants écrits en toutes lettres et jamais transformés en assertion).
+    accessibles_sans_porte = _zone_sans_porte(e, (ax, ay))
+    derriere_la_porte = [p for p in libres if p not in accessibles_sans_porte]
+
+    if derriere_la_porte:
+        candidates = derriere_la_porte
+    else:
+        # Cartes sans porte (les paliers `Empty` d'autres cursus, ou une topologie
+        # dégénérée) : on retombe sur le critère de distance. Ce n'est pas un
+        # contournement du correctif — il n'y a simplement pas de porte à respecter.
+        candidates = libres
+
+    dmax = max(abs(x - ax) + abs(y - ay) for x, y in candidates)
+    lointaines = [p for p in candidates
+                  if abs(p[0] - ax) + abs(p[1] - ay) >= dmax * 0.5]
     gx, gy = lointaines[rng.randrange(len(lointaines))]
     e.grid.set(gx, gy, Goal())
 

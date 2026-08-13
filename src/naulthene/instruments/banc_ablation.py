@@ -138,21 +138,61 @@ class Lesion:
     # les versions.
     @staticmethod
     def _bornes_queue(n):
-        """Retourne les tranches (début, fin) de chaque sens, en index négatifs."""
-        q = bs.DIM_TOUCHER + bs.DIM_CHIMIE + bs.DIM_EXO + bs.DIM_ODORAT_DELTA
-        d = n - q                                     # début de la queue sensorielle
-        t0 = d
+        """Retourne les tranches (début, fin) de chaque sens, en index ABSOLUS.
+
+        --- v39-fix (R1) : ANCRAGE PAR LE DÉBUT, JAMAIS PAR LA FIN ---
+
+        🔴 CE QUE ÇA CORRIGE. L'ancienne version calculait `d = n - q`, c'est-à-dire
+        qu'elle partait de la FIN du vecteur en supposant la clinotaxie dernière. C'était
+        vrai en v32.0 ; ça ne l'est plus depuis que le contrat append-only a fait son
+        travail :
+
+            v36.0  +2 dims (rappel marquant)   -> décalage +2
+            v39.2  +1 dim  (présence auditive) -> décalage +3
+
+        Conséquence mesurée sur le layout réel (v39.2) :
+
+            tranche      index RÉELS   index CALCULÉS (ancienne version)
+            toucher      16:20         19:23      (+3)
+            odorat       20:22         23:25      (+3)
+            goût         22:24         25:27      (+3)
+            exo          24:32         27:35      (+3)
+            clinotaxie   32:34         35:37      (+3)
+
+        Donc `toucher_coupe` neutralisait en réalité 2 dims de toucher ET 2 d'odorat, en
+        laissant 2 dims de toucher intactes — et `clinotaxie` écrasait le rappel marquant
+        (dont le neutre est [0.5, 0.0], pas 0.5). **Le tableau d'ablation publié dans les
+        deux README a été produit avec ce découpage faux et doit être refait.**
+
+        Les 16 premières dims du vecteur bio sont STABLES depuis la v22.1 (3 jauges +
+        3 quête + 2 rappel spatial + 8 quête vocale) : c'est le seul ancrage fiable, parce
+        que le contrat du projet garantit que tout ajout se fait EN QUEUE.
+        """
+        t0 = 16                                       # fin du bloc stable v22.1
         c0 = t0 + bs.DIM_TOUCHER
         e0 = c0 + bs.DIM_CHIMIE
         k0 = e0 + bs.DIM_EXO
+        r0 = k0 + bs.DIM_ODORAT_DELTA                 # rappel marquant (v36.0)
+
+        # Garde-fou : le contrat est append-only, donc toute dimension ajoutée en queue
+        # DOIT faire crier cette assertion plutôt que décaler silencieusement les lésions.
+        # C'est la leçon des trois défauts R1/R4/R5 — un invariant qu'on peut tester
+        # mécaniquement et qu'on laisse en commentaire finit par être violé sans bruit.
+        attendu = r0 + nx.DIM_RAPPEL_MARQUANT + getattr(nx, "DIM_PRESENCE_AUDITIVE", 0)
+        assert attendu == n, (
+            f"Layout du vecteur bio inattendu : {n} dims reçues, {attendu} calculées. "
+            "Une dimension a été ajoutée sans mettre à jour _bornes_queue — les lésions "
+            "porteraient sur les mauvaises tranches (défaut R1, v39)."
+        )
+
         return {
-            "queue":      (d,  n),
+            "queue":      (t0, k0 + bs.DIM_ODORAT_DELTA),
             "toucher":    (t0, c0),
             "chimie":     (c0, e0),
             "odorat":     (c0, c0 + 2),               # odeur_food, odeur_water
             "gout":       (c0 + 2, e0),               # gout_food, gout_water
             "exo":        (e0, k0),
-            "clinotaxie": (k0, n),
+            "clinotaxie": (k0, r0),
         }
 
     def masquer_obs(self, obs):
@@ -180,6 +220,13 @@ class Lesion:
             v[..., :] = 0.0
             d, f = b["clinotaxie"]
             v[..., d:f] = 0.5                          # neutre v32.0, jamais 0.0
+            # v39-fix (R1) : le rappel marquant a pour neutre [0.5, 0.0] — sa valence
+            # remise à 0.0 signifierait « le pire souvenir possible » et rendrait l'agent
+            # craintif partout, ce qui n'est pas une ABLATION mais une lésion active.
+            # L'ancien découpage écrasait cette tranche sans le savoir (décalage +3).
+            r0 = b["clinotaxie"][1]
+            v[..., r0] = 0.5                           # valence neutre
+            v[..., r0 + 1] = 0.0                       # confiance nulle
         elif self.id == "toucher_coupe":
             d, f = b["toucher"]; v[..., d:f] = 0.0
         elif self.id == "gout_coupe":

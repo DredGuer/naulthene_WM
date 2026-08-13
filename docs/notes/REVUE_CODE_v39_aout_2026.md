@@ -1,12 +1,24 @@
 # Revue de code v39 — 13-14 août 2026
 
 > **Nature du document** : carnet de revue, non normatif. Liste les défauts trouvés en
-> relisant le code pendant que les campagnes P12/P14 tournaient. Rien n'est corrigé ici —
-> ce document sert à **corriger après**, une fois les campagnes terminées (modifier le
-> code pendant qu'il tourne invaliderait les runs en cours).
+> relisant le code pendant que les campagnes P12/P14 tournaient.
 >
 > Chaque entrée porte : la **preuve** (mesure ou lecture), l'**impact réel**, et la
-> **correction proposée**. Les défauts sans preuve exécutée sont marqués comme tels.
+> **correction**.
+>
+> ## ✅ LES CINQ DÉFAUTS SONT CORRIGÉS *(14 août 2026)*
+>
+> | Défaut | Avant | Après | Vérification |
+> |---|---|---|---|
+> | **R5** réarmement 2a | jusqu'à **48,7 %** de cartes triviales | **0 %** | 600 réarmements, 4 tailles |
+> | **R4** croissance P14 | **92 %** de cartes triviales | **0 %** | 200 croissances |
+> | **R1** `_bornes_queue` | lésions décalées de **+3** | index exacts | 5 lésions vérifiées une à une |
+> | **R3** paliers 10×10/12×12 | 2 instruments sur 2 en échec | lisibles | `sonde_poids`, `sonde_c1_c2` |
+> | **R2** docstring | « 34 dims » périmé | la constante fait foi | — |
+>
+> Une **assertion exécutable** a été ajoutée dans `_bornes_queue` : toute dimension
+> future ajoutée en queue fera désormais **échouer bruyamment** le banc d'ablation au
+> lieu de décaler silencieusement les lésions.
 
 ---
 
@@ -334,7 +346,75 @@ explicitement :
 
 ---
 
-## Ordre de correction proposé *(après la fin des campagnes)*
+## 📊 IMPACT SUR LES DONNÉES — ce qui est touché, et à quel point
+
+> Section demandée explicitement. Elle distingue ce qui est **mesuré** de ce qui est
+> **estimé**, et refuse d'aller plus loin que les mesures.
+
+### La mesure centrale : le biais croît avec la taille de la carte
+
+Taux de cartes solvables **sans la clé** après réarmement 2a (BFS, porte verrouillée
+traitée comme un mur) :
+
+| Carte | Avant correctif | Après correctif |
+|---|---|---|
+| `DoorKey-5x5` | 7,3 % | **0 %** |
+| `DoorKey-6x6` | 26,7 % | **0 %** |
+| `DoorKey-8x8` | 36,7 % | **0 %** |
+| **`DoorKey-16x16`** | **48,7 %** | **0 %** |
+| *MiniGrid natif (le témoin)* | *0 %* | *0 %* |
+
+**Le biais n'est pas uniforme : il double à chaque palier.** Et il est **unilatéral** —
+vérifié dans le code, `_rearmer_tache` n'est appelé que par la condition « continu »
+(`installer_continuite`) ; le témoin joue un `reset()` natif, donc 0 % partout.
+
+### Ce qui est AFFECTÉ
+
+| Résultat | Ampleur du biais | Verdict |
+|---|---|---|
+| **2a** — continuité, 3,0 vs 1,5 paliers (p = 0,375) | 7 à 37 % selon le palier atteint | ⚠️ **à refaire** |
+| **2b** — « le seul résultat qui tient » (p = 0,062) | idem, construit sur 2a | ⚠️ **à refaire** |
+| **g22** — 69 victoires, cursus complet en 239 j | **65 victoires sur `16x16`**, la carte la plus biaisée | ⚠️ **fortement suspect** |
+| **P14** — campagne croissance | 92 % | ❌ **arrêtée en cours, jetée** |
+| **Tableau d'ablation** des deux README | lésions décalées de +2 (v36) puis +3 (v39) | ⚠️ **à refaire** |
+
+**Le cas g22 mérite d'être dit franchement.** C'était le run exceptionnel du projet — 69
+victoires quand le record était 22. Or 65 de ces victoires sont sur `DoorKey-16x16`, dont
+**48,7 % des cartes réarmées étaient solvables sans clé**. Une estimation par le taux de
+base donnerait ~32 victoires « faciles » sur 65.
+
+⚠️ **Ce chiffre est une ESTIMATION, pas une mesure.** Le taux de base ne dit pas ce qui
+s'est réellement passé dans ce run précis : les cartes réellement rencontrées dépendent de
+la graine et des positions successives de l'agent. La seule façon de trancher serait de
+rejouer g22 avec le réarmement corrigé.
+
+### Ce qui n'est PAS affecté
+
+| Résultat | Pourquoi il tient |
+|---|---|
+| **2c** parent nourricier (−2 paliers, 0/5) | Un biais qui **facilite** ne peut pas produire une **régression** |
+| **2c-fix**, **2c-ter**, **2d** | Idem — tous des résultats négatifs ou nuls |
+| **H16** loterie d'amorçage (réfutée) | Analyse rétrospective sur runs W&B, sans réarmement |
+| **H18** la promotion efface la mémoire | Mécanisme observé dans le code et par journal, indépendant de la topologie |
+| **Les correctifs v37** (0 synapse morte) | Mesurés sur la santé synaptique, pas sur la difficulté de la tâche |
+| **La campagne P12** (prior d'empreinte) | N'utilise ni la croissance ni le réarmement modifié — **elle continue** |
+
+### La lecture honnête
+
+Le biais **ne renverse aucune conclusion négative**, et c'est important : tout ce que le
+projet a *réfuté* reste réfuté. Ce qu'il fragilise, c'est précisément la seule chose que le
+projet présentait comme **acquise** — « la continuité rend possible quelque chose ».
+
+> On ne peut pas dire « 2a est faux ». On doit dire : **2a a été mesuré avec un témoin
+> plus difficile que la condition testée, et la comparaison doit être refaite.**
+
+Il reste une raison de penser que l'effet n'est pas entièrement artefactuel : 2a avait
+**une graine en recul** (−2) et 2b **aucune**. Un biais qui facilite uniformément
+expliquerait mal qu'une graine régresse. Mais c'est un argument, pas une preuve.
+
+---
+
+## Ordre de correction *(appliqué le 14 août 2026)*
 
 | # | Défaut | Pourquoi ce rang |
 |---|---|---|

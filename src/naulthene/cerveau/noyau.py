@@ -1294,6 +1294,38 @@ def encoder(obs):
     return torch.as_tensor(obs['image'].flatten(), dtype=torch.float32, device=DEVICE).unsqueeze(0) / 10.0
 
 
+# --- v39-fix (R3) : LES PALIERS INTERMÉDIAIRES APPARTIENNENT AU NOYAU ---
+#
+# MiniGrid ne fournit que quatre DoorKey : 5x5, 6x6, 8x8, 16x16. Les cursus du projet en
+# utilisent six — les deux manquants (10x10, 12x12) étaient enregistrés à la volée PAR LE
+# BANC D'ESSAI, donc invisibles pour tout autre point d'entrée.
+#
+# 🔴 CE QUE ÇA CORRIGE (vérifié, 2 instruments sur 2) : un `.brain` sauvegardé sur l'un de
+# ces paliers était ILLISIBLE par les outils de diagnostic —
+#
+#     $ python -m naulthene.instruments.sonde_poids <brain>
+#     gymnasium.error.NameNotFound: Environment `MiniGrid-DoorKey-12x12` doesn't exist.
+#
+# C'est un échec silencieux DIFFÉRÉ : rien ne prévient pendant le run, la panne
+# n'apparaît que le jour où l'on veut auditer le cerveau, souvent des semaines plus tard.
+#
+# L'enregistrement est donc remonté ici, près de `creer_env` : il devient effectif partout
+# où le noyau est importé (bancs, instruments, Cuve, Arène). Idempotent — un
+# ré-enregistrement par un banc ne fait qu'émettre un avertissement gymnasium bénin.
+try:
+    from gymnasium.envs.registration import register as _gym_register
+    for _taille_doorkey in (10, 12):
+        try:
+            _gym_register(
+                id=f"MiniGrid-DoorKey-{_taille_doorkey}x{_taille_doorkey}-v0",
+                entry_point="minigrid.envs:DoorKeyEnv",
+                kwargs={"size": _taille_doorkey})
+        except Exception:
+            pass    # déjà enregistré : sans conséquence (idempotent)
+except Exception:
+    pass            # gymnasium/minigrid absent : le noyau reste importable
+
+
 def creer_env(env_id, dim_attendue, render_mode=None):
     """`render_mode` (v24.0, Arène & Démo Live) : None par défaut (comportement
     identique à avant v24.0, aucun rendu — c'est le cas de tous les appels existants
@@ -1968,8 +2000,14 @@ class BiologicalHomeostasisEngine:
     def obtenir_vecteur_bio(self, rappel_spatial=None, cible_vocale=None,
                              signaux_sensoriels=None, rappel_marquant=None,
                              presence_auditive=None):
-        """Retourne le vecteur de DIM_VECTEUR_BIO=34 dims (3 jauges + 3 quête + 2 rappel
-        spatial + 8 quête vocale + 4 toucher + 4 chimie + 8 Exo-Sens + 2 clinotaxie) consommé par
+        """Retourne le vecteur de `DIM_VECTEUR_BIO` dims — la constante fait foi, ce
+        commentaire ne la répète PAS (v39-fix R2 : la valeur « 34 » écrite ici en dur
+        était périmée depuis deux versions, et c'est ce genre d'écart qui a produit le
+        défaut R1 du banc d'ablation).
+
+        Composition, dans l'ordre de concaténation (contrat append-only) : 3 jauges +
+        3 quête + 2 rappel spatial + 8 quête vocale + 4 toucher + 4 chimie + 8 Exo-Sens +
+        2 clinotaxie + 2 rappel marquant + 1 présence auditive. Consommé par
         AGI_Naulthene.integrer_bio — jamais recalculé côté réseau, toujours dérivé de
         l'état réel du moteur biologique, de la mémoire épisodique et des sens.
 

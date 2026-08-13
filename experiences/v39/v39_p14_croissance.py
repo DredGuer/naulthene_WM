@@ -100,6 +100,37 @@ def agrandir_monde(env, nouvelle_taille, rng):
     # 2. La nouvelle bordure.
     neuve.wall_rect(0, 0, nouvelle_taille, nouvelle_taille)
 
+    # --- v39-fix (R4) : PROLONGER LE MUR DE SÉPARATION ---
+    #
+    # 🔴 CE QUE ÇA CORRIGE (mesuré par BFS sur 200 configurations) : **92 %** des cartes
+    # agrandies étaient solvables SANS clé ni porte.
+    #
+    # Dans DoorKey, le mur intérieur ne sépare la carte en deux pièces que parce qu'il
+    # BUTTE sur la bordure extérieure. En agrandissant, la bordure recule — mais le mur
+    # garde sa longueur d'origine, ne touche plus rien, et l'agent le contourne :
+    #
+    #     AVANT (5×5)        APRÈS, sans ce correctif (8×8)
+    #       #####              ########
+    #       #.D.#              #.D....#
+    #       #@#.#              #@#...G#    ← le mur s'arrête ici
+    #       #k#G#              #k#....#    ← on passe par-dessous
+    #       #####              #......#
+    #
+    # La séparation en deux pièces est L'INVARIANT DE LA TÂCHE : elle doit survivre à
+    # l'agrandissement au même titre que la clé et la porte. On prolonge donc la colonne
+    # du mur intérieur jusqu'à la nouvelle bordure.
+    colonne_mur = None
+    for x in range(1, ancienne - 1):
+        # la colonne de séparation est celle qui porte la porte
+        if any(type(ancienne_grille.get(x, y)).__name__ == "Door"
+               for y in range(ancienne)):
+            colonne_mur = x
+            break
+    if colonne_mur is not None:
+        for y in range(1, nouvelle_taille - 1):
+            if neuve.get(colonne_mur, y) is None:
+                neuve.set(colonne_mur, y, Wall())
+
     # 3. De l'INCONNU dans la zone gagnée (sinon on n'ajoute que du vide, et le monde
     #    devient un couloir appris par cœur — le piège de H5).
     cases_neuves = [(x, y)
@@ -128,6 +159,22 @@ def rearmer_tache(env, rng):
     e = _grille_de(env)
     ax, ay = int(e.agent_pos[0]), int(e.agent_pos[1])
 
+    def _zone_sans_porte(grille_env, depart):
+        """Cases atteignables sans franchir de porte (une porte verrouillée = un mur)."""
+        g = grille_env.grid
+        vus, pile = {depart}, [depart]
+        while pile:
+            x, y = pile.pop()
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                n = (x + dx, y + dy)
+                if not (0 <= n[0] < g.width and 0 <= n[1] < g.height) or n in vus:
+                    continue
+                if type(g.get(*n)).__name__ in ("Wall", "Door"):
+                    continue
+                vus.add(n)
+                pile.append(n)
+        return vus
+
     def libres():
         return [(x, y) for x in range(1, e.grid.width - 1)
                 for y in range(1, e.grid.height - 1)
@@ -141,8 +188,16 @@ def rearmer_tache(env, rng):
     cases = libres()
     if not cases:
         return False
-    dmax = max(abs(x - ax) + abs(y - ay) for x, y in cases)
-    loin = [p for p in cases if abs(p[0] - ax) + abs(p[1] - ay) >= dmax * 0.5]
+
+    # v39-fix (R5) : le but doit rester DERRIÈRE la porte — même correctif que 2a.
+    # Sans lui, reposer le but « loin » suffisait à le placer dans la pièce de départ,
+    # rendant clé et porte inutiles (mesuré : jusqu'à 48,7 % des cartes en 16×16).
+    zone_ouverte = _zone_sans_porte(e, (ax, ay))
+    derriere = [p for p in cases if p not in zone_ouverte]
+    candidates = derriere if derriere else cases
+
+    dmax = max(abs(x - ax) + abs(y - ay) for x, y in candidates)
+    loin = [p for p in candidates if abs(p[0] - ax) + abs(p[1] - ay) >= dmax * 0.5]
     gx, gy = loin[rng.randrange(len(loin))]
     e.grid.set(gx, gy, Goal())
 
