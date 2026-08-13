@@ -188,27 +188,49 @@ nécessaires par condition.
 
 Quatre volets, du moins cher au plus ambitieux :
 
-### P2.a Exploiter les données qui existent déjà *(coût : zéro calcul)*
+### P2.a Exploiter les données qui existent déjà — ❌ **FAIT, HYPOTHÈSE RÉFUTÉE**
 
-Le dépôt contient **~180 runs W&B et une centaine de `.brain`**. Une analyse
-rétrospective peut tester dès maintenant l'hypothèse la plus importante sur la variance :
+> Exécutée le 13/08 sur les 142 runs W&B. Résultat complet :
+> [recherche_bug_or_not_bug.md § H16](recherche_bug_or_not_bug.md).
 
-> **La loterie des premiers jours.** Corréler, sur tous les runs existants, le *jour de la
-> première victoire* avec le *palier final*. Si la corrélation est forte, la variance n'est
-> pas du bruit : c'est un effet d'amorçage — une victoire précoce lance le cercle vertueux
-> (dopamine → myéline → consolidation), son absence laisse le cerveau au plancher.
+L'hypothèse était : *une victoire précoce lance le cercle vertueux, son absence laisse le
+cerveau au plancher.* **Elle est fausse.**
 
-Si c'est confirmé, le levier n'est pas statistique mais développemental : ce que 2b fait
-peut-être déjà (aucune régression = personne ne rate l'amorçage ?).
+| Population | rho (`niv_j200` → `niv_j1200`) | p |
+|---|---|---|
+| 33 runs de 1200 j, protocoles mélangés | +0,596 | 0,0004 |
+| **10 témoins, protocole identique** | **−0,003** | **1,000** |
 
-### P2.b Étudier g22 au lieu de le moyenner
+L'effet mesuré était une différence **entre protocoles**, pas une trajectoire individuelle.
+Les six témoins partis lentement finissent au **même niveau médian (4,5)** que les quatre
+partis vite. Un mauvais départ n'a jamais été un handicap — il n'y a donc rien à sauver par
+une intervention précoce.
 
-Le run g22 (69 victoires, cursus complet en 239 jours) est traité comme un outlier à
-neutraliser. C'est peut-être **l'observation la plus précieuse du projet** : le régime
-existe, il est atteignable, une graine l'a trouvé. Analyse de trajectoire complète :
-séquence des premières expériences, chocs dopaminergiques des 50 premiers jours, ordre des
-promotions. On ne cherche pas la moyenne d'un phénomène rare — on cherche **sa porte
-d'entrée**.
+**Conséquence pratique** : juger un run sur ses 200 premiers jours ne dit rien. L'espoir
+d'écourter les campagnes est mort avec cette hypothèse.
+
+### P2.b Étudier g22 au lieu de le moyenner — ✅ **FAIT, RÉSULTAT INATTENDU**
+
+> Exécutée le 13/08 sur les 12 `.brain` de la campagne 2a. Résultat complet :
+> [recherche_bug_or_not_bug.md § H17-H18](recherche_bug_or_not_bug.md).
+
+**Le cerveau de g22 est structurellement banal** — 26,5× plus de victoires que ses frères,
+mais norme synaptique 1,02×, myéline 1,04×, référence de choc 1,00×. Ni la neurogenèse ni
+l'homéostasie ne le distinguent.
+
+Une seule chose sortait : **21 repères `goal`, quand les onze autres en ont exactement 0**.
+Après sept vérifications par exécution, le mécanisme a été trouvé — et il **inverse la
+conclusion** :
+
+> **`reinitialiser_niveau()` (`noyau.py:5371`) vide 100 % de la mémoire spatiale à chaque
+> promotion.** Le repère `goal` naît au tick de la victoire, donc quelques ticks avant la
+> promotion qu'il déclenche — et disparaît avec elle.
+
+g22 n'a pas une meilleure mémoire : il a atteint le **dernier** palier au jour 239, donc
+plus rien ne l'effaçait ensuite. **C'est la stabilité de la carte qui produit la mémoire,
+pas la mémoire qui produit la performance.**
+
+Ce qui en sort comme piste réelle → **P11**.
 
 ### P2.c Mesurer des vitesses, pas des totaux
 
@@ -558,14 +580,45 @@ P6, et l'honnêteté de publier le résultat du contrôle négatif quel qu'il so
 
 ---
 
+## P11 — Ne pas jeter l'abstraction avec les coordonnées *(issue de P2.b, mesurée)*
+
+**Problème mesuré** : à chaque promotion, `reinitialiser_niveau()` vide la mémoire spatiale
+**entière**. L'intention est juste — une position `(1,2)` n'a pas le même sens sur une autre
+carte — mais l'effet de bord ne l'est pas : on efface aussi la **valence apprise par type**
+(`goal` = 1,00 contre `sol` = 0,07), qui n'a rien de spatial.
+
+Le mécanisme d'abstraction par récurrence (v36.0) existe précisément pour que
+l'apprentissage **survive au particulier**. Or ici, un agent qui a appris « atteindre un
+`goal` est ce qui m'arrive de mieux » redécouvre cette leçon **de zéro à chaque palier**,
+et il la perd à l'instant exact où il vient de prouver qu'il l'avait acquise.
+
+**Proposition** : à la promotion, effacer les `pos` (qui n'ont effectivement plus de sens)
+mais **conserver la statistique par type** (`valence`, `confirmations`). Le cerveau garderait
+« ce genre d'endroit vaut ça » en perdant « c'était là ».
+
+**Respect de la règle** : la valence est **apprise** (moyenne des chocs vécus), jamais
+déclarée ; aucun type n'est nommé nulle part. C'est exactement le mécanisme v36.0 qu'on
+laisse vivre, au lieu de le réinitialiser.
+
+⚠️ **À tester, pas à croire.** Trois de mes explications successives sur ce sujet se sont
+révélées fausses en une soirée. Le mécanisme d'effacement est **mesuré** (journal
+`[ECRIT goal]` puis `.brain` vide) ; son *effet sur la performance* ne l'est pas. Test :
+2a continu, 6 graines appariées, avec et sans conservation de la valence.
+
+**Coût** : faible (une dizaine de lignes), et c'est la seule piste issue d'une **mesure
+directe** plutôt que d'une intuition.
+
+---
+
 # Partie III — L'ordre proposé
 
 L'ordre découle des dépendances et de la leçon « une brique à la fois, jamais empilées » :
 
 | # | Action | Dépend de | Nature | Coût |
 |---|---|---|---|---|
+| ~~1~~ | ~~**P2.a/b** Analyse rétrospective (amorçage, g22)~~ | — | ✅ **FAIT le 13/08** — H16 réfutée, H18 confirmée | — |
 | 1 | **P1** Versionner `noyau.py` | — | processus | une session |
-| 2 | **P2.a/b** Analyse rétrospective (amorçage, g22) | — | zéro calcul | une session |
+| 2 | **P11** Conserver la valence à la promotion | P1 | code léger, **issu d'une mesure** | faible |
 | 3 | Consolider **2b sur 15-20 graines** *(priorité 1 de l'état des lieux, inchangée)* | — | calcul | ~4 h |
 | 4 | **P9** Sonde d'invariants + les 2 correctifs identifiés (silence, `%` rêve) | P1 | code léger | faible |
 | 5 | **P3** Campagne de soustraction | 3 | calcul lourd | la plus grosse |

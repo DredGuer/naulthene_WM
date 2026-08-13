@@ -45,7 +45,8 @@ D'où le titre de ce carnet.
 | H9 (testée) | **Le seuil de promotion** | ✅ **CONFIRMÉE** | 25 %/1 vict. → **cursus franchi de bout en bout**, une première |
 | A1 | C2 est une fonction de valeur **linéaire** | 🔬 **EN COURS** | Projection dim_bus→1 sans couche cachée |
 | **H16** | **La loterie d'amorçage** (un bon départ détermine le run) | ❌ **RÉFUTÉE** | À protocole identique, `niv_j200 → niv_j1200` : **rho = −0,003** |
-| **H17** | **La mémoire spatiale sépare les runs** | 🟢 **SIGNAL FORT** | `souvenirs ↔ niveau` rho = **+0,77** (p = 0,006), et **g22 est le seul cerveau à mémoriser le but** |
+| **H17** | **La mémoire spatiale sépare les runs** | 🟡 **CORRÉLATION RÉELLE, CAUSALITÉ INVERSÉE** | rho = **+0,77** (p = 0,006), mais **la promotion efface la mémoire** — c'est la stabilité de la carte qui fait la mémoire, pas l'inverse |
+| **H18** | **La promotion efface l'abstraction avec les coordonnées** | ✅ **MÉCANISME CONFIRMÉ** | `reinitialiser_niveau()` vide **100 %** de la mémoire à chaque palier — journal à l'appui |
 
 ---
 
@@ -278,23 +279,76 @@ _memoriser_si_saillant -> True
 (graine 22, témoin) a confirmé l'instrumentation elle-même — mais **0 victoire en 40 jours**,
 donc aucune donnée sur le devenir du repère.
 
-### Ce qu'il reste, et pourquoi je m'arrête là
+### ✅ LE MÉCANISME, TROUVÉ — la promotion efface la carte du but
 
-L'explication survivante la plus simple est que **ces victoires sont si rares qu'elles ne
-laissent qu'un repère isolé**, lequel n'est jamais reconfirmé et se retrouve noyé — mais
-je n'ai **pas** réussi à identifier le mécanisme qui le fait disparaître, et les six voies
-plausibles sont éliminées.
+Le run instrumenté a été lancé sur la **condition qui gagne** (2a continu + patience ∝
+surface, graine 22). Le journal donne la réponse en trois lignes :
 
-> ⚠️ **Je m'arrête ici plutôt que de proposer une septième hypothèse.** Ce carnet contient
-> déjà quinze erreurs de diagnostic, dont deux commises **dans cette section même** (le
-> correctif d'éviction, puis la ré-explication par l'éviction). Continuer à produire des
-> explications sans mesure décisive, c'est exactement le mode d'échec que ce document
-> existe pour éviter.
+```
+[ECRIT goal] tick=22091 pos=(1, 2) int=1.0035 taille 14->15
+[ECRIT goal] tick=22142 pos=(1, 3) int=1.0119 taille 15->16
 
-**Le test décisif est identifié et peu coûteux** : reprendre le run instrumenté ci-dessus
-sur une condition **qui gagne** (2a continu, graine 22, ~200 jours) et lire le journal
-`[ECRIT goal]` / `[PERDU goal]`. Il n'a pas été lancé faute de temps de calcul, pas faute
-d'outil : le script existe et fonctionne.
+🎓 [PROMOTION] L'Agent passe en DoorKey 6×6 ! 🚀  (série de victoires)
+```
+
+Et le `.brain` sauvegardé juste après contient : `{'sol': 5, 'FOOD': 1, 'porte_key': 3,
+'porte_ball': 1}` — **zéro repère `goal`**.
+
+**Les repères sont bien écrits. Ils sont effacés par la promotion.**
+
+```python
+# noyau.py:5371, dans le bloc de promotion
+etat.memoire_episodique_spatiale.reinitialiser_niveau()   # -> self.souvenirs = []
+```
+
+`reinitialiser_niveau()` **vide la mémoire spatiale entière** à chaque changement de
+niveau. Son intention est raisonnable et documentée (*« les souvenirs d'un niveau précédent
+n'ont plus de sens spatial une fois la carte changée »*), mais elle produit un effet de
+bord que personne n'avait mesuré :
+
+> **Un agent qui progresse perd toute sa mémoire spatiale à l'instant précis où il vient de
+> prouver qu'il savait quelque chose.** Et il la perd au pire moment : le repère `goal`
+> naît *au tick de la victoire*, donc quelques ticks avant la promotion qu'il déclenche.
+
+Ce n'est **pas** une explication par la rareté ni par l'oubli : c'est un effacement
+programmé, systématique, à 100 % des promotions.
+
+### Pourquoi g22 est le seul à en garder
+
+g22 a atteint le **dernier palier** (`DoorKey-16x16`) au jour 239, puis y est resté 361
+jours en gagnant 65 fois. **Après la dernière promotion, plus rien n'efface sa mémoire** :
+ses 21 repères `goal` sont ceux accumulés sur cette unique carte finale.
+
+Les onze autres sont morts en cours de cursus (niveaux 0 à 4) : chacun a été **remis à zéro
+à chaque palier franchi**, et leur dernier `goal` a été effacé par leur dernière promotion.
+
+**La corrélation `souvenirs ↔ niveau` (rho = +0,77) s'explique donc en grande partie par un
+artefact** : plus un agent est resté longtemps sans être promu sur sa carte finale, plus il
+a de souvenirs. Ce n'est pas la mémoire qui produit la performance — c'est la **stabilité de
+la carte** qui produit la mémoire.
+
+### Ce que ça vaut comme piste
+
+L'effacement pose une vraie question de conception, indépendante de tout ce qui précède :
+
+| | |
+|---|---|
+| **L'argument pour** | une position `(1,2)` n'a pas le même sens sur une autre carte — garder les coordonnées serait trompeur |
+| **L'argument contre** | on efface aussi **la valence apprise par type** (`goal` = 1,00 ; `sol` = 0,07), qui n'a rien de spatial et qui est exactement ce que la v36.0 cherchait à construire |
+
+Autrement dit : le mécanisme jette **l'abstraction avec les coordonnées**. Or l'abstraction
+par récurrence (v36.0) était précisément censée survivre au particulier — c'est sa raison
+d'être. Un agent qui a appris « atteindre un `goal` est ce qui m'arrive de mieux »
+(valence 1,00 contre 0,07) redécouvre cette leçon **à chaque palier**, de zéro.
+
+**La proposition compatible avec la règle « rien en dur »** : à la promotion, effacer les
+`pos` (qui n'ont effectivement plus de sens) mais **conserver la statistique par type**
+(`valence`, `confirmations`) — qui n'est ni spatiale, ni nommée, ni déclarée. Le cerveau
+garderait « ce genre d'endroit vaut ça » en perdant « c'était là ».
+
+⚠️ **À tester, pas à croire.** Ce carnet vient de montrer que trois de mes explications
+successives sur ce sujet étaient fausses. Celle-ci est **mesurée** (le journal ci-dessus),
+mais son *effet* sur la performance ne l'est pas.
 
 ### Ce qui reste vrai, et ce qui tombe
 
