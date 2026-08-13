@@ -22,11 +22,25 @@ brains/ablations/*.json
 # macOS
 .DS_Store
 
-# Copie de travail locale (Mac, terrain d'essai des mécaniques expérimentales avant
-# portage éventuel sur src/naulthene/cerveau/colab.py — voir CLAUDE.md, section
-# "Variante Locale de Test"). Jamais trackée par git, contrairement aux autres
-# modules du client-serveur.
-src/naulthene/cerveau/noyau.py
+# --- src/naulthene/cerveau/noyau.py : DÉSORMAIS VERSIONNÉ (v39.0, 2026-08-13) ---
+#
+# Ce fichier a été gitignoré jusqu'au 13 août 2026 : c'était le terrain d'essai local
+# (Mac), non trackée par git contrairement aux autres modules.
+#
+# ⚠️ CETTE RÈGLE A ÉTÉ RETIRÉE, et c'est un choix délibéré. Le fichier portait à lui
+# seul TOUTE l'évolution v34 → v37.1 (érosion géométrique, plancher vital, équilibre
+# C1/C2, distillation sélective, flux mnésique enrichi, cursus à 6 paliers…) — quatre
+# mois de mécaniques, 369 Ko, en UN SEUL exemplaire sur UN SEUL disque. Un `rm`
+# malheureux ou une panne matérielle les effaçait définitivement : les carnets décrivent
+# ces mécaniques, ils ne permettent pas de les reconstruire à l'identique.
+#
+# C'était le risque structurel n°1 du projet, signalé dans ETAT_DU_PROJET_aout_2026.md
+# §5.2 puis dans AVIS_ET_PROPOSITIONS_aout_2026.md (P1). Le versionner coûte un fichier
+# de plus dans l'historique ; ne pas le versionner coûtait potentiellement tout.
+#
+# La nature du fichier ne change PAS pour autant : il reste le terrain d'essai des
+# mécaniques expérimentales, et `colab.py` reste le script de référence. Le portage
+# noyau → colab reste à faire, mécanique par mécanique (voir CLAUDE.md).
 
 # Analyses de run et propositions de conception personnelles (diagnostics chiffrés
 # d'un run local précis, notes de travail) — pas des documents de référence du
