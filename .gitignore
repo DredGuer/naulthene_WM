@@ -45,7 +45,19 @@ docs/Old_Archive_rmd/AMELIORATION_V1.md
 voix/*
 !voix/.gitkeep
 
-# Notes de travail personnelles (rapports d'évaluation de rétention générés par
-# instruments/evaluer_cerveau.py, diagnostics ponctuels...) — spécifiques à une
-# machine/un run local précis, jamais des documents de référence du projet.
-docs/notes/
+# Sorties générées par instruments/evaluer_cerveau.py — spécifiques à une machine/un run
+# local précis, jamais des documents de référence du projet.
+docs/notes/evals/
+#
+# ⚠️ Depuis le 2026-08-12, `docs/notes/` accueille aussi les CARNETS DE RECHERCHE
+# (recherche_bug_or_not_bug, dia_Aout_2026, les CHANTIER_*...), qui sont eux
+# **versionnés** : ils gardent la trace des hypothèses réfutées et des erreurs de
+# diagnostic, ce qu'aucun document à jour ne raconte. L'ancienne règle ignorait tout
+# `docs/notes/`, ce qui excluait silencieusement chaque nouveau carnet — les fichiers
+# déjà suivis restaient tracés, les nouveaux disparaissaient sans avertissement.
+# Ne pas revenir à `docs/notes/` : n'ignorer que les sous-dossiers de sorties générées.
+
+# Fichiers temporaires de sauvegarde des cerveaux (PersistanceAnatomique ecrit un
+# .tmp puis renomme). Un `git add -A` lance pendant une sauvegarde echouait sur un
+# .tmp deja disparu — vu le 2026-08-13.
+*.brain.tmp

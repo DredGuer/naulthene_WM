@@ -4,6 +4,195 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [v38.0-experimental] - 2026-08-13 (soir) — clôture du chantier
+
+### 2c-ter et 2d : le chantier se termine avec UNE brique validée sur six
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | feat (expérimental) / docs |
+| **Impact** | **Documentation** — aucune ligne de `src/naulthene/` modifiée |
+
+**🔔 2c-ter — le son parcimonieux, variable, et le vrai silence.**
+
+Trois corrections issues de remarques utilisateur, toutes mesurées :
+
+| Correction | Mesure |
+|---|---|
+| **Variance des timbres** | intra-type 2,909 vs inter-type 6,201 → **ratio 2,1×** : distinguables *malgré* la variance |
+| **Parcimonie** | 10 à 34 % de ticks sonores selon la carte, jamais 0 %, jamais 100 % |
+| **Le silence n'est pas 0** | quasi-silence perçu (distance 3,71 au timbre plein) au lieu de `None` |
+
+⚠️ **La troisième corrige un défaut RÉEL du noyau** : `noyau.py:548-552`,
+`obs_auditive=None` ne produit pas un silence — le terme **disparaît** de la somme du bus.
+La norme change, donc l'échelle de tout l'aval. Le cerveau ne perçoit pas le calme, **il perd
+le canal**. Défaut annoncé dans `les_sens_combinatoire.md` §4.3, jamais corrigé.
+
+Résultat : paliers 5, 5, 1, 3, 2, 1 (médiane 2,5), **37 victoires** contre 17 pour 2b. Deux
+graines franchissent le cursus complet. Le canal auditif **cesse de coûter des paliers** —
+mais n'améliore pas 2b de façon démontrable (p = 0,688).
+
+⚠️ **Anomalie non expliquée** : la graine 22 finit à `cooc = 0,00` tout en atteignant le
+palier 5. Un run **sans aucune co-occurrence sonore** réussit aussi bien qu'un run à 0,67.
+
+**🔗 2d — le liage multimodal : ÉCHEC.**
+
+InfoNCE symétrique sur les sorties de porte, empilé sur **2b** (la seule base qui tient),
+négatifs in-batch obligatoires, ticks de quasi-silence exclus.
+
+| | 2b | 2d |
+|---|---|---|
+| Paliers médians | **3,0** | 1,5 |
+| Écarts appariés | — | −1, −3, 0, −1, +3, −3 (**1/5**, p = 1,000) |
+
+**La perte MONTE** (4,3 → 5,0) : le liage n'apprend rien. Ce n'est pas un effondrement — le
+garde-fou a fonctionné, la variance ne s'est jamais annulée — c'est une absence pure
+d'apprentissage. Explication la plus probable, et c'est **une faute de conception de ma
+part** : l'InfoNCE apparie un *tick* à un *tick*, alors que le liage visé est entre un *type*
+et un *timbre*. Deux ticks montrant la même clé sont comptés comme négatifs l'un de l'autre.
+
+**Bug attrapé avant lancement** : `optimiseur` au lieu de `optimizer` (`noyau.py:533`), dans
+un `try/except` nu. L'exception aurait été avalée, le liage n'aurait jamais appris, et le run
+aurait produit un « effet nul » crédible. **Un banc d'essai qui masque ses propres pannes
+mesure du vide.**
+
+**📊 Verdict du chantier v38**
+
+| Étape | Paliers médians | p vs origine | Verdict |
+|---|---|---|---|
+| origine | 1,5 | — | référence |
+| 2a continuité | 3,0 | 0,375 | 🟡 non significatif |
+| **2b + densité** | **3,0** | **0,062** | ✅ **le seul qui tient** |
+| 2c parent | 1,0 | — | ❌ nuisible |
+| 2c-fix | 2,0 | 1,000 | ❌ |
+| 2c-ter son | 2,5 | 0,688 | 🟡 cesse de nuire |
+| 2d liage | 1,5 | 1,000 | ❌ |
+
+**Une brique sur six.** Le chantier produit plus de connaissances négatives que positives —
+ce qui reste une avancée, à condition de ne pas présenter le reste comme un succès.
+
+**Le fil conducteur des 4 jours** : *ce qui **rend possible** fait progresser · ce qui
+**facilite** ne change rien · ce qui **fait à la place** fait régresser.*
+
+**La saturation, rencontrée 4 fois** (états absorbants, parole permanente, portée trop
+large, portée trop étroite). Une cause unique : *une variable saturée — dans un sens comme
+dans l'autre — cesse de porter de l'information.*
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `docs/notes/ETAT_DU_PROJET_aout_2026.md` | **NOUVEAU** — état complet : forces, faiblesses, ce qui reste à faire |
+| `docs/notes/CHANTIER_v38_monde_continu.md` | 2c-ter, 2d, verdict du chantier |
+| `experiences/v38/*.py` | bancs 2c-ter et 2d |
+
+---
+
+## [v38.0-experimental] - 2026-08-13
+
+### Le Monde Continu — 2a, 2b, 2c : la pile progresse, le parent la fait régresser
+
+| Type | Details |
+|------|---------|
+| **Commit** | `864a8d0` (2a/2b/2c), suite en cours |
+| **Catégorie** | feat (expérimental) |
+| **Impact** | **Fonctionnel** — aucune ligne de `src/naulthene/` modifiée |
+| **Branche** | `feat/v38-monde-continu` |
+
+Chantier ouvert sur deux exigences utilisateur : **la continuité permanente** et **la
+superposition des 5 sens en permanence et en tout lieu**. Protocole imposé : chaque étape
+s'**empile** sur la précédente, 6 graines appariées, 600 jours, et **deux points de
+comparaison** — l'étape N−1 (ce que la brique ajoute) et le monde d'origine (ce que la pile
+entière vaut).
+
+⚠️ Tout vit dans `experiences/v38/` par surcharge en mémoire. **`src/naulthene/` est
+intact** — aucune de ces mécaniques n'est portée.
+
+**Correction d'une erreur de diagnostic propagée dans plusieurs documents** : j'avais écrit
+que « l'agent voit déjà ce qu'il sent, donc l'odorat est redondant ». **C'est faux**, vérifié
+dans le code — MiniGrid a **déjà l'occlusion** (cône 7×7 agent-centré,
+`see_through_walls=False`, ~49 cases visibles sur 256 en 16×16). Le problème n'a jamais été
+le champ de vision : c'est la **discontinuité temporelle**.
+
+**🌍 2a — la continuité.** Le `reset()` de fin d'épisode est remplacé par un **réarmement de
+tâche** : le monde et le corps persistent, seule la tâche se régénère.
+
+| Graine | Continu | Témoin | Écart |
+|---|---|---|---|
+| 22 | **69 vict. / niv. 5** | 1 / niv. 1 | **+68** |
+| autres | 1, 3, 4, 3, 2 | 3, 2, 1, 0, 2 | −2, +1, +3, +3, 0 |
+
+4 gagne / 1 perd / 1 nul, **p ≈ 0,375**. Paliers médians **3,0 contre 1,5**. La moyenne
+(13,7) est portée par une seule graine — ne jamais la citer seule. Sans l'outlier, l'effet
+subsiste (2,6 contre 1,6 paliers).
+
+La graine 22 est notable : **65 des 69 victoires sur `DoorKey-16x16`**, la carte la plus
+dure, du jour 239 au jour 600, intervalles descendant à 1 jour. Record antérieur du projet :
+22 victoires en 1300 jours, sur des niveaux faciles. **La continuité lève un plafond, elle ne
+monte pas un plancher.**
+
+*Piège trouvé au smoke test* : une continuité naïve rend la tâche **triviale** dès la
+première réussite — `carrying` n'est jamais relâché (Portage 100 %), la porte reste ouverte à
+jamais, les souvenirs se figent à 1. D'où la distinction qui est le vrai contenu de l'étape :
+**le monde et le corps persistent, la tâche se réarme**.
+
+**🌾 2b — la permanence des sens.** Densité de ressources proportionnelle à la surface utile
+(29+29 sur `16x16` contre 2+2 avant).
+
+| Comparaison | Écarts appariés | p |
+|---|---|---|
+| 2b vs 2a *(apport densité)* | +3, −1, −1, −2, −2, +2 | **1,000** |
+| **2b vs origine** *(la pile)* | **+1, +3, 0, +1, +1, +2** | **0,062** |
+
+**La densité seule n'apporte rien**, alors même que les canaux sont bien remplis (odorat
+actif **100 %** des ticks). Cohérent avec l'ablation du 12/08 : remplir un canal ne le rend
+pas utile.
+
+**Mais la pile progresse — 5 positifs sur 5, aucun négatif.** C'est le signal le plus
+régulier de l'investigation : ni 2a seul ni aucun levier du 12/08 n'avait évité d'avoir au
+moins une graine en recul. L'échange, non anticipé : on **perd le cas exceptionnel**
+(69 victoires) mais **tout le monde monte**. ⚠️ p = 0,062 n'est pas p < 0,05.
+
+**👪 2c — le parent physique : ÉCHEC, et il apprend quelque chose.**
+
+Remarque utilisateur qui cadre l'étape : *« l'ouïe est peut-être le plus difficile à
+exploiter, il y a tout à créer comme son »*. Exact — vue, toucher, odorat et goût **dérivent**
+d'un état de la grille ; l'ouïe ne dérive de rien. Vérifié : `SynthetiseurFormants` +
+`extraire_mfcc` suffisent (4 noms synthétiques, MFCC distants de 2,59 à 5,66).
+
+| | 2c parent | 2b pile | Origine |
+|---|---|---|---|
+| Paliers médians | **1,0** | **3,0** | 1,5 |
+| Repères mnésiques | **12** | **74** | — |
+| Approche olfactive | **0,128** | **0,306** | — |
+
+`2c vs 2b` : **0 positif sur 5**, p = 1,000. **Les six graines se figent au palier 1** — cette
+uniformité est un mécanisme, pas du bruit.
+
+**Le parent nourrit trop bien** : l'agent n'a plus besoin de chercher, donc plus besoin de
+sentir ni de mémoriser. La mémoire spatiale s'effondre au jour 121 (7 → 1 repère) et ne
+remonte jamais.
+
+⚠️ **Erreur de méthode consignée** : le cadrage v34 §3.2 contient *exactement* cet
+avertissement (« nourrir sans montrer masque l'incompétence… la différence entre donner un
+poisson et pêcher devant lui »), et je l'ai **recopié dans la docstring de l'étape** avant de
+coder le poisson. **Citer un avertissement ne le mesure pas.**
+
+✅ **L'acquis de 2c** : `Cooc_Vue_Ouie` passe de **0** — valeur sur *tous* les runs du projet
+— à **~0,23**. La synchronisation vue↔son fonctionne, préalable non négociable de 2d. Le
+sevrage mérité fonctionne aussi (`force` 0,35 → 0,23 avec la maturation, aucun compteur de
+jours).
+
+🔬 **2c-fix en cours** : montrer et nommer **sans nourrir**, pour isoler le geste que v34
+désigne comme principal.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `experiences/v38/*.py` | bancs d'essai 2a, 2b, 2c (surcharge en mémoire) |
+| `docs/notes/CHANTIER_v38_monde_continu.md` | plan interrogeable, résultats, erreurs |
+| `.gitignore` | `docs/notes/` n'ignore plus que `evals/` ; ajout de `*.brain.tmp` |
+
+---
+
 ## [recherche] - 2026-08-12 (nuit, 2) — ablation sensorielle
 
 ### 🔴 Le toucher porte 75 % de la performance ; l'odorat et le goût ne servent à rien
