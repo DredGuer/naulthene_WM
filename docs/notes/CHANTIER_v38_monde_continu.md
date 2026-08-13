@@ -622,4 +622,149 @@ réels : **58 % sonores / 42 % silencieux** — le silence redevient informatif.
 Si les deux tiennent, la co-occurrence est obtenue **sans son coût**, et 2d devient
 mesurable.
 
-🔬 **6 runs lancés.**
+### 11.5 ❌ Résultat de 2c-bis — le canal saturé, quatrième fois
+
+`120 200 ticks sonores / 0 silencieux`. La portée ne mordait pas, pour une raison que je
+n'avais pas anticipée : **`Ball` était dans le vocabulaire sonore, et 2b en sème des
+dizaines** (29 par carte en 16×16). Il y avait donc toujours une ressource à portée.
+
+**Mes deux propres étapes se contredisaient.** 2b remplit le monde de ressources, 2c-bis fait
+sonner les ressources.
+
+Paliers médians **2,0** contre 3,0 pour 2b : un canal saturé ne coûte pas rien — il
+**encombre**. Ces runs ne testent donc pas la co-occurrence ; ils mesurent « la pile + un
+bruit de fond ».
+
+---
+
+## 12. Étape 2c-ter — la parcimonie, la variance et le vrai silence
+
+### 12.1 Les trois remarques de l'utilisateur qui cadrent l'étape
+
+> *« Il y a autant de variations, de possibilités et d'états pour le dire. Chaque variation
+> nourrit les précédentes. Je pense que c'est ce qui permet d'appréhender un nouveau son qui
+> ressemble. »*
+
+> *« Le cerveau est fait pour être stimulé, mais finit par perdre de l'information s'il l'est
+> trop, surtout dans ses débuts. Trop de son, rien ne passe ; pas assez, rien ne s'établit. »*
+
+> *« Le silence n'est pas 0, le silence est quand il y a presque plus rien à établir. »*
+
+### 12.2 ⚠️ La troisième remarque corrige un défaut RÉEL du noyau
+
+Ce n'est pas seulement un défaut de mon banc d'essai. Dans `noyau.py:548-552` :
+
+```python
+if obs_auditive is not None:
+    bus_latent = stimulus_visuel + stimulus_auditif
+else:
+    bus_latent = stimulus_visuel          # le terme DISPARAÎT
+```
+
+**`obs_auditive=None` ne produit pas un silence : il fait disparaître le terme de la somme.**
+La norme du bus change, donc l'échelle d'activation de tout l'aval (`hippocampe`,
+`analyseur`, `tete_motrice`). Le cerveau ne perçoit pas le calme — **il perd le canal**, sans
+qu'aucun signal ne l'indique.
+
+C'est exactement le défaut annoncé dans
+[les_sens_combinatoire.md](les_sens_combinatoire.md) §4.3 (« absent » et « nul » sont
+indistinguables), jamais corrigé depuis.
+
+Ici, le silence devient un son de **très faible amplitude**, donc perçu : distance mesurée au
+timbre plein **3,71**, non nulle.
+
+> **C'est un acquis indépendant de tous ces runs, et il mérite d'être porté dans `src/`.**
+
+### 12.3 La variance des timbres — ce qui rend la généralisation possible
+
+Chaque émission varie autour de son prototype (`VARIANCE_TIMBRE = 0.04`) :
+
+| Mesure | Valeur |
+|---|---|
+| Variance **intra**-type (20 prises) | 2,909 |
+| Distance **inter**-type | 6,201 |
+| **Ratio** | **2,1×** |
+
+Les types restent distinguables **malgré** la variance — condition pour qu'il y ait quelque
+chose à *généraliser* plutôt qu'une table à mémoriser. Sans cela, l'agent ne peut construire
+qu'une correspondance exacte, indiscernable d'un concept (limite posée en
+[les_sens_combinatoire.md](les_sens_combinatoire.md) §7.6 pour la vision — que j'avais
+reproduite dans le canal auditif **alors que rien ne m'y obligeait** : le son, contrairement
+aux pixels, je le fabrique).
+
+### 12.4 La portée, calibrée par mesure
+
+Une portée fixe donnait **0 %** de son sur les grandes cartes. Balayage 4 diviseurs ×
+4 tailles, 400 ticks, à densité 2b réelle :
+
+| diviseur | 5×5 | 8×8 | 12×12 | 16×16 | |
+|---|---|---|---|---|---|
+| /3 | 33 % | 8 % | **0 %** | 3 % | trop rare |
+| /2 | 33 % | 4 % | 3 % | 18 % | trop rare |
+| **/1.5** | **34 %** | **33 %** | **22 %** | **10 %** | ✅ équilibré |
+| /1 | 36 % | 50 % | 40 % | 48 % | retour au bruit de fond |
+
+Même erreur d'échelle que la patience (A3) et la densité (2b) : **une constante calibrée sur
+la petite carte ne transpose pas**.
+
+### 12.5 Résultats — le meilleur essai sonore, mais non concluant
+
+| Condition | g11 | g22 | g33 | g44 | g55 | g66 | Médiane | Victoires |
+|---|---|---|---|---|---|---|---|---|
+| origine | 3 | 1 | 2 | 1 | 0 | 2 | 1,5 | 9 |
+| 2a | 1 | 5 | 3 | 4 | 3 | 2 | 3,0 | **82** |
+| **2b** | 4 | 4 | 2 | 2 | 1 | 4 | **3,0** | 17 |
+| 2c | 1 | 1 | 1 | 1 | 1 | 1 | 1,0 | 6 |
+| 2c-fix | 2 | 2 | 2 | 1 | 2 | 2 | 2,0 | 11 |
+| **2c-ter** | **5** | **5** | 1 | 3 | 2 | 1 | 2,5 | **37** |
+
+| Comparaison | Écarts appariés | p |
+|---|---|---|
+| 2c-ter vs origine | +2, +4, −1, +2, +2, −1 | 0,688 |
+| 2c-ter vs 2b | +1, +1, −1, +1, +1, −3 | 0,688 |
+
+**Deux graines atteignent le palier 5** (cursus complet), dont une avec **25 victoires**. Le
+canal auditif **cesse de coûter des paliers** — c'est l'acquis. Mais il n'améliore pas 2b de
+façon démontrable : 4 montent, 2 chutent, p = 0,688.
+
+### 12.6 ⚠️ Une anomalie non expliquée
+
+La graine 22 finit à **`cooc = 0,00`** tout en atteignant le palier 5 avec 5 victoires. Un run
+**sans aucune co-occurrence sonore** réussit aussi bien que celui à 0,67.
+
+Cela affaiblit l'idée que le son explique la progression. **Aucune explication à ce stade**, et
+je n'en invente pas.
+
+---
+
+## 13. Bilan du chantier v38 — ce qui tient, ce qui ne tient pas
+
+### 13.1 Le seul résultat propre reste 2b
+
+| Condition | p (vs origine) | Régressions |
+|---|---|---|
+| 2a | 0,375 | 1 graine |
+| **2b** | **0,062** | **aucune** |
+| 2c | — | 5 graines |
+| 2c-fix | 1,000 | 3 graines |
+| 2c-ter | 0,688 | 2 graines |
+
+**Aucune brique post-2b n'a démontré son apport.** Avec une variance qui va de 1 à 25
+victoires sur une même condition, il faudrait 15 à 20 graines pour trancher.
+
+### 13.2 Le fil conducteur, confirmé quatre fois
+
+> **Ce qui REND POSSIBLE fait progresser · ce qui FACILITE ne change rien · ce qui FAIT À LA
+> PLACE fait régresser.**
+
+### 13.3 La saturation, rencontrée quatre fois sous quatre formes
+
+| # | Forme | Symptôme | Correctif |
+|---|---|---|---|
+| 1 | états absorbants (2a) | Portage 100 %, souvenirs figés | réarmement de tâche |
+| 2 | parole permanente (2c) | `Cooc = 1,000` | `PLAFOND_PAROLE` |
+| 3 | portée trop large (2c-bis) | 0 tick silencieux | portée + vocabulaire réduit |
+| 4 | portée trop étroite (2c-ter v1) | 0 % de son sur 8×8 | portée ∝ carte |
+
+**Une seule cause** : *une variable saturée — dans un sens comme dans l'autre — cesse de
+porter de l'information.* C'est la leçon technique la plus réutilisable du chantier.
