@@ -458,4 +458,72 @@ compteur de jours n'est introduit.
 opaque**. Le cerveau ne reçoit jamais « ceci est une clé » — il reçoit un MFCC qui
 co-occurre avec une forme visuelle. L'association est à apprendre, jamais déclarée.
 
-🔬 **En cours.**
+### 9.5 ❌ Résultat — le parent BLOQUE l'apprentissage
+
+| Graine | 2c parent | 2b pile | Origine |
+|---|---|---|---|
+| 11 | 1 (1v) | 4 (4v) | 3 (3v) |
+| 22 | 1 (1v) | 4 (4v) | 1 (1v) |
+| 33 | 1 (1v) | 2 (2v) | 2 (2v) |
+| 44 | 1 (1v) | 2 (2v) | 1 (1v) |
+| 55 | 1 (1v) | 1 (1v) | 0 (0v) |
+| 66 | 1 (1v) | 4 (4v) | 2 (2v) |
+| **Paliers médians** | **1,0** | **3,0** | 1,5 |
+
+`2c vs 2b` : **−3, −3, −1, −1, 0, −3 — 0 positif sur 5**, p = 1,000.
+
+**Les six graines se figent au palier 1, exactement.** Cette uniformité n'est pas du bruit :
+c'est un mécanisme. Le parent fait *pire que l'absence de parent*, et même pire que le monde
+d'origine.
+
+### 9.6 Le mécanisme — l'agent désapprend à chercher
+
+| | 2b (sans parent) | 2c (avec parent) |
+|---|---|---|
+| Repères mnésiques finaux | **74** en moyenne | **12** |
+| Approche olfactive moyenne | **0,306** | **0,128** |
+
+Trajectoire de la mémoire spatiale (graine 11) :
+
+```
+jour   1 :  5 repères
+jour  61 :  7 repères
+jour 121 :  1 repère    ← effondrement
+jour 481 :  9 repères   (2b en avait 74)
+```
+
+**Le parent nourrit trop bien.** Il dépose une ressource dès que les jauges baissent : l'agent
+n'a plus besoin de chercher, donc plus besoin de sentir (approche olfactive divisée par
+2,4) ni de mémoriser où sont les choses (repères divisés par 6).
+
+### 9.7 ⚠️ L'erreur de méthode — j'ai cité l'avertissement sans le mesurer
+
+Le cadrage v34 §3.2 contient exactement ce risque, et je l'ai **recopié en écrivant
+l'étape** :
+
+> *« Nourrir sans montrer masque l'incompétence : les jauges remontent, l'agent ne sait
+> toujours pas chercher, et le sevrage le ramène au point de départ. C'est la différence
+> entre donner un poisson et pêcher devant lui. »*
+
+J'ai codé le poisson. Citer un avertissement dans une docstring ne le mesure pas — c'est la
+même faute que « instrumenter avant de rendre adaptatif », appliquée à un risque connu
+d'avance.
+
+### 9.8 ✅ Ce que 2c acquiert malgré tout
+
+`Cooc_Vue_Ouie` passe de **0** (valeur sur *tous* les runs du projet) à **~0,23**. La
+synchronisation vue↔son fonctionne, et elle est le préalable non négociable de 2d.
+
+Le sevrage mérité fonctionne aussi : `force` décroît de 0,35 à 0,23 avec la maturation, sans
+aucun compteur de jours.
+
+### 9.9 🔬 2c-fix — montrer sans nourrir
+
+Le parent n'est pas à jeter, il est **mal réglé**. Le geste que v34 désigne comme principal
+est **montrer**, pas nourrir. La correction isole donc le premier en supprimant le second
+(`--sans-nourrir`).
+
+Si les paliers remontent au niveau de 2b **et** que `Cooc_Vue_Ouie` reste à ~0,23, alors le
+parent apporte l'association sans coûter l'autonomie — et 2d devient possible.
+
+🔬 **6 runs lancés.**

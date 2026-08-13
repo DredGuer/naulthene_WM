@@ -182,7 +182,7 @@ class ParentPhysique:
 
         # NOURRIR : si les jauges sont basses, déposer une ressource près de l'agent.
         moteur = getattr(etat, "moteur_bio", None)
-        if moteur is not None and min(getattr(moteur, "satiete", 1.0),
+        if getattr(self, "nourrir_actif", True) and moteur is not None and min(getattr(moteur, "satiete", 1.0),
                                       getattr(moteur, "hydratation", 1.0)) < 0.2:
             from minigrid.core.world_object import Ball
             libres = [(x, y) for x in range(max(1, ax - 2), min(e.grid.width - 1, ax + 3))
@@ -216,6 +216,8 @@ def main():
     p.add_argument("--densite", type=float, default=3.0)
     p.add_argument("--parent", action="store_true",
                    help="active le parent ; sans ce flag = TÉMOIN (= pile 2b)")
+    p.add_argument("--sans-nourrir", action="store_true",
+                   help="2c-fix : MONTRER et NOMMER seulement, jamais nourrir")
     p.add_argument("--patience-surface", action="store_true")
     p.add_argument("--journal", type=str, default=None)
     p.add_argument("--no-wandb", action="store_true")
@@ -231,7 +233,7 @@ def main():
     N.TAUX_PROMOTION = 0.35
     N.VICTOIRES_REQUISES = 1
 
-    nom = "2c_PARENT" if a.parent else "2c_TEMOIN"
+    nom = ("2c_MONTRER" if a.sans_nourrir else "2c_PARENT") if a.parent else "2c_TEMOIN"
     print(f"\n👪 v38 ÉTAPE 2c — {nom}   (graine {a.graine})\n", flush=True)
     print("   pile : continuité (2a) + densité (2b)" + (" + parent (2c)" if a.parent else ""))
     if a.parent:
@@ -249,6 +251,13 @@ def main():
     rng = random.Random(7 if a.graine is None else 7 + a.graine)
     stats = {"continuations": 0, "resets_secours": 0}
     parent = ParentPhysique(rng) if a.parent else None
+    if parent is not None and a.sans_nourrir:
+        # 2c-fix — mesuré : nourrir supprime le besoin de chercher. L'agent
+        # cesse d'explorer (74 -> 12 repères), cesse de sentir (approche
+        # olfactive 0,306 -> 0,128) et les 6 graines se figent au palier 1.
+        # C'est le risque écrit dans le cadrage v34 §3.2 — « nourrir sans
+        # montrer masque l'incompétence » — que j'ai cité sans le mesurer.
+        parent.nourrir_actif = False
 
     if not a.no_wandb:
         wandb.init(project="Naulthene-AGI", name=f"V38_{nom}_g{a.graine}_{a.jours}j",
