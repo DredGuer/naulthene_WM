@@ -346,6 +346,75 @@ explicitement :
 
 ---
 
+## ⚠️ R6 — LE CORRECTIF R5 A RENDU LA TÂCHE 50× PLUS DURE *(14 août, mesuré)*
+
+> **La campagne de validation v37→v39 (30 runs) est INEXPLOITABLE.** Elle a été lancée
+> avec le réarmement corrigé, et le correctif ne s'est pas contenté de retirer un biais :
+> il a changé la difficulté de la tâche d'un ordre de grandeur.
+
+### Le symptôme
+
+Les 30 runs se sont effondrés — **0 à 2 paliers partout**, contre 3 à 5 en v38, et
+**zéro repère `goal` dans les 30**. Y compris la condition `base`, qui n'a rien de
+neutralisé. Un effondrement uniforme sur toutes les conditions n'est pas un résultat :
+c'est une panne.
+
+Comparaison décisive, **même graine, même durée, même banc** :
+
+| Run | Réarmement | Palier atteint en 400 j |
+|---|---|---|
+| `p12_temoin_g11` | **avant** R5 | **3** |
+| `v3739_base_g11` | **après** R5 | **1**, puis 396 jours de stagnation |
+
+### La cause, mesurée
+
+Taux de réussite d'une politique **aléatoire** (300 essais, 250 pas), qui est l'étalon de
+difficulté d'un environnement :
+
+| Carte | Avant R5 | Après R5 | Facteur |
+|---|---|---|---|
+| `DoorKey-5x5` | 16,3 % | 15,0 % | ×1,1 |
+| `DoorKey-6x6` | 22,0 % | **4,0 %** | **×5,5** |
+| `DoorKey-8x8` | 15,3 % | **0,3 %** | **×51** |
+
+**Le correctif est juste, et c'est précisément pour ça qu'il fait mal.** Avant, une carte
+sur quatre laissait aller droit au but ; désormais le parcours est **toujours** clé → porte
+→ but. Sur 8×8, une politique aléatoire ne réussit plus qu'une fois sur 300.
+
+### Ce que ça implique
+
+1. **Les 30 runs de validation v37→v39 sont à jeter.** Ils ne mesurent pas les mécaniques :
+   ils mesurent un plancher où aucune condition n'a le temps d'exprimer quoi que ce soit.
+   Aucun `p` de cette campagne n'a de sens.
+2. **La comparaison v38 ↔ v39 est définitivement impossible.** Les deux ne jouent pas la
+   même tâche — et c'est irréparable a posteriori.
+3. **Le biais R5 était plus structurant qu'estimé.** Je l'avais présenté comme « un quart
+   des cartes plus faciles » ; la mesure dit que le retirer divise le taux de réussite
+   aléatoire par 51 sur 8×8. Les résultats 2a/2b reposaient donc sur une tâche
+   substantiellement plus permissive que ce que j'avais écrit.
+
+### Ce qu'il faut faire *(et ne pas faire)*
+
+❌ **Ne pas revenir en arrière.** Le correctif est correct : c'est la tâche DoorKey
+authentique. Annuler R5 reviendrait à préférer une mesure facile à une mesure juste.
+
+✅ **Recalibrer le berceau, pas le cerveau.** L'agent doit pouvoir gagner *parfois*, sinon
+il n'y a aucun gradient à apprendre — c'est exactement le diagnostic du blocage d'août
+(espérance −1,06, patience deux fois trop courte). Trois leviers, à mesurer :
+
+| Levier | Pourquoi |
+|---|---|
+| Repartir de `DoorKey-5x5` seul | c'est la seule taille encore à 15 % de réussite aléatoire |
+| Allonger la patience | 250 pas ne suffisent plus pour clé → porte → but sur 8×8 |
+| Un palier intermédiaire | l'écart 6×6 → 8×8 vaut désormais ×13 en difficulté |
+
+> **La leçon** : corriger un biais **change l'échelle de difficulté**, donc invalide la
+> comparabilité avec tout ce qui précède. Il aurait fallu mesurer le taux de réussite
+> aléatoire **avant et après** le correctif, avant de lancer 30 runs dessus. C'est la
+> même faute que « instrumenter avant de rendre adaptatif », appliquée à un correctif.
+
+---
+
 ## 📊 IMPACT SUR LES DONNÉES — ce qui est touché, et à quel point
 
 > Section demandée explicitement. Elle distingue ce qui est **mesuré** de ce qui est
