@@ -34,6 +34,11 @@
   - [P8. Penser coûte : le métabolisme de la délibération](#p8--penser-coûte--le-métabolisme-de-la-délibération)
   - [P9. Les invariants exécutables](#p9--les-invariants-exécutables)
   - [P10. Le test de concept](#p10--le-test-de-concept--enfin-possible)
+  - [P11. Ne pas jeter l'abstraction avec les coordonnées](#p11--ne-pas-jeter-labstraction-avec-les-coordonnées-issue-de-p2b-mesurée)
+  - [P12. Le prior d'empreinte : brancher le consommateur](#p12--le-prior-dempreinte--brancher-le-consommateur)
+  - [P13. Le bit de présence auditive](#p13--le-bit-de-présence-auditive--le-calme-enfin-perçu)
+  - [P14. La promotion par croissance](#p14--la-promotion-par-croissance--lenfance-na-pas-de-promotions)
+- [Partie II bis — La grille développementale](#partie-ii-bis--la-grille-développementale-cadre-utilisateur)
 - [Partie III — L'ordre proposé](#partie-iii--lordre-proposé)
 - [Ce que je ne propose PAS](#ce-que-je-ne-propose-pas)
 
@@ -610,28 +615,211 @@ directe** plutôt que d'une intuition.
 
 ---
 
+## P12 — Le prior d'empreinte : brancher le consommateur
+
+**Problème découvert en relisant mon propre code v39.0** : `empreinte_types` est **nourrie,
+sérialisée, télémétrée — et jamais lue.** `valence_de_type()` n'a aucun appelant. Le
+`rappel_le_plus_marquant` qui entre dans le vecteur bio lit toujours les souvenirs
+*spatiaux*, ceux qui sont encore effacés à chaque promotion.
+
+> **Un agent v39 et un agent v38 se comportent à l'identique.** Le QUOI survit désormais aux
+> promotions, mais il est enfermé dans une boîte que le cerveau n'ouvre jamais.
+
+⚠️ **J'ai failli lancer un A/B 6 graines sur cette version.** Il aurait produit un « effet
+nul » parfaitement crédible et parfaitement faux — le symétrique exact de l'erreur de
+l'ablation mnésique du 12/08, où l'on mesurait *l'ablation d'un organe vide*. Ici, on aurait
+mesuré **la greffe d'un organe non branché**.
+
+**Proposition** : l'empreinte devient le **prior des nouveaux repères**. Aujourd'hui un
+repère naît avec la valence du seul choc vécu ; désormais il naît d'un mélange entre ce choc
+et l'empreinte de son type.
+
+C'est littéralement *« je ne suis jamais venu ici, mais ce genre d'endroit m'a réussi »* —
+le transfert du tout-petit qui n'a jamais vu **ce** chien mais sait déjà que les chiens
+mordent.
+
+**Respect de la règle** : aucune table, aucun seuil, aucun type nommé. Le prior est une
+moyenne d'expériences vécues, et son poids doit lui-même **décroître avec les confirmations
+locales** (le lieu connu prend le dessus sur le préjugé de type) — donc dérivé, jamais posé.
+
+**Alternative écartée** : injecter la valence de type dans le vecteur bio. Plus direct, mais
+elle ajoute une dimension → greffe `persistance` → chantier plus lourd. Le prior utilise la
+plomberie existante (~5 lignes).
+
+**Métrique du test** — et c'est une correction de méthode : mesurer **la vitesse
+post-promotion** (ticks jusqu'à la première victoire sur le *nouveau* palier), pas les
+paliers finaux. C'est exactement là que l'empreinte doit aider : arriver sur une carte
+inconnue en sachant déjà ce qui vaut la peine. Et c'est statistiquement bien plus puissant
+que des totaux qui convergent (§P2.c).
+
+---
+
+## P13 — Le bit de présence auditive : le calme enfin perçu
+
+**Problème** : la v39.0 a rendu le défaut du silence *explicite*, mais ne l'a **pas levé**.
+Le correctif est bit-identique par construction. Mesuré :
+
+| Cas | Norme du bus |
+|---|---|
+| `obs_auditive=None` | 6,3323 |
+| Silence numérique (zéros) | **6,3323** — écart **0,0000** |
+
+`porte_auditive` est **sans biais**, donc `relu(porte_auditive(zeros)) = 0` exactement.
+**Aujourd'hui encore, l'agent ne perçoit pas le calme : il est sourd sans le savoir.**
+
+**Proposition** : un **bit de présence** en queue du `vecteur_bio` — « le canal auditif
+est-il actif ce tick ? ». Une dimension, valeur continue (pas booléenne : l'amplitude
+moyenne perçue), qui distingue enfin *écouter le silence* de *ne pas avoir d'oreilles*.
+
+**Contraintes non négociables** (CLAUDE.md) : dimension **en queue**, jamais au milieu ;
+greffe `persistance` **par recopie** ; validation par **nuit complète**, pas par N ticks.
+
+**Pourquoi ça monte en priorité** : le cadre développemental le classe en « corrigé », et il
+ne l'est pas. C'est aussi le prérequis de la nuit (P4.a) — une vision qui s'atténue tombe
+dans le même piège si l'absence et le noir sont indiscernables.
+
+---
+
+## P14 — La promotion par croissance : l'enfance n'a pas de promotions
+
+> **Proposition née du cadre développemental de l'utilisateur.** C'est sa contribution la
+> plus structurante : elle ne corrige pas un bug, elle révèle une **collision de métaphores**.
+
+**Le constat** : aucun enfant n'est téléporté dans un monde neuf le jour où il apprend à
+marcher — et on ne lui efface pas la mémoire pour fêter ça. Or c'est exactement ce que fait
+le cursus.
+
+H18 (la mémoire vidée à chaque palier) n'est donc **pas un bug isolé** : c'est le symptôme
+de deux métaphores empilées —
+
+| Métaphore | Ce qu'elle impose |
+|---|---|
+| **L'école** | des paliers, des promotions, un changement de salle |
+| **Le développement** | un monde continu qui grandit *avec* l'enfant |
+
+Le projet a adopté la seconde dans son discours (« berceau », « nourrisson », « sevrage »)
+et la première dans son code (`PROGRAMME`, `niveau_actuel`, `reinitialiser_niveau`).
+
+**Ce qui rend la proposition testable maintenant** : le cursus v38 est littéralement **une
+seule tâche à 6 échelles** (`DoorKey` 5×5 → 16×16). La promotion pourrait donc être une
+**croissance de la carte autour de l'agent** plutôt qu'un remplacement : le 5×5 reste *dans*
+le 8×8.
+
+Conséquences, toutes cohérentes avec ce qui a déjà été mesuré :
+
+- **Plus rien à effacer** — même le OÙ survit, puisque les coordonnées restent valides.
+  P11 et P12 deviennent des cas particuliers d'un principe plus général.
+- C'est la **continuité (2a)** — le seul acquis solide du chantier — étendue de l'épisode au
+  cursus entier.
+- C'est aussi l'intuition de l'utilisateur du 12/08 : *« quand il change de grid 3×3 à 4×4,
+  il faut de temps en temps lui réinjecter du 3×3 »*. Ici, on ne réinjecte pas : **le 3×3
+  n'est jamais parti**.
+
+⚠️ **Risque à instrumenter** : une carte qui grandit sans jamais se renouveler peut devenir
+un monde appris par cœur (le piège de `Empty-5x5` = 1 configuration, H5). La croissance doit
+donc **ajouter de l'inconnu**, pas seulement de la surface.
+
+**Coût** : moyen — c'est un wrapper d'environnement (comme 2a), zéro ligne dans le cerveau.
+
+---
+
+# Partie II bis — La grille développementale *(cadre utilisateur)*
+
+> Cadre proposé par l'utilisateur le 13/08 : lire l'état de Naulthène comme on lirait le
+> développement d'un enfant de 2-3 ans. Consigné ici parce qu'il a **produit une proposition
+> que trois semaines d'analyse technique n'avaient pas produite** (P14).
+
+## Ce que le cadre apporte
+
+C'est le premier cadre du projet qui fasse les trois choses à la fois :
+
+1. **Il explique** pourquoi les seuls leviers qui marchent sont des propriétés du monde
+   (un cerveau sain dans un berceau pauvre).
+2. **Il prédit** où chercher — et sa prédiction est **falsifiable** (voir P3 ci-dessous).
+3. **Il unifie** les intuitions successives de l'utilisateur : la nécessité de la lutte, la
+   redondance qui devient prédiction, le silence qui n'est pas zéro, la croissance plutôt
+   que la promotion.
+
+Ses deux diagnostics centraux collent aux mesures à la décimale : le **parent hélicoptère**
+(2c : mémoire ÷6, odorat ÷2, 0/5) et le **berceau tiers-monde** (4 objets × 6 couleurs).
+
+## Trois cases du tableau que les mesures contredisent
+
+Le cadre est trop utile pour reposer sur des faits faux. Corrections :
+
+| Case du tableau | Verdict proposé | Ce que disent les mesures |
+|---|---|---|
+| **Arbitrage C1/C2** | Mature ✅ | 🟡 **Équilibré, pas collaboratif.** Le ratio tient (0,57-1,09) mais l'accord **oscille 29-75 % sans converger**, et couper C2 **double** le succès. L'analogie du vélo décrit un S2 qui prend le relais *puis se retire* — c'est la cible, pas l'état : C2 parle à chaque tick, par principe |
+| **Sens & Calme** | Corrigé 🛠️ | ❌ **Identifié, pas levé.** Le « 3,71 » vient du banc 2c-ter, pas du noyau ; et la norme du bus **ne change pas** (6,3323 dans les deux cas). Le correctif v39 est bit-identique — l'agent est toujours sourd sans le savoir. Voir **P13** |
+| **« Le moteur sera prêt »** | 2c-ter → 2d à finir | ❌ **2d a échoué** (1/5, la perte monte), par faute de conception. Il doit être **reconçu** (P6), et il n'a rien à lier tant que deux clés sont identiques au pixel près (P4.d d'abord) |
+
+## Deux apports conceptuels du cadre, au-delà du diagnostic
+
+**Le fossé de l'inné.** Un enfant de 2-3 ans n'est pas un cerveau vierge dans un monde
+riche : c'est un cerveau massivement **pré-câblé** par l'évolution (visages, physique
+intuitive, prédisposition au langage). Naulthène a *un peu* d'inné — odorat topologique,
+jauges, cycle jour/nuit — mais des ordres de grandeur en moins. La comparaison vaut donc
+pour la **plomberie**, pas pour la **dotation**.
+
+Cela reformule la vieille question de l'utilisateur (*« où s'arrête l'inné, où commence
+l'apprentissage ? »*) en bouton de conception : **le câblage sensoriel EST l'inné du
+projet**. Le BFS de l'odorat est déjà de l'inné assumé — et ce n'est pas du « en dur » : ce
+qui doit rester appris, c'est la **sémantique**, jamais la tuyauterie. Le berceau doit
+compenser ce que l'évolution n'a pas donné.
+
+**L'équifinalité.** σ culmine à mi-parcours puis retombe : les enfants atteignent les jalons
+par des chemins différents et convergent. Et **H16 réfutée est une bonne nouvelle
+développementale** — pas de loterie de période critique, un départ lent ne condamne jamais.
+L'analogie du bambin distrait était plus juste que ma lecture statistique.
+
+## ⚠️ Ce que ce cadre n'est pas
+
+Un **générateur d'hypothèses**, pas une preuve. Les quinze erreurs de diagnostic consignées
+viennent presque toutes de belles histoires crues avant mesure — et l'analogie
+développementale est particulièrement séduisante, donc particulièrement dangereuse.
+
+Sa force est ailleurs : **il produit des prédictions falsifiables**. La principale est que
+la campagne de soustraction (P3) devrait montrer que le *monde* domine le *cerveau*. Si un
+cerveau largement élagué fait aussi bien dans un monde riche, alors la cage n'était pas le
+seul problème — et le cadre devra être révisé. C'est exactement ce qu'on demande à un bon
+cadre.
+
+---
+
 # Partie III — L'ordre proposé
 
 L'ordre découle des dépendances et de la leçon « une brique à la fois, jamais empilées » :
 
+L'ordre découle des dépendances, de la leçon « une brique à la fois », et **des ajustements
+imposés par la grille développementale** (Partie II bis) :
+
 | # | Action | Dépend de | Nature | Coût |
 |---|---|---|---|---|
-| ~~1~~ | ~~**P2.a/b** Analyse rétrospective (amorçage, g22)~~ | — | ✅ **FAIT le 13/08** — H16 réfutée, H18 confirmée | — |
-| 1 | **P1** Versionner `noyau.py` | — | processus | une session |
-| 2 | **P11** Conserver la valence à la promotion | P1 | code léger, **issu d'une mesure** | faible |
-| 3 | Consolider **2b sur 15-20 graines** *(priorité 1 de l'état des lieux, inchangée)* | — | calcul | ~4 h |
-| 4 | **P9** Sonde d'invariants + les 2 correctifs identifiés (silence, `%` rêve) | P1 | code léger | faible |
-| 5 | **P3** Campagne de soustraction | 3 | calcul lourd | la plus grosse |
-| 6 | **P4.a→d** Le monde qui exige, brique par brique | 3, 4 | wrappers monde | moyen |
-| 7 | **P5** L'aîné incarné | P4 partiel | monde + `.brain` | modeste |
-| 8 | **P6** Liage : temps + rêve | **P4.d obligatoire** | cerveau (rêve) | moyen |
-| 9 | **P10** Test de concept | P4.d, P6 | évaluation | faible |
-| 10 | **P7** Écoute de C2 apprise | *si* ratio stagnant | cerveau | faible |
-| 11 | **P8** Penser coûte | instrumentation d'abord | monde | faible |
-| 12 | **P4.e** Crafter, puis le corps | qu'un mécanisme ait payé (P3) | horizon | élevé |
+| ~~—~~ | ~~**P2.a/b** Analyse rétrospective (amorçage, g22)~~ | — | ✅ **FAIT 13/08** — H16 réfutée, H18 confirmée | — |
+| ~~—~~ | ~~**P1** Versionner `noyau.py`~~ | — | ✅ **FAIT 13/08** — risque n°1 clos | — |
+| ~~—~~ | ~~**P11** Conserver la valence à la promotion~~ | — | ✅ **FAIT 13/08** (v39.0) — mais **écrite seule, jamais lue** → P12 | — |
+| **1** | **P12** Brancher le prior d'empreinte + A/B 6 graines, métrique **vitesse post-promotion** | P11 | cerveau, ~5 lignes | ~2 h |
+| **2** | **P13** Le bit de présence auditive | greffe `persistance` | vecteur bio **en queue** | moyen |
+| **3** | **P14** La promotion par croissance *(prototype `DoorKey`)* | — | wrapper monde | moyen |
+| 4 | Consolider **2b sur 15-20 graines** | — | calcul | ~4 h |
+| 5 | **P9** Sonde d'invariants | — | code léger | faible |
+| 6 | **P3** Campagne de soustraction — **le test de falsification du cadre** | 4 | calcul lourd | la plus grosse |
+| 7 | **P4.a→d** Le monde qui exige *(la nuit **après** P13)* | 5, **P13** | wrappers monde | moyen |
+| 8 | **P5** L'aîné incarné | P4 partiel | monde + `.brain` | modeste |
+| 9 | **P6** Liage **reconçu** : temps + rêve | **P4.d obligatoire** | cerveau (rêve) | moyen |
+| 10 | **P10** Test de concept | P4.d, P6 | évaluation | faible |
+| 11 | **P7** Écoute de C2 apprise | *si* ratio stagnant | cerveau | faible |
+| 12 | **P8** Penser coûte | instrumentation d'abord | monde | faible |
+| 13 | **P4.e** Crafter, puis le corps | qu'un mécanisme ait payé (P3) | horizon | élevé |
 
-Les trois premières lignes ne se discutent pas entre elles : elles sont indépendantes,
-peu coûteuses, et tout le reste s'appuie dessus.
+**Ce que le cadre développemental a changé dans cet ordre** :
+
+- **P12 passe en tête** — sans consommateur, l'A/B de P11 mesurerait du vide.
+- **P13 monte** de « correctif mineur » à priorité 2 : le cadre le croit fait, il ne l'est
+  pas, et il conditionne la nuit (P4.a).
+- **P14 apparaît** — elle n'existait pas avant le cadre.
+- **P3 change de statut** : de « campagne de ménage » à **test de falsification** du cadre
+  lui-même.
 
 ---
 
