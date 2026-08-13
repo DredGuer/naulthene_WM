@@ -44,6 +44,374 @@ D'où le titre de ce carnet.
 | H11 | **Surproduction initiale** (foisonner avant d'élaguer) | ✅ **CONFIRMÉE** | Bus 64 à la naissance → **18 victoires** contre 7 |
 | H9 (testée) | **Le seuil de promotion** | ✅ **CONFIRMÉE** | 25 %/1 vict. → **cursus franchi de bout en bout**, une première |
 | A1 | C2 est une fonction de valeur **linéaire** | 🔬 **EN COURS** | Projection dim_bus→1 sans couche cachée |
+| **H16** | **La loterie d'amorçage** (un bon départ détermine le run) | ❌ **RÉFUTÉE** | À protocole identique, `niv_j200 → niv_j1200` : **rho = −0,003** |
+| **H17** | **La mémoire spatiale sépare les runs** | 🟢 **SIGNAL FORT** | `souvenirs ↔ niveau` rho = **+0,77** (p = 0,006), et **g22 est le seul cerveau à mémoriser le but** |
+
+---
+
+## H17 — Ce qui distingue g22 : il a mémorisé le but *(signal fort)*
+
+> Analyse des `.brain` de la campagne 2a, coût de calcul **nul**.
+> Proposition P2.b de [AVIS_ET_PROPOSITIONS_aout_2026.md](AVIS_ET_PROPOSITIONS_aout_2026.md),
+> devenue la seule piste ouverte sur la variance après la réfutation de H16.
+
+### Le point de départ
+
+g22 (continuité, **69 victoires**, cursus complet en 239 jours) est traité depuis le début
+comme un outlier à neutraliser dans les moyennes. Question inverse : **que contient-il que
+ses onze frères n'ont pas ?**
+
+### Le cerveau de g22 est structurellement BANAL
+
+Comparé à ses cinq frères de condition (mêmes protocoles, graines différentes) :
+
+| Mesure | g22 | frères (moy.) | rapport |
+|---|---|---|---|
+| Victoires | 69 | 2,6 | **26,5×** |
+| Norme synaptique totale | 48,32 | 47,39 | 1,02× |
+| Myéline moyenne | 0,0015 | 0,0015 | 1,04× |
+| `reference_choc_dopamine` | 0,608 | 0,611 | 1,00× |
+| `dim_bus` | 96 | 96 | 1,00× |
+| Couches au plancher vital | 1/12 | 1/12 | — |
+| **Souvenirs spatiaux** | **241** | **52,6** | **4,58×** |
+
+**Un agent 26 fois plus performant a exactement le même tissu synaptique.** Ni la
+neurogenèse, ni la myélinisation, ni l'homéostasie dopaminergique ne le distinguent. Une
+seule chose sort : **la mémoire**.
+
+### La corrélation tient sans lui
+
+Sur les 12 cerveaux, `souvenirs ↔ niveau atteint` :
+
+| Population | n | rho | p (permutation, 50 000) |
+|---|---|---|---|
+| Tous | 12 | **+0,772** | **0,0055** |
+| **Sans g22** | 11 | **+0,701** | **0,0199** |
+
+Ce n'est donc pas un artefact de l'outlier : c'est un gradient qui traverse toute la
+population.
+
+### ⚠️ La contre-épreuve indispensable : cause ou conséquence ?
+
+Un agent qui gagne beaucoup visite beaucoup, donc mémorise beaucoup. La corrélation
+pourrait n'être qu'un compteur d'activité déguisé. **La structure des souvenirs tranche.**
+
+| Cerveau | Souvenirs | dont `goal` | Victoires |
+|---|---|---|---|
+| **continu g22** | 241 | **21** | **69** |
+| continu g11 | 14 | **0** | 1 |
+| continu g33 | 75 | **0** | 3 |
+| continu g44 | 72 | **0** | 4 |
+| continu g55 | 54 | **0** | 3 |
+| continu g66 | 48 | **0** | 2 |
+| témoin g11 | 108 | **0** | 3 |
+| témoin g22 | 45 | **0** | 1 |
+| témoin g33 | 127 | **0** | 2 |
+| témoin g44 | 50 | **0** | 1 |
+| témoin g55 | 21 | **0** | 0 |
+| témoin g66 | 35 | **0** | 2 |
+
+> **g22 est le SEUL des douze cerveaux à posséder un seul repère de type `goal`. Il en a 21.
+> Tous les autres en ont exactement zéro.**
+
+Et le témoin g11 le confirme par l'absurde : **108 souvenirs, aucun `goal`, 3 victoires**.
+Accumuler des repères ne suffit pas — il en avait sept fois plus que `continu g11` sans
+faire mieux. Ce n'est pas la *quantité* de mémoire qui compte, c'est **ce qui est
+mémorisé**.
+
+### Ce que ça dit du mécanisme
+
+La mémoire de g22 n'est pas un journal d'activité : c'est une **carte du but**. Les 21
+repères `goal` (dédupliqués par `(pos, type)`, donc 21 *lieux* distincts) constituent
+littéralement la connaissance « voilà où se trouvent les sorties ». Ses autres repères sont
+d'ailleurs *moins* confirmés que ceux de ses frères (médiane 18 contre 55-114) : il n'a pas
+ressassé quelques cases, il en a **cartographié beaucoup**.
+
+Le mécanisme v36.0 (abstraction par récurrence) a donc fonctionné exactement comme prévu —
+**sur un seul run sur douze**. Il n'est pas cassé : il n'est presque jamais **amorcé**.
+
+### Pourquoi c'est cohérent avec tout le reste
+
+Cela résout l'ambiguïté laissée par l'ablation mnésique (écarts 0, −3, +1, « non
+concluant ») : couper la mémoire d'un agent **qui n'a mémorisé aucun but** ne pouvait rien
+changer. On mesurait l'ablation d'un organe vide.
+
+Et cela recoupe le critère déjà posé pour les sens :
+
+> *Un sens n'est utile que s'il apporte une information qu'aucun autre canal ne donne.*
+
+La position du but est **exactement** cette information : dans un monde continu, le but
+déjà atteint n'est plus visible, et seule la mémoire peut le redonner. C'est aussi pourquoi
+l'effet apparaît en condition **continuité** — la seule où un « T+n » existe.
+
+### ⚠️ Ce que cette analyse ne démontre PAS
+
+- **n = 12, et un seul cerveau porte le phénomène `goal`.** Une corrélation significative
+  ne dit pas le sens de la flèche : mémoriser le but peut être la cause des victoires, ou
+  la conséquence d'en avoir assez remporté pour que le repère se crée.
+- **Aucune intervention n'a été testée.** Tout ce qui précède est de l'observation
+  rétrospective.
+
+### ⚠️ Correction : la piste de l'éviction ne tient pas
+
+J'avais d'abord conclu qu'il fallait **protéger le repère `goal` de l'éviction précoce**
+(un repère naît à 1 confirmation, donc part en premier). **Vérification faite dans le code,
+cette piste vise un mécanisme qui ne tourne pas.**
+
+| | Valeur |
+|---|---|
+| Capacité mnésique (plancher, `capacite_plancher`) | **200** minimum |
+| Capacité à `dim_bus=96` | `96 × 12 × (1+déficit)` ≈ **1 152**, bornée par `cases × 3` |
+| Souvenirs réellement stockés (12 cerveaux) | **14 à 241** |
+
+**L'éviction ne se déclenche quasiment jamais** : la mémoire n'est jamais pleine. Aucun
+repère `goal` n'a donc été « perdu » par oubli — il n'a **jamais été créé**.
+
+La question se déplace donc en amont, sur `_memoriser_si_saillant` et
+`SEUIL_SAILLANCE_MEMOIRE` : **pourquoi atteindre le but ne produit-il pas un repère chez
+onze cerveaux sur douze ?**
+
+> C'est la **quinzième erreur de diagnostic** du carnet, et elle a été évitée de justesse :
+> j'allais proposer un correctif d'éviction pondérée par la valence, séduisant et
+> parfaitement inutile. Vérifier qu'un mécanisme **tourne** avant de proposer de
+> l'améliorer — le même défaut que `SEUIL_CRISTAL = 0,80`, jamais franchi, et que la
+> Cristallisation Souple censée protéger des couches qu'elle n'a jamais protégées.
+
+### Ce que la vérification en amont a donné
+
+Trois hypothèses testées, deux éliminées **par la mesure directe** :
+
+| Hypothèse | Test | Verdict |
+|---|---|---|
+| Le but n'est pas lisible au tick de victoire (l'agent est téléporté avant) | `grid.get(agent_pos)` au tick terminal, sur MiniGrid réel | ❌ **le but EST lisible** : `type = 'goal'`, récompense 0,955 |
+| Le `reset()` efface la case avant la mémorisation | ordre dans `traiter_tick` | ❌ mémorisation ligne **5141**, `reset()` ligne **5221** — l'écriture précède |
+| Le seuil de saillance rejette l'événement | reste la seule voie possible | 🔬 **piste ouverte** |
+
+Le mécanisme n'est donc **pas cassé** : dans les deux modes (continu et témoin), un agent
+qui touche le but se tient sur une case étiquetée `goal` au moment exact où
+`_memoriser_si_saillant` est appelé.
+
+### L'anomalie qui reste, et qui n'est pas expliquée
+
+Si le seul facteur était la rareté des victoires, on attendrait une proportionnalité. Elle
+n'existe pas :
+
+| Cerveau | Victoires | Confirmations `goal` | Lieux `goal` distincts |
+|---|---|---|---|
+| **continu g22** | 69 | **155** | **21** |
+| continu g44 | 4 | **0** | 0 |
+| continu g33 / g55 / témoin g11 | 3 | **0** | 0 |
+| continu g66 / témoin g33 / g66 | 2 | **0** | 0 |
+
+Un agent à 4 victoires devrait avoir ~4 confirmations `goal`. Il en a **exactement zéro**,
+et c'est vrai des onze. Inversement g22 en a **155 pour 69 victoires** — plus de deux par
+victoire, ce qui est cohérent avec le réarmement continu (le but est **repositionné** et
+retouché plusieurs fois au même endroit) mais pas avec un simple comptage.
+
+**Le phénomène est donc discret, pas graduel : soit un agent cartographie le but, soit il
+n'en garde aucune trace.**
+
+### ✅ L'explication, trouvée — et elle dégonfle mon propre résultat
+
+Le chemin de code a été **exécuté** (et non relu) sur MiniGrid réel, en pilotant un agent
+jusqu'au but puis en appelant la vraie fonction du noyau :
+
+```
+victoire, recompense_env = 0.9550
+agent_pos = (3,3), grid.get = goal
+_memoriser_si_saillant -> True
+repere ecrit : {'pos': (3,3), 'type': 'goal', 'confirmations': 1, 'valence': 0.955}
+```
+
+**Le mécanisme fonctionne parfaitement.** Une victoire écrit bien un repère `goal`. Ni le
+seuil (0,05 contre une récompense de 0,955), ni la lisibilité de la case, ni l'ordre
+mémorisation/`reset()` ne sont en cause.
+
+Reste donc une seule explication compatible avec toutes les mesures, et elle est
+arithmétique :
+
+| | continu g22 | les onze autres |
+|---|---|---|
+| Env. final | `DoorKey-16x16` | `DoorKey-5x5` à `12x12` |
+| Victoires en 600 jours | **69** | **0 à 4** |
+| Repères `goal` | 21 lieux, 155 confirmations | **0** |
+| Souvenirs stockés | **241** *(> capacité 200)* | 14 à 127 *(< 200)* |
+
+Les onze autres ont gagné **1 à 4 fois sur ~240 000 ticks vécus**. Le repère `goal` de
+chaque victoire a bien été écrit — mais il représente moins de 0,002 % de leur vécu, et il
+disparaît du `.brain` final.
+
+⚠️ **Et ce n'est PAS l'éviction qui l'a retiré** : onze des douze cerveaux sont **sous la
+capacité** (plancher 200), donc l'éviction n'a jamais tourné chez eux. Seul g22 la
+déclenche (241 repères).
+
+> **Je me suis trompé deux fois de suite au même endroit.** D'abord en proposant un
+> correctif d'éviction (§ ci-dessus) alors que l'éviction ne tourne pas. Puis, en corrigeant,
+> en réintroduisant **la même explication par l'éviction** sous une autre forme. La
+> vérification numérique — « ces cerveaux ont-ils seulement atteint la capacité ? » — invalide
+> les deux.
+
+**Le devenir des 1 à 4 repères `goal` des onze autres cerveaux reste donc inexpliqué.**
+
+### Les six vérifications faites, et ce qu'elles éliminent
+
+Chaque voie a été testée **par exécution**, pas par lecture de code :
+
+| # | Voie testée | Méthode | Résultat |
+|---|---|---|---|
+| 1 | Le but n'est pas lisible au tick terminal | agent piloté jusqu'au but, `Empty-5x5` | ❌ lisible (`type='goal'`, r=0,955) |
+| 2 | Idem sur DoorKey (but derrière une porte) | clé ramassée, porte ouverte, but atteint | ❌ lisible (r=0,964) |
+| 3 | Tenir la clé masque l'étiquette | `carrying=key` au tick de victoire | ❌ la case occupée **prime** sur le portage |
+| 4 | Le seuil de saillance rejette l'événement | `SEUIL = 0,05` contre `r ≈ 0,96` | ❌ **19× au-dessus** du seuil |
+| 5 | `reset()` efface la case avant l'écriture | ordre dans `traiter_tick` | ❌ écriture l.5141, `reset()` l.5221 |
+| 6 | L'éviction / la troncature retire le repère | capacité 200-768 contre 14-127 stockés | ❌ **jamais atteinte** chez les onze |
+| 7 | La déduplication au chargement le fusionne | `dedupliquer()` conserve un repère par `(pos,type)` | ❌ un `goal` unique survit |
+
+Et la fonction réelle du noyau, appelée sur une vraie victoire DoorKey, écrit bien :
+
+```
+_memoriser_si_saillant -> True
+{'pos': (3,3), 'type': 'goal', 'confirmations': 1, 'valence': 0.964}
+```
+
+**Le mécanisme est donc sain sur tous les chemins testés.** Un run instrumenté de 40 jours
+(graine 22, témoin) a confirmé l'instrumentation elle-même — mais **0 victoire en 40 jours**,
+donc aucune donnée sur le devenir du repère.
+
+### Ce qu'il reste, et pourquoi je m'arrête là
+
+L'explication survivante la plus simple est que **ces victoires sont si rares qu'elles ne
+laissent qu'un repère isolé**, lequel n'est jamais reconfirmé et se retrouve noyé — mais
+je n'ai **pas** réussi à identifier le mécanisme qui le fait disparaître, et les six voies
+plausibles sont éliminées.
+
+> ⚠️ **Je m'arrête ici plutôt que de proposer une septième hypothèse.** Ce carnet contient
+> déjà quinze erreurs de diagnostic, dont deux commises **dans cette section même** (le
+> correctif d'éviction, puis la ré-explication par l'éviction). Continuer à produire des
+> explications sans mesure décisive, c'est exactement le mode d'échec que ce document
+> existe pour éviter.
+
+**Le test décisif est identifié et peu coûteux** : reprendre le run instrumenté ci-dessus
+sur une condition **qui gagne** (2a continu, graine 22, ~200 jours) et lire le journal
+`[ECRIT goal]` / `[PERDU goal]`. Il n'a pas été lancé faute de temps de calcul, pas faute
+d'outil : le script existe et fonctionne.
+
+### Ce qui reste vrai, et ce qui tombe
+
+| Affirmation | Statut |
+|---|---|
+| `souvenirs ↔ niveau`, rho = +0,77 (p = 0,006), sans g22 rho = +0,70 | ✅ **tient** |
+| g22 est le seul à cartographier le but | ✅ **tient** (mesuré) |
+| Le cerveau de g22 est structurellement banal (norme 1,02×, myéline 1,04×) | ✅ **tient** |
+| « Mémoriser le but **cause** la performance » | ❌ **non démontré** — la causalité inverse suffit à tout expliquer |
+
+**La flèche va très probablement dans l'autre sens** : g22 cartographie le but *parce
+qu'*il gagne souvent, et non l'inverse. C'est exactement la contre-épreuve que j'avais
+annoncée comme indispensable — et elle est défavorable à mon hypothèse.
+
+### Ce qui subsiste comme piste réelle
+
+Le mécanisme d'abstraction v36.0 a un **point de fragilité mesuré** : un repère rare et
+précieux (le but, atteint 1 à 4 fois) est traité exactement comme un repère banal et
+massif (`sol`, vu des milliers de fois). L'éviction retire le **moins confirmé** — donc
+systématiquement l'événement rare, quelle que soit son importance.
+
+La `valence` est déjà calculée, déjà stockée, et vaut **0,955 pour un but contre ~0,07 pour
+le reste** (mesuré sur les 12 cerveaux : valence médiane 0,068-0,132). Elle distingue donc
+déjà l'événement marquant du bruit — **sans qu'aucun type ne soit nommé**, exactement comme
+la règle l'exige.
+
+C'est la seule proposition qui survit à cette analyse, et elle est modeste : faire entrer
+la valence dans le critère d'éviction, à côté des confirmations. Elle reste **à tester**,
+et le résultat ci-dessus impose de la tester **contre** l'hypothèse nulle « la mémoire du
+but n'est qu'un symptôme » — pas de la supposer acquise.
+
+---
+
+## H16 — La loterie d'amorçage *(RÉFUTÉE — et c'était mon hypothèse)*
+
+> Analyse rétrospective sur les **142 runs W&B existants**, coût de calcul **nul**.
+> Proposition P2.a de [AVIS_ET_PROPOSITIONS_aout_2026.md](AVIS_ET_PROPOSITIONS_aout_2026.md).
+
+### L'hypothèse
+
+J'avais proposé que la variance ×69 entre graines ne soit pas du bruit mais un **effet
+d'amorçage** : une victoire précoce lancerait le cercle vertueux (dopamine → myéline →
+consolidation), son absence laissant le cerveau au plancher. Si c'était vrai, le levier
+n'était plus statistique mais développemental.
+
+### Le premier signal, séduisant et trompeur
+
+Sur les 94 runs exploitables, le jour de la première victoire corrèle négativement avec le
+nombre total de victoires : **rho = −0,533**. Une victoire précoce annonce un meilleur run.
+
+**Ce chiffre ne vaut rien**, pour une raison mécanique : une première victoire au jour 704
+laisse 496 jours pour en accumuler d'autres, contre 1199 pour une victoire au jour 1. La
+corrélation mesure la durée restante, pas l'amorçage. À durée constante, le signe s'inverse
+même sur un sous-groupe (400 j : **+0,457**).
+
+### Le test qui tranche
+
+Question reformulée pour échapper à l'artefact : **le niveau atteint au jour 200 prédit-il
+le niveau final ?** Le niveau, contrairement au cumul de victoires, ne croît pas
+mécaniquement avec le temps restant.
+
+| Population | n | rho | p (permutation, 20 000) |
+|---|---|---|---|
+| Tous les runs de 1200 j | 33 | **+0,596** | **0,0004** |
+| **Groupe TÉMOIN seul** *(protocole identique, graines différentes)* | 10 | **−0,003** | **1,0000** |
+
+**Tout l'effet disparaît dès qu'on compare des runs qui ne diffèrent que par leur graine.**
+
+### Les dix trajectoires témoins, brutes
+
+```
+niv_j200 = 0  ->  niv_j1200 = 5      niv_j200 = 2  ->  niv_j1200 = 2
+niv_j200 = 0  ->  niv_j1200 = 2      niv_j200 = 2  ->  niv_j1200 = 5
+niv_j200 = 1  ->  niv_j1200 = 5      niv_j200 = 2  ->  niv_j1200 = 5
+niv_j200 = 1  ->  niv_j1200 = 5      niv_j200 = 3  ->  niv_j1200 = 4
+niv_j200 = 1  ->  niv_j1200 = 4
+niv_j200 = 1  ->  niv_j1200 = 4
+```
+
+| Départ à j.200 | n | Niveau final médian |
+|---|---|---|
+| Niveau 0-1 *(démarrage lent)* | 6 | **4,5** |
+| Niveau 2-3 *(démarrage rapide)* | 4 | **4,5** |
+
+**Exactement la même médiane.** Le meilleur run final (niveau 5) est parti de **zéro** à
+j.200 ; l'un des pires (niveau 2) était **le plus avancé** de tous à j.200 (niveau 3, trois
+victoires précoces).
+
+### Ce que ça veut dire
+
+Le rho = +0,596 sur la population mélangée n'était **pas** de l'amorçage : c'était un effet
+de **condition expérimentale**. Certains protocoles vont mieux du début à la fin, ce qui
+crée une corrélation début↔fin qui n'a rien d'individuel. La confondre avec de l'amorçage,
+c'est attribuer à la trajectoire d'un agent ce qui appartient à son protocole.
+
+**Trois conséquences :**
+
+1. **Un mauvais départ n'est pas rattrapable — il n'a jamais été un handicap.** Il n'y a
+   donc rien à « sauver » par une intervention précoce, et toute mécanique de type
+   « garantir une première victoire tôt » viserait un problème inexistant.
+2. **La variance ×69 reste inexpliquée.** Elle ne vient pas de l'amorçage. La piste
+   suivante est [P2.b](AVIS_ET_PROPOSITIONS_aout_2026.md#p2--dompter-la-variance-sans-la-tuer)
+   (l'étude de g22), désormais la seule ouverte.
+3. **Mesurer tôt ne sert à rien.** Un run évalué à j.200 n'annonce pas son résultat à
+   j.1200 — l'espoir d'écourter les campagnes en jugeant sur les 200 premiers jours est mort
+   avec cette hypothèse.
+
+### La leçon de méthode
+
+C'est la **quatorzième erreur de diagnostic** consignée, et elle appartient à la même
+famille que les cinq précédentes : *une corrélation lue sur une population hétérogène*.
+La correction n'a pas demandé un seul run — seulement de poser la question à l'intérieur
+d'un groupe où une seule chose varie.
+
+> **Un chiffre significatif (p = 0,0004) peut mesurer exactement le contraire de ce qu'on
+> croit.** Ici, il mesurait la différence entre protocoles pendant que je lui faisais dire
+> la trajectoire d'un individu.
 
 ---
 
