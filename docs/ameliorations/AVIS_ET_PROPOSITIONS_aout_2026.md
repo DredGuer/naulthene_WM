@@ -962,17 +962,42 @@ et n'aurait glissé vers le 1 qu'à mesure que sa maîtrise du 0 montait.
 - C'est aussi, mot pour mot, la **zone proximale de développement** de Vygotski — obtenue
   ici par une intuition sur la variance, pas par citation.
 
-### Ce qui reste à trancher avant de coder
+### ✅ La forme, précisée par l'utilisateur (14/08) — et IMPLÉMENTÉE
+
+> *« Commencer en 3×3 ~75 % du temps → 4×4 ~20 % → 5×5 ~5 %. Et tu déplaces jusqu'à ce
+> que l'entrée 3×3 atteigne un seuil de 80 % minimum. Puis 4×4 ~75 %, 5×5 ~20 %,
+> 6×6 ~5 %. Etc., jusqu'à ce qu'il passe tous les paliers. »*
+>
+> *« Donc on ne fixe plus de nombre de jours — on laisse tourner jusqu'à ce qu'il ait
+> passé tous les niveaux. »*
+
+Banc d'essai : [`experiences/v39/v39_p17_gaussienne.py`](../../experiences/v39/v39_p17_gaussienne.py)
+
+| Paramètre | Valeur | Nature |
+|---|---|---|
+| Poids de la courbe | **75 / 20 / 5 %** | une **forme**, pas une décision |
+| Seuil de déplacement du sommet | **80 %** de réussite sur le socle | un **niveau** mesuré |
+| Fenêtre de maîtrise | 20 épisodes, min. 10 | borne de significativité |
+| Durée du run | **aucune** — s'arrête quand tout est acquis | conséquence du principe |
+
+Vérifié en isolation (10 000 tirages) : **74,9 / 19,9 / 5,2 %**. Le sommet avance à 80 %,
+**ne bouge pas** à 70 %, et le tirage se borne correctement au dernier palier.
+
+**Ce qui change par rapport au cursus historique** : celui-ci ne tenait qu'**une seule**
+fenêtre de maîtrise, celle du niveau courant — impossible de savoir si un palier ancien
+était encore maîtrisé. La gaussienne en tient une **par palier**, ce qui est la condition
+pour que « revenir en arrière » ait un sens mesurable.
+
+### Ce qui reste à trancher
 
 | Question | Pourquoi elle compte |
 |---|---|
-| Largeur de la gaussienne (σ) | trop étroite = cliquet déguisé ; trop large = l'agent joue au hasard |
-| σ fixe ou dérivé ? | cohérence avec la règle : il devrait suivre la **variance de maîtrise** |
-| Que devient `niveau_actuel` dans le `.brain` ? | c'est un entier aujourd'hui ; il devient une position continue → **greffe `persistance`** |
+| σ fixe ou dérivé de la variance de maîtrise ? | cohérence avec la règle « rien en dur » — la forme 75/20/5 est posée, pas dérivée |
+| Que devient `niveau_actuel` dans le `.brain` ? | entier aujourd'hui ; le banc contourne en gardant le pointeur et en tirant le palier au vol |
 
-⚠️ **Rétrocompatibilité** : `niveau_actuel` est un INDEX sérialisé dans tous les `.brain`
-existants. Le passage à une position continue exige une greffe par recopie (règle du
-projet), sous peine de rétrograder silencieusement tous les cerveaux.
+⚠️ **Rétrocompatibilité** : `niveau_actuel` est un INDEX sérialisé dans tous les `.brain`.
+Le banc actuel ne le modifie pas (il intercepte `creer_env`), donc aucune greffe n'est
+nécessaire — mais une intégration dans le noyau en exigerait une.
 
 ---
 
