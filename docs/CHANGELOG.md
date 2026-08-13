@@ -4,6 +4,89 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [v38.0-experimental] - 2026-08-13 (soir) — clôture du chantier
+
+### 2c-ter et 2d : le chantier se termine avec UNE brique validée sur six
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | feat (expérimental) / docs |
+| **Impact** | **Documentation** — aucune ligne de `src/naulthene/` modifiée |
+
+**🔔 2c-ter — le son parcimonieux, variable, et le vrai silence.**
+
+Trois corrections issues de remarques utilisateur, toutes mesurées :
+
+| Correction | Mesure |
+|---|---|
+| **Variance des timbres** | intra-type 2,909 vs inter-type 6,201 → **ratio 2,1×** : distinguables *malgré* la variance |
+| **Parcimonie** | 10 à 34 % de ticks sonores selon la carte, jamais 0 %, jamais 100 % |
+| **Le silence n'est pas 0** | quasi-silence perçu (distance 3,71 au timbre plein) au lieu de `None` |
+
+⚠️ **La troisième corrige un défaut RÉEL du noyau** : `noyau.py:548-552`,
+`obs_auditive=None` ne produit pas un silence — le terme **disparaît** de la somme du bus.
+La norme change, donc l'échelle de tout l'aval. Le cerveau ne perçoit pas le calme, **il perd
+le canal**. Défaut annoncé dans `les_sens_combinatoire.md` §4.3, jamais corrigé.
+
+Résultat : paliers 5, 5, 1, 3, 2, 1 (médiane 2,5), **37 victoires** contre 17 pour 2b. Deux
+graines franchissent le cursus complet. Le canal auditif **cesse de coûter des paliers** —
+mais n'améliore pas 2b de façon démontrable (p = 0,688).
+
+⚠️ **Anomalie non expliquée** : la graine 22 finit à `cooc = 0,00` tout en atteignant le
+palier 5. Un run **sans aucune co-occurrence sonore** réussit aussi bien qu'un run à 0,67.
+
+**🔗 2d — le liage multimodal : ÉCHEC.**
+
+InfoNCE symétrique sur les sorties de porte, empilé sur **2b** (la seule base qui tient),
+négatifs in-batch obligatoires, ticks de quasi-silence exclus.
+
+| | 2b | 2d |
+|---|---|---|
+| Paliers médians | **3,0** | 1,5 |
+| Écarts appariés | — | −1, −3, 0, −1, +3, −3 (**1/5**, p = 1,000) |
+
+**La perte MONTE** (4,3 → 5,0) : le liage n'apprend rien. Ce n'est pas un effondrement — le
+garde-fou a fonctionné, la variance ne s'est jamais annulée — c'est une absence pure
+d'apprentissage. Explication la plus probable, et c'est **une faute de conception de ma
+part** : l'InfoNCE apparie un *tick* à un *tick*, alors que le liage visé est entre un *type*
+et un *timbre*. Deux ticks montrant la même clé sont comptés comme négatifs l'un de l'autre.
+
+**Bug attrapé avant lancement** : `optimiseur` au lieu de `optimizer` (`noyau.py:533`), dans
+un `try/except` nu. L'exception aurait été avalée, le liage n'aurait jamais appris, et le run
+aurait produit un « effet nul » crédible. **Un banc d'essai qui masque ses propres pannes
+mesure du vide.**
+
+**📊 Verdict du chantier v38**
+
+| Étape | Paliers médians | p vs origine | Verdict |
+|---|---|---|---|
+| origine | 1,5 | — | référence |
+| 2a continuité | 3,0 | 0,375 | 🟡 non significatif |
+| **2b + densité** | **3,0** | **0,062** | ✅ **le seul qui tient** |
+| 2c parent | 1,0 | — | ❌ nuisible |
+| 2c-fix | 2,0 | 1,000 | ❌ |
+| 2c-ter son | 2,5 | 0,688 | 🟡 cesse de nuire |
+| 2d liage | 1,5 | 1,000 | ❌ |
+
+**Une brique sur six.** Le chantier produit plus de connaissances négatives que positives —
+ce qui reste une avancée, à condition de ne pas présenter le reste comme un succès.
+
+**Le fil conducteur des 4 jours** : *ce qui **rend possible** fait progresser · ce qui
+**facilite** ne change rien · ce qui **fait à la place** fait régresser.*
+
+**La saturation, rencontrée 4 fois** (états absorbants, parole permanente, portée trop
+large, portée trop étroite). Une cause unique : *une variable saturée — dans un sens comme
+dans l'autre — cesse de porter de l'information.*
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `docs/notes/ETAT_DU_PROJET_aout_2026.md` | **NOUVEAU** — état complet : forces, faiblesses, ce qui reste à faire |
+| `docs/notes/CHANTIER_v38_monde_continu.md` | 2c-ter, 2d, verdict du chantier |
+| `experiences/v38/*.py` | bancs 2c-ter et 2d |
+
+---
+
 ## [v38.0-experimental] - 2026-08-13
 
 ### Le Monde Continu — 2a, 2b, 2c : la pile progresse, le parent la fait régresser

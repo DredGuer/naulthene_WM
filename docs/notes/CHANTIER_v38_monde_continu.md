@@ -768,3 +768,98 @@ victoires sur une même condition, il faudrait 15 à 20 graines pour trancher.
 
 **Une seule cause** : *une variable saturée — dans un sens comme dans l'autre — cesse de
 porter de l'information.* C'est la leçon technique la plus réutilisable du chantier.
+
+---
+
+## 14. Étape 2d — le liage multimodal : ÉCHEC
+
+### 14.1 La base choisie, et pourquoi
+
+2d est empilé sur **2b** (la seule condition qui tient, p = 0,062), **pas** sur la pile
+complète. Empiler sur 2c-ter — dont l'apport n'est pas démontré — aurait rendu un résultat
+nul ininterprétable : « le liage n'apporte rien » et « la brique du dessous l'a annulé » se
+confondent en un seul chiffre.
+
+Le **son** de 2c-ter est conservé (seul moyen d'obtenir la co-occurrence) ; c'est le
+**parent** qui est écarté.
+
+### 14.2 Le mécanisme
+
+InfoNCE symétrique sur les sorties de `porte_visuelle` et `porte_auditive` :
+
+- **positif** : `(vision_t, audio_t)` — même tick, donc même objet
+- **négatifs** : `(vision_t, audio_t')` avec `t' ≠ t` — in-batch, jamais de perte purement
+  attractive
+- **exclusion** : les ticks de quasi-silence ne sont jamais appariés — rapprocher une forme
+  visuelle du silence apprendrait au silence à être prédictif, l'inverse du but
+
+### 14.3 Résultats
+
+| Condition | g11 | g22 | g33 | g44 | g55 | g66 | Médiane | Victoires |
+|---|---|---|---|---|---|---|---|---|
+| **2b** | 4 | 4 | 2 | 2 | 1 | 4 | **3,0** | 17 |
+| **2d liage** | 3 | 1 | 2 | 1 | 4 | 1 | **1,5** | 12 |
+
+| Comparaison | Écarts appariés | p |
+|---|---|---|
+| 2d vs 2b *(apport du liage)* | −1, −3, 0, −1, **+3**, −3 | **1,000** |
+| 2d vs origine | 0, 0, 0, 0, +4, −1 | 1,000 |
+
+**1 positif sur 5.** Le liage ne fonctionne pas, et il coûte 1,5 palier médian par rapport à
+2b.
+
+### 14.4 Le diagnostic : la perte MONTE
+
+| | Début (j.1-4) | Fin (j.600) |
+|---|---|---|
+| Perte de liage | 4,3 | **4,9 à 5,3** |
+
+**La perte augmente au lieu de descendre : le liage n'apprend rien.** Ce n'est pas un
+effondrement (le garde-fou a bien fonctionné — variance vision 0,002 à 0,153, audio 0,31 à
+0,75, jamais nulle), c'est une **absence pure d'apprentissage**.
+
+Trois explications possibles, aucune tranchée :
+
+1. **Un pas de gradient par jour est trop peu.** La perte est appliquée une fois en fin de
+   journée sur le lot accumulé, alors que l'Acteur-Critique et le JEPA en reçoivent des
+   centaines. Le liage est noyé.
+2. **Il n'y a rien à lier.** Le timbre dépend du *type* d'objet, mais la vision de MiniGrid
+   rend un objet identique au pixel près : les deux canaux portent la même information sans
+   redondance exploitable — le cas exact du §7.6 de `les_sens_combinatoire.md`.
+3. **La cible est mal posée.** L'InfoNCE demande d'apparier un *tick* à un *tick*, alors que
+   le liage visé est entre un *type* et un *timbre*. Deux ticks montrant la même clé sont
+   comptés comme des négatifs l'un de l'autre — ce qui est faux.
+
+**La 3 est la plus probable et c'est une faute de conception de ma part** : mes négatifs
+in-batch contiennent des paires qui devraient être positives.
+
+### 14.5 Ce qui a bien fonctionné malgré l'échec
+
+- **Le garde-fou anti-effondrement**, instrumenté *avant* activation comme prévu : la
+  variance ne s'est jamais effondrée, donc l'échec est lisible au lieu d'être masqué par une
+  courbe qui descend.
+- **La suppression du `except` silencieux** : la première version appelait `optimiseur` au
+  lieu de `optimizer` (`noyau.py:533`) à l'intérieur d'un `try/except` nu. L'exception aurait
+  été avalée, le liage n'aurait **jamais appris**, et le run aurait produit un « effet nul »
+  parfaitement crédible. **Un banc d'essai qui masque ses propres pannes mesure du vide.**
+
+---
+
+## 15. Verdict du chantier v38
+
+| Étape | Paliers médians | p vs origine | Verdict |
+|---|---|---|---|
+| origine | 1,5 | — | référence |
+| 2a continuité | 3,0 | 0,375 | 🟡 prometteur, non significatif |
+| **2b + densité** | **3,0** | **0,062** | ✅ **le seul qui tient** |
+| 2c parent | 1,0 | — | ❌ nuisible |
+| 2c-fix montrer | 2,0 | 1,000 | ❌ |
+| 2c-ter son | 2,5 | 0,688 | 🟡 cesse de nuire |
+| 2d liage | 1,5 | 1,000 | ❌ |
+
+**Une seule brique sur six a démontré quelque chose.** Le chantier a produit plus de
+connaissances négatives que positives — ce qui reste une avancée, à condition de ne pas
+présenter le reste comme un succès.
+
+> Voir [ETAT_DU_PROJET_aout_2026.md](ETAT_DU_PROJET_aout_2026.md) pour la synthèse générale,
+> les forces et faiblesses du projet, et les priorités qui en découlent.
