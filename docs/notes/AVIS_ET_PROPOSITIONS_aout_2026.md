@@ -786,6 +786,114 @@ cadre.
 
 ---
 
+## P15 — Le cursus ultra-progressif à retours en arrière *(utilisateur, 14/08)*
+
+> **La réponse directe au défaut R6** : le test est passé de trop facile à trop dur. Cette
+> proposition dit comment le régler au milieu — et elle vient de l'utilisateur.
+
+### Les trois principes posés
+
+> *« Si c'est plus dur, il faut être plus progressif, et surtout il faut avancer avec des
+> retours en arrière de temps en temps, jusqu'à atteindre des taux de réussite de 80 à
+> 100 %. »*
+>
+> *« Il ne faut pas se dire qu'à chaque MiniGrid = 100 % direct, mais 20 %, retour en
+> arrière, puis 30 %, et faire progresser step by step. »*
+>
+> *« L'environnement et les règles du monde sont importantes. »*
+
+### Pourquoi c'est la bonne réponse à R6
+
+| | Avant R5 | Après R5 | Ce que P15 vise |
+|---|---|---|---|
+| Réussite aléatoire (`8x8`) | 15,3 % | **0,3 %** | un palier où l'agent gagne **parfois** |
+| Promotion | 1 victoire suffit | idem | **80-100 % de maîtrise** avant de monter |
+| Retour en arrière | ❌ jamais | ❌ jamais | ✅ **régulier** |
+
+Le cursus actuel est un **cliquet** : on monte, on ne redescend jamais. Un agent promu sur
+une victoire chanceuse se retrouve coincé sur un palier qu'il ne maîtrise pas — et n'a plus
+aucun moyen de consolider ce qu'il venait d'apprendre. C'est exactement l'état observé :
+`base g11` promu au palier 1 au jour 4, puis **396 jours de stagnation**.
+
+### Ce que ça change, concrètement
+
+1. **Promouvoir sur la maîtrise, pas sur l'exploit.** Le seuil actuel (1 victoire) laisse
+   passer le hasard. Un taux glissant élevé (80 %) exige une compétence *installée*.
+2. **Redescendre quand ça bloque.** Après N jours sans victoire, revenir au palier
+   précédent, y regagner de la confiance, remonter. C'est l'intuition de l'utilisateur du
+   12/08 (*« réinjecter du 3×3 quand il passe au 4×4 »*), appliquée au cursus entier.
+3. **Des paliers plus rapprochés.** L'écart `6x6` → `8x8` vaut désormais **×13** en
+   difficulté. Il faut des marches intermédiaires (tailles, densité d'obstacles), pas un
+   saut.
+
+### Le lien avec le reste
+
+- C'est le **fil conducteur** appliqué au cursus : un palier trop dur ne *rend pas
+  possible*, il bloque. Un palier trop facile *fait à la place*.
+- C'est aussi la **saturation** (fil 2) sous une sixième forme : un taux de réussite à 0 %
+  ne porte pas plus d'information qu'un taux à 100 %. L'apprentissage n'existe qu'entre
+  les deux.
+- Et c'est cohérent avec **P14** (la promotion par croissance) : les deux disent que le
+  passage d'un palier au suivant est aujourd'hui trop brutal.
+
+### Ce qui reste à trancher *(vraie question ouverte)*
+
+Le retour en arrière doit-il être **déclenché** (« N jours sans victoire → redescendre »)
+ou **émerger** ? Un seuil serait contraire à la règle du projet. Une piste compatible : que
+le palier joué soit **tiré au sort** dans une fenêtre autour du niveau courant, la
+probabilité de chaque palier suivant le taux de maîtrise mesuré — l'agent revient alors
+naturellement là où il est moyen, sans qu'aucune règle ne le décide.
+
+⚠️ À concevoir avec l'utilisateur avant de coder : c'est une décision d'architecture du
+cursus, pas un détail d'implémentation.
+
+---
+
+## P16 — La mémoire comme représentation, pas comme liste *(utilisateur, 14/08)*
+
+> *« Le cerveau ne doit rien oublier directement, mais plutôt apprendre à créer des
+> représentations à partir d'infos qui s'accumulent, par optimisation énergétique. »*
+
+### Ce que ça corrige dans ma formulation
+
+J'avais résumé la mémoire par *« il retient les endroits marquants »*. La correction de
+l'utilisateur est plus juste, et plus exigeante :
+
+| Ma formulation | La sienne |
+|---|---|
+| une **liste** de lieux marquants | une **représentation** qui se construit |
+| l'oubli est une **suppression** | l'oubli est une **compression** |
+| capacité bornée → on jette | accumulation → on **abstrait** |
+
+Le mécanisme actuel jette effectivement : `capacite_max` atteinte ⇒ éviction du repère le
+moins confirmé. C'est de la place libérée, pas de la connaissance produite.
+
+### Ce que la v39 fait déjà dans ce sens
+
+`empreinte_types` **est** une première représentation : la valence moyenne par type
+d'objet, accumulée sur toute la vie, indépendante du lieu. Quand un repère spatial est
+évincé, ce qu'il a appris **survit** dans l'empreinte — l'information n'est pas perdue,
+elle est *résumée*.
+
+C'est modeste (un scalaire par type), mais c'est la bonne direction : **du particulier vers
+le général, par accumulation.**
+
+### Ce qui manque pour aller au bout
+
+L'« optimisation énergétique » que décrit l'utilisateur suppose que **compresser coûte
+moins cher que stocker**, et que le cerveau en tire un bénéfice mesurable. Aujourd'hui,
+rien ne facture le stockage : la mémoire est gratuite, donc rien ne pousse à abstraire.
+
+Piste, cohérente avec **P8** (« penser coûte ») : rendre la mémoire **coûteuse en
+métabolisme**, proportionnellement à sa taille. L'abstraction devient alors une économie
+— exactement le mécanisme décrit — au lieu d'être une règle imposée.
+
+⚠️ **À instrumenter avant d'implémenter** (doctrine v30.1) : mesurer d'abord la corrélation
+entre taille de mémoire et performance sur les runs existants. Si elle est nulle, facturer
+le stockage ne changera rien.
+
+---
+
 # Partie III — L'ordre proposé
 
 L'ordre découle des dépendances et de la leçon « une brique à la fois, jamais empilées » :
