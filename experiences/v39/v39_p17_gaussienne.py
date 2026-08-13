@@ -256,10 +256,38 @@ def main():
         from naulthene.cerveau import persistance as _persist
         _persist.creer_env = creer_env_tire
 
+        # --- ⚠️ NEUTRALISER LE CLIQUET HISTORIQUE (correctif du 14/08) ---
+        #
+        # Le noyau promeut TOUT SEUL sur « série de victoires » (`VICTOIRES_REQUISES`)
+        # ou taux de maîtrise. Sans ce correctif, DEUX mécaniques déplacent le niveau en
+        # parallèle : la gaussienne, et le cliquet qu'elle est censée remplacer.
+        #
+        # Mesuré sur le run g22 avant correction : 5 promotions du noyau, et **14 jours
+        # sur 478** joués sur des paliers que la gaussienne INTERDIT (10×10, 12×12 et
+        # même 16×16 alors que le sommet était encore sur 5×5). L'agent était propulsé
+        # sur la carte la plus dure du cursus par une simple série chanceuse — exactement
+        # ce que P17 existe pour empêcher.
+        #
+        # Rendre le seuil inatteignable est plus sûr que de patcher la fonction de
+        # promotion : aucune branche du noyau n'est modifiée, seule la condition ne peut
+        # plus être remplie.
+        #
+        # ⚠️ Le banc 2a réassigne ces deux constantes dans son `main()` (l.281-282), qui
+        # s'exécute APRÈS ce bloc. Les poser ici ne suffit donc pas : elles sont
+        # réappliquées à chaque nuit, dans le wrapper ci-dessous, où elles ont le dernier
+        # mot. C'est le même piège que le patch de `creer_env` sur `persistance` — une
+        # référence figée par un import ou une réassignation tardive.
+        N.VICTOIRES_REQUISES = 10 ** 9
+        N.TAUX_PROMOTION = 2.0            # > 1.0, donc jamais atteint
+
         # --- Enregistrer la réussite AU BON PALIER, et faire avancer le sommet ---
         vraie_nuit = N.executer_nuit
 
         def nuit_gaussienne(etat, *args, **kwargs):
+            # Le cliquet du noyau est re-neutralisé À CHAQUE NUIT : le banc 2a repose
+            # ces constantes dans son main(), qui s'exécute après notre installation.
+            N.VICTOIRES_REQUISES = 10 ** 9
+            N.TAUX_PROMOTION = 2.0
             r = vraie_nuit(etat, *args, **kwargs)
             palier = etat_partage.get("palier_courant", gauss.sommet)
             # La réussite se juge sur la JOURNÉE (victoire OU 100 portes franchies),
