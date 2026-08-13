@@ -327,3 +327,135 @@ pas dans la grille et `agent_pos` reste figée.
 
 Corrigé : l'échantillonnage est conditionné à `mode == "minigrid"`. La question 2a.4
 (« l'agent reste-t-il coincé ? ») reste **sans réponse** sur la première salve.
+
+### 7.4 Verdict de 2a — 6 graines appariées
+
+| Graine | Continu | Témoin | Écart |
+|---|---|---|---|
+| 11 | 1 vict. / niv. 1 | 3 / niv. 3 | −2 |
+| **22** | **69 / niv. 5** | 1 / niv. 1 | **+68** |
+| 33 | 3 / niv. 3 | 2 / niv. 2 | +1 |
+| 44 | 4 / niv. 4 | 1 / niv. 1 | +3 |
+| 55 | 3 / niv. 3 | 0 / niv. 0 | +3 |
+| 66 | 2 / niv. 2 | 2 / niv. 2 | 0 |
+
+**4 gagne / 1 perd / 1 nul**, test des signes **p ≈ 0,375** — non significatif au sens strict.
+
+Le chiffre pertinent n'est **pas** la moyenne (13,7 contre 1,5, entièrement portée par g22)
+mais la **médiane des paliers : 3,0 contre 1,5**. En retirant l'outlier, l'effet subsiste
+(2,6 paliers contre 1,6).
+
+**Lecture** : la continuité lève un plafond, elle ne monte pas un plancher. Elle rend
+accessible un régime d'apprentissage qui ne l'était pas, sans le déclencher de façon fiable.
+
+---
+
+## 8. Résultats de l'étape 2b — la permanence des sens
+
+Densité 3 sources/20 cases utiles (soit 29 food + 29 water sur `16x16`, contre 2+2 avant).
+
+### 8.1 Les deux comparaisons
+
+| Comparaison | Paliers médians | Écarts appariés | p |
+|---|---|---|---|
+| **2b vs 2a** *(apport de la densité)* | 3,0 vs 3,0 | +3, −1, −1, −2, −2, +2 | **1,000** |
+| **2b vs origine** *(la pile entière)* | **3,0 vs 1,5** | **+1, +3, 0, +1, +1, +2** | **0,062** |
+| 2a vs origine *(rappel)* | 3,0 vs 1,5 | −2, +4, +1, +3, +3, 0 | 0,375 |
+
+### 8.2 ❌ La densité seule n'apporte rien
+
+2 positifs sur 6, p = 1,000. Les canaux sont pourtant **bien remplis** — odorat actif
+**100 %** des ticks contre 91,7 % avant, goût présent sur plusieurs runs.
+
+C'est cohérent avec l'ablation du 12/08 : **donner plus d'odeur à un agent qui ne s'en sert
+pas ne change rien.** Remplir un canal ne suffit pas à le rendre utile — il faut que le
+monde rende son usage *nécessaire*, ce qu'aucune densité ne fait à elle seule.
+
+### 8.3 ✅ Mais la pile progresse — le signal le plus régulier de l'investigation
+
+`2b vs origine` : **5 positifs sur 5, aucun négatif, p = 0,062**.
+
+Aucune graine ne régresse — ce qui n'était vrai **ni pour 2a seul, ni pour aucun levier
+testé le 12/08** (tous avaient au moins une graine en recul).
+
+### 8.4 L'échange que je n'avais pas anticipé
+
+| | 2a seul | 2b (pile) |
+|---|---|---|
+| Victoires moyennes | **13,7** | 2,8 |
+| Écarts appariés | −2, +4, +1, +3, +3, 0 | +1, +3, 0, +1, +1, +2 |
+| Graines en recul | 1 | **0** |
+
+On **perd le cas exceptionnel** (g22 et ses 69 victoires) mais **tout le monde monte**. La
+densité ne fait pas gagner plus : elle rend le gain **fiable**.
+
+⚠️ À vérifier plutôt qu'à habiller : 6 graines, et p = 0,062 **n'est pas** p < 0,05.
+
+### 8.5 Le garde-fou a tenu
+
+`Calibrage_Ticks_Critiques_Ratio = 0,50` sur les 6 runs — la rareté survit. Rappel :
+**1,00** = famine permanente (l'état de tous les runs antérieurs), **0,00** aurait signifié
+un monde sans enjeu, donc un test invalide. La densité choisie est dans la plage utile.
+
+---
+
+## 9. Étape 2c — le parent physique
+
+### 9.1 La remarque qui cadre l'étape *(utilisateur)*
+
+> *« L'ouïe est peut-être le plus difficile à exploiter, par sa nature dans MiniGrid où il y
+> a tout à créer comme son. »*
+
+C'est exact, et ça distingue 2c des étapes précédentes. La vue, le toucher, l'odorat et le
+goût **dérivent d'un état de la grille** (une case occupée, un contact, une distance
+topologique). **L'ouïe ne dérive de rien** : MiniGrid est un monde muet. Il n'y a pas de son
+à capter, il y a un son à *fabriquer*.
+
+### 9.2 Ce qui existe déjà, vérifié
+
+Bonne nouvelle : la machinerie audio est là, et elle n'a rien de spécifique à la voix
+humaine.
+
+| Brique | État |
+|---|---|
+| `SynthetiseurFormants` | ✅ synthèse source-filtre pure numpy, vecteur 8 dims → onde |
+| `extraire_mfcc` | ✅ onde → **130 dims**, exactement l'entrée qu'attend `porte_auditive` |
+| `porte_auditive` | ✅ couche existante, déjà branchée sur le bus latent |
+
+**Un « nom d'objet » est donc simplement un vecteur de 8 paramètres formantiques.** Vérifié :
+quatre noms synthétiques (clé, porte, but, ressource) produisent des MFCC dont les distances
+deux à deux valent 2,59 à 5,66 — **distinguables**, donc apprenables.
+
+Aucune brique nouvelle n'est nécessaire : le parent nomme en synthétisant.
+
+### 9.3 Pourquoi c'est la vraie pièce manquante
+
+`Cooc_Vue_Ouie = 0` aujourd'hui. Le professeur parle **ou** l'agent regarde, jamais les deux
+au même tick ([les_sens_combinatoire.md](les_sens_combinatoire.md) §9). Tant que c'est le
+cas, **aucune association vue↔son ne peut se former**, quel que soit le monde.
+
+Le parent résout la synchronisation **par construction** : il est *dans* la grille, donc ce
+qu'il nomme est visible au moment où il le nomme.
+
+### 9.4 Les gestes retenus
+
+Repris du cadrage v34 §3.2
+([CONCEPTION_v34_fatigue_mortalite.md](CONCEPTION_v34_fatigue_mortalite.md)), où *« montrer »*
+est explicitement le geste principal, pas un appoint :
+
+| Geste | Implémentation |
+|---|---|
+| **Montrer** | le parent se déplace vers l'objet saillant le plus proche de l'agent |
+| **Nommer** | il émet le MFCC du type d'objet qu'il montre, **au tick où il le montre** |
+| **Nourrir** | il dépose une ressource quand les jauges de l'agent sont basses |
+| **Se retirer** | sa fréquence d'intervention décroît avec `empreinte_enfance` |
+
+⚠️ **Le sevrage est mérité, jamais daté** (v34 §3.3). `empreinte_enfance` est déjà une
+mesure continue de maturité (1,0 à la naissance → 0,25 mesuré) : elle sert de curseur, aucun
+compteur de jours n'est introduit.
+
+⚠️ **Rien n'est expliqué en dur** : le son associé à un type d'objet est **arbitraire et
+opaque**. Le cerveau ne reçoit jamais « ceci est une clé » — il reçoit un MFCC qui
+co-occurre avec une forme visuelle. L'association est à apprendre, jamais déclarée.
+
+🔬 **En cours.**
