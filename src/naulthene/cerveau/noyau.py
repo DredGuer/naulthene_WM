@@ -364,8 +364,35 @@ class NaultheneLinearSynaptique(nn.Module):
 # ignorer le canal tant qu'il ne porte rien.
 DIM_RAPPEL_MARQUANT = 2
 
+# --- v39.2 : LE BIT DE PRÉSENCE AUDITIVE — écouter le calme ≠ ne pas avoir d'oreilles ---
+#
+# 🔴 CE QUE ÇA CORRIGE (mesuré) : `porte_auditive` est SANS BIAIS, donc
+#
+#     relu(porte_auditive(zeros)).norm() == 0.000000   (exact)
+#     norme du bus avec obs_auditive=None : 6.3323
+#     norme du bus avec un silence numérique : 6.3323  (écart 0.0000)
+#
+# Un silence PARFAIT et une oreille ABSENTE produisaient rigoureusement le même état
+# interne. Le correctif v39.0 avait rendu ce défaut explicite (il est bit-identique par
+# construction) ; il ne l'avait PAS levé. L'agent était toujours sourd sans le savoir.
+#
+# C'est la remarque de l'utilisateur, et elle vise juste :
+#   « Le silence n'est pas 0. Le silence, c'est quand il y a presque plus rien à établir. »
+#
+# La dimension porte l'AMPLITUDE MOYENNE réellement perçue, pas un booléen : le calme est
+# un continuum (un murmure n'est pas un silence, qui n'est pas une absence d'oreille).
+#   0.0 = aucun canal auditif ce tick (rêve, vocal hors-ligne)
+#   >0  = le canal existe, et voici ce qu'il porte
+#
+# ⚠️ AJOUTÉE EN QUEUE, jamais au milieu (contrat append-only du vecteur bio) : une
+# insertion décalerait silencieusement tous les acquis des `.brain` existants. La greffe
+# `_greffer_vecteur_bio_etendu` recopie les N premières colonnes, donc un `.brain` v39.1
+# se recharge en héritant d'un canal neutre à 0.
+DIM_PRESENCE_AUDITIVE = 1
+
 DIM_VECTEUR_BIO = (16 + DIM_TOUCHER + DIM_CHIMIE + DIM_EXO
-                   + DIM_ODORAT_DELTA + DIM_RAPPEL_MARQUANT)  # = 36 depuis la v36.0
+                   + DIM_ODORAT_DELTA + DIM_RAPPEL_MARQUANT
+                   + DIM_PRESENCE_AUDITIVE)  # = 37 depuis la v39.2
                        # 3 jauges (satiete, hydratation, stimulation) + 3 quête (target_vector one-hot)
                        # + 2 rappel spatial (v20.0 : distance normalisée + fraîcheur du souvenir)
                        # + 8 quête vocale (v22.1 : formants cibles de la leçon en cours, ou [0]*8
@@ -1939,7 +1966,8 @@ class BiologicalHomeostasisEngine:
         return self.quete_active
 
     def obtenir_vecteur_bio(self, rappel_spatial=None, cible_vocale=None,
-                             signaux_sensoriels=None, rappel_marquant=None):
+                             signaux_sensoriels=None, rappel_marquant=None,
+                             presence_auditive=None):
         """Retourne le vecteur de DIM_VECTEUR_BIO=34 dims (3 jauges + 3 quête + 2 rappel
         spatial + 8 quête vocale + 4 toucher + 4 chimie + 8 Exo-Sens + 2 clinotaxie) consommé par
         AGI_Naulthene.integrer_bio — jamais recalculé côté réseau, toujours dérivé de
@@ -1998,9 +2026,20 @@ class BiologicalHomeostasisEngine:
         else:
             vecteur_marquant = [0.5, 0.0]
 
+        # v39.2 — LA PRÉSENCE AUDITIVE, en QUEUE (contrat append-only). C'est le canal qui
+        # distingue « j'écoute et c'est calme » de « je n'ai pas d'oreilles » — deux états
+        # jusqu'ici rigoureusement indiscernables pour le cerveau (voir DIM_PRESENCE_AUDITIVE).
+        #
+        # Le neutre est 0.0, et ici c'est JUSTE (contrairement à la clinotaxie ou au rappel
+        # marquant, dont le 0.0 signifierait « pire cas ») : 0.0 veut dire « aucun canal
+        # auditif ce tick », ce qui est exactement l'information à porter. Il n'y a pas de
+        # « mauvais silence » — il y a un silence, et une absence.
+        vecteur_presence = [float(np.clip(presence_auditive, 0.0, 1.0))
+                            if presence_auditive is not None else 0.0]
+
         return ([self.satiete, self.hydratation, self.stimulation] + vecteur_quete
                 + vecteur_rappel + vecteur_quete_vocale + vecteur_sensoriel
-                + vecteur_marquant)
+                + vecteur_marquant + vecteur_presence)
 
 
 class DetecteurRessourcesBiologiques:
@@ -4612,8 +4651,14 @@ def _traiter_tick_vocal_isole(etat, obs_auditive, formants_cibles, parent_actif=
     # Pas de rappel spatial (l'agent ne bouge pas ce tick, aucun souvenir de position
     # n'est pertinent à consulter) — vecteur bio construit sans lui, comme si l'agent
     # n'avait pas de quête de survie active en cours (neutre par défaut).
+    # v39.2 — en leçon vocale, le canal auditif existe par construction : la présence porte
+    # l'amplitude réellement entendue. C'est le cas où la distinction compte le plus, le
+    # professeur alternant parole et silence.
+    _presence_aud = (float(torch.clamp(obs_auditive.detach().abs().mean(), 0.0, 1.0))
+                     if obs_auditive is not None else 0.0)
     vecteur_bio_tensor = torch.tensor(
-        [etat.moteur_bio.obtenir_vecteur_bio(None, cible_vocale)],
+        [etat.moteur_bio.obtenir_vecteur_bio(None, cible_vocale,
+                                              presence_auditive=_presence_aud)],
         dtype=torch.float32, device=DEVICE
     )
 
@@ -4856,10 +4901,19 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
         etat.memoire_rappels_marquants_jour += 1
         etat.memoire_valence_cumul_jour += abs(rappel_marquant[0])
 
+    # v39.2 — la présence auditive : l'amplitude moyenne réellement perçue ce tick, ou 0.0
+    # si aucun canal n'existe. C'est la seule information qui distingue « j'écoute et c'est
+    # calme » de « je n'ai pas d'oreilles » — deux états jusqu'ici identiques pour le
+    # cerveau (`relu(porte_auditive(zeros)) == 0` exactement, la couche étant sans biais).
+    # `obs_auditive` est un TENSEUR (DIM_AUDIO_ENTREE) — pas un tableau numpy.
+    _presence_aud = (float(torch.clamp(obs_auditive.detach().abs().mean(), 0.0, 1.0))
+                     if obs_auditive is not None else 0.0)
+
     vecteur_bio_tensor = torch.tensor(
         [etat.moteur_bio.obtenir_vecteur_bio(rappel_spatial, cible_vocale,
                                               signaux_sensoriels=signaux_sensoriels,
-                                              rappel_marquant=rappel_marquant)],
+                                              rappel_marquant=rappel_marquant,
+                                              presence_auditive=_presence_aud)],
         dtype=torch.float32, device=DEVICE
     )
 
