@@ -2503,8 +2503,39 @@ class MemoireEpisodiqueSpatiale:
                 self.souvenirs.append(self.souvenirs.pop(i))
                 self.doublons_evites += 1
                 return
+        # --- v39.1 : LE PRIOR D'EMPREINTE — « je ne suis jamais venu ici, mais je sais
+        #             ce que vaut CE GENRE d'endroit » ---
+        #
+        # Un repère naissait avec la valence du SEUL choc de l'instant. Il naît désormais
+        # d'un mélange entre ce choc et ce que l'agent a appris du TYPE, sur toute sa vie.
+        # C'est le transfert du tout-petit : il n'a jamais vu CE chien, mais il sait déjà
+        # que les chiens mordent.
+        #
+        # ⚠️ Sans ce branchement, `empreinte_types` (v39.0) était écrite, sérialisée,
+        # télémétrée — et JAMAIS LUE. Un agent v39.0 se comportait exactement comme un
+        # v38 : le QUOI survivait aux promotions, enfermé dans une boîte que le cerveau
+        # n'ouvrait pas. Mesurer la v39.0 aurait produit un « effet nul » parfaitement
+        # crédible et parfaitement faux — le symétrique de l'ablation d'un organe vide.
+        #
+        # LE POIDS DU PRIOR EST DÉRIVÉ, JAMAIS POSÉ. Il vaut la solidité de l'empreinte
+        # du type : `n / (n + SOUVENIRS_CONFIRMATIONS_REFERENCE)`, exactement la même
+        # saturation douce que `rappel_le_plus_marquant` applique déjà aux repères. Un
+        # type vu deux fois n'impose presque rien ; un type vécu cent fois pèse. Le
+        # préjugé se mérite par l'expérience, et il ne peut jamais écraser complètement
+        # le vécu de l'instant (le poids tend vers 1 sans l'atteindre).
+        #
+        # ⚠️ Rien n'est expliqué en dur : aucune table, aucun seuil, aucun type nommé.
+        # Le prior est une moyenne d'expériences réellement vécues par CET agent.
+        e = self.empreinte_types.get(type_evenement)
+        if e is not None:
+            n = e['confirmations']
+            poids = n / (n + SOUVENIRS_CONFIRMATIONS_REFERENCE)
+            valence_initiale = (1.0 - poids) * float(intensite) + poids * e['valence']
+        else:
+            valence_initiale = float(intensite)   # type inédit : rien à transférer
+
         self.souvenirs.append({'pos': position, 'type': type_evenement, 'tick': tick_absolu,
-                               'confirmations': 1, 'valence': float(intensite)})
+                               'confirmations': 1, 'valence': valence_initiale})
         self._nourrir_empreinte(type_evenement, intensite)
         if len(self.souvenirs) > self.capacite_max:
             # v36.0 — l'éviction ne jette plus aveuglément le plus ancien : elle jette le
