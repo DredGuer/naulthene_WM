@@ -118,18 +118,39 @@ MIN_EPISODES = 10        # sous ce nombre, le taux n'est pas encore significatif
 # « franchir au moins une porte par épisode joué », ce qui veut dire que l'agent a
 # effectivement trouvé la clé et ouvert la porte à chaque tentative de la journée.
 def journee_reussie(etat) -> bool:
-    """Le critère de réussite d'une JOURNÉE (v39-P17).
+    """Le critère de réussite d'une JOURNÉE (v39-P17, ajusté).
 
-    Une victoire suffit. À défaut, l'agent a « réussi sa journée » s'il a franchi une
-    porte à chaque épisode joué — c'est-à-dire s'il a exécuté la compétence centrale de
-    DoorKey (trouver la clé, ouvrir) de façon systématique, sans forcément atteindre le
-    but. C'est le signal gradué que la victoire seule ne donne pas.
+    Une victoire suffit. À défaut, l'agent a « réussi sa journée » s'il a franchi la
+    porte dans la MAJORITÉ de ses épisodes — c'est-à-dire s'il a exécuté la compétence
+    centrale de DoorKey (trouver la clé, l'utiliser, passer) de façon régulière, sans
+    forcément atteindre le but. C'est le signal gradué que la victoire seule ne donne pas.
+
+    --- ⚠️ POURQUOI « LA MAJORITÉ » ET NON « À CHAQUE ÉPISODE » ---
+
+    La première version exigeait `portes >= episodes`. Ce critère est **injuste et
+    instable**, pour une raison qui n'a rien à voir avec la compétence : le nombre
+    d'épisodes par jour dépend de la PATIENCE, qui est elle-même adaptative.
+
+        patience 120 ticks  ->  ~3 épisodes/jour  ->  il faut 3 portes
+        patience 250 ticks  ->  ~1 épisode/jour   ->  il faut 1 porte
+
+    Un agent dont la patience s'allonge (donc qui prend le temps de réfléchir, ce qu'on
+    veut) se voyait imposer une barre PLUS BASSE ; un agent pressé, une barre plus haute.
+    Le critère mesurait le régime de patience autant que la compétence.
+
+    `>= ceil(episodes / 2)` corrige ça : « la porte est franchie plus d'une fois sur
+    deux » garde le même sens quel que soit le nombre d'épisodes, et reste exigeant —
+    sur un seul épisode, il faut toujours franchir la porte.
+
+    Rappel de l'échelle (mesurée sur 2 400 journées réelles) : le maximum observé est de
+    **2 portes/jour**, jamais 100 — `DoorKey` n'a qu'une porte par carte.
     """
     if bool(getattr(etat, "victoire_aujourdhui", False)):
         return True
     portes = getattr(etat, "portes_franchies_jour", 0)
     episodes = max(1, getattr(etat, "episodes_jour", 1))
-    return portes >= episodes
+    requis = -(-episodes // 2)          # ceil(episodes / 2), sans import
+    return portes >= requis
 
 
 class Gaussienne:

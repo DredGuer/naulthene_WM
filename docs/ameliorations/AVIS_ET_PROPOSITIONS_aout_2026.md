@@ -1007,9 +1007,25 @@ C'est le piège documenté du projet (`SEUIL_CRISTAL = 0,80`, jamais franchi ; l
 d'un organe vide) : **un seuil posé a priori, jamais confronté à une mesure.**
 
 **L'intention est conservée, l'échelle est dérivée** : une journée est réussie si l'agent
-gagne **ou** s'il franchit *au moins une porte par épisode joué* — c'est-à-dire s'il a
-exécuté la compétence centrale (trouver la clé, ouvrir) de façon systématique. Vérifié :
-atteignable sur **0,3 %** des journées, donc discriminant sans être mort.
+gagne **ou** s'il franchit la porte dans **la majorité de ses épisodes**.
+
+⚠️ **Deuxième ajustement (14/08)** — la première correction exigeait *une porte par
+épisode* (`portes >= episodes`). Elle était **injuste et instable**, pour une raison
+étrangère à la compétence : le nombre d'épisodes par jour dépend de la **patience**, qui
+est adaptative.
+
+| Patience | Épisodes/jour | Portes exigées *(v1)* |
+|---|---|---|
+| 120 ticks | ~3 | **3** |
+| 250 ticks | ~1 | **1** |
+
+Un agent dont la patience s'allonge — donc qui prend le temps de réfléchir, ce qu'on
+veut — se voyait imposer une barre **plus basse** ; un agent pressé, une barre plus haute.
+Le critère mesurait le **régime de patience** autant que la compétence.
+
+`portes >= ceil(episodes / 2)` corrige : « la porte est franchie plus d'une fois sur
+deux » garde le même sens quel que soit le nombre d'épisodes, et reste exigeant — sur un
+seul épisode, il faut toujours franchir la porte.
 
 ### Ce qui reste à trancher
 
