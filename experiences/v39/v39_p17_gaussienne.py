@@ -78,6 +78,59 @@ SEUIL_MAITRISE = 0.80
 FENETRE_MAITRISE = 20
 MIN_EPISODES = 10        # sous ce nombre, le taux n'est pas encore significatif
 
+# --- LA RÉUSSITE SE MESURE SUR LA JOURNÉE, PAS SUR L'ÉPISODE (utilisateur, 14/08) ---
+#
+#   « 80 %, c'est sur une journée : il faut mesurer l'évolution du taux d'échec par
+#     rapport à la réussite. Si par exemple dans une journée il dépasse le seuil des
+#     100 portes ouvertes, on peut considérer qu'il a réussi. »
+#
+# Pourquoi c'est un meilleur signal que la victoire seule : sur DoorKey, une victoire est
+# un événement RARE et binaire (0 ou 1 par jour, souvent 0 pendant des centaines de
+# jours — mesuré). Le taux de maîtrise calculé dessus est donc extrêmement bruité, et
+# c'est exactement ce qui a permis à `base g11` d'être promu au jour 4 sur un coup de
+# chance.
+#
+# Franchir une porte est en revanche un acte FRÉQUENT et GRADUÉ : il exige déjà la
+# compétence centrale (trouver la clé, l'utiliser, passer). Un agent qui franchit
+# 100 portes dans sa journée a démontré une compétence *installée*, pas un accident.
+#
+# ⚠️ Ce n'est PAS un seuil de décision au sens interdit par le projet : il ne pilote
+# aucune action de l'agent. C'est un critère de MESURE — l'équivalent d'une note
+# d'examen —, appliqué a posteriori sur une journée déjà vécue.
+#
+# --- ⚠️ LE CHIFFRE DE 100 EST IMPOSSIBLE SUR DOORKEY — MESURÉ ---
+#
+# L'utilisateur proposait « 100 portes ouvertes dans une journée ». Vérification sur tous
+# les logs disponibles (60 journées où au moins une porte a été franchie) :
+#
+#     minimum 1  ·  médiane 1  ·  MAXIMUM 2
+#
+# La raison est structurelle : `DoorKey` ne contient **qu'une seule porte** par carte, et
+# la journée compte ~2 épisodes. Un seuil à 100 ne se déclencherait donc JAMAIS — le
+# critère serait mort, et la gaussienne retomberait silencieusement sur la seule victoire.
+#
+# C'est exactement le piège documenté du projet (`SEUIL_CRISTAL = 0.80`, jamais franchi ;
+# l'ablation d'un organe vide) : **un seuil posé a priori, jamais confronté à une mesure.**
+#
+# L'INTENTION de l'utilisateur est juste et elle est conservée : juger la journée sur un
+# acte FRÉQUENT et GRADUÉ plutôt que sur l'événement rare et binaire qu'est la victoire.
+# Seule l'ÉCHELLE est corrigée — et elle est désormais DÉRIVÉE du monde, pas posée :
+# « franchir au moins une porte par épisode joué », ce qui veut dire que l'agent a
+# effectivement trouvé la clé et ouvert la porte à chaque tentative de la journée.
+def journee_reussie(etat) -> bool:
+    """Le critère de réussite d'une JOURNÉE (v39-P17).
+
+    Une victoire suffit. À défaut, l'agent a « réussi sa journée » s'il a franchi une
+    porte à chaque épisode joué — c'est-à-dire s'il a exécuté la compétence centrale de
+    DoorKey (trouver la clé, ouvrir) de façon systématique, sans forcément atteindre le
+    but. C'est le signal gradué que la victoire seule ne donne pas.
+    """
+    if bool(getattr(etat, "victoire_aujourdhui", False)):
+        return True
+    portes = getattr(etat, "portes_franchies_jour", 0)
+    episodes = max(1, getattr(etat, "episodes_jour", 1))
+    return portes >= episodes
+
 
 class Gaussienne:
     """Le cursus comme distribution — pas comme pointeur.
@@ -188,7 +241,12 @@ def main():
         def nuit_gaussienne(etat, *args, **kwargs):
             r = vraie_nuit(etat, *args, **kwargs)
             palier = etat_partage.get("palier_courant", gauss.sommet)
-            gauss.enregistrer(palier, bool(etat.victoire_aujourdhui))
+            # La réussite se juge sur la JOURNÉE (victoire OU 100 portes franchies),
+            # pas sur le seul événement rare qu'est la victoire — voir `journee_reussie`.
+            reussie = journee_reussie(etat)
+            gauss.enregistrer(palier, reussie)
+            if reussie and not etat.victoire_aujourdhui:
+                etat_partage["jours_portes"] = etat_partage.get("jours_portes", 0) + 1
 
             # Le palier suivant est tiré maintenant, et le monde suit.
             suivant = gauss.tirer_palier()

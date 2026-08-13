@@ -988,6 +988,29 @@ fenêtre de maîtrise, celle du niveau courant — impossible de savoir si un pa
 était encore maîtrisé. La gaussienne en tient une **par palier**, ce qui est la condition
 pour que « revenir en arrière » ait un sens mesurable.
 
+### ⚠️ Le critère « 100 portes » corrigé par la mesure
+
+L'utilisateur proposait de juger la journée sur *« 100 portes ouvertes »* plutôt que sur la
+seule victoire. **L'intention est juste, le chiffre est impossible.** Mesuré sur 2 400
+journées de logs réels :
+
+| Portes franchies en une journée | min | médiane | **max** |
+|---|---|---|---|
+| Valeur observée | 1 | 1 | **2** |
+
+Raison structurelle : `DoorKey` ne contient **qu'une seule porte** par carte, et la journée
+compte ~2 épisodes. Un seuil à 100 ne se serait déclenché **0 fois sur 2 400 journées** —
+le critère aurait été mort, et la gaussienne serait silencieusement retombée sur la seule
+victoire.
+
+C'est le piège documenté du projet (`SEUIL_CRISTAL = 0,80`, jamais franchi ; l'ablation
+d'un organe vide) : **un seuil posé a priori, jamais confronté à une mesure.**
+
+**L'intention est conservée, l'échelle est dérivée** : une journée est réussie si l'agent
+gagne **ou** s'il franchit *au moins une porte par épisode joué* — c'est-à-dire s'il a
+exécuté la compétence centrale (trouver la clé, ouvrir) de façon systématique. Vérifié :
+atteignable sur **0,3 %** des journées, donc discriminant sans être mort.
+
 ### Ce qui reste à trancher
 
 | Question | Pourquoi elle compte |
