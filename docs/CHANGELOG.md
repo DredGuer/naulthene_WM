@@ -4,6 +4,94 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../rea
 
 ---
 
+## [v39.0-experimental] - 2026-08-13 (nuit) — L'abstraction s'émancipe de l'espace
+
+### Le QUOI survit au OÙ — et `noyau.py` entre enfin dans git
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | chore (versionnement) + fix (mémoire, audio, télémétrie) |
+| **Impact** | **Critique** — premier correctif issu d'une mesure directe, et fin du risque structurel n°1 |
+| **Branche** | `feat/v39-memoire-abstraite` |
+
+**🔴 `noyau.py` est désormais VERSIONNÉ.** Le fichier était gitignoré depuis l'origine et
+portait à lui seul toute l'évolution **v34 → v37.1** : 369 Ko, quatre mois de mécaniques, en
+**un exemplaire sur un disque**. Les carnets *décrivent* ces mécaniques, ils ne permettent pas
+de les *reconstruire*. Risque signalé dans `ETAT_DU_PROJET_aout_2026.md` §5.2 puis
+`AVIS_ET_PROPOSITIONS_aout_2026.md` (P1) — il est clos. La **nature** du fichier ne change pas :
+il reste le terrain d'essai, `colab.py` reste la référence, le portage reste à faire.
+
+---
+
+**🧬 Correctif 1 — l'empreinte de type (le QUOI qui survit au OÙ).**
+
+Mesuré par run instrumenté (300 jours, graine 22) :
+
+```
+[ECRIT goal] tick=22091 pos=(1,2) int=1.0035
+[ECRIT goal] tick=22142 pos=(1,3) int=1.0119
+🎓 [PROMOTION] L'Agent passe en DoorKey 6x6 !
+→ .brain sauvegardé juste après : ZÉRO repère `goal`
+```
+
+**4 repères `goal` écrits, 3 promotions, 0 survivant, 0 jamais confirmé une seule fois.**
+Sur les 12 cerveaux de la campagne 2a, onze ont exactement 0 repère `goal` ; le seul qui en
+garde (21) est celui qu'aucune promotion n'effaçait plus — il avait atteint le dernier palier.
+
+Cause : `reinitialiser_niveau()` vidait la mémoire **entière** à chaque palier. Le repère du
+but naît **au tick de la victoire**, donc quelques ticks avant la promotion qu'il déclenche.
+
+> **La distinction (formulée par l'utilisateur)** : le **OÙ** — les coordonnées `(x,y)` —
+> est périmé au changement de carte et doit partir. Le **QUOI** — la valence apprise par
+> *type* — est vrai partout. *« L'abstraction doit s'émanciper de l'espace. »*
+
+⚠️ **Rien n'est expliqué en dur** : `empreinte_types` n'est pas une table `goal = bien`,
+c'est la moyenne des chocs réellement vécus sur chaque étiquette opaque. Vérifié après
+12 jours réels : `porte_key` **+0,175** (×12) contre `sol` **−0,006** (×111) — la
+discrimination est **apprise**, jamais déclarée.
+
+---
+
+**🔇 Correctif 2 — le silence n'est pas l'absence.**
+
+⚠️ **Correction d'un fait publié dans l'entrée v38 ci-dessous.** Il y était écrit que
+`obs_auditive=None` fait *« changer la norme du bus »*. **C'est faux, et la mesure le montre :**
+
+| Cas | Norme du bus |
+|---|---|
+| `obs_auditive=None` | 6,3323 |
+| Silence numérique (zéros) | **6,3323** — écart **0,0000** |
+
+`porte_auditive` est **sans biais**, donc `relu(porte_auditive(zeros)) = 0` exactement. Le vrai
+défaut n'est pas une échelle qui bouge : c'est qu'**un silence parfait et une oreille absente
+sont mathématiquement indiscernables**. *« Le silence, c'est quand il y a presque plus rien à
+établir »* — pas quand il n'y a pas d'oreille.
+
+Le correctif est **bit-identique** (écart max vérifié : `0.0`) : il rend le défaut explicite et
+localisé. La vraie levée demande un **bit de présence** dans le vecteur bio, donc une greffe
+`persistance` — chantier séparé, délibérément non fait ici.
+
+---
+
+**📊 Correctif 3 — `Pourcentage_Reve` est une fraction.**
+
+Ambiguïté ayant causé une erreur de diagnostic propagée dans deux documents (0,001 lu
+« 0,1 % », rêve déclaré éteint alors qu'il rejouait 15-18 %). La clé n'est **pas renommée** —
+190 runs historiques l'utilisent — mais deux clés explicites l'accompagnent désormais.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `.gitignore` | règle `noyau.py` retirée, avec l'argumentaire du choix |
+| `src/naulthene/cerveau/noyau.py` | `empreinte_types` + `_nourrir_empreinte` + `valence_de_type` ; `reinitialiser_niveau` conserve le QUOI ; silence auditif explicite ; télémétrie console + 5 clés W&B |
+| `src/naulthene/cerveau/persistance.py` | sérialisation de `empreinte_types`, rechargement rétrocompatible (`.get(..., {})`) |
+
+⚠️ **Aucun effet sur la performance n'est démontré.** Les trois correctifs sont *mesurés dans
+leur mécanisme*, pas dans leur *conséquence*. Test à faire : 2a continu, 6 graines appariées,
+avec et sans conservation de l'empreinte.
+
+---
+
 ## [v38.0-experimental] - 2026-08-13 (soir) — clôture du chantier
 
 ### 2c-ter et 2d : le chantier se termine avec UNE brique validée sur six
@@ -26,8 +114,14 @@ Trois corrections issues de remarques utilisateur, toutes mesurées :
 
 ⚠️ **La troisième corrige un défaut RÉEL du noyau** : `noyau.py:548-552`,
 `obs_auditive=None` ne produit pas un silence — le terme **disparaît** de la somme du bus.
-La norme change, donc l'échelle de tout l'aval. Le cerveau ne perçoit pas le calme, **il perd
+~~La norme change, donc l'échelle de tout l'aval.~~ Le cerveau ne perçoit pas le calme, **il perd
 le canal**. Défaut annoncé dans `les_sens_combinatoire.md` §4.3, jamais corrigé.
+
+> ❌ **CORRECTION (v39.0, 2026-08-13)** — la phrase barrée est **fausse**. Mesuré :
+> `porte_auditive` est **sans biais**, donc `relu(porte_auditive(zeros)) = 0` exactement, et
+> la norme du bus est **identique** dans les deux cas (6,3323, écart 0,0000). Le défaut est
+> réel mais il est ailleurs : un silence parfait et une oreille absente sont **mathématiquement
+> indiscernables**. Voir l'entrée v39.0 en tête de fichier.
 
 Résultat : paliers 5, 5, 1, 3, 2, 1 (médiane 2,5), **37 victoires** contre 17 pour 2b. Deux
 graines franchissent le cursus complet. Le canal auditif **cesse de coûter des paliers** —

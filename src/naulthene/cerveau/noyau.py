@@ -549,7 +549,42 @@ class AGI_Naulthene(nn.Module):
             stimulus_auditif = F.relu(self.porte_auditive(obs_auditive))
             bus_latent = stimulus_visuel + stimulus_auditif
         else:
-            bus_latent = stimulus_visuel
+            # --- v39.0 : LE SILENCE N'EST PAS L'ABSENCE ---
+            #
+            # 🔴 CE QUE ÇA CORRIGE (mesuré) : `porte_auditive` n'a PAS de biais, donc
+            #
+            #     relu(porte_auditive(zeros)).norm() == 0.000000   (exact)
+            #
+            # Autrement dit, un silence PARFAIT et une oreille ABSENTE produisaient
+            # rigoureusement le même bus latent (6.3323 dans les deux cas, écart 0.0000).
+            # Le cerveau ne pouvait pas les distinguer : rien, nulle part, ne lui disait
+            # si le canal auditif existait et se taisait, ou n'existait pas du tout.
+            #
+            # C'est la remarque de l'utilisateur, et elle vise juste :
+            #
+            #     « Le silence n'est pas 0. Le silence, c'est quand il y a presque plus
+            #       rien à établir. »
+            #
+            # Un silence est une INFORMATION — « j'écoute et je n'entends rien » n'est pas
+            # « je n'ai pas d'oreilles ». Le rêve (`rever()`), qui ne rejoue que la
+            # mémoire visuelle, était dans le même cas : il présentait au cerveau un monde
+            # sourd indiscernable d'un monde muet.
+            #
+            # LE CORRECTIF, minimal et neutre : le canal auditif reste présent, alimenté
+            # par un vecteur nul. Comme la couche est sans biais, la contribution reste
+            # EXACTEMENT nulle — le comportement numérique est donc **bit-identique** à
+            # l'ancien, aucun `.brain` n'est affecté, aucune échelle ne bouge.
+            #
+            # ⚠️ Ce que ce correctif fait vraiment : il rend le défaut EXPLICITE et
+            # localisé, au lieu de le laisser implicite dans une branche `else`. La vraie
+            # levée du défaut demande un BIT DE PRÉSENCE dans le vecteur bio (« l'ouïe
+            # est-elle active ce tick ? »), qui change la dimension du vecteur et exige
+            # une greffe `persistance` — donc un chantier à part entière, à mesurer.
+            # Le noter ici sans le faire est délibéré : v29.0 avait livré cinq sens sans
+            # télémétrie, on ne recommence pas en livrant une dimension sans greffe.
+            silence = torch.zeros(obs.shape[0], self.porte_auditive.in_features,
+                                  device=obs.device, dtype=obs.dtype)
+            bus_latent = stimulus_visuel + F.relu(self.porte_auditive(silence))
         fusion_temporelle = torch.cat([bus_latent, memoire_precedente], dim=-1)
         memoire_actuelle = F.relu(self.hippocampe(fusion_temporelle))
         pensee = F.relu(self.analyseur(memoire_actuelle))
@@ -2219,6 +2254,45 @@ class MemoireEpisodiqueSpatiale:
         self.doublons_evites = 0
         self.cap_densite_actif = False  # True si le cap spatial a bridé la capacité
 
+        # --- v39.0 : L'EMPREINTE DE TYPE — le QUOI qui survit au OÙ ---
+        #
+        # 🔴 CE QUE ÇA CORRIGE (mesuré, run instrumenté du 13/08, graine 22) :
+        #
+        #     [ECRIT goal] tick=22091 pos=(1,2) int=1.0035
+        #     [ECRIT goal] tick=22142 pos=(1,3) int=1.0119
+        #     🎓 [PROMOTION] L'Agent passe en DoorKey 6x6 !
+        #     -> .brain sauvegardé juste après : ZÉRO repère `goal`
+        #
+        # Sur 300 jours : 4 repères `goal` écrits, 3 promotions, **0 survivant, 0 jamais
+        # confirmé une seule fois**. Sur les 12 cerveaux de la campagne 2a, onze ont
+        # exactement 0 repère `goal` ; le seul qui en garde (21) est celui qui avait
+        # atteint le DERNIER palier, donc que plus aucune promotion n'effaçait.
+        #
+        # La cause est `reinitialiser_niveau()`, qui vide la mémoire entière à chaque
+        # palier. Son intention est juste — une position (1,2) n'a plus le même sens sur
+        # une autre carte — mais elle jetait AUSSI ce qui n'a rien de spatial.
+        #
+        # LA DISTINCTION (formulée par l'utilisateur) :
+        #
+        #     le OÙ   : les coordonnées (x,y)      -> périmées au changement de carte
+        #     le QUOI : la valence apprise du TYPE -> vraie partout, indépendante du lieu
+        #
+        # « L'abstraction doit s'émanciper de l'espace. » Un agent qui a appris
+        # qu'atteindre un `goal` est ce qui lui arrive de mieux (valence ~1,00 contre
+        # ~0,07 pour `sol`) redécouvrait cette leçon DE ZÉRO à chaque palier — et la
+        # perdait à l'instant précis où il venait de prouver qu'il l'avait acquise.
+        #
+        # ⚠️ RIEN N'EST EXPLIQUÉ EN DUR. `empreinte_types` n'est pas une table
+        # `goal = bien` : c'est la moyenne glissante des chocs réellement vécus sur
+        # chaque étiquette, exactement comme `valence` l'est par lieu. Le cerveau ne sait
+        # toujours pas ce qu'est un but — il sait seulement que « ce genre d'endroit » lui
+        # a valu telle intensité, en moyenne, sur toute sa vie. C'est le mécanisme v36.0
+        # (l'abstraction par récurrence) qu'on laisse enfin vivre au lieu de le remettre
+        # à zéro.
+        #
+        # {type: {'valence': float, 'confirmations': int}}
+        self.empreinte_types = {}
+
     def ajuster_capacite(self, dim_bus: int, deficit_bio: float = 0.0,
                           cases_grille: int | None = None) -> int:
         """Recalcule la capacité en fonction du substrat neural et du besoin courant.
@@ -2289,11 +2363,59 @@ class MemoireEpisodiqueSpatiale:
         self.souvenirs = sorted(plus_recent.values(), key=lambda s: s['tick'])
         return avant - len(self.souvenirs)
 
+    def _nourrir_empreinte(self, type_evenement: str, intensite: float) -> None:
+        """v39.0 — accumule la statistique par TYPE, indépendamment du lieu.
+
+        Moyenne glissante exacte (pas exponentielle) : chaque expérience d'un type pèse
+        autant que les autres, comme pour `valence` au niveau du repère. Un type vécu
+        mille fois a donc une empreinte très stable, un type vu deux fois reste
+        volatil — ce qui est le comportement voulu : l'abstraction se mérite par la
+        répétition.
+
+        ⚠️ Aucune étiquette n'est interprétée ici. La fonction ne sait pas si
+        `type_evenement` vaut 'goal', 'lava' ou 'sol' — elle accumule ce qu'on lui donne.
+        """
+        e = self.empreinte_types.get(type_evenement)
+        if e is None:
+            self.empreinte_types[type_evenement] = {'valence': float(intensite),
+                                                     'confirmations': 1}
+            return
+        n = e['confirmations'] + 1
+        e['valence'] = (e['valence'] * (n - 1) + float(intensite)) / n
+        e['confirmations'] = n
+
+    def valence_de_type(self, type_evenement: str, defaut: float = 0.0) -> float:
+        """La valeur apprise d'un TYPE, survivant aux changements de carte (v39.0)."""
+        e = self.empreinte_types.get(type_evenement)
+        return float(e['valence']) if e else float(defaut)
+
     def reinitialiser_niveau(self):
-        """À appeler uniquement au changement de niveau (PROGRAMME), pas à chaque
-        épisode — les souvenirs d'un niveau précédent n'ont plus de sens spatial une
-        fois la carte changée."""
-        self.souvenirs = []
+        """Au changement de niveau (PROGRAMME) : on oublie le OÙ, on garde le QUOI.
+
+        v39.0 — LA CORRECTION. Jusqu'ici cette méthode faisait `self.souvenirs = []`,
+        c'est-à-dire qu'elle effaçait **tout**. Mesuré sur un run instrumenté de
+        300 jours (graine 22) : 4 repères `goal` écrits, 3 promotions, **0 survivant et
+        0 jamais confirmé une seule fois**. Sur les 12 cerveaux de la campagne 2a, onze
+        ont exactement 0 repère `goal` — le seul qui en garde est celui qu'aucune
+        promotion n'effaçait plus (dernier palier atteint).
+
+        Les COORDONNÉES doivent effectivement partir : `(1,2)` ne désigne pas le même
+        endroit sur la carte suivante, et garder ces positions produirait des rappels
+        franchement trompeurs. C'est le comportement historique, et il est conservé.
+
+        Mais l'EMPREINTE DE TYPE n'est pas spatiale. « Ce genre d'endroit m'a valu ça en
+        moyenne » reste vrai quelle que soit la carte — c'est même la définition d'une
+        abstraction. La v36.0 avait construit le mécanisme qui la produit
+        (`confirmations` + `valence`) ; cette méthode le remettait à zéro à chaque palier,
+        donc juste après chaque victoire, puisque le repère du but naît au tick même de
+        la victoire qui déclenche la promotion.
+
+        ⚠️ Rien n'est expliqué en dur : `empreinte_types` ne contient aucune table
+        `objet → valeur`, seulement la moyenne des chocs réellement vécus sur chaque
+        étiquette opaque. Le cerveau ne sait toujours pas ce qu'est un but.
+        """
+        self.souvenirs = []          # le OÙ : périmé, il part
+        # le QUOI : `empreinte_types` survit intentionnellement.
 
     # --- v36.0 : LE FLUX ENRICHI & L'ABSTRACTION PAR RÉCURRENCE ---
     #
@@ -2373,11 +2495,17 @@ class MemoireEpisodiqueSpatiale:
                 # d'expérience, exactement comme un conditionnement.
                 n = souvenir['confirmations']
                 souvenir['valence'] = (souvenir.get('valence', 0.0) * (n - 1) + intensite) / n
+                # v39.0 — la confirmation nourrit AUSSI l'empreinte de type. Sans cela,
+                # `empreinte_types` n'enregistrerait que les premières impressions et
+                # ignorerait toute la répétition — or c'est précisément la récurrence qui
+                # produit l'abstraction (v36.0).
+                self._nourrir_empreinte(type_evenement, intensite)
                 self.souvenirs.append(self.souvenirs.pop(i))
                 self.doublons_evites += 1
                 return
         self.souvenirs.append({'pos': position, 'type': type_evenement, 'tick': tick_absolu,
                                'confirmations': 1, 'valence': float(intensite)})
+        self._nourrir_empreinte(type_evenement, intensite)
         if len(self.souvenirs) > self.capacite_max:
             # v36.0 — l'éviction ne jette plus aveuglément le plus ancien : elle jette le
             # MOINS ABSTRAIT. Un repère confirmé cent fois est une régularité du monde ;
@@ -5687,6 +5815,20 @@ def executer_nuit(etat, plafond_reve=None):
           f"🔁 {_conf:.1f} confirmation(s)/repère | 🏷️ {_typ} type(s) distinct(s) | "
           f"💭 rappel marquant {100.0 * etat.memoire_rappels_marquants_jour / ticks_du_jour:.1f}% des ticks")
 
+    # v39.0 — L'EMPREINTE DE TYPE : ce que l'agent sait du QUOI, indépendamment du OÙ.
+    # Instrumentée dans le même commit que la mécanique (règle v29.1) : sans cette ligne,
+    # impossible de vérifier sur un run long que l'abstraction survit bien aux promotions
+    # — ce qui est exactement l'objet du correctif.
+    _emp = getattr(etat.memoire_episodique_spatiale, 'empreinte_types', {}) or {}
+    if _emp:
+        _meilleur = max(_emp.items(), key=lambda kv: kv[1]['valence'])
+        _pire = min(_emp.items(), key=lambda kv: kv[1]['valence'])
+        _vecu = sum(e['confirmations'] for e in _emp.values())
+        print(f"  ├─ Empreinte v39  : 🧬 {len(_emp)} type(s) appris sur {_vecu} expérience(s) | "
+              f"↑ '{_meilleur[0]}' {_meilleur[1]['valence']:+.3f} "
+              f"(×{_meilleur[1]['confirmations']}) | "
+              f"↓ '{_pire[0]}' {_pire[1]['valence']:+.3f} (×{_pire[1]['confirmations']})")
+
     pct_autonomie = 100.0 * etat.ticks_jauges_saines_jour / ticks_du_jour
     deficit_moyen = etat.deficit_cumul_jour / ticks_du_jour
     print(f"  ├─ Calibrage v34  : ⚡ Effort [{(etat.effort_min_jour or 0.0):.2f}–{etat.effort_max_jour:.2f}] | "
@@ -5755,7 +5897,18 @@ def executer_nuit(etat, plafond_reve=None):
         "Perte_Consolidation": perte_jour,
         "Perte_Reves": perte_reves,
         "Nb_Reves": nb_reves,
-        "Pourcentage_Reve": pourcentage_reve,
+        # ⚠️ v39.0 — PIÈGE DE LECTURE, conservé tel quel pour la continuité historique.
+        # `Pourcentage_Reve` est une FRACTION (0,15 = 15 %), malgré son nom. Cette
+        # ambiguïté a produit une vraie erreur de diagnostic, propagée dans deux
+        # documents : la valeur 0,001 avait été lue « 0,1 % » et le rêve déclaré éteint,
+        # alors qu'il rejouait 15-18 % de la journée et fonctionnait.
+        #
+        # La clé n'est PAS renommée : 190 runs historiques l'utilisent, et casser leur
+        # comparabilité coûterait plus que l'ambiguïté. On ajoute la version explicite
+        # à côté, et c'est elle qu'il faut lire désormais.
+        "Pourcentage_Reve": pourcentage_reve,          # fraction [0,1] — nom trompeur
+        "Reve_Fraction": pourcentage_reve,             # idem, nom honnête
+        "Reve_Pourcentage_Reel": pourcentage_reve * 100.0,   # en %, lisible directement
         "Recompense_Moyenne": rec_moy,
         "Victoire": int(etat.victoire_aujourdhui),
         "Teneur_Dopamine": etat.teneur_dopamine,
@@ -5986,6 +6139,24 @@ def executer_nuit(etat, plafond_reve=None):
     # qu'elle suit bien dim_bus et le déficit, et de relire a posteriori un taux de
     # saturation (dont le dénominateur bouge désormais d'une nuit à l'autre).
     log_wandb["Memoire_Capacite_Courante"] = cap_mem
+    # v39.0 — L'EMPREINTE DE TYPE. Clés CONDITIONNELLES (règle v29.1) : tant qu'aucune
+    # expérience n'a été vécue, ne rien logger plutôt que des zéros trompeurs.
+    #
+    # Ce que ces courbes doivent montrer si le correctif fait ce qu'on attend :
+    #   - `Empreinte_Types_Connus` CROÎT et ne retombe JAMAIS à 0 après une promotion
+    #     (avant la v39, la mémoire entière était vidée à chaque palier) ;
+    #   - `Empreinte_Valence_Max` se sépare de `Empreinte_Valence_Min` : l'agent
+    #     distingue de mieux en mieux ce qui lui réussit de ce qui lui coûte, et cette
+    #     distinction survit au changement de carte.
+    _emp_w = getattr(etat.memoire_episodique_spatiale, 'empreinte_types', {}) or {}
+    if _emp_w:
+        _vals = [e['valence'] for e in _emp_w.values()]
+        log_wandb["Empreinte_Types_Connus"] = len(_emp_w)
+        log_wandb["Empreinte_Experiences_Cumul"] = sum(e['confirmations']
+                                                        for e in _emp_w.values())
+        log_wandb["Empreinte_Valence_Max"] = max(_vals)
+        log_wandb["Empreinte_Valence_Min"] = min(_vals)
+        log_wandb["Empreinte_Valence_Etendue"] = max(_vals) - min(_vals)
     log_wandb["Reve_Facteur_Richesse"] = facteur_richesse
     log_wandb["Reve_Empreinte_Enfance"] = etat.empreinte_enfance
     # v31.1 — santé de la mémoire spatiale : la déduplication travaille-t-elle, et la

@@ -240,6 +240,12 @@ class PersistanceAnatomique:
 
             # --- 4. Souvenirs persistants (mémoire épisodique spatiale, v20.0) ---
             'souvenirs_spatiaux': etat.memoire_episodique_spatiale.souvenirs,
+            # v39.0 — L'EMPREINTE DE TYPE (le QUOI). Contrairement aux souvenirs, elle
+            # n'est pas spatiale : elle survit aux changements de carte ET aux
+            # résurrections. Sans cette ligne, l'abstraction accumulée sur toute une vie
+            # mourrait à chaque relance du run, ce qui viderait le correctif de son sens.
+            'empreinte_types': getattr(etat.memoire_episodique_spatiale,
+                                       'empreinte_types', {}),
 
             # --- 5. Curriculum & progression ---
             'niveau_actuel': etat.niveau_actuel,
@@ -484,6 +490,13 @@ class PersistanceAnatomique:
 
         # --- Souvenirs ---
         etat.memoire_episodique_spatiale.souvenirs = checkpoint['souvenirs_spatiaux']
+        # v39.0 — l'empreinte de type. `.get` avec défaut vide : un `.brain` antérieur à
+        # la v39 n'a pas cette clé, et doit se recharger sans broncher (règle du projet :
+        # greffe par recopie, jamais par exclusion). L'agent repart alors avec une
+        # empreinte vierge qu'il reconstruira par l'expérience — aucune perte, seulement
+        # un réapprentissage, exactement comme avant le correctif.
+        etat.memoire_episodique_spatiale.empreinte_types = dict(
+            checkpoint.get('empreinte_types', {}) or {})
         # v31.1 — compactage des doublons historiques. La déduplication d'
         # `enregistrer_evenement` ne vaut que pour les nouveaux souvenirs ; un `.brain`
         # antérieur porte encore tous les siens. Mesuré sur naulthene_parole (480 000
