@@ -526,4 +526,100 @@ est **montrer**, pas nourrir. La correction isole donc le premier en supprimant 
 Si les paliers remontent au niveau de 2b **et** que `Cooc_Vue_Ouie` reste à ~0,23, alors le
 parent apporte l'association sans coûter l'autonomie — et 2d devient possible.
 
+### 9.10 Résultat de 2c-fix — la correction aide, sans suffire
+
+| Condition | g11 | g22 | g33 | g44 | g55 | g66 | Médiane |
+|---|---|---|---|---|---|---|---|
+| origine | 3 | 1 | 2 | 1 | 0 | 2 | 1,5 |
+| 2b pile | 4 | 4 | 2 | 2 | 1 | 4 | **3,0** |
+| 2c parent nourricier | 1 | 1 | 1 | 1 | 1 | 1 | 1,0 |
+| **2c-fix montrer seul** | 2 | 2 | 2 | 1 | 2 | 2 | **2,0** |
+
+| Comparaison | Écarts appariés | p |
+|---|---|---|
+| 2c-fix vs origine | −1, +1, 0, 0, +2, 0 | 1,000 |
+| **2c-fix vs 2b** *(apport du parent)* | **−2, −2, 0, −1, +1, −2** | **1,000** |
+
+Retirer la nourriture **aide** (paliers 1,0 → 2,0 ; repères 13 → 26 ; odorat 0,127 → 0,201)
+mais **ne restaure pas le niveau de 2b**. Verdict : même réduit au seul geste « montrer »,
+**le parent coûte plus qu'il ne rapporte**.
+
+---
+
+## 10. Le fil conducteur — ce que trois jours de mesures dessinent
+
+| Intervention | Nature | Effet sur les paliers |
+|---|---|---|
+| **Continuité** (2a) | *rend possible* | **+1,5** |
+| **Densité** (2b) | *facilite* | 0 |
+| **Parent nourricier** (2c) | *fait à la place* | **−2,0** |
+| **Parent montreur** (2c-fix) | *fait à la place, en partie* | **−1,0** |
+
+> **Tout ce qui facilite la tâche de l'agent le fait régresser. Tout ce qui la rend possible
+> sans la faciliter le fait progresser.**
+
+C'est le prolongement direct de l'intuition de l'utilisateur — *« un cerveau qui revoit en
+boucle les mêmes choses se meurt de bêtise »* — auquel les mesures ajoutent son symétrique :
+**un cerveau à qui on épargne l'effort désapprend aussi**.
+
+### ⚠️ Les gains ne se sont jamais additionnés
+
+| Pile | Gain vs origine |
+|---|---|
+| 2a | +1,5 |
+| 2a + 2b | +1,5 *(pas +3)* |
+| 2a + 2b + 2c | −0,5 |
+
+Même constat qu'avec H11+H09 le 12/08. Ces briques ne sont pas des additifs indépendants :
+la continuité **crée une possibilité**, et les briques suivantes occupent l'espace qu'elle a
+ouvert — ou le remplissent d'assistance.
+
+**Nuance qui compte** : 2b n'a pas augmenté la moyenne, il a **supprimé les régressions**
+(5/5 positifs contre 4/5 pour 2a). C'est un gain réel, invisible si l'on ne regarde que la
+moyenne.
+
+---
+
+## 11. Étape 2c-bis — le monde sonore *(sans assistant)*
+
+### 11.1 Pourquoi cette étape s'intercale
+
+2c a produit la co-occurrence vue↔ouïe (0 → 0,24) **mais au prix de 1 à 2 paliers**.
+Conséquence méthodologique : **2d n'est pas interprétable sur cette pile**. Un résultat nul
+ne permettrait pas de distinguer « le liage n'apporte rien » de « le parent a annulé l'apport
+du liage » — deux effets de signe opposé mesurés par un seul chiffre.
+
+### 11.2 Le principe
+
+Le son ne vient plus d'un assistant mais **du monde lui-même** : un objet proche émet son
+timbre. Personne ne montre, personne ne nourrit, personne ne décide à la place de l'agent.
+
+C'est l'application directe du fil conducteur du §10 : un objet qui sonne **rend possible**
+l'association sans rien **faciliter**. L'agent doit toujours chercher, sentir, mémoriser et
+atteindre le but seul. Le son devient une **propriété du monde**, comme l'odeur — qui n'a
+jamais rien fait à sa place.
+
+### 11.3 Le piège, rencontré une troisième fois
+
+Sans contrainte de portée, le son est émis à **100 % des ticks** (mesuré : 400 sonores /
+0 silencieux) — une porte est presque toujours dans le champ. **Un signal permanent est un
+bruit de fond : il ne peut rien prédire puisqu'il est toujours là.**
+
+C'est le même piège qu'en 2c (`PLAFOND_PAROLE`) et, avant lui, que la continuité naïve
+(états absorbants). Trois formes, une seule cause : **une variable saturée cesse de porter de
+l'information.**
+
+`PORTEE_SONORE = 2` est le pendant auditif de l'atténuation olfactive. Vérifié sur 300 ticks
+réels : **58 % sonores / 42 % silencieux** — le silence redevient informatif.
+
+### 11.4 Critère de réussite
+
+| Métrique | Cible |
+|---|---|
+| `Cooc_Vue_Ouie` | ~0,2-0,3 (le niveau de 2c) |
+| Paliers médians | **3,0** (le niveau de 2b), pas 2,0 |
+
+Si les deux tiennent, la co-occurrence est obtenue **sans son coût**, et 2d devient
+mesurable.
+
 🔬 **6 runs lancés.**
