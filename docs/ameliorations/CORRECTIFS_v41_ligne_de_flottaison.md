@@ -1,9 +1,15 @@
 # Correctifs v41 — La Ligne de Flottaison Métabolique
 
-> **Statut : PROPOSÉ, non implémenté.** Aucune ligne de `src/` n'a été modifiée.
-> Document de décision, rédigé pendant que les 3 runs V40 tournent (jour ~350/2000).
+> **Statut : LIVRÉ** (commit `04080c4`, branche `feat/v41-ligne-flottaison`).
+> Correctifs **C1 + C2 implémentés ensemble** — la mesure §8 a montré qu'ils ne sont
+> pas dissociables. **C3 (renaissance nocturne) reste proposé, non implémenté.**
 >
 > Date : 14 août 2026 · Origine : lecture utilisateur du run V40 en cours
+>
+> **Résultat en une ligne :** C2 passe de mort (2000 nuits/2000) à dominant
+> (ratio 1,41×) ; la force de planification de **0,000 à 0,462**.
+>
+> ⚠️ La v41 rend C2 **audible**. Elle n'a **pas** démontré qu'il *sert* — voir §9.
 
 ---
 
@@ -283,5 +289,124 @@ Cette décision confirme et prolonge le choix « pas de plancher » de la v40.1.
 
 ---
 
-*Document créé le 14 août 2026 pendant les runs V40. Aucun code modifié.*
-*Les mesures §1 proviennent de `/private/tmp/v40_g11.log`, jour 348.*
+---
+
+## 8. Le benchmark « C1 pur » — l'étalon (3 graines × 2000 jours)
+
+Les 3 runs V40 ont été menés à terme **précisément pour servir de référence**. C'est le
+premier benchmark d'un système réflexe pur, non reproductible une fois la v41 posée.
+
+| | g11 | g22 | g33 |
+|---|---|---|---|
+| Victoires / 2000 j | 774 | **880** | 624 |
+| Niveau | 1/15 | 1/15 | 1/15 |
+| Maîtrise | 5 % | 10 % | 10 % |
+| `vecu_danger` | 186,02 | 172,80 | 153,28 |
+| `vecu_okay` | 0,04 | 0,34 | 0,25 |
+| force planif. | 0,000 | 0,002 | 0,002 |
+| envie | 0,0000 | 0,0000 | 0,0000 |
+| erreur JEPA | 0,0116 | **0,0026** | 0,0146 |
+| C2 | 0,000 | 0,000 | 0,000 |
+
+### 8.1 L'asymptote prédite était FAUSSE — et c'est instructif
+
+Prédiction §1.3 : `vecu_danger` plafonne vers **221**. Mesure : la trajectoire est
+**linéaire**, sans aucun aplatissement.
+
+```
+g11 : 0 → 17,9 → 35,8 → 52,5 → 71,0 → 91,1 → 110,4 → 129,2 → 147,6 → 166,9 → 186,0
+```
+
+Pente sur les **200 derniers** jours : **+0,096/jour**. L'asymptote existe (~950) mais
+2000 jours n'en montrent que le début.
+
+**Cause : `OUBLI_DANGER = 0,99990` a une demi-vie de 6931 jours.** Sur un run de 2000
+jours, l'oubli n'existe pas — le réservoir *accumule*. Le cliquet n'était pas
+asymétrique, il était **inopérant des deux côtés** (`OUBLI_OKAY` : 1386 jours, encore
+70 % de la durée d'un run).
+
+> **Leçon** : une constante d'oubli ne se lit pas en « pour mille par jour », elle se
+> lit en **DEMI-VIE** — et la demi-vie doit être comparable à l'échelle de temps du
+> vécu. C'est un cas de plus du fil « une échelle absolue posée a priori, jamais
+> confrontée à une mesure » (cf. `SEUIL_CRISTAL`, `q_ref = 1.0`).
+
+### 8.2 Le résultat le plus troublant
+
+**g22 est le meilleur partout** — 880 victoires, JEPA à 0,0026 (4× meilleur que g33),
+accord C1/C2 à **100 %** — et il est bloqué au **niveau 1/15 à 10 % de maîtrise**,
+comme les deux autres.
+
+Un agent qui prédit son monde presque parfaitement, dont les deux têtes s'accordent sur
+100 % des ticks, et qui gagne tous les 2 jours, ne progresse **pas d'un seul palier en
+2000 jours**. La compétence est là ; c'est sa **conversion en progression** qui est
+cassée.
+
+### 8.3 Zéro tick de repos — la contrainte imprévue
+
+`ticks en zone critique : 400/400` sur **les trois graines**. L'agent n'a **aucun tick
+de repos** dont dériver une flottaison. C'est ce qui a imposé de la dériver de la
+**médiane du jour** plutôt que d'un état de repos observé.
+
+---
+
+## 9. Résultat de la v41 — run test 300 jours (graine 11)
+
+| Critère fixé | Cible | Résultat |
+|---|---|---|
+| 1. `danger` ne sature plus les jours de victoire | — | ✅ 245,6 vs `okay` 211,5 |
+| 2. `okay` décolle proportionnellement | — | ✅ **0 → 211,50** |
+| 3. `force` en zone utile | 0,20–0,40 | ✅ **0,462** |
+| 4. `envie` s'anime | > 0,30 | ✅ **1,0000** |
+
+| | V40 (2000 j) | **V41 (300 j)** |
+|---|---|---|
+| `vecu_okay` | 0,04 | **211,50** |
+| **force planif.** | 0,000 | **0,462** |
+| **envie** | 0,0000 💀 | **1,0000** 🔥 |
+| C2 | 0,000 | **1,425** |
+| ratio C1/C2 | 0,00× | **1,41×** |
+| erreur JEPA | 0,0116 | **0,0035** |
+
+**C2 mort 1 nuit sur 300** (contre 2000/2000 en V40). Le rapport de force s'est
+**inversé** — C2 (1,425) parle plus fort que C1 (1,010) — et se stabilise dès le jour
+~30 (ratio 0,96×–1,32× sur tout le run).
+
+### 9.1 ⚠️ Ce que ce run ne démontre PAS
+
+**Niveau 1/15, maîtrise 0 %, 54 victoires en 300 jours** — intervalle de 5 jours, contre
+**3 jours** en V40 avec C2 éteint.
+
+La v41 a rendu C2 **vivant et audible**. Elle n'a **pas** montré qu'il **sert**. Sur
+300 jours c'est trop court pour trancher : à lire comme « pas encore de bénéfice
+mesurable sur la tâche », **jamais** comme « C2 nuit ». Un run 2000 j × 3 graines,
+directement comparable à §8, est en cours.
+
+### 9.2 Une projection démentie — note de méthode
+
+La projection annonçait une envie stabilisée à **0,11–0,20**, donc **sous** le critère 4.
+Mesure : **1,0000**.
+
+L'erreur venait d'une hypothèse `lucidité ≈ 0,99`. Elle vaut **0,574** : la lucidité est
+le produit `compréhension_C2 × expérience_C1`, et C1 s'étant affaibli *relativement*
+(gain ×1,01), le second terme reste bas. L'érosion (`0,02 × 0,574 = 0,0115`) est donc
+battue par l'apport (`0,03 × 0,462 = 0,0139`).
+
+> **La foi n'avait pas besoin d'atteindre 0,66 — il suffisait que la lucidité reste
+> modérée.** Une projection à un seul paramètre libre, sur une mécanique où deux
+> grandeurs bougent ensemble, n'est pas une prédiction : c'est une intuition chiffrée.
+
+---
+
+## 10. Ce qui reste ouvert
+
+| # | Sujet | État |
+|---|---|---|
+| **C3** | Renaissance nocturne | **proposé, non implémenté** (§2) |
+| **P-lucidité** | Le rapport `POIDS_LUCIDITE`/`POIDS_FOI` | jamais confronté à une mesure de la force atteignable — candidat suivant |
+| **Palier** | C2 réveillé permet-il de franchir le niveau 1 ? | run 2000 j × 3 graines en cours |
+
+---
+
+*Document créé le 14 août 2026 pendant les runs V40 ; mis à jour après livraison.*
+*Mesures §1 : `/private/tmp/v40_g11.log` (j348) · §8 : les 3 logs V40 à 2000 j ·*
+*§9 : `/private/tmp/v41_g11.log`.*

@@ -4,6 +4,114 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.0-experimental] - 2026-08-14 — La ligne de flottaison métabolique
+
+### « Le zéro n'est pas 0.0, c'est le coût incompressible d'un organisme vivant »
+
+| Type | Details |
+|------|---------|
+| **Commit** | `04080c4` |
+| **Catégorie** | fix critique |
+| **Impact** | Critique — C2 passe de mort (2000 nuits/2000) à dominant (ratio 1,41×) |
+| **Branche** | `feat/v41-ligne-flottaison` |
+| **Chantier** | [CORRECTIFS_v41_ligne_de_flottaison.md](../ameliorations/CORRECTIFS_v41_ligne_de_flottaison.md) |
+
+**Le vécu se compte en SAILLANCES au-dessus du coût d'exister, plus en moyenne.**
+
+### Le défaut — mesuré, pas supposé
+
+Benchmark « C1 pur » (3 graines × 2000 jours). Journée type de g11, reconstituée
+depuis les logs :
+
+| Terme | Valeur |
+|---|---|
+| `r_bio` cumulé sur 400 ticks | −2,30 |
+| victoires (0,46/jour × 1,0) | +0,46 |
+| **somme de la journée** | **−1,84** |
+| ÷ 400 ticks | −0,004593 |
+| ÷ référence de choc (0,208) | −0,0221 |
+| → apport **OKAY** | **0,0000** ← un jour AVEC victoire |
+| → apport **DANGER** | 0,0221 |
+
+Le modèle prédisait `f = 0,0028` ; le run affichait **0,003**. Reproduction au
+millième — la cause était établie sans ambiguïté.
+
+> « En moyennant 399 ticks d'effort continu avec 1 tick de victoire, on forçait
+> l'algorithme à conclure que **vivre est une punition**. »
+
+`r_bio` est une **dérivée de déficit** (`deficit_avant − deficit_apres`), donc
+structurellement négative dès que les jauges dérivent vers zéro. Sans zéro de
+référence, exister coûte — donc exister est un danger.
+
+### Pourquoi corriger l'opérateur seul ne suffisait pas
+
+Mesuré **avant** implémentation : sommer sans flottaison est *pire* que moyenner.
+
+| opérateur | okay (avec victoire) | danger | okay (sans victoire) |
+|---|---|---|---|
+| moyenne (v40) | 0,0000 | 0,0146 | 0,0000 |
+| somme nue | 1,0000 | 1,0000 | **0,2503** ← inutilisable |
+| somme au-dessus flottaison | 1,0000 | ~1,0 | **0,0209** |
+
+La saturation venait du **NOMBRE** (198 ticks négatifs contre 1 victoire), pas de
+l'intensité. Les correctifs C1 et C2 du chantier ne sont donc **pas dissociables** —
+arbitrage utilisateur, option B.
+
+### Ce qui est livré
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `nourrir_vecu_journee` : somme des saillances au-dessus de la flottaison ; flottaison dérivée à cliquet ; demi-vies d'oubli recalibrées |
+| `src/naulthene/cerveau/persistance.py` | `flottaison_metabolique` sérialisée (`None` traverse tel quel) |
+
+1. **Flottaison DÉRIVÉE, jamais posée** — médiane des `|r|` du jour, mesurée stable à
+   **0,00574 ± 0,00026** sur 200 jours (amplitude 23 %). Médiane et non moyenne : la
+   moyenne serait tirée par la victoire elle-même (+1,0 pèse autant que 176 ticks
+   ordinaires) — même raison que le 3ᵉ quartile de `echelle_myeline` (v37.0).
+2. **Cliquet de flottaison** — montée 2 %/nuit, descente 50× plus lente. Sans lui une
+   famine prolongée ferait *descendre* la ligne vers la famine, normalisant l'agonie
+   comme état ordinaire : le défaut de `norme_naissance` à l'identique.
+3. **Demi-vies d'oubli recalibrées.** `OUBLI_DANGER = 0,99990` avait une demi-vie de
+   **6931 jours** : sur un run de 2000 jours l'oubli n'existait pas, d'où la croissance
+   **linéaire** observée (pente encore +0,096/j au jour 1800). Le cliquet n'était pas
+   asymétrique, il était **inopérant des deux côtés**. Désormais en demi-vies
+   explicites : 300 j / 500 j (asymétrie ×1,7).
+
+### Résultat — run test 300 jours, graine 11
+
+| | V40 (2000 j) | **V41 (300 j)** |
+|---|---|---|
+| `vecu_okay` | 0,04 | **211,50** |
+| `vecu_danger` | 186,02 | 245,61 |
+| **force planif.** | 0,000 | **0,462** |
+| **envie** | 0,0000 💀 | **1,0000** 🔥 |
+| C2 | 0,000 | **1,425** |
+| ratio C1/C2 | 0,00× | **1,41×** |
+| erreur JEPA | 0,0116 | **0,0035** |
+
+**C2 est mort 1 nuit sur 300** — contre 2000 sur 2000 en V40. Le rapport de force
+s'est même inversé : C2 parle désormais plus fort que C1, et ça se stabilise dès le
+jour ~30 (ratio 0,96×–1,32× sur tout le run).
+
+### ⚠️ Ce que ce run ne démontre PAS
+
+**Niveau 1/15, maîtrise 0 %, 54 victoires en 300 jours** (intervalle 5 j, contre 3 j
+en V40). La v41 a rendu C2 **vivant et audible** ; elle n'a **pas encore montré qu'il
+sert**. Un run 2000 jours × 3 graines, directement comparable à l'étalon « C1 pur »,
+est en cours pour trancher.
+
+### Note de méthode — une projection démentie
+
+La projection annonçait une envie stabilisée à **0,11–0,20**, donc sous le critère
+fixé (> 0,30). Mesure : **1,0000**. L'erreur venait d'une hypothèse `lucidité ≈ 0,99`
+alors qu'elle vaut **0,574** — la lucidité est le produit `compréhension_C2 ×
+expérience_C1`, et C1 s'étant affaibli relativement, le second terme reste bas.
+L'érosion (`0,02 × 0,574 = 0,0115`) est donc battue par l'apport (`0,03 × 0,462 =
+0,0139`). *La foi n'avait pas besoin d'atteindre 0,66 : il suffisait que la lucidité
+reste modérée.*
+
+---
+
 ## [v40.1-fix3/fix4-experimental] - 2026-08-14 — La chasse aux branches
 
 ### « Rien en dur et pas de If / Else — sauf si c'est lié à la mesure »
