@@ -704,55 +704,33 @@ class AGI_Naulthene(nn.Module):
         distillation sélective. Aucun seuil : le crédit est continu et borné à ±1.
         """
         valeurs = [float(r) for r in (recompenses or ())]
-        if not valeurs:
-            # Une journée sans le moindre retour n'apprend rien — mais l'oubli, lui,
-            # continue de courir : c'est ce qui permet à un monde durablement muet de
-            # recalibrer l'agent.
-            self.vecu_okay *= OUBLI_OKAY
-            self.vecu_danger *= OUBLI_DANGER
-            return
 
-        moyenne = sum(valeurs) / len(valeurs)
+        # L'oubli court TOUJOURS, y compris une journée sans le moindre retour : c'est ce
+        # qui permet à un monde durablement muet de recalibrer l'agent. Écrit avant tout
+        # apport, donc sans avoir à distinguer les deux cas.
+        self.vecu_okay *= OUBLI_OKAY
+        self.vecu_danger *= OUBLI_DANGER
+
+        # `max(len, 1)` plutôt qu'un `if` de garde : une journée vide donne une moyenne
+        # nulle, donc un bilan nul, donc un apport nul des deux côtés. Le cas dégénéré est
+        # absorbé par l'arithmétique au lieu d'être intercepté par une branche.
+        moyenne = sum(valeurs) / max(len(valeurs), 1)
+
         # L'échelle qui juge « fort » ou « faible » est celle de l'agent lui-même, jamais
         # une constante : même principe que `reference_choc_dopamine` (v37.1), dont on
         # réutilise directement la valeur quand elle existe.
         echelle = max(self.reference_choc_dopamine or 0.0, 1e-3)
         bilan = max(-1.0, min(1.0, moyenne / echelle))
 
-        self.vecu_okay *= OUBLI_OKAY
-        self.vecu_danger *= OUBLI_DANGER
-        if bilan >= 0.0:
-            self.vecu_okay += bilan
-        else:
-            self.vecu_danger += -bilan
-
-    def nourrir_vecu(self, chocs):
-        """v40.0 — accumule le vécu à partir des récompenses internes RÉELLEMENT ressenties.
-
-        Appelée une fois par nuit. Une récompense positive nourrit OKAY, une négative
-        nourrit DANGER — en valeur absolue, l'intensité comptant autant que le signe.
-
-        ⚠️ Attend `recompenses_journee` (SIGNÉE), surtout pas `chocs_dopamine_journee`.
-        Première implémentation branchée par erreur sur cette dernière : `poids_evenement`
-        est une INTENSITÉ, toujours positive — la distillation v37.1 ne s'intéresse qu'à
-        « à quel point c'était marquant », jamais à « était-ce bon ou mauvais ». Résultat
-        mesuré sur 10 jours : `danger` restait à 0,00 exact et f saturait à 0,97, l'agent
-        devenant incapable de jamais enregistrer un échec. Le DANGER de la formulation
-        utilisateur exige une grandeur qui peut être négative.
-
-        Le CLIQUET (v37.1-fix1, même principe que `reference_choc_dopamine`) : les deux
-        réservoirs s'oublient, mais le DANGER ~5× plus lentement que l'OKAY. Sans cette
-        asymétrie, une bonne série effacerait la mémoire d'un danger réel, et l'agent
-        redeviendrait imprudent exactement là où il s'était déjà brûlé.
-        """
-        self.vecu_okay *= OUBLI_OKAY
-        self.vecu_danger *= OUBLI_DANGER
-        for choc in (chocs or ()):
-            c = float(choc)
-            if c >= 0.0:
-                self.vecu_okay += c
-            else:
-                self.vecu_danger += -c
+        # LE TRI DU SIGNE SANS BRANCHE. `if bilan >= 0` bifurquait sur le signe ; ici les
+        # deux parts sont calculées arithmétiquement et l'une des deux vaut exactement 0.
+        # C'est la partie positive et la partie négative d'un réel :
+        #     part⁺ = (|x| + x)/2      part⁻ = (|x| − x)/2
+        # Strictement équivalent, mais sans point de bascule dans le code — et surtout, les
+        # DEUX réservoirs sont toujours touchés, ce qui reflète mieux le principe « l'un
+        # n'empêche pas l'autre » : ils coexistent, ils ne s'excluent pas.
+        self.vecu_okay += (abs(bilan) + bilan) / 2.0
+        self.vecu_danger += (abs(bilan) - bilan) / 2.0
 
     def _reset_optimizer(self):
         params = [p for p in self.parameters() if p.requires_grad]
@@ -6008,10 +5986,15 @@ def executer_nuit(etat, plafond_reve=None):
     erreur_moyenne = etat.erreur_journee / ticks_du_jour
 
     # --- Plasticité calculée AVANT le rêve et AVANT le ressort nocturne ---
-    if etat.teneur_dopamine >= DOPAMINE_NEUTRE:
-        etat.plasticite_base = 1.0
-    else:
-        etat.plasticite_base = max(0.0, (etat.teneur_dopamine - DOPAMINE_MIN) / (DOPAMINE_NEUTRE - DOPAMINE_MIN))
+    #
+    # v40.1-style — écrit comme un CLIP, plus comme un `if`. L'ancienne forme
+    # (`if teneur >= NEUTRE: 1.0 else: rampe`) donnait exactement le même résultat —
+    # vérifié : écart maximal 0.000000000000 sur 10 001 points couvrant tout le domaine
+    # [DOPAMINE_MIN, DOPAMINE_MAX]. Ce n'était donc pas une décision, seulement une
+    # saturation déguisée en branche, et le `if` laissait croire à deux régimes
+    # cognitifs là où il n'y a qu'une rampe bornée.
+    etat.plasticite_base = max(0.0, min(1.0, (etat.teneur_dopamine - DOPAMINE_MIN)
+                                             / (DOPAMINE_NEUTRE - DOPAMINE_MIN)))
 
     perte_jour = etat.agent.apprendre_journee(
         etat.jepa_losses, etat.log_probs_journee, etat.entropies_journee,
