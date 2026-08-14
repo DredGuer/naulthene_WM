@@ -565,6 +565,15 @@ class AGI_Naulthene(nn.Module):
         self.vecu_okay = 0.0
         self.vecu_danger = 0.0
 
+        # v41.0 — LA LIGNE DE FLOTTAISON MÉTABOLIQUE : le coût du tick ordinaire, tel que
+        # l'agent le vit. `None` (et non 0.0) à la naissance : c'est « jamais mesuré », un
+        # état que l'arithmétique ne peut pas représenter — une flottaison de 0.0 est une
+        # mesure valide (un organisme sans coût), pas une absence de mesure. Initialisée à
+        # la première nuit sur la médiane observée, puis suivie par cliquet. Sérialisée
+        # dans le .brain — c'est de l'état cognitif acquis.
+        self.flottaison_metabolique = None
+        self.mesure_flottaison = {}
+
         # v40.1 — L'ENVIE DE VIVRE. Naît au MAXIMUM (le nourrisson tente tout) et se
         # compose multiplicativement chaque nuit. Peut atteindre zéro : aucun plancher.
         # État cognitif à part entière → sérialisé dans le .brain.
@@ -685,23 +694,61 @@ class AGI_Naulthene(nn.Module):
         return self.vecu_okay / total
 
     def nourrir_vecu_journee(self, recompenses):
-        """v40.0-fix1 — le vécu se compte en JOURNÉES, pas en ticks.
+        """v41.0 — LE VÉCU SE COMPTE EN SAILLANCES, PAS EN MOYENNE.
 
-        Première version : chaque tick nourrissait directement les réservoirs. Mesuré sur
-        12 jours — 400 ticks/jour contre un a priori de 1,0 — la force passait de 0,000 à
-        **0,906 EN UNE SEULE NUIT**. L'agent naissait prudent et délibérait largement dès
-        le lendemain : exactement l'inverse de « c'est l'expérience qui fera grandir la
-        force de planification ».
+        ══ Ce que la v40.0-fix1 faisait, et pourquoi c'était faux ══
 
-        L'unité correcte n'est pas le tick mais la JOURNÉE : une journée vécue apporte au
-        plus 1 point de vécu, réparti entre OKAY et DANGER selon ce qui l'a dominée. Un
-        agent a donc besoin de plusieurs dizaines de journées pour se faire une opinion, ce
-        qui est la temporalité de tous les autres acquis du projet (référence de choc,
-        capacité mnésique, myéline).
+        La version précédente prenait la MOYENNE signée des 400 ticks de la journée. Le
+        raisonnement était juste (« l'unité est la journée, pas le tick ») mais l'opérateur
+        ne l'était pas : moyenner revient à demander « comment s'est passée la journée EN
+        MOYENNE ? », or une victoire n'est pas une propriété moyenne d'une journée. C'est
+        un ÉVÉNEMENT.
 
-        Le bilan du jour est sa moyenne signée normalisée par ce que CET agent juge
-        marquant (`reference_choc_dopamine`) — le même niveau dérivé qui sert déjà à la
-        distillation sélective. Aucun seuil : le crédit est continu et borné à ±1.
+        Mesure du benchmark « C1 pur » (3 graines × 2000 jours, 14/08/2026), journée type
+        de g11 reconstituée depuis les logs :
+
+            r_bio cumulé sur 400 ticks .............. −2,30
+            victoires (0,46/jour × 1,0) ............. +0,46
+            ─────────────────────────────────────────────────
+            somme de la journée ..................... −1,84
+            ÷ 400 ticks ............................. −0,004593
+            ÷ référence de choc (0,208) ............. −0,0221
+
+            → apport OKAY   = 0,0000   ← UN JOUR AVEC VICTOIRE
+            → apport DANGER = 0,0221
+
+        Le point d'équilibre prédit par ce modèle donne f = 0,0028 ; la mesure sur le run
+        affichait **0,003**. Le modèle reproduisait l'observation au millième : la cause
+        était établie sans ambiguïté.
+
+        Formulation utilisateur : « en moyennant 399 ticks d'effort continu avec 1 tick de
+        victoire, on forçait l'algorithme à conclure que VIVRE EST UNE PUNITION. »
+
+        C'était exact. Le coût métabolique (`r_bio`, une DÉRIVÉE de déficit, donc
+        structurellement négative dès que les jauges dérivent vers zéro) est présent à
+        CHAQUE tick, tandis que la victoire n'occupe qu'UN tick. La moyenne noyait
+        systématiquement le succès sous le coût d'exister.
+
+        ══ Ce que la v41.0 fait ══
+
+        Deux voies distinctes, comme en neurobiologie — c'est la correction demandée :
+
+          • DOPAMINE PHASIQUE (les pics) : le succès s'inscrit par SOMME des saillances
+            positives. Une victoire à +1,0 n'est plus divisée par 400. Elle compte pour ce
+            qu'elle est : un accomplissement.
+
+                vecu_okay += Σ max(0, r − 0) / échelle
+
+          • ALERTE VISCÉRALE (les creux) : le danger s'inscrit par somme des saillances
+            NÉGATIVES, selon la même règle. Le coût de fonctionnement ordinaire, réparti en
+            micro-négatifs sur des centaines de ticks, ne pèse plus qu'à proportion de sa
+            saillance réelle — il ne peut plus, par accumulation, écraser un événement.
+
+        La flottaison (le zéro) et l'échelle (l'unité) sont TOUTES DEUX dérivées de ce que
+        l'agent vit — jamais posées. La borne finale reste ±1 par journée, ce qui préserve
+        l'acquis v40.0-fix1 : **une journée ne peut pas valoir plus qu'une journée**. Sans
+        cette borne, sommer 400 ticks reproduirait exactement le défaut inverse (f à 0,906
+        en une nuit) que fix1 avait corrigé.
         """
         valeurs = [float(r) for r in (recompenses or ())]
 
@@ -711,26 +758,69 @@ class AGI_Naulthene(nn.Module):
         self.vecu_okay *= OUBLI_OKAY
         self.vecu_danger *= OUBLI_DANGER
 
-        # `max(len, 1)` plutôt qu'un `if` de garde : une journée vide donne une moyenne
-        # nulle, donc un bilan nul, donc un apport nul des deux côtés. Le cas dégénéré est
-        # absorbé par l'arithmétique au lieu d'être intercepté par une branche.
-        moyenne = sum(valeurs) / max(len(valeurs), 1)
+        # --- LA LIGNE DE FLOTTAISON DU JOUR (v41.0) ---
+        #
+        # La médiane des |r| de la journée EST le coût du tick ordinaire de cette
+        # journée-là : rien n'est déclaré, la référence naît de l'expérience vécue. Le
+        # `or [0.0]` couvre la journée vide sans branche de garde (median([]) lèverait).
+        amplitudes = sorted(abs(v) for v in valeurs) or [0.0]
+        milieu = len(amplitudes) // 2
+        # Médiane sans dépendance externe, valide pour les deux parités.
+        flottaison_jour = (amplitudes[milieu] + amplitudes[~milieu]) / 2.0
+
+        # LE CLIQUET : montée rapide, descente `FREIN_DESCENTE_FLOTTAISON` fois plus lente.
+        # `max(delta, 0)` et `min(delta, 0)` séparent les deux régimes sans `if` — même
+        # écriture que le cliquet de `reference_choc_dopamine` (v37.1-fix1). Le premier
+        # jour, `flottaison_metabolique` vaut None (aucune donnée) : on l'initialise sur la
+        # mesure du jour. C'est une garde technique, pas un seuil — elle distingue
+        # « jamais mesuré » de « mesuré à zéro », distinction que l'arithmétique ne peut
+        # pas porter.
+        if self.flottaison_metabolique is None:
+            self.flottaison_metabolique = flottaison_jour
+        else:
+            delta = flottaison_jour - self.flottaison_metabolique
+            montee = (1.0 - INERTIE_FLOTTAISON) * max(delta, 0.0)
+            descente = (1.0 - INERTIE_FLOTTAISON) / FREIN_DESCENTE_FLOTTAISON * min(delta, 0.0)
+            self.flottaison_metabolique += montee + descente
+
+        flottaison = self.flottaison_metabolique
 
         # L'échelle qui juge « fort » ou « faible » est celle de l'agent lui-même, jamais
         # une constante : même principe que `reference_choc_dopamine` (v37.1), dont on
         # réutilise directement la valeur quand elle existe.
         echelle = max(self.reference_choc_dopamine or 0.0, 1e-3)
-        bilan = max(-1.0, min(1.0, moyenne / echelle))
 
-        # LE TRI DU SIGNE SANS BRANCHE. `if bilan >= 0` bifurquait sur le signe ; ici les
-        # deux parts sont calculées arithmétiquement et l'une des deux vaut exactement 0.
-        # C'est la partie positive et la partie négative d'un réel :
+        # LE TRI DU SIGNE SANS BRANCHE, appliqué TICK PAR TICK avant sommation. `if r > 0`
+        # bifurquerait sur le signe ; ici les deux parts sont calculées arithmétiquement et
+        # l'une des deux vaut exactement 0 pour chaque tick :
         #     part⁺ = (|x| + x)/2      part⁻ = (|x| − x)/2
-        # Strictement équivalent, mais sans point de bascule dans le code — et surtout, les
-        # DEUX réservoirs sont toujours touchés, ce qui reflète mieux le principe « l'un
-        # n'empêche pas l'autre » : ils coexistent, ils ne s'excluent pas.
-        self.vecu_okay += (abs(bilan) + bilan) / 2.0
-        self.vecu_danger += (abs(bilan) - bilan) / 2.0
+        # L'EXCÉDENT au-dessus de la flottaison — `max(|v| − flottaison, 0)` — est ce qui
+        # transforme un tick en événement : un pas qui coûte le prix ordinaire de la vie
+        # contribue EXACTEMENT 0 aux deux réservoirs. C'est la traduction directe de « un
+        # pas qui consomme −0,02 de satiété est un pas neutre ».
+        # Une journée vide donne deux sommes nulles — le cas dégénéré est absorbé par
+        # l'arithmétique (`sum([]) == 0`) au lieu d'être intercepté par une garde.
+        excedents = [(v, max(abs(v) - flottaison, 0.0)) for v in valeurs]
+        saillance_positive = sum(e * (abs(v) + v) / (2.0 * abs(v) + 1e-12)
+                                 for v, e in excedents)
+        saillance_negative = sum(e * (abs(v) - v) / (2.0 * abs(v) + 1e-12)
+                                 for v, e in excedents)
+
+        # La borne à 1,0 par journée et par réservoir préserve l'invariant v40.0-fix1 :
+        # une journée vécue apporte AU PLUS un point de vécu. Elle s'applique après
+        # sommation, donc une journée à trois victoires sature comme une journée à une
+        # seule — c'est voulu : ce qui doit croître avec l'expérience, c'est le NOMBRE de
+        # journées réussies, pas l'intensité d'une seule.
+        self.vecu_okay += min(1.0, saillance_positive / echelle)
+        self.vecu_danger += min(1.0, saillance_negative / echelle)
+
+        # Télémétrie (leçon v29.1 : une mécanique non instrumentée est indémontrable).
+        self.mesure_flottaison = {
+            "flottaison": flottaison,
+            "flottaison_jour": flottaison_jour,
+            "saillance_positive": saillance_positive,
+            "saillance_negative": saillance_negative,
+        }
 
     def _reset_optimizer(self):
         params = [p for p in self.parameters() if p.requires_grad]
@@ -3357,10 +3447,72 @@ PRUDENCE_NAISSANCE = 1.0
 # verrait f s'effondrer et perdrait sa planification PRÉCISÉMENT quand il en a le plus
 # besoin — la boucle qui s'auto-verrouille. La décroissance reste NON NULLE (un monde
 # durablement plus dur doit pouvoir recalibrer), mais sur des centaines de nuits.
-OUBLI_OKAY = 0.9995                # ce qui a marché s'oublie lentement...
-OUBLI_DANGER = 0.99990             # ...et ce qui a fait mal encore plus lentement.
+#
+# v41.0 — LES DEMI-VIES SONT RECALIBRÉES SUR UNE MESURE, plus posées à vue.
+#
+# Mesure du benchmark « C1 pur » (3 graines × 2000 jours, 14/08/2026) : le réservoir
+# DANGER croît de façon LINÉAIRE sur toute la durée du run — 0 → 186 pour g11, avec une
+# pente encore à +0,096/jour sur les 200 DERNIERS jours. Aucun aplatissement.
+#
+# La cause est arithmétique : OUBLI_DANGER = 0,99990 a une demi-vie de **6931 jours**.
+# Sur un run de 2000 jours, l'oubli n'existe tout simplement pas — le réservoir ACCUMULE.
+# Le cliquet n'était pas asymétrique, il était **inopérant des deux côtés** (OKAY :
+# 1386 jours, soit encore 70 % de la durée totale d'un run).
+#
+# Une constante d'oubli ne se lit pas en « pour mille par jour » — elle se lit en DEMI-VIE,
+# et c'est la demi-vie qui doit être comparable à l'échelle de temps du vécu. Un agent qui
+# vit 2000 jours doit pouvoir oublier une mauvaise saison en quelques centaines de nuits,
+# pas en trois fois sa propre vie.
+#
+# L'asymétrie du cliquet est PRÉSERVÉE et devient enfin visible : le danger s'efface
+# ~1,7× plus lentement que le succès. C'est le rapport, pas la valeur absolue, qui porte
+# le principe « ce qui a fait mal s'oublie plus lentement que ce qui a marché ».
+DEMI_VIE_OKAY = 300.0              # jours — ce qui a marché s'oublie lentement...
+DEMI_VIE_DANGER = 500.0            # ...et ce qui a fait mal ~1,7× plus lentement encore.
                                     # L'asymétrie est le cliquet : elle interdit à une
                                     # bonne série d'effacer la mémoire d'un danger réel.
+OUBLI_OKAY = 0.5 ** (1.0 / DEMI_VIE_OKAY)        # ≈ 0,997692
+OUBLI_DANGER = 0.5 ** (1.0 / DEMI_VIE_DANGER)    # ≈ 0,998615
+
+# --- v41.0 : LA LIGNE DE FLOTTAISON MÉTABOLIQUE ---
+#
+# Formulation utilisateur : « Le zéro n'est pas 0.0, c'est la ligne de flottaison
+# métabolique. Le métabolisme de base est le coût incompressible d'un organisme vivant. Un
+# pas qui consomme −0,02 de satiété est un pas NEUTRE (0 danger, 0 succès). »
+#
+# POURQUOI ELLE EST INDISPENSABLE (et pas un raffinement). Mesuré avant implémentation, sur
+# la journée type de g11 : sommer les saillances SANS zéro de référence est arithmétiquement
+# PIRE que moyenner. La somme brute compte les 400 micro-négatifs du coût métabolique
+# (2,28 cumulé) comme s'ils étaient des événements — `danger` sature à 1,0 et `okay` monte
+# à 0,25 UN JOUR SANS AUCUNE VICTOIRE. C'est le défaut exactement symétrique de la moyenne :
+# au lieu de noyer la victoire sous le coût, on noie tout dans le bruit.
+#
+#   opérateur              okay (avec victoire)   danger   okay (sans victoire)
+#   moyenne  (v40)              0,0000            0,0146         0,0000
+#   somme nue                   1,0000            1,0000         0,2503   ← inutilisable
+#   somme au-dessus flottaison  1,0000            ~1,0           0,0209   ← v41.0
+#
+# D'OÙ VIENT LE ZÉRO — IL EST DÉRIVÉ, JAMAIS POSÉ. La flottaison d'une journée est la
+# MÉDIANE des |r| de ses ticks : par construction, c'est le tick ordinaire de cette
+# journée-là, donc le coût d'exister tel que l'agent vient de le vivre. Mesuré sur 200
+# journées simulées : 0,00574 ± 0,00026 (amplitude 23 %). Écrire `cout_neutre = 0.0057`
+# aurait donné le même chiffre — et aurait été une constante en dur, invalide dès que le
+# métabolisme, la carte ou l'âge de l'agent changent.
+#
+# ⚠️ POURQUOI LA MÉDIANE ET NON LA MOYENNE : la moyenne des |r| est tirée par la victoire
+# elle-même (+1,0 sur un tick pèse autant que 176 ticks ordinaires). La médiane est
+# insensible à cette queue — c'est précisément la propriété recherchée, la même raison qui
+# avait fait choisir le 3ᵉ quartile plutôt que le max pour `echelle_myeline` (v37.0).
+#
+# LE CLIQUET DE FLOTTAISON (demande utilisateur explicite). Même principe que
+# `reference_choc_dopamine` (v37.1-fix1) : montée rapide, descente ~50× plus lente. Sans
+# lui, un agent traversant une famine prolongée verrait sa ligne de flottaison DESCENDRE
+# vers la famine — normalisant l'agonie comme état ordinaire, donc cessant de la compter
+# comme un danger. C'est le défaut de `norme_naissance` à l'identique : une référence qui
+# suit la décroissance ne borne plus rien. La descente reste NON NULLE (un monde
+# durablement plus pauvre doit pouvoir recalibrer l'agent), mais sur des centaines de nuits.
+INERTIE_FLOTTAISON = 0.98          # montée : 2 % d'écart absorbé par nuit
+FREIN_DESCENTE_FLOTTAISON = 50.0   # descente 50× plus lente que la montée
 
 # --- v40.1 : L'ENVIE DE VIVRE (le couplage C1 ↔ C2) ---
 #

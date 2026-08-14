@@ -237,6 +237,12 @@ class PersistanceAnatomique:
             'vecu_okay': getattr(etat.agent, 'vecu_okay', 0.0),
             'vecu_danger': getattr(etat.agent, 'vecu_danger', 0.0),
 
+            # v41.0 — la ligne de flottaison métabolique (le coût du tick ordinaire).
+            # `None` est une valeur LÉGITIME ici : « jamais mesuré », distinct de « mesuré
+            # à zéro ». Un cerveau v40 rechargé par un binaire v41 repart donc à None et
+            # se recalibre dès sa première nuit, sans greffe ni erreur.
+            'flottaison_metabolique': getattr(etat.agent, 'flottaison_metabolique', None),
+
             # v40.1 — l'envie de vivre. Le plus fragile des acquis : elle peut atteindre
             # zéro et ne jamais remonter. La perdre au rechargement effacerait précisément
             # ce que la mécanique cherche à mesurer (un agent éteint renaîtrait plein
@@ -494,6 +500,12 @@ class PersistanceAnatomique:
         # portait auparavant (0.5 ou 0.85) n'avait elle-même jamais été mesurée.
         agent.vecu_okay = float(checkpoint.get('vecu_okay', 0.0))
         agent.vecu_danger = float(checkpoint.get('vecu_danger', 0.0))
+        # v41.0 — la flottaison. `None` traverse la sérialisation tel quel (torch.save
+        # gère les None) ; le `float(...)` n'est appliqué QUE si la valeur existe, sinon
+        # `float(None)` lèverait. Un .brain v40 repart donc à None — « jamais mesuré » —
+        # et se recalibre à sa première nuit.
+        _flottaison = checkpoint.get('flottaison_metabolique', None)
+        agent.flottaison_metabolique = None if _flottaison is None else float(_flottaison)
         # v40.1 — défaut 1.0 (l'envie de naissance) : un .brain antérieur n'a jamais eu
         # l'occasion de perdre la foi, donc il repart entier. C'est le seul défaut
         # défendable — 0.0 condamnerait d'emblée tout cerveau existant.
