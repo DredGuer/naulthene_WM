@@ -68,6 +68,22 @@ TAILLES = [5, 6, 8, 10, 12, 16]
 # sur trois paliers. Le socle domine, l'exploration existe, l'exceptionnel reste possible.
 POIDS_GAUSSIENNE = (0.75, 0.20, 0.05)
 
+# --- ⚠️ LA QUEUE GAUCHE — corrigée le 14/08 après mesure ---
+#
+# La première version ne tirait que vers l'AVANT (`sommet`, `sommet+1`, `sommet+2`).
+# C'était un contresens : la propriété centrale demandée par l'utilisateur —
+#
+#     « avancer et revenir 100 ou 1000 fois dessus »
+#     « puis 3×3 deux fois, comme ça aléatoirement »
+#
+# — n'existait tout simplement pas. Mesuré sur les runs de nuit : après le déplacement du
+# sommet, le palier acquis a été rejoué **1 fois en ~900 jours**. Sa maîtrise affichée
+# (80 %) était donc une relique gelée, plus une mesure vivante.
+#
+# La courbe s'étend désormais des DEUX côtés. Le poids du retour en arrière est plus
+# faible que celui de l'exploration : on révise, on ne régresse pas.
+POIDS_RETOUR = 0.15      # probabilité de rejouer le palier précédemment acquis
+
 # Le socle est « acquis » à 80 % de réussite — le sommet se déplace alors d'un cran.
 # ⚠️ C'est un NIVEAU mesuré sur ce que l'agent a vécu, pas une constante de décision :
 # rien ne dit « si taux > 0.8 alors fais X », on déplace seulement le centre de la courbe.
@@ -177,6 +193,12 @@ class Gaussienne:
     def tirer_palier(self):
         """Tire le palier du prochain épisode selon la courbe centrée sur `sommet`."""
         candidats, poids = [], []
+        # La queue GAUCHE : réviser un palier déjà acquis. Sans elle, la maîtrise du
+        # socle cesse d'être mesurée dès que le sommet avance (mesuré : rejoué 1 fois
+        # en 900 jours), et « revenir en arrière » n'existe pas.
+        if self.sommet > 0:
+            candidats.append(self.sommet - 1)
+            poids.append(POIDS_RETOUR)
         for decalage, p in enumerate(POIDS_GAUSSIENNE):
             palier = self.sommet + decalage
             if palier < self.n:
