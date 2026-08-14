@@ -3810,6 +3810,41 @@ FENETRE_PROMOTION = 20      # nombre d'épisodes observés (borne, pas une cible
 TAUX_PROMOTION = 0.60       # 60 % de réussite sur la fenêtre ⇒ compétence installée
 MIN_EPISODES_PROMOTION = 10  # sous ce nombre, le taux n'est pas encore significatif
 
+# --- v40.2 : LA MATURITÉ — la promotion cesse d'être scolaire ---
+#
+# Formulation utilisateur : « L'idée de promotion devrait être différente, car c'est une
+# méthode très scolaire qui ne qualifie pas directement les capacités d'un élève/agent. »
+#
+# CE QUI CLOCHAIT. Deux portes en OU, toutes deux binaires : 2 victoires CONSÉCUTIVES, ou
+# 60 % sur 20 épisodes. La première est un examen qu'on passe par chance — et la campagne
+# P17 l'a mesuré noir sur blanc : un agent monté au palier 5/6 avec **4 victoires au
+# total**, dont plus aucune depuis 1368 jours, contre un agent resté à 1/6 avec **205
+# victoires**. Le niveau enregistrait le plus haut palier jamais EFFLEURÉ, pas ce que
+# l'agent savait faire.
+#
+# CE QUI LA REMPLACE. Une grandeur continue dans [0, 1] — la MATURITÉ — produit de trois
+# facteurs qui doivent TOUS être présents. Un produit, jamais une somme : une somme
+# laisserait un facteur fort compenser un facteur nul, et c'est exactement ce que faisait
+# le OU logique.
+#
+#   maturité = régularité × consolidation × autonomie
+#
+#   RÉGULARITÉ    le taux de réussite observé. « Sait-il faire ? »
+#   CONSOLIDATION combien de fois il l'a montré, rapporté à la fenêtre. « Est-ce installé
+#                 ou est-ce un coup de chance ? » — c'est ce facteur qui tue l'examen : un
+#                 agent à 2 victoires sur 2 a une régularité de 1,0 mais une consolidation
+#                 de 0,1, donc une maturité de 0,1. Il ne passe pas.
+#   AUTONOMIE     1 − guidage. « Y arrive-t-il SANS béquille ? » Un agent qui ne réussit
+#                 que sous perfusion de récompense continue n'a rien démontré ; le sevrage
+#                 (v35.1) fait déjà décroître ce guidage avec la maîtrise, donc l'autonomie
+#                 monte toute seule quand la compétence s'installe. Aucun terme nouveau.
+#
+# LA PROMOTION RESTE UN ÉVÉNEMENT DISCRET — on change de carte ou non, il n'existe pas de
+# demi-promotion — mais elle est désormais déclenchée par le franchissement d'une grandeur
+# CONTINUE que l'agent construit, au lieu d'un compteur d'examens réussis.
+# Le SEUIL_MATURITE est DÉRIVÉ des constantes de sevrage, définies plus bas dans ce
+# fichier (§ guidage dégressif) — voir `SEUIL_MATURITE` juste après elles.
+
 # --- LE GUIDAGE DÉGRESSIF (v35.1) : « plus il comprend, moins on l'aide » ---
 #
 # Décision utilisateur, formulée ainsi : *« à chaque victoire, jusqu'à 85-100 % de réussite,
@@ -3839,6 +3874,25 @@ MIN_EPISODES_PROMOTION = 10  # sous ce nombre, le taux n'est pas encore signific
 # expert — lui couper l'aide faute de données serait exactement l'erreur du Mode Libre.
 SEUIL_DEBUT_SEVRAGE = 0.60   # borne basse : en dessous, aide maximale
 SEUIL_FIN_SEVRAGE = 0.90     # borne haute : au-dessus, plus aucune aide
+
+# --- v40.2 : LE SEUIL DE MATURITÉ, DÉRIVÉ (voir `_maturite_niveau`) ---
+#
+# Il n'est PAS posé. Il vaut la maturité d'un agent placé exactement à MI-COURSE du
+# sevrage : il réussit `_TAUX_MI_SEVRAGE` du temps ET on lui a déjà retiré la moitié de son
+# aide, et il continue de réussir sans elle.
+#
+# Pourquoi mi-course et pas le taux de promotion (0.60) : à 0.60 le sevrage n'a pas encore
+# commencé (SEUIL_DEBUT_SEVRAGE = 0.60), donc l'autonomie y est nulle par construction et
+# la maturité aussi. Le premier point où les trois facteurs sont simultanément non nuls est
+# le milieu de la rampe — c'est une propriété de la courbe de sevrage, pas un choix.
+_TAUX_MI_SEVRAGE = (SEUIL_DEBUT_SEVRAGE + SEUIL_FIN_SEVRAGE) / 2.0
+_AUTONOMIE_MI_SEVRAGE = ((_TAUX_MI_SEVRAGE - SEUIL_DEBUT_SEVRAGE)
+                         / (SEUIL_FIN_SEVRAGE - SEUIL_DEBUT_SEVRAGE))
+SEUIL_MATURITE = _TAUX_MI_SEVRAGE * _AUTONOMIE_MI_SEVRAGE
+                            # ≈ 0,375 — BORNE, jamais une cible. Elle ne fixe aucun
+                            # comportement : elle dit « à ce point, rester est du
+                            # surplace ». Les grandeurs dont elle dérive préexistent
+                            # toutes.
 
 # --- LE FILET DE SÉCURITÉ (v35.1) : « quand il bloque, on l'aide un peu » ---
 #
@@ -4619,6 +4673,46 @@ def _taux_maitrise_niveau(etat):
     if len(h) < MIN_EPISODES_PROMOTION:
         return None
     return sum(h) / len(h)
+
+
+def _maturite_niveau(etat):
+    """v40.2 — LA MATURITÉ sur le niveau courant, dans [0, 1]. Continue, jamais binaire.
+
+    Remplace les deux portes scolaires (2 victoires consécutives OU 60 % sur 20 épisodes)
+    par le produit de trois facteurs qui doivent TOUS être présents :
+
+        maturité = régularité × consolidation × autonomie
+
+    Le PRODUIT est le point essentiel. Une somme laisserait un facteur fort compenser un
+    facteur nul — c'est précisément ce que faisait le `OU` logique, et ce qui a permis à un
+    agent de monter au palier 5/6 avec 4 victoires au total (campagne P17). Ici, un seul
+    facteur à zéro annule tout : savoir faire ne suffit pas s'il ne l'a montré qu'une fois,
+    et l'avoir montré souvent ne suffit pas s'il était guidé.
+
+    Aucune donnée nouvelle n'est collectée : les trois facteurs sortent de grandeurs déjà
+    mesurées (`historique_episodes_niveau`, `facteur_guidage_jour`).
+    """
+    h = etat.historique_episodes_niveau
+    # « Pas encore mesurable » reste distinct de « mesuré à zéro » (même invariant que
+    # `_taux_maitrise_niveau`) : sans historique, aucune maturité ne peut être affirmée.
+    if not h:
+        return 0.0
+
+    # 1. RÉGULARITÉ — sait-il faire ?
+    regularite = sum(h) / len(h)
+
+    # 2. CONSOLIDATION — l'a-t-il montré assez souvent pour que ce ne soit pas la chance ?
+    #    Rapportée à la fenêtre : il faut avoir REMPLI la fenêtre d'observations pour
+    #    qu'une réussite pèse son poids plein. C'est ce facteur qui tue l'examen.
+    consolidation = min(1.0, len(h) / FENETRE_PROMOTION)
+
+    # 3. AUTONOMIE — y arrive-t-il sans béquille ? Le guidage décroît déjà avec la maîtrise
+    #    (sevrage v35.1), donc l'autonomie monte d'elle-même quand la compétence s'installe.
+    #    `min(guidage, 1)` neutralise le filet (> 1), qui n'est pas une aide « en plus »
+    #    mais une compensation de stagnation : la compter comme telle punirait deux fois.
+    autonomie = 1.0 - max(0.0, min(1.0, getattr(etat, "facteur_guidage_jour", 1.0)))
+
+    return regularite * consolidation * autonomie
 
 
 def _compter_ressources_grille(etat) -> int:
@@ -5989,15 +6083,26 @@ def executer_nuit(etat, plafond_reve=None):
     #
     # Les deux coexistent pour qu'aucun cerveau existant ne régresse en vitesse de
     # promotion : le taux ne fait qu'AJOUTER une seconde porte, jamais fermer la première.
+    # v40.2 — LA MATURITÉ REMPLACE LES DEUX PORTES SCOLAIRES.
+    #
+    # `promu_par_serie` (2 victoires consécutives) et `promu_par_taux` (60 % sur 20) ont
+    # disparu : c'étaient deux examens, et un examen se passe par chance. Mesuré en P17 :
+    # palier 5/6 atteint avec 4 victoires au total. La promotion suit désormais une
+    # grandeur CONTINUE que l'agent construit — voir `_maturite_niveau`.
+    #
+    # L'ÉVÉNEMENT reste discret (on change de carte ou non), mais son déclencheur ne l'est
+    # plus : c'est le franchissement d'un continuum, pas la réussite d'un test.
     taux_niveau = _taux_maitrise_niveau(etat)
-    promu_par_serie = etat.victoires_consecutives >= VICTOIRES_REQUISES
-    promu_par_taux = taux_niveau is not None and taux_niveau >= TAUX_PROMOTION
+    maturite = _maturite_niveau(etat)
+    etat.maturite_niveau_jour = maturite   # télémétrie (voir bilan de nuit et W&B)
 
-    if promu_par_serie or promu_par_taux:
+    if maturite >= SEUIL_MATURITE:
         if etat.niveau_actuel < len(PROGRAMME) - 1:
             # Motif calculé AVANT de vider l'historique, sinon il afficherait 0 épisode.
-            motif = ("série de victoires" if promu_par_serie
-                     else f"maîtrise {taux_niveau:.0%} sur {len(etat.historique_episodes_niveau)} épisodes")
+            motif = (f"maturité {maturite:.0%} "
+                     f"(régularité {(sum(etat.historique_episodes_niveau) / max(len(etat.historique_episodes_niveau), 1)):.0%}"
+                     f" × {len(etat.historique_episodes_niveau)} épisodes"
+                     f" × autonomie {(1.0 - min(1.0, getattr(etat, 'facteur_guidage_jour', 1.0))):.0%})")
             etat.niveau_actuel += 1
             etat.victoires_consecutives = 0
             # Vider l'historique est OBLIGATOIRE : un taux hérité d'un niveau plus facile
@@ -6375,9 +6480,17 @@ def executer_nuit(etat, plafond_reve=None):
         _aide = f"📉 sevrage {_g:.0%}"
     else:
         _aide = "🤝 aide pleine"
+    # v40.2 — la MATURITÉ remplace « série x/2 » : on ne compte plus des examens réussis,
+    # on affiche les trois facteurs dont le produit décide de la promotion.
+    _h = etat.historique_episodes_niveau
+    _mat = getattr(etat, "maturite_niveau_jour", 0.0)
+    _reg = sum(_h) / max(len(_h), 1)
+    _cons = min(1.0, len(_h) / FENETRE_PROMOTION)
+    _auto = 1.0 - max(0.0, min(1.0, etat.facteur_guidage_jour))
     print(f"  ├─ Cursus         : 🎓 Niveau {etat.niveau_actuel + 1}/{len(PROGRAMME)} — "
-          f"maîtrise {_txt}, seuil {TAUX_PROMOTION:.0%} | "
-          f"série {etat.victoires_consecutives}/{VICTOIRES_REQUISES} | {_aide}")
+          f"maîtrise {_txt} | {_aide}")
+    print(f"  ├─ Maturité v40.2 : 🌡️ {_mat:.3f} / {SEUIL_MATURITE:.2f} — "
+          f"régularité {_reg:.0%} × consolidation {_cons:.0%} × autonomie {_auto:.0%}")
 
     # v36.0 — ce que la mémoire reçoit, ce qu'elle abstrait, ce qu'elle rend.
     _sv = etat.memoire_episodique_spatiale.souvenirs
