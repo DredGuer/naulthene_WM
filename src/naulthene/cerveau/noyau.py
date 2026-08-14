@@ -565,7 +565,109 @@ class AGI_Naulthene(nn.Module):
         self.vecu_okay = 0.0
         self.vecu_danger = 0.0
 
+        # v40.1 — L'ENVIE DE VIVRE. Naît au MAXIMUM (le nourrisson tente tout) et se
+        # compose multiplicativement chaque nuit. Peut atteindre zéro : aucun plancher.
+        # État cognitif à part entière → sérialisé dans le .brain.
+        self.envie_de_vivre = ENVIE_NAISSANCE
+        # Amplitude BRUTE de C1 au dernier tick (avant gain) : c'est la mesure de « ce que
+        # C1 a construit » qu'utilise `reviser_envie_de_vivre`. Alimentée par `penser`.
+        # 0.0 à la naissance = une expérience nulle, donc aucune lucidité, donc envie MAX.
+        self.amplitude_c1_recente = 0.0
+        self.mesure_envie = {}
+
         self._reset_optimizer()
+
+    def acceptation(self):
+        """v40.1 — la force d'ACCEPTATION de C1, couplée à la compréhension de C2.
+
+        « C1 est lui-même lié à cet élément comme une force qui est comme de l'acceptation
+        et devient exponentielle liée à la compréhension de C2. »
+
+        L'acceptation est le produit de l'envie de vivre et de la confiance en la
+        planification : C1 accepte d'autant plus que C2 comprend. Comme les deux facteurs
+        vivent dans [0, 1], leur produit ne peut pas s'emballer — l'exponentielle vient de
+        la COMPOSITION dans le temps (voir `reviser_envie_de_vivre`), jamais d'un `exp()`.
+
+        C'est ce nombre, et non `force_planification` seule, qui module l'ensemble des
+        décisions : exploration, patience, et poids de C2.
+        """
+        return self.envie_de_vivre * self.force_planification_vecue()
+
+    def reviser_envie_de_vivre(self, erreur_jepa_moyenne):
+        """v40.1 — la composition multiplicative de l'envie de vivre (une fois par nuit).
+
+        Deux forces opposées, appliquées comme des FACTEURS (jamais des termes) :
+
+          LUCIDITÉ ↓  — ce que C2 comprend × ce que C1 a construit. Plus l'agent prévoit
+                        juste, plus il VOIT le risque, moins il ose. La compétence produit
+                        sa propre paralysie.
+          FOI      ↑  — la part de son vécu qui a été bonne. Tant qu'il accumule des
+                        réussites, il reste en mouvement malgré la prudence croissante.
+
+        La composition produit les trois propriétés demandées sans qu'aucune ne soit
+        écrite séparément : une série de facteurs > 1 s'emballe (boule de neige), un
+        facteur bas casse la série (inversion), et rien n'est moyenné (les deux réservoirs
+        de vécu restent parallèles).
+
+        ⚠️ Aucun plancher : l'envie peut atteindre 0 et l'agent s'y figer. C'est voulu.
+        """
+        # Ce que C2 comprend du monde : l'inverse de son erreur de prédiction, borné dans
+        # [0, 1]. Un agent qui prédit mal ne voit pas le risque, donc n'a pas peur.
+        erreur = max(float(erreur_jepa_moyenne or 0.0), 0.0)
+        comprehension_c2 = 1.0 / (1.0 + erreur)
+
+        # Ce que C1 a construit : sa vigueur réelle, rapportée à l'échelle naturelle de
+        # l'arbitrage (`AMPLITUDE_C2_NORMALISEE`, l'amplitude d'un z-score sur 7 actions).
+        # Aucune constante nouvelle — c'est la même échelle que celle qui sert déjà à la
+        # parité C1/C2.
+        #
+        # v40.1-fix2 — l'échelle est AMPLITUDE_C2_NORMALISEE, PAS `vigueur_min_c1(f)`.
+        # Avec cette dernière, un agent à foi nulle donnait cible = 0, donc experience_c1
+        # forcée à 0, donc lucidité nulle : L'AGENT LE PLUS DÉSESPÉRÉ ÉTAIT LE SEUL
+        # IMMUNISÉ CONTRE LA PERTE D'ENVIE (mesuré : envie restait à 1,000000 après 1000
+        # nuits sans la moindre réussite). L'expérience de C1 est une propriété de C1, elle
+        # ne doit pas dépendre de la confiance accordée à C2.
+        experience_c1 = min(1.0, self.amplitude_c1_recente / AMPLITUDE_C2_NORMALISEE)
+
+        lucidite = comprehension_c2 * experience_c1        # ∈ [0, 1]
+        foi = self.force_planification_vecue()             # ∈ [0, 1[
+
+        # LES DEUX FACTEURS. Ils ne s'additionnent pas et ne s'annulent pas : ils se
+        # composent, l'un après l'autre, sur l'état de la nuit précédente.
+        self.envie_de_vivre *= (1.0 - POIDS_LUCIDITE * lucidite)
+        self.envie_de_vivre *= (1.0 + POIDS_FOI * foi)
+
+        # v40.1-fix1 — LA FOI EST AUSSI UN APPORT, PAS SEULEMENT UN FACTEUR.
+        #
+        # Défaut mesuré à l'implémentation : en purement multiplicatif, ZÉRO EST ABSORBANT.
+        # Un agent tombé à 0,0001 puis redevenu très performant remontait de 0,0001 à…
+        # 0,0001 (+3 % de presque rien reste presque rien). L'« inversion » demandée —
+        # « certains éléments peuvent littéralement changer le sens » — était donc
+        # nominalement vraie et pratiquement impossible : la mort était le seul état
+        # absorbant, et la mécanique ne racontait plus qu'une histoire à sens unique.
+        #
+        # Le terme additif est ce qui rend la résurrection possible : il ne dépend PAS de
+        # l'état courant, donc il fonctionne même depuis zéro. Il reste proportionnel à la
+        # foi — un agent qui ne réussit rien ne ressuscite pas — et au carré, pour qu'une
+        # foi tiède ne suffise pas : il faut une vraie série de réussites pour rallumer
+        # quelqu'un qui s'était éteint.
+        #
+        # ⚠️ Ceci ne réintroduit PAS de plancher : envie = 0 reste atteignable et STABLE
+        # tant que la foi est nulle. On ne garantit pas la survie, on garantit seulement
+        # qu'une rédemption reste possible pour qui recommence à réussir.
+        self.envie_de_vivre += POIDS_FOI * (foi ** 2)
+
+        self.envie_de_vivre = max(0.0, min(ENVIE_PLAFOND, self.envie_de_vivre))
+
+        # Télémétrie : sans elle, une mécanique latente est indémontrable (leçon v29.1).
+        self.mesure_envie = {
+            "envie": self.envie_de_vivre,
+            "lucidite": lucidite,
+            "foi": foi,
+            "comprehension_c2": comprehension_c2,
+            "experience_c1": experience_c1,
+            "acceptation": self.acceptation(),
+        }
 
     def force_planification_vecue(self):
         """v40.0 — la force de planification, DÉRIVÉE du vécu (jamais une constante).
@@ -956,6 +1058,11 @@ class AGI_Naulthene(nn.Module):
                         - logits_instinct.min(dim=-1, keepdim=True).values)
         gain_c1 = torch.clamp(vigueur_min_c1(force_planification) / (amplitude_c1 + 1e-8),
                               min=GAIN_C1_MIN, max=GAIN_C1_MAX)
+        # v40.1 — trace de ce que C1 a CONSTRUIT (amplitude brute, avant gain). Lue une
+        # fois par nuit par `reviser_envie_de_vivre` : c'est la moitié « expérience de C1 »
+        # de la lucidité. Purement observationnel, aucune influence sur ce tick.
+        with torch.no_grad():
+            self.amplitude_c1_recente = float(amplitude_c1.mean().item())
         voix_c1 = logits_instinct * gain_c1
 
         # Télémétrie de l'arbitrage (v37.0) — déposée sur le module plutôt que retournée,
@@ -3265,6 +3372,65 @@ OUBLI_DANGER = 0.99990             # ...et ce qui a fait mal encore plus lenteme
                                     # L'asymétrie est le cliquet : elle interdit à une
                                     # bonne série d'effacer la mémoire d'un danger réel.
 
+# --- v40.1 : L'ENVIE DE VIVRE (le couplage C1 ↔ C2) ---
+#
+# Formulation utilisateur : « L'envie de vivre pousse au maximum la pondération à essayer
+# quand même. Cependant quand C2 sera assez fort et l'expérience de C1 assez construite, il
+# y a un risque non négligeable que l'envie de vivre diminue au risque de tuer l'agent.
+# C'est le jeu de la vie. » Et : « C1 est lui-même lié à cet élément comme une force qui est
+# comme de l'ACCEPTATION et devient EXPONENTIELLE liée à la compréhension de C2. »
+#
+# CE QUE CE N'EST PAS : un troisième module posé à côté de C1 et C2. L'envie de vivre est
+# le COUPLAGE entre les deux — ce qui fait que C1 accepte d'autant plus que C2 comprend.
+#
+# CE QUE ÇA RÉPOND (et que la v40 ne répondait pas) :
+#   v40   : « est-ce que je planifie ? »  → f_planif, une balance okay/danger
+#   v40.1 : « est-ce que je TENTE ? »     → l'envie, une dynamique multiplicative
+# Un agent peut très bien savoir délibérer (f élevé) et refuser d'agir. Rien dans le cerveau
+# ne portait cette question : l'envie d'essayer était implicite et constante.
+#
+# POURQUOI MULTIPLICATIF, JAMAIS UNE MOYENNE. Trois propriétés demandées, qu'une moyenne
+# glissante détruirait toutes les trois :
+#   1. EFFET BOULE DE NEIGE — le positif appelle le positif. Une suite de facteurs > 1
+#      s'emballe ; une moyenne, elle, lisse et ramène au centre.
+#   2. INVERSION POSSIBLE — « certains éléments peuvent littéralement changer le sens ». Un
+#      seul facteur très bas casse la série ; une moyenne diluerait cet événement.
+#   3. LES DEUX COEXISTENT — « l'un n'empêche pas l'autre ». Ce n'est pas un solde net où le
+#      positif annule le négatif : `vecu_okay` et `vecu_danger` vivent en parallèle.
+# La croissance exponentielle ÉMERGE de la composition, elle n'est jamais déclarée. Il n'y a
+# donc aucun `exp()` dans ce code : seulement des produits successifs.
+#
+# ⚠️ AUCUN PLANCHER (décision utilisateur explicite). L'envie peut atteindre zéro et l'agent
+# s'y figer définitivement. C'est un RÉSULTAT du modèle, pas un bug : une variable qui ne
+# peut pas atteindre zéro ne mesure pas la perte de foi. Certains runs mourront — c'est le
+# jeu de la vie, et c'est mesurable (métrique `Envie_Vivre`).
+ENVIE_NAISSANCE = 1.0              # le nourrisson tente TOUT : il n'a rien à perdre et
+                                    # aucun modèle du monde pour évaluer un risque. Ce n'est
+                                    # pas un réglage, c'est le maximum de l'échelle [0, 1].
+ENVIE_PLAFOND = 1.0                # borne haute : l'envie ne s'emballe pas au-delà du
+                                    # maximum. Une BORNE, pas un rapport de force.
+
+# La LUCIDITÉ — ce qui érode l'envie. C'est la phrase « quand C2 sera assez fort ET
+# l'expérience de C1 assez construite » : le produit de ce que C2 comprend du monde (le
+# modèle JEPA, mesuré par son erreur) et de ce que C1 a construit (sa vigueur réelle).
+#
+# Rien n'est posé ici : la lucidité est le produit de deux grandeurs déjà mesurées à chaque
+# tick. Un agent qui prédit mal le monde n'a aucune raison d'avoir peur — il ne VOIT pas le
+# risque. Un agent qui prédit bien le voit, et c'est ce savoir qui le paralyse.
+#
+# C'est le mécanisme contre-intuitif que la formulation demande : LA COMPÉTENCE PRODUIT SA
+# PROPRE PARALYSIE. L'envie de vivre est ce qui l'en empêche.
+POIDS_LUCIDITE = 0.02              # DYNAMIQUE, pas seuil : à quelle vitesse (par nuit) la
+                                    # lucidité peut éroder l'envie. À 0.02, une lucidité
+                                    # pleine coûte 2 % d'envie par nuit — donc des dizaines
+                                    # de nuits pour se figer, jamais un basculement.
+POIDS_FOI = 0.03                   # ...et à quelle vitesse la foi la restaure. Légèrement
+                                    # SUPÉRIEUR à la lucidité : un agent qui réussit doit
+                                    # pouvoir remonter plus vite qu'il ne s'éteint, sinon
+                                    # la mort est le seul état absorbant et la mécanique ne
+                                    # dit plus rien. Aucun des deux n'est un seuil : ce sont
+                                    # les deux pentes d'une composition multiplicative.
+
 # --- v37.0 : L'ÉQUILIBRE C1 / C2 ---
 #
 # Diagnostic complet dans `docs/ameliorations_appliquees/CHANTIER_v37_equilibre_c1_c2.md`. En trois lignes : sur le
@@ -4544,11 +4710,40 @@ def demarrer_journee(etat):
     # n'avait mesuré, et l'ablation du 14/08 a montré qu'aucune valeur unique ne peut être
     # juste sur tous les niveaux. Calculée UNE FOIS par journée, comme le guidage : une
     # force qui fluctuerait d'un tick à l'autre serait un signal non stationnaire.
-    etat.force_planification_jour = etat.agent.force_planification_vecue()
-    etat.coeff_entropie_jour = COEFF_ENTROPIE_LIBRE if etat.mode_libre else COEFF_ENTROPIE_GUIDE
+    #
+    # --- v40.1 : L'ENVIE DE VIVRE MODULE TOUTES LES DÉCISIONS ---
+    #
+    # Décision utilisateur : « Sur toutes les décisions ! C1 est lui-même lié à cet élément
+    # comme une force qui est comme de l'acceptation. » L'envie n'est donc pas un curseur
+    # posé à côté des deux modules — elle traverse les trois leviers du chemin de décision :
+    # ce que l'agent OSE (entropie), combien il INSISTE (patience), et à quel point il
+    # DÉLIBÈRE (poids de C2).
+    #
+    # Toutes trois passent par `acceptation()` = envie × confiance. Un agent qui a perdu la
+    # foi n'explore plus, n'insiste plus et ne planifie plus — il répète le connu jusqu'à
+    # s'éteindre. C'est le « risque de tuer l'agent » assumé, et il est observable.
+    envie = etat.agent.envie_de_vivre
+    acceptation = etat.agent.acceptation()
+
+    # La confiance vécue (v40) est PONDÉRÉE par l'envie : savoir délibérer ne sert à rien
+    # si l'on n'ose plus rien tenter.
+    etat.force_planification_jour = acceptation
+
+    # L'exploration suit l'envie au lieu de basculer sur un seuil de palier. Les deux
+    # constantes COEFF_ENTROPIE_GUIDE/LIBRE (0.02 / 0.06) deviennent les BORNES d'un
+    # continuum, plus un interrupteur : à envie pleine l'agent explore comme en Mode Libre,
+    # à envie nulle il se replie sur le réflexe pur.
+    etat.coeff_entropie_jour = (COEFF_ENTROPIE_GUIDE
+                                + (COEFF_ENTROPIE_LIBRE - COEFF_ENTROPIE_GUIDE) * envie)
 
     etat.facteur_complexite_jour = etat.gestionnaire_cursus.obtenir_facteur_complexite() if etat.doorkey_actif else 1.0
     etat.patience_jour = etat.module_acceptation.obtenir_seuil_patience(etat.facteur_complexite_jour)
+    # La persistance suit l'envie : « pousse au maximum à essayer quand même ». L'agent qui
+    # y croit s'acharne, celui qui n'y croit plus abandonne tôt. La patience reste par
+    # ailleurs adaptative (taux de succès récent) — l'envie la module, ne la remplace pas.
+    # Bornée par PATIENCE_MIN pour rester un épisode jouable, jamais un abandon immédiat.
+    etat.patience_jour = max(PATIENCE_MIN,
+                             int(round(etat.patience_jour * (0.5 + 0.5 * envie))))
     etat.patience_base_jour = etat.patience_jour  # capturée avant tout étirement par Sursaut (v17.0), pour le log
     etat.ticks_episode_courant = 0
     etat.a_utilise_sursaut_episode = False
@@ -5844,6 +6039,13 @@ def executer_nuit(etat, plafond_reve=None):
     # lendemain, au lieu de gagner sa confiance sur des dizaines de journées.
     etat.agent.nourrir_vecu_journee(getattr(etat, "recompenses_journee", None))
 
+    # --- v40.1 : LA COMPOSITION DE L'ENVIE DE VIVRE (une fois par nuit) ---
+    # Placée APRÈS `nourrir_vecu_journee` : la foi du jour doit être à jour avant d'entrer
+    # dans le produit. `erreur_moyenne` (calculée plus haut) est ce que C2 comprend du
+    # monde — la moitié « lucidité » du couplage. L'ordre compte : lucidité puis foi, sur
+    # l'état de la nuit précédente, jamais sur une moyenne.
+    etat.agent.reviser_envie_de_vivre(erreur_moyenne)
+
     # --- v31.0 : capacité mnésique adaptative (une fois par nuit) ---
     # Placée AVANT le calcul du rêve : la nuit est le moment où le cerveau grandit
     # (declencher_neurogenese plus bas) et où la plasticité est réévaluée — c'est donc
@@ -6008,6 +6210,22 @@ def executer_nuit(etat, plafond_reve=None):
         _profil = "🦉 délibère largement"
     print(f"  ├─ Planif. v40    : {_profil} — force {_f:.3f} "
           f"(okay {_okay:.2f} / danger {_danger:.2f})")
+    # v40.1 — l'envie de vivre et ses deux forces opposées. Sans cette ligne, la mécanique
+    # serait latente et indémontrable sur un run long (leçon v29.1).
+    _me = getattr(etat.agent, "mesure_envie", None) or {}
+    if _me:
+        _envie = _me.get("envie", 1.0)
+        if _envie < 0.05:
+            _etat_vie = "💀 éteint (ne tente plus rien)"
+        elif _envie < 0.35:
+            _etat_vie = "🥀 la foi vacille"
+        elif _envie < 0.75:
+            _etat_vie = "🚶 avance prudemment"
+        else:
+            _etat_vie = "🔥 tente quand même"
+        print(f"  ├─ Envie v40.1    : {_etat_vie} — envie {_envie:.4f} "
+              f"| lucidité {_me.get('lucidite', 0.0):.3f} ↓ "
+              f"foi {_me.get('foi', 0.0):.3f} ↑ | acceptation {_me.get('acceptation', 0.0):.4f}")
     if etat.detecteur_portes.actif and etat.portes_franchies_jour > 0:
         print(f"  ├─ Portes         : 🚪 {etat.portes_franchies_jour} porte(s) franchie(s) aujourd'hui")
     if _quete_auto_active(etat) and etat.detecteur_progres.actif and etat.progres_personnel_jour > 0:
@@ -6551,6 +6769,17 @@ def executer_nuit(etat, plafond_reve=None):
     log_wandb["Force_Planification"] = etat.force_planification_jour
     log_wandb["Planif_Vecu_Okay"] = etat.agent.vecu_okay
     log_wandb["Planif_Vecu_Danger"] = etat.agent.vecu_danger
+    # v40.1 — les six courbes de l'envie de vivre. `Envie_Vivre` est celle qui dit si un
+    # run est mort ; `Envie_Lucidite` et `Envie_Foi` disent laquelle des deux forces l'a
+    # emporté, et leurs deux facteurs séparément (a-t-il compris ? a-t-il construit ?).
+    _me = getattr(etat.agent, "mesure_envie", None) or {}
+    if _me:
+        log_wandb["Envie_Vivre"] = _me.get("envie")
+        log_wandb["Envie_Lucidite"] = _me.get("lucidite")
+        log_wandb["Envie_Foi"] = _me.get("foi")
+        log_wandb["Envie_Comprehension_C2"] = _me.get("comprehension_c2")
+        log_wandb["Envie_Experience_C1"] = _me.get("experience_c1")
+        log_wandb["Envie_Acceptation"] = _me.get("acceptation")
     if etat.doorkey_actif and etat.detecteur.actif:
         log_wandb["Palier_Cible"] = etat.palier_cible
         log_wandb["Guidage_But"] = etat.guidage_but_journee

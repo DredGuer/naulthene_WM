@@ -4,6 +4,88 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v40.1-experimental] - 2026-08-14 — L'Envie de Vivre (le couplage C1 ↔ C2)
+
+### « L'envie de vivre pousse au maximum à essayer quand même »
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | feat |
+| **Impact** | Critique — module TOUTES les décisions |
+| **Branche** | `feat/v40.1-envie-de-vivre` |
+| **Portée** | `noyau.py` uniquement — `colab.py` **non touché** |
+| **Chantier** | [CHANTIER_v40](../ameliorations_appliquees/CHANTIER_v40_planification_emergente.md) |
+
+**La v40 répondait à « est-ce que je planifie ? ». La v40.1 répond à « est-ce que je
+TENTE ? ».** Un agent peut savoir délibérer et refuser d'agir — rien dans le cerveau ne
+portait cette question.
+
+### Le mécanisme : la compétence produit sa propre paralysie
+
+Deux forces opposées, appliquées comme des **facteurs** (jamais des termes) :
+
+| Force | Composition | Effet |
+|---|---|---|
+| **Lucidité** ↓ | compréhension de C2 × expérience de C1 | « je VOIS le risque » |
+| **Foi** ↑ | $f_{planif}$ (v40) | « mais ça a marché » |
+
+Un débutant fonce parce qu'il **ignore** le danger ; un expert hésite parce qu'il le
+**voit**. L'envie de vivre est ce qui l'en empêche.
+
+**L'envie n'est pas un troisième module** : c'est le **couplage** entre C1 et C2 —
+`acceptation() = envie × confiance` module les trois leviers de décision.
+
+### Multiplicatif, jamais une moyenne
+
+Trois propriétés demandées qu'une moyenne détruirait : effet **boule de neige**,
+**inversion** possible, et les deux réservoirs qui **coexistent**. La croissance
+exponentielle **émerge de la composition** — il n'y a aucun `exp()` dans le code.
+
+### ⚠️ Aucun plancher (décision utilisateur explicite)
+
+L'envie peut atteindre **zéro** et l'agent s'y figer définitivement. **Certains runs
+mourront** — c'est un résultat du modèle, pas un bug. Une variable qui ne peut pas
+atteindre zéro ne mesure pas la perte de foi.
+
+### Où l'envie agit — sur toutes les décisions
+
+| Levier | Effet |
+|---|---|
+| Poids de C2 | `force_planification = acceptation` |
+| Exploration | `coeff_entropie` suit l'envie — la bascule 0.02/0.06 devient un **continuum** |
+| Patience | `× (0.5 + 0.5 × envie)`, borné par `PATIENCE_MIN` |
+
+### ⚠️ Deux défauts trouvés pendant l'implémentation
+
+**fix1 — zéro était absorbant.** En purement multiplicatif, un agent tombé à 0,0001 puis
+redevenu performant remontait à… 0,0001. L'inversion était nominalement vraie et
+pratiquement impossible. **Correctif** : un terme additif $\propto \text{foi}^2$, qui ne
+dépend pas de l'état courant. Mesuré : `0,0038 → 1,0000` en 150 nuits. Ceci ne réintroduit
+**pas** de plancher — envie = 0 reste stable tant que la foi est nulle.
+
+**fix2 — l'agent le plus désespéré était immunisé.** L'expérience de C1 était rapportée à
+`vigueur_min_c1(f)` ; avec `vecu_okay = 0` la cible valait 0, donc lucidité nulle. Mesuré :
+envie à **1,000000** après 1 000 nuits sans la moindre réussite. **Correctif** : échelle
+`AMPLITUDE_C2_NORMALISEE` — l'expérience de C1 est une propriété de C1.
+
+### Grille de validation (1 000 nuits par scénario)
+
+| Scénario | Envie | Verdict |
+|---|---|---|
+| désespéré | 0,0000 | ✅ meurt |
+| compétent, foi faible | 0,0336 | ✅ s'éteint |
+| compétent, qui réussit | 1,0000 | ✅ survit |
+| ignorant (JEPA mauvais) | 1,0000 | ✅ n'a pas peur |
+| C1 encore neuf | 1,0000 | ✅ n'a pas peur |
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `envie_de_vivre`, `acceptation()`, `reviser_envie_de_vivre()` ; branchement sur entropie + patience + poids C2 ; ligne console `Envie v40.1` ; 6 clés W&B |
+| `src/naulthene/cerveau/persistance.py` | `envie_de_vivre` sérialisée — défaut 1.0, un `.brain` antérieur repart entier |
+
+---
+
 ## [v40.0-experimental] - 2026-08-14 — La Planification Émergente
 
 ### « C1 a toujours raison, sauf si C2 estime que le bénéfice dépasse le risque »

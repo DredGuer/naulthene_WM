@@ -273,7 +273,13 @@ $$
 \text{logits}_{finaux} = \text{logits}_{instinct} + f_{planif} \cdot \tilde{V}_{cumulée}
 $$
 
-$f_{planif}$ vaut **0.5 en mode guidé**, **0.85 en Mode Libre** (dès `palier_cible >= 5`). Le Système 2 pèse donc structurellement plus lourd précisément au moment où le guidage artificiel externe disparaît — l'agent est forcé de s'appuyer davantage sur sa propre planification interne. L'action finale est échantillonnée par `Categorical(logits=logits_finaux)`.
+$f_{planif}$ valait **0.5 en mode guidé**, **0.85 en Mode Libre** (dès `palier_cible >= 5`). L'action finale est échantillonnée par `Categorical(logits=logits_finaux)`.
+
+> 🆕 **v40.0/v40.1 (2026-08-14, branche `feat/v40.1-envie-de-vivre`) — ces deux nombres
+> n'existent plus.** `f_{planif}` est désormais **dérivée du vécu**, puis modulée par
+> l'envie de vivre. Voir [§7.3](#73-v400--la-planification-émergente) et
+> [§7.4](#74-v401--lenvie-de-vivre-le-couplage-c1--c2). Les §7.1/7.2 ci-dessous restent la
+> **mesure qui a motivé** cette refonte.
 
 ### ⚠️ 7.1 — Ce que cet arbitrage produit réellement (mesuré, 2026-08-14)
 
@@ -402,6 +408,105 @@ pas le même selon la carte : sur `5x5` l'agent ferait mieux avec $f_{planif} \a
 
 Détail complet et protocole :
 [CAMPAGNE_P17_ABLATION](../recherche/CAMPAGNE_P17_ABLATION_aout_2026.md).
+
+---
+
+### 7.3 v40.0 — la planification émergente
+
+> Branche `feat/v40-planification-emergente`. `noyau.py` uniquement.
+
+**`force_planification` n'est plus une constante : c'est la fraction du vécu que l'agent a
+trouvée bénéfique.**
+
+$$f_{planif} = \frac{\text{OKAY}}{\text{OKAY} + \text{DANGER} + \text{PRUDENCE\_NAISSANCE}}$$
+
+Formulation : *« C1 a toujours raison, sauf si C2 estime que le bénéfice dépasse le risque
+au vu des expériences passées. »*
+
+`OKAY` et `DANGER` sont les sommes pondérées des retours **réellement ressentis**
+(`recompenses_journee`, la grandeur signée). Rien n'est déclaré — l'agent ne sait pas ce
+qu'est une victoire, il sait qu'il a ressenti *n* fois du bon et *m* fois du mauvais.
+
+À la naissance $f = 0/1 = 0$ : **C1 seul**. La confiance en la planification se **gagne**.
+
+| Constante supprimée | Valeur | Ce qu'elle décrétait |
+|---|---|---|
+| `FORCE_PLANIFICATION_GUIDE` | 0.5 | poids de C2 en mode guidé |
+| `FORCE_PLANIFICATION_LIBRE` | 0.85 | poids de C2 en mode libre |
+| `RATIO_C1C2_VISE` | 2.0 | « C2 doit peser 2× C1 » |
+
+`VIGUEUR_MIN_C1` devient `vigueur_min_c1(f) = AMPLITUDE_C2_NORMALISEE × f` : **la parité**.
+Le rapport de force n'est plus décrété, il est une **conséquence** de l'expérience.
+
+⚠️ **Deux pièges rencontrés, tous deux instructifs.** (1) Brancher le vécu sur
+`chocs_dopamine_journee` ne marche pas : `poids_evenement` est une **intensité toujours
+positive**, donc `DANGER` restait à 0,00 et $f$ saturait à 0,97 — **le DANGER exige une
+grandeur qui peut être négative**. (2) Compter par **tick** faisait passer $f$ de 0,000 à
+0,906 **en une nuit** (400 ticks contre un a priori de 1,0). L'unité juste est la
+**journée**, normalisée par `reference_choc_dopamine`.
+
+### 7.4 v40.1 — l'envie de vivre (le couplage C1 ↔ C2)
+
+> Branche `feat/v40.1-envie-de-vivre`. Chantier complet :
+> [CHANTIER_v40](../ameliorations_appliquees/CHANTIER_v40_planification_emergente.md).
+
+La v40 répond à « **est-ce que je planifie ?** ». La v40.1 répond à une question
+différente : « **est-ce que je tente ?** » — un agent peut savoir délibérer et refuser
+d'agir.
+
+**L'envie n'est pas un troisième module** : c'est le **couplage** entre les deux qui
+existent, *« une force qui est comme de l'acceptation et devient exponentielle liée à la
+compréhension de C2 »*.
+
+$$\text{acceptation} = \text{envie} \times f_{planif}$$
+
+#### La compétence produit sa propre paralysie
+
+Deux forces opposées, appliquées comme des **facteurs** :
+
+| Force | Composition | Sens |
+|---|---|---|
+| **Lucidité** ↓ | $\frac{1}{1+\varepsilon_{JEPA}} \times \frac{\|C1\|}{\text{AMPLITUDE\_C2\_NORMALISEE}}$ | « je VOIS le risque » |
+| **Foi** ↑ | $f_{planif}$ | « mais ça a marché » |
+
+Un débutant fonce parce qu'il **ignore** le danger ; un expert hésite parce qu'il le
+**voit**. C'est le mécanisme contre-intuitif au cœur de la version.
+
+#### Pourquoi multiplicatif, jamais une moyenne
+
+Trois propriétés qu'une moyenne glissante détruirait **toutes** : effet **boule de neige**
+(une suite de facteurs > 1 s'emballe), **inversion** possible (un facteur bas casse la
+série), et les deux réservoirs qui **coexistent** au lieu de s'annuler.
+
+> **La croissance exponentielle ÉMERGE de la composition.** Il n'y a aucun `exp()` dans le
+> code — seulement des produits successifs.
+
+#### ⚠️ Aucun plancher
+
+L'envie peut atteindre **zéro** et l'agent s'y figer définitivement. **C'est un résultat du
+modèle, pas un bug** : une variable qui ne peut pas atteindre zéro ne mesure pas la perte
+de foi. Certains runs mourront — c'est observable via `Envie_Vivre`.
+
+#### Où elle agit : sur toutes les décisions
+
+| Levier | Effet |
+|---|---|
+| Poids de C2 | `force_planification = acceptation` |
+| Exploration | `coeff_entropie` suit l'envie — les constantes 0.02/0.06 deviennent les **bornes d'un continuum** |
+| Patience | `× (0.5 + 0.5 × envie)` |
+
+#### Les deux correctifs d'implémentation
+
+**fix1 — zéro était absorbant.** En purement multiplicatif, un agent tombé à 0,0001 puis
+redevenu performant remontait à 0,0001. Correctif : un terme **additif** $\propto
+\text{foi}^2$, indépendant de l'état courant. Le carré exige une **vraie série** de
+réussites pour ressusciter. Ceci ne réintroduit pas de plancher : envie = 0 reste **stable**
+tant que la foi est nulle.
+
+**fix2 — le désespéré était immunisé.** L'expérience de C1 rapportée à `vigueur_min_c1(f)`
+donnait cible = 0 quand $f = 0$, donc lucidité nulle : envie restait à **1,000000** après
+1 000 nuits sans réussite. L'expérience de C1 est une propriété de **C1**, elle ne peut pas
+dépendre de la confiance accordée à C2.
 
 ---
 

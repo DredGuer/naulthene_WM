@@ -237,6 +237,12 @@ class PersistanceAnatomique:
             'vecu_okay': getattr(etat.agent, 'vecu_okay', 0.0),
             'vecu_danger': getattr(etat.agent, 'vecu_danger', 0.0),
 
+            # v40.1 — l'envie de vivre. Le plus fragile des acquis : elle peut atteindre
+            # zéro et ne jamais remonter. La perdre au rechargement effacerait précisément
+            # ce que la mécanique cherche à mesurer (un agent éteint renaîtrait plein
+            # d'allant à chaque reprise, et aucun run ne pourrait jamais « mourir »).
+            'envie_de_vivre': getattr(etat.agent, 'envie_de_vivre', 1.0),
+
             # --- 3. Chimie viscérale (réservoir dopaminergique + moteur homéostatique) ---
             'teneur_dopamine': etat.teneur_dopamine,
             'plasticite_base': etat.plasticite_base,
@@ -488,6 +494,10 @@ class PersistanceAnatomique:
         # portait auparavant (0.5 ou 0.85) n'avait elle-même jamais été mesurée.
         agent.vecu_okay = float(checkpoint.get('vecu_okay', 0.0))
         agent.vecu_danger = float(checkpoint.get('vecu_danger', 0.0))
+        # v40.1 — défaut 1.0 (l'envie de naissance) : un .brain antérieur n'a jamais eu
+        # l'occasion de perdre la foi, donc il repart entier. C'est le seul défaut
+        # défendable — 0.0 condamnerait d'emblée tout cerveau existant.
+        agent.envie_de_vivre = float(checkpoint.get('envie_de_vivre', 1.0))
 
         env_id = checkpoint['env_id']
         nom_classe = checkpoint['nom_classe']
