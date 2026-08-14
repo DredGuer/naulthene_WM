@@ -209,13 +209,77 @@ dont l'effet est le plus isolable — si la force de planification décolle, la 
 
 ---
 
-## 6. Ce qui reste à trancher (décision utilisateur)
+## 6. Décisions prises (14 août 2026)
 
-1. **Attendre la fin des 3 runs V40** (~16h25) pour avoir la courbe complète à
-   2000 jours, ou couper maintenant ? *Le jour 348 suffit déjà au diagnostic.*
-2. **C2 seul ou C1+C2 ensemble ?** Ensemble va plus vite mais rend l'attribution
-   impossible si le résultat est mitigé.
-3. **Branche `feat/v41-ligne-flottaison` depuis `feat/v40.1-envie-de-vivre` ?**
+| # | Question | Décision |
+|---|---|---|
+| 1 | Couper ou laisser tourner ? | **Laisser tourner jusqu'à 2000 jours** |
+| 2 | C2 seul ou C1+C2 ? | **C2 seul** — 300 jours, graine 11 |
+| 3 | Branche | **`feat/v41-ligne-flottaison`** depuis `feat/v40.1-envie-de-vivre` |
+
+### 6.1 Pourquoi laisser tourner (décision utilisateur)
+
+Les 3 runs V40 ne sont pas un run raté à interrompre — c'est **le tout premier
+benchmark de référence sur 2000 jours d'un système réflexe pur (C1 isolé)**, l'envie
+de vivre étant éteinte depuis le jour ~50. Trois choses à en tirer :
+
+1. Vérifier empiriquement si `vecu_danger` **plafonne à son asymptote théorique
+   de ~221** (§1.3) ou s'arrête avant.
+2. Vérifier si la **robustesse synaptique de C1 tient sans dégradation** à très
+   long terme, sans aucun apport de C2.
+3. Servir d'**étalon** pour mesurer le gain réel de la v41.
+
+C'est le point important : cette référence « C1 pur » n'existait pas, et elle ne
+sera pas reproductible une fois la v41 posée.
+
+### 6.2 Pourquoi C2 seul d'abord (règle d'or du projet)
+
+**Une seule mutation causale à la fois.** Modifier simultanément l'intégration du
+vécu (C2) et la dynamique du métabolisme viscéral (C1) rendrait impossible de savoir
+lequel des deux a restauré la force de planification.
+
+Tester d'abord la correction de l'**opérateur** dans la comptabilisation nocturne du
+vécu isole l'effet direct sur la résurrection de C2 (`f_planif ≈ 0.3` attendu).
+
+---
+
+## 7. Raffinement des deux réserves
+
+### 7.1 La ligne de flottaison ne doit pas être un seuil en dur
+
+**Le piège.** Écrire `cout_neutre = 0.0057` violerait le principe directeur.
+
+**La solution — moyenne glissante + cliquet asymétrique.** La dépense basale est
+suivie par une moyenne glissante du coût métabolique passif des pas **ordinaires**
+(sans choc).
+
+Le **cliquet de flottaison**, exactement comme `reference_choc_dopamine`
+(v37.1-fix1) : si l'agent traverse une famine prolongée, sa ligne de flottaison ne
+doit **pas s'effondrer vers le bas** — sinon la famine serait normalisée comme état
+ordinaire, et le défaut §1 reviendrait sous une autre forme.
+
+> La descente doit rester **non nulle mais minimale** (« un variation minimal ») :
+> un monde durablement plus pauvre doit pouvoir recalibrer l'agent, mais sur des
+> centaines de nuits, jamais sur une saison creuse. Même formulation que le cliquet
+> v37.1-fix1.
+
+### 7.2 Le sommeil sans béquille artificielle
+
+La phase nocturne ne doit **pas** être un « bouton magique » qui réinjecte de l'envie
+de vivre arbitrairement.
+
+Ce que le sommeil fait légitimement :
+- consolider les représentations JEPA ;
+- dissiper la **tension d'échec immédiate**.
+
+Ce qu'il ne doit pas faire : garantir la survie. **Si un agent est dans une impasse
+absolue sans aucun renforcement positif pendant des centaines de jours, sa mort
+cognitive doit rester mathématiquement possible.**
+
+> C'est la garantie que la réussite, quand elle advient, est une **véritable
+> émergence adaptative** — et non le produit d'un filet de sécurité.
+
+Cette décision confirme et prolonge le choix « pas de plancher » de la v40.1.
 
 ---
 
