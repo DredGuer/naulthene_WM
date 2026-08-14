@@ -6933,15 +6933,52 @@ def executer_nuit(etat, plafond_reve=None):
 
 
 if __name__ == "__main__":
-    wandb.init(project="Naulthene-AGI", name="Run_27_Ecole_Parole_Synesthesie_Local")
+    # v40.2 — CLI minimal. Jusqu'ici le mode standalone n'acceptait AUCUN argument : les
+    # flags passés en ligne de commande (`--jours`, `--brain`, `--graine`) étaient ignorés
+    # SILENCIEUSEMENT, et la graine était figée à 42 en tête de fichier. Conséquence
+    # mesurée le 14/08 : trois runs lancés avec trois graines différentes étaient en
+    # réalité STRICTEMENT IDENTIQUES, et tournaient tous vers `jours_totaux` (500) quel que
+    # soit le `--jours` demandé. Toute campagne multi-graines lancée ainsi était nulle.
+    import argparse
+    import os
+    import random as _random
+    from naulthene.cerveau.persistance import PersistanceAnatomique
 
-    etat = initialiser_etat_cognitif()
+    _p = argparse.ArgumentParser(description="Naulthène — terrain d'essai local")
+    _p.add_argument("--jours", type=int, default=jours_totaux,
+                    help=f"nombre de journées à simuler (défaut : {jours_totaux})")
+    _p.add_argument("--graine", type=int, default=42,
+                    help="graine aléatoire — DOIT différer entre runs d'une même campagne")
+    _p.add_argument("--brain", type=str, default=None,
+                    help="chemin du .brain (repris s'il existe, créé sinon)")
+    _p.add_argument("--no-wandb", action="store_true", help="désactive Weights & Biases")
+    _args = _p.parse_args()
 
-    for _ in range(1, jours_totaux + 1):
+    # La graine est réappliquée ICI, après les `manual_seed(42)` du haut de fichier : ce
+    # sont eux qui rendaient les runs indiscernables.
+    torch.manual_seed(_args.graine)
+    np.random.seed(_args.graine)
+    _random.seed(_args.graine)
+
+    if _args.no_wandb:
+        os.environ["WANDB_MODE"] = "disabled"
+    wandb.init(project="Naulthene-AGI",
+               name=f"v40_g{_args.graine}_{_args.jours}j",
+               mode="disabled" if _args.no_wandb else None)
+
+    if _args.brain:
+        _persist = PersistanceAnatomique(_args.brain)
+        etat = _persist.charger_ou_naitre()
+    else:
+        _persist, etat = None, initialiser_etat_cognitif()
+
+    for _ in range(1, _args.jours + 1):
         demarrer_journee(etat)
         for _tick in range(ticks_par_jour):
             traiter_tick(etat)
         log = executer_nuit(etat)
         wandb.log(log)
+        if _persist is not None:
+            _persist.sauvegarder(etat)
 
     etat.env.close()
