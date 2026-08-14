@@ -230,6 +230,13 @@ class PersistanceAnatomique:
             # qu'un expert cesse de trouver marquant ce qui bouleversait le débutant.
             'reference_choc_dopamine': etat.agent.reference_choc_dopamine,
 
+            # v40.0 — le vécu qui détermine la force de planification. Deux scalaires :
+            # la somme pondérée de ce qui a marché et de ce qui a fait mal. C'est l'acquis
+            # le plus fondamental de l'agent (sa confiance en sa propre délibération), il
+            # ne doit jamais repartir de zéro sur un cerveau qui a déjà vécu.
+            'vecu_okay': getattr(etat.agent, 'vecu_okay', 0.0),
+            'vecu_danger': getattr(etat.agent, 'vecu_danger', 0.0),
+
             # --- 3. Chimie viscérale (réservoir dopaminergique + moteur homéostatique) ---
             'teneur_dopamine': etat.teneur_dopamine,
             'plasticite_base': etat.plasticite_base,
@@ -473,6 +480,14 @@ class PersistanceAnatomique:
         # cette clé, et None est exactement la valeur d'initialisation attendue (« jamais
         # mesuré »). Aucune greffe : c'est un scalaire, pas un tenseur.
         agent.reference_choc_dopamine = checkpoint.get('reference_choc_dopamine')
+
+        # v40.0 — même logique : un .brain antérieur n'a pas ces clés, et 0.0 est exactement
+        # la valeur de naissance (« rien vécu » ⇒ f = 0 ⇒ C1 seul). Un ancien cerveau
+        # RÉAPPREND donc sa confiance en quelques nuits au lieu de l'hériter d'une
+        # constante — c'est le comportement voulu, pas une perte : la constante qu'il
+        # portait auparavant (0.5 ou 0.85) n'avait elle-même jamais été mesurée.
+        agent.vecu_okay = float(checkpoint.get('vecu_okay', 0.0))
+        agent.vecu_danger = float(checkpoint.get('vecu_danger', 0.0))
 
         env_id = checkpoint['env_id']
         nom_classe = checkpoint['nom_classe']

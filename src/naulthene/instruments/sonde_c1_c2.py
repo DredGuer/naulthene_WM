@@ -84,11 +84,16 @@ def sonder(chemin_brain: str, env_id: str, ticks: int = 400) -> dict:
         # qu'elles sortent de leur module : C2 est donc pondéré par force_planification,
         # et C1 reçoit le gain de réamplification de la v37.0 (Mesure 2). Sonder les
         # logits bruts de C1 mesurerait un déséquilibre que l'arbitrage ne voit plus.
+        # v40.0 — la force de planification n'est plus une constante : on lit celle que le
+        # cerveau sondé a réellement GAGNÉE par son vécu. Sonder avec l'ancienne valeur fixe
+        # (0.85) mesurerait un rapport de force que cet agent n'a jamais connu.
+        force = agent.force_planification_vecue()
         amplitude_brute = (logits_instinct.max(dim=-1, keepdim=True).values
                            - logits_instinct.min(dim=-1, keepdim=True).values)
-        gain = torch.clamp(N.VIGUEUR_MIN_C1 / (amplitude_brute + 1e-8), min=1.0)
+        gain = torch.clamp(N.vigueur_min_c1(force) / (amplitude_brute + 1e-8),
+                           min=N.GAIN_C1_MIN, max=N.GAIN_C1_MAX)
         voix_c1 = (logits_instinct * gain)[0, :7].cpu().numpy()
-        voix_c2 = (valeurs_simulees[0, :7] * N.FORCE_PLANIFICATION_LIBRE).cpu().numpy()
+        voix_c2 = (valeurs_simulees[0, :7] * force).cpu().numpy()
         mesures["gain_c1"].append(float(gain.mean().item()))
 
         mesures["amplitude_c1"].append(float(voix_c1.max() - voix_c1.min()))
@@ -98,7 +103,7 @@ def sonder(chemin_brain: str, env_id: str, ticks: int = 400) -> dict:
         mesures["argmax_c2"].append(int(voix_c2.argmax()))
 
         logits_finaux = (torch.tensor(voix_c1)
-                         + valeurs_simulees[0, :7].cpu() * N.FORCE_PLANIFICATION_LIBRE)
+                         + valeurs_simulees[0, :7].cpu() * force)
         action = int(torch.multinomial(torch.softmax(logits_finaux, 0), 1,
                                        generator=generateur).item())
         mesures["action_jouee"].append(action)

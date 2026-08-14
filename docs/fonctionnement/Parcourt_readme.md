@@ -24,6 +24,12 @@ scripts de `src/naulthene/salles_de_classe/`.
 > [§6bis](#6bis--pourquoi-ce-programme-est-trop-court-et-trop-brutal-diagnostic-2026-08-07)
 > garde le diagnostic qui a motivé la refonte (2000 jours de blocage mesurés).
 > **Rien à activer** — un ancien `.brain` est remappé automatiquement.
+>
+> 🧪 **P17 (2026-08-14) — le cursus gaussien, expérimental et hors du cœur.** Un régime
+> d'entraînement alternatif où le cursus n'est plus un **pointeur** sur un niveau mais une
+> **distribution** sur plusieurs. Il vit dans `experiences/v39/v39_p17_gaussienne.py`, **pas**
+> dans le noyau : aucune des commandes de ce guide n'est affectée. Premiers résultats et
+> **biais de mesure connus** au [§6quater](#6quater--le-cursus-gaussien-p17--expérimental).
 
 ---
 
@@ -37,6 +43,7 @@ scripts de `src/naulthene/salles_de_classe/`.
 6. [Les 15 niveaux MiniGrid (`PROGRAMME`, v35.0)](#6-les-15-niveaux-minigrid-programme-v350)
 6bis. [⚠️ Pourquoi ce programme est trop court et trop brutal](#6bis--pourquoi-ce-programme-est-trop-court-et-trop-brutal-diagnostic-2026-08-07)
 6ter. [Le Guidage Dégressif & le Filet de Sécurité (v35.1)](#6ter-le-guidage-dégressif--le-filet-de-sécurité-v351)
+6quater. [🧪 Le cursus gaussien (P17) — expérimental](#6quater--le-cursus-gaussien-p17--expérimental)
 7. [Les 7 paliers DoorKey — le détail complet](#7-les-7-paliers-doorkey--le-détail-complet)
 8. [Le curriculum vocal — les 19 paliers](#8-le-curriculum-vocal--les-19-paliers)
 9. [Mode Guidé vs Mode Libre](#9-mode-guidé-vs-mode-libre)
@@ -528,6 +535,96 @@ deux ne sert**) et `Cursus_Jours_Stagnation`.
 
 ---
 
+## 6quater. 🧪 Le cursus gaussien (P17) — expérimental
+
+> ⚠️ **Hors du cœur.** Cette mécanique vit dans `experiences/v39/v39_p17_gaussienne.py` et
+> **n'est pas** dans `noyau.py` ni `colab.py`. Aucune commande des §2 à §5 ne l'utilise.
+> Résultats complets et biais : [CAMPAGNE_P17_ABLATION](../recherche/CAMPAGNE_P17_ABLATION_aout_2026.md).
+
+### L'idée
+
+Le cursus classique est un **pointeur** : l'agent joue le niveau *n*, et rien d'autre. Le
+cursus gaussien est une **distribution** — chaque journée, le niveau est tiré au sort autour
+d'un centre qui se déplace à mesure que l'agent progresse.
+
+| Zone | Part des journées | Rôle |
+|---|---|---|
+| 🔙 **Révision** (niveaux déjà acquis) | **13,2 %** | entretenir ce qui est su |
+| 🎯 **Socle** (niveau d'entrée) | **64,9 %** | le gros du travail |
+| 🔭 **Exploration** (+1) | **17,4 %** | goûter à la suite |
+| 🚀 **Audace** (+2) | **4,5 %** | apercevoir le lointain |
+
+La cloche avance quand le niveau d'entrée atteint **80 % de maîtrise** sur ses 20 derniers
+épisodes (au lieu de 2 victoires ou 35 % dans le cursus classique). Il n'y a **pas de nombre
+de jours fixé** : le run tourne jusqu'à ce que tous les paliers soient franchis.
+
+**La queue gauche (13,2 %) n'est pas décorative** : sans elle, un niveau acquis n'était
+rejoué qu'une fois en 900 jours, et son taux de 80 % devenait une relique figée — plus
+personne ne vérifiait qu'il était encore vrai.
+
+### Les premiers résultats (2026-08-14)
+
+3 graines par régime.
+
+| Graine | Cursus classique | Gaussien |
+|---|---|---|
+| g11 | **0** victoire en 2 000 j | **199** |
+| g22 | 1 victoire | 248 |
+| g33 | 4 victoires | 205 |
+
+### ⚠️ Ce que ces chiffres ne disent PAS
+
+**Deux biais, tous deux en faveur de la gaussienne** — à connaître avant de citer ce tableau :
+
+1. **Les runs gaussiens ont tourné 4 590 jours contre 2 000** (cerveaux cumulatifs d'une
+   campagne antérieure). 2,3× plus de temps.
+2. **Une gaussienne à 64,9 % sur le socle joue des cartes plus faciles.** Compter les
+   victoires **brutes** favorise mécaniquement le régime qui passe son temps sur du facile.
+
+Et un résultat en sens inverse : **aucune gaussienne n'a dépassé le palier 2/6, alors que le
+témoin g33 est monté à 5/6.** Les deux régimes n'ont pas le même critère de promotion (80 %
+contre 35 %) — le témoin est promu sans avoir appris, la gaussienne apprend sans être promue.
+
+> **Ce qui tient** : sur g11, le cursus classique n'a produit **aucune victoire en 2 000
+> jours** là où la gaussienne en produit 199. Un facteur 2,3 en durée n'explique pas 0 → 199.
+>
+> **Ce qui ne tient pas** : l'amplitude. Un verdict propre demande 3 runs partant de zéro,
+> comparés en **taux de victoire par niveau**, jamais en victoires brutes.
+
+### 🔴 Ce qu'il faut en conclure
+
+**1. Les deux régimes ne mesurent pas la même chose, et c'est le résultat le plus utile.**
+
+Le témoin g33 est monté à 5/6 avec **4 victoires**. La gaussienne g33 est restée à 1/6 avec
+**205 victoires**. Ce n'est pas que l'un est meilleur : c'est que **« être promu » et
+« savoir faire » sont deux variables décorrélées** dans ce projet.
+
+Le cursus classique promeut sur 2 victoires consécutives — c'est-à-dire qu'**un coup de
+chance suffit à changer de niveau**. Un agent peut donc traverser cinq paliers sans jamais
+avoir maîtrisé le premier, et c'est exactement ce que fait g33 : 5 niveaux, 4 victoires,
+1 368 jours sans en gagner une seule.
+
+> **Le « niveau atteint » n'est pas un indicateur de compétence.** Il ne l'a jamais été, et
+> aucune analyse antérieure du projet n'en tenait compte — le blocage « niveau 2/15 » cité
+> partout mérite d'être relu à cette lumière.
+
+**2. Le critère de promotion compte plus que le régime d'entraînement.**
+
+La seule différence de fond entre les deux régimes n'est pas la distribution des cartes,
+c'est **35 % contre 80 %**. La gaussienne n'est pas « bloquée » — elle refuse de promouvoir
+un agent qui ne sait pas faire. C'est un choix de conception, pas un défaut.
+
+**3. Le plafond est le même dans les deux cas.**
+
+Aucun régime n'a franchi `DoorKey`. Les victoires **s'espacent** chez les deux meilleurs
+(tendance 3,01 et 1,73 ↗️). Changer la façon de présenter les niveaux n'a pas levé le
+blocage de fond — au mieux, ça produit plus de réussites **sur les niveaux déjà accessibles**.
+
+> **La gaussienne améliore l'exploitation, pas la capacité.** Elle ne fait pas apprendre à
+> l'agent quelque chose qu'il ne savait pas faire.
+
+---
+
 ## 7. Les 7 paliers DoorKey — le détail complet
 
 Actifs uniquement sur le niveau "Collège" (`MiniGrid-DoorKey-6x6-v0`). C'est le cursus le plus
@@ -622,6 +719,18 @@ l'abandon.
 **Aucune des progressions ci-dessus ne peut redescendre** — ni le niveau MiniGrid, ni le palier
 DoorKey, ni le palier vocal. Un agent qui devient moins bon sur un palier déjà acquis reste
 officiellement à ce palier, pour toujours.
+
+> 🔴 **Corollaire mesuré (2026-08-14) : le niveau atteint n'indique PAS la compétence.**
+>
+> La promotion par série suffit à 2 victoires consécutives — **un coup de chance change de
+> niveau**. Mesuré sur un run de 2 000 jours : un agent monté à **5/6** n'avait au total que
+> **4 victoires** et n'en avait plus gagné une seule depuis **1 368 jours**. Sur la même
+> graine, un agent resté à **1/6** en comptait **205**.
+>
+> Le niveau enregistre donc le **plus haut palier jamais effleuré**, pas ce que l'agent sait
+> faire. Pour juger la compétence, lire `Cursus_Taux_Maitrise_Niveau` et le nombre de jours
+> depuis la dernière victoire (`Chrono Victoire`), jamais le numéro de palier seul.
+> Voir [§6quater](#6quater--le-cursus-gaussien-p17--expérimental).
 
 Ce que tu peux regarder à la place pour détecter une dégradation réelle :
 - **`Taux_Maitrise_Palier`** (W&B) — pourcentage d'épisodes réussis dans la journée, peut chuter

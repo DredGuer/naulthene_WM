@@ -275,6 +275,134 @@ $$
 
 $f_{planif}$ vaut **0.5 en mode guidé**, **0.85 en Mode Libre** (dès `palier_cible >= 5`). Le Système 2 pèse donc structurellement plus lourd précisément au moment où le guidage artificiel externe disparaît — l'agent est forcé de s'appuyer davantage sur sa propre planification interne. L'action finale est échantillonnée par `Categorical(logits=logits_finaux)`.
 
+### ⚠️ 7.1 — Ce que cet arbitrage produit réellement (mesuré, 2026-08-14)
+
+Cette formule est le point le plus fragile de l'architecture. Six runs longs de 2 000 jours
+(3 régimes classiques + 3 gaussiens) donnent tous la même lecture :
+
+| Run | $\|C1\|$ | $\|C2\|$ | Ratio | **Accord C1/C2** |
+|---|---|---|---|---|
+| témoin g11 | 0,469 | 2,743 | 5,85× | **0,0 %** |
+| témoin g22 | 0,315 | 2,751 | 8,74× | **0,0 %** |
+| témoin g33 | 0,378 | 2,513 | 6,64× | **0,0 %** |
+
+**C1 et C2 ne votent la même action sur aucun tick, et C2 parle 6 à 9 fois plus fort.**
+Concrètement, le terme $\text{logits}_{instinct}$ est presque toujours écrasé : l'arbitrage
+n'arbitre pas, il substitue.
+
+C'est le défaut que le
+[chantier v37](../ameliorations_appliquees/CHANTIER_v37_equilibre_c1_c2.md) devait corriger
+(il mesurait 0 % d'accord et un ratio de 9,9× à 22,1×). **Le ratio a baissé ; l'accord n'a
+pas bougé d'un point.**
+
+#### 🔴 Constatation — ratio et accord sont deux problèmes distincts, un seul a été traité
+
+Le chantier v37 a lu ce défaut comme un problème de **volume** et y a répondu par un
+`gain_c1` scalaire. C'était juste, et ça a marché : 22× → 6×. Mais **monter le volume d'une
+voix ne lui fait pas changer d'avis.**
+
+| | Ce que ça mesure | État |
+|---|---|---|
+| Le **ratio** $\|C2\|/\|C1\|$ | qui parle le plus fort | ✅ corrigé |
+| L'**accord** | veulent-ils la même action | ❌ **jamais traité** |
+
+L'invariant v37.0 est explicite là-dessus (« le gain règle le VOLUME, jamais l'OPINION ») —
+ce qui était nécessaire pour ne pas fausser C1, mais implique que **rien dans l'architecture
+n'a jamais cherché à réconcilier les deux avis.**
+
+#### ⚠️ Constatation — la métrique d'accord des logs de nuit est FAUSSE
+
+`noyau.py:868` :
+
+```python
+"accord": int((logits_instinct.argmax(dim=-1)
+               == valeurs_simulees.argmax(dim=-1)).all().item()),
+```
+
+Le `.all()` exige que **toutes** les lignes du batch soient d'accord pour compter 1. Sur un
+batch de 400 ticks, une seule divergence suffit à écrire 0. Le résultat est donc quasiment
+garanti à 0 % par construction, quel que soit l'état réel du cerveau.
+
+**Le banc d'ablation, qui mesure tick par tick, trouve 0,26 à 0,31 — soit 26 à 31 % d'accord.**
+
+> **`accord 0.0 %` dans les logs de nuit ne veut pas dire « ils ne sont jamais d'accord ».
+> Ça veut dire « ils ne sont jamais TOUS d'accord sur 400 ticks d'affilée ».** Un chiffre que
+> le projet traîne depuis le chantier v37 et qui a orienté le diagnostic vers un problème plus
+> grave qu'il ne l'est. Le désaccord réel est de ~70 %, pas de 100 %.
+
+#### Constatation — pourquoi ils divergent : ils ne répondent pas à la même question
+
+C1 et C2 reçoivent **le même** état (`pensee_bio`) — C2 ne voit jamais autre chose que ce que
+C1 a compressé. La divergence ne vient donc pas de l'entrée, mais de l'objectif :
+
+| | Apprend par | Répond à |
+|---|---|---|
+| **C1** (`tete_motrice`) | la récompense (Acteur-Critique) | « qu'est-ce qui **a marché** ? » |
+| **C2** (rollout JEPA) | l'erreur de prédiction du monde | « qu'est-ce qui **va se passer** ? » |
+
+Le JEPA de ce cerveau prédit très bien (erreur 0,0113 à 0,0525). Mais **prédire correctement
+le prochain état latent ne dit rien sur quelle action mène à la victoire** : un modèle du
+monde parfait peut noter les 7 actions de façon parfaitement inutile pour la tâche.
+
+> **C2 n'est pas en désaccord avec C1 — il répond à une autre question.** Et l'addition
+> `voix_c1 + f·V` n'a aucun moyen de savoir lequel des deux a raison sur ce tick précis :
+> elle superpose, toujours dans les mêmes proportions, quel que soit le contexte.
+
+### 7.2 — L'ablation de C2 : le verdict change de signe selon le niveau
+
+Cerveau figé (aucun apprentissage), 60 épisodes par condition, `force_planification = 0` :
+
+| Niveau | Témoin | Sans C2 | Effet |
+|---|---|---|---|
+| `DoorKey-5x5` | 3,3 % | **15,0 %** | **+11,7 pts (×4,5)** |
+| `DoorKey-6x6` | 11,7 % | 6,7 % | −5,0 pts |
+| `DoorKey-8x8` | 3,3 % | 0,0 % | −3,3 pts |
+
+**Sur la plus petite carte, la planification nuit ; dès qu'elle grandit, elle aide.**
+
+Lecture la plus simple : sur `5x5` l'optimum est à ~10 actions pour 250 disponibles (marge
+25×), l'exploration réflexe suffit, et un planificateur qui contredit systématiquement C1 ne
+fait que **réduire la couverture** (0,0165 sans C2 contre 0,0121 avec). Sur les cartes plus
+grandes, le réflexe seul ne porte plus assez loin.
+
+> ⚠️ **Les deux README portent « couper C2 double le taux de succès ».** Cette formulation
+> vient d'une mesure sur **un seul niveau** et elle est **trop générale** : l'effet dépend du
+> niveau et change de signe. À corriger lors de la prochaine mise à jour des README.
+
+> ⚠️ **Piège de lecture.** La lésion `c2_coupe` affiche un accord C1/C2 de **1,000 exactement**.
+> Ce n'est pas un résultat : avec $f_{planif} = 0$, l'action fusionnée *est* celle de C1 par
+> construction (`banc_ablation.py:243-246`). Ne jamais citer ça comme « couper C2 réconcilie
+> les deux systèmes » — c'est une tautologie de la mesure.
+
+#### 🔴 Constatation — le bon poids de C2 dépend du niveau, et il est figé
+
+L'inversion de signe entre `5x5` et `6x6` a une conséquence directe sur les constantes :
+
+```python
+FORCE_PLANIFICATION_GUIDE = 0.5    # posé
+FORCE_PLANIFICATION_LIBRE = 0.85   # posé
+RATIO_C1C2_VISE = 2.0              # posé — « C2 doit peser 2× C1 »
+```
+
+**D'où vient ce 2,0 ?** D'aucune mesure. Or l'ablation montre que le rapport optimal n'est
+pas le même selon la carte : sur `5x5` l'agent ferait mieux avec $f_{planif} \approx 0$, sur
+`8x8` C2 est indispensable.
+
+> **Une valeur qui devrait dépendre du contexte est figée pour tous les niveaux.** C'est
+> exactement le motif que le projet a corrigé six fois ailleurs (rêve adaptatif, capacité
+> mnésique, référence de choc, échelle de myéline…) : une constante posée a priori, jamais
+> confrontée à une mesure.
+>
+> ⚠️ Ceci **n'autorise pas** à écrire un `if niveau == 7: force = 0`. La doctrine du projet
+> (§13, et `CLAUDE.md`) interdit le déclenchement sur seuil et impose d'**instrumenter avant
+> de calibrer** — et le chantier v37 a déjà écarté deux fois l'idée de piloter
+> `force_planification` par l'incertitude. La constatation ici est un **constat de mesure**,
+> pas une solution : elle dit qu'il existe un signal réel là où le projet avait conclu qu'il
+> n'y en avait pas.
+
+Détail complet et protocole :
+[CAMPAGNE_P17_ABLATION](../recherche/CAMPAGNE_P17_ABLATION_aout_2026.md).
+
 ---
 
 ## 8. Plasticité structurelle — `NaultheneLinearSynaptique`
@@ -853,6 +981,34 @@ Au-dessus de 0.5 l'agent se rapproche, en dessous il s'éloigne. C'est ce qui d�
 **Option écartée : l'habituation au capteur.** Un filtre $\max(0,\ S - \alpha \cdot S_{\text{lissé}})$ imite la désensibilisation des récepteurs olfactifs, mais c'est une **dérivée en moins lisible** : le $\max(0, \cdot)$ écrase toute l'information d'éloignement, soit exactement la moitié du signal que la clinotaxie vient d'apporter. Il rendrait de plus l'odorat non-markovien (deux agents à la même position percevraient des odeurs différentes selon leur trajectoire passée). Si une lassitude olfactive est souhaitée, sa place est le réservoir dopaminergique (`stimulation`), qui modélise déjà ce phénomène — pas le capteur, qui ne doit jamais mentir sur la géométrie du monde.
 
 **Corollaire de persistance.** La détection de greffe ne peut pas se fonder sur `missing_keys` : une greffe **par recopie** ne produit aucune clé manquante, la couche existant déjà. Les moments Adam restaient donc chargés à l'ancienne largeur, et la première **`executer_nuit`** d'un cerveau greffé plantait — ni au chargement, ni pendant la journée, donc invisible à toute validation « N ticks post-résurrection ». Bug latent depuis la v29.0. Toute validation de greffe doit désormais inclure **une nuit complète**.
+
+### 15.10 ⚠️ Ce qu'une ablation sensorielle mesure — et ce qu'elle ne mesure pas
+
+Ablation du 14 août 2026 sur un cerveau de 4 590 jours, `DoorKey` 5×5 / 6×6 / 8×8 :
+
+| Canal coupé | Résultat |
+|---|---|
+| 👁 **vue** | dégrade sur **les 3 niveaux** — jusqu'à 11,7 % → **0,0 %** sur `6x6` |
+| ✋ toucher | dégrade légèrement (−1,7 à −3,3 pts) |
+| 👂 ouïe · 👃 odorat · 👅 goût · 🌐 exo | **identiques au témoin à la 7ᵉ décimale** |
+
+Ce dernier point n'est **pas** un verdict d'inutilité. Les valeurs sont rigoureusement les
+mêmes — `couverture = 0.012144507493088898`, `accord = 0.2567137785537611` — c'est-à-dire
+**le même calcul, bit pour bit**. Sur `DoorKey` il n'y a ni son, ni nourriture, ni plug C3
+enregistré : ces canaux portent déjà des zéros, et les couper revient à mettre des zéros là
+où il y en avait.
+
+> **On n'a pas mesuré l'inutilité de ces sens — on a mesuré leur absence de stimulus.**
+> Un verdict « inerte » sur un canal muet est **vide**, pas négatif. Toujours croiser avec
+> la ligne « Les 5 Sens » des logs (§15 de [Parcourt_readme](Parcourt_readme.md)) avant de
+> conclure quoi que ce soit sur l'utilité d'un sens.
+
+La vue reste donc, à ce jour, **le seul canal dont l'utilité est démontrée** — et c'est
+aussi le seul dont l'ablation effondre l'accord C1/C2 (0,311 → 0,042) : privé de vision,
+le planificateur délire.
+
+Protocole et tableaux complets :
+[CAMPAGNE_P17_ABLATION](../recherche/CAMPAGNE_P17_ABLATION_aout_2026.md).
 
 ---
 

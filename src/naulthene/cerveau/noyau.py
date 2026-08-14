@@ -553,7 +553,104 @@ class AGI_Naulthene(nn.Module):
         # `None` = jamais mesuré (la 1re journée avec un choc l'établit).
         self.reference_choc_dopamine = None
 
+        # v40.0 — LE VÉCU QUI DÉTERMINE LA FORCE DE PLANIFICATION.
+        #
+        # Deux compteurs, et rien d'autre : la somme pondérée de ce qui a marché (OKAY) et
+        # de ce qui a fait mal (DANGER). Ils ne contiennent aucune connaissance déclarée —
+        # l'agent ne sait pas ce qu'est une victoire, il a juste ressenti des chocs.
+        #
+        # À la naissance les deux valent 0, donc f = 0/(0+0+1) = 0 : C1 SEUL. La confiance
+        # en la planification se GAGNE, elle n'est jamais accordée. Sérialisés dans le
+        # .brain — c'est de l'état cognitif, au même titre que `reference_choc_dopamine`.
+        self.vecu_okay = 0.0
+        self.vecu_danger = 0.0
+
         self._reset_optimizer()
+
+    def force_planification_vecue(self):
+        """v40.0 — la force de planification, DÉRIVÉE du vécu (jamais une constante).
+
+        « C1 a toujours raison, sauf si C2 estime que le bénéfice dépasse le risque au vu
+        des expériences passées. » Cette méthode est cette phrase.
+
+        Retourne une fraction dans [0, 1[ : la part de son vécu que l'agent a trouvée
+        bénéfique. `PRUDENCE_NAISSANCE` (a priori de Laplace, une observation fictive de
+        prudence) donne un sens à la fraction quand rien n'a encore été vécu, et garantit
+        qu'elle reste strictement inférieure à 1 — un agent ne peut jamais devenir
+        certain au point de faire taire son réflexe.
+        """
+        total = self.vecu_okay + self.vecu_danger + PRUDENCE_NAISSANCE
+        return self.vecu_okay / total
+
+    def nourrir_vecu_journee(self, recompenses):
+        """v40.0-fix1 — le vécu se compte en JOURNÉES, pas en ticks.
+
+        Première version : chaque tick nourrissait directement les réservoirs. Mesuré sur
+        12 jours — 400 ticks/jour contre un a priori de 1,0 — la force passait de 0,000 à
+        **0,906 EN UNE SEULE NUIT**. L'agent naissait prudent et délibérait largement dès
+        le lendemain : exactement l'inverse de « c'est l'expérience qui fera grandir la
+        force de planification ».
+
+        L'unité correcte n'est pas le tick mais la JOURNÉE : une journée vécue apporte au
+        plus 1 point de vécu, réparti entre OKAY et DANGER selon ce qui l'a dominée. Un
+        agent a donc besoin de plusieurs dizaines de journées pour se faire une opinion, ce
+        qui est la temporalité de tous les autres acquis du projet (référence de choc,
+        capacité mnésique, myéline).
+
+        Le bilan du jour est sa moyenne signée normalisée par ce que CET agent juge
+        marquant (`reference_choc_dopamine`) — le même niveau dérivé qui sert déjà à la
+        distillation sélective. Aucun seuil : le crédit est continu et borné à ±1.
+        """
+        valeurs = [float(r) for r in (recompenses or ())]
+        if not valeurs:
+            # Une journée sans le moindre retour n'apprend rien — mais l'oubli, lui,
+            # continue de courir : c'est ce qui permet à un monde durablement muet de
+            # recalibrer l'agent.
+            self.vecu_okay *= OUBLI_OKAY
+            self.vecu_danger *= OUBLI_DANGER
+            return
+
+        moyenne = sum(valeurs) / len(valeurs)
+        # L'échelle qui juge « fort » ou « faible » est celle de l'agent lui-même, jamais
+        # une constante : même principe que `reference_choc_dopamine` (v37.1), dont on
+        # réutilise directement la valeur quand elle existe.
+        echelle = max(self.reference_choc_dopamine or 0.0, 1e-3)
+        bilan = max(-1.0, min(1.0, moyenne / echelle))
+
+        self.vecu_okay *= OUBLI_OKAY
+        self.vecu_danger *= OUBLI_DANGER
+        if bilan >= 0.0:
+            self.vecu_okay += bilan
+        else:
+            self.vecu_danger += -bilan
+
+    def nourrir_vecu(self, chocs):
+        """v40.0 — accumule le vécu à partir des récompenses internes RÉELLEMENT ressenties.
+
+        Appelée une fois par nuit. Une récompense positive nourrit OKAY, une négative
+        nourrit DANGER — en valeur absolue, l'intensité comptant autant que le signe.
+
+        ⚠️ Attend `recompenses_journee` (SIGNÉE), surtout pas `chocs_dopamine_journee`.
+        Première implémentation branchée par erreur sur cette dernière : `poids_evenement`
+        est une INTENSITÉ, toujours positive — la distillation v37.1 ne s'intéresse qu'à
+        « à quel point c'était marquant », jamais à « était-ce bon ou mauvais ». Résultat
+        mesuré sur 10 jours : `danger` restait à 0,00 exact et f saturait à 0,97, l'agent
+        devenant incapable de jamais enregistrer un échec. Le DANGER de la formulation
+        utilisateur exige une grandeur qui peut être négative.
+
+        Le CLIQUET (v37.1-fix1, même principe que `reference_choc_dopamine`) : les deux
+        réservoirs s'oublient, mais le DANGER ~5× plus lentement que l'OKAY. Sans cette
+        asymétrie, une bonne série effacerait la mémoire d'un danger réel, et l'agent
+        redeviendrait imprudent exactement là où il s'était déjà brûlé.
+        """
+        self.vecu_okay *= OUBLI_OKAY
+        self.vecu_danger *= OUBLI_DANGER
+        for choc in (chocs or ()):
+            c = float(choc)
+            if c >= 0.0:
+                self.vecu_okay += c
+            else:
+                self.vecu_danger += -c
 
     def _reset_optimizer(self):
         params = [p for p in self.parameters() if p.requires_grad]
@@ -849,9 +946,15 @@ class AGI_Naulthene(nn.Module):
         # Ce n'est toujours qu'un facteur SCALAIRE — l'opinion de C1 (les rapports entre ses
         # 7 logits) reste rigoureusement intacte, seul son volume est réglé. Les bornes
         # empêchent l'un ou l'autre module de disparaître de l'arbitrage.
+        #
+        # v40.0 — la cible de vigueur suit `force_planification`, qui n'est plus une
+        # constante mais la confiance que l'agent a GAGNÉE dans sa propre planification
+        # (voir `vigueur_min_c1` et `PRUDENCE_NAISSANCE`). Un agent inexpérimenté a f≈0 :
+        # la cible tend vers 0, le gain vers sa borne basse, et C1 domine sans qu'aucune
+        # règle ne l'ait décrété. « C1 a toujours raison, sauf si… » est ici, en une ligne.
         amplitude_c1 = (logits_instinct.max(dim=-1, keepdim=True).values
                         - logits_instinct.min(dim=-1, keepdim=True).values)
-        gain_c1 = torch.clamp(VIGUEUR_MIN_C1 / (amplitude_c1 + 1e-8),
+        gain_c1 = torch.clamp(vigueur_min_c1(force_planification) / (amplitude_c1 + 1e-8),
                               min=GAIN_C1_MIN, max=GAIN_C1_MAX)
         voix_c1 = logits_instinct * gain_c1
 
@@ -865,8 +968,20 @@ class AGI_Naulthene(nn.Module):
                 "amplitude_c2": float((voix_c2_ponderee.max(dim=-1).values
                                        - voix_c2_ponderee.min(dim=-1).values).mean().item()),
                 "gain_c1": float(gain_c1.mean().item()),
-                "accord": int((logits_instinct.argmax(dim=-1)
-                               == valeurs_simulees.argmax(dim=-1)).all().item()),
+                # v39.2-fix — L'ACCORD EST UNE FRACTION, PLUS UN « TOUT OU RIEN ».
+                #
+                # L'ancienne version fermait sur `.all()` : l'accord ne valait 1 que si les
+                # 400 lignes du batch votaient la même action. Une seule divergence écrivait
+                # 0 — le résultat était donc quasiment garanti à 0 % PAR CONSTRUCTION, quel
+                # que soit l'état réel du cerveau. Mesuré le 14/08 : les logs de nuit
+                # affichaient 0,0 % sur six runs longs, là où le banc d'ablation, qui compte
+                # tick par tick, trouvait 26 à 31 % sur le MÊME cerveau.
+                #
+                # Ce 0 % circulait dans le projet depuis le chantier v37 et faisait paraître
+                # le désaccord total (100 %) alors qu'il est de ~70 %. C'est un défaut de
+                # MESURE, pas de cognition : rien dans la décision ne change ici.
+                "accord": float((logits_instinct.argmax(dim=-1)
+                                 == valeurs_simulees.argmax(dim=-1)).float().mean().item()),
             }
 
         # --- Arbitrage C1 + C2 (structure inchangée depuis la v13.0) ---
@@ -3105,10 +3220,50 @@ PLANCHER_ECHELLE_MYELINE = 1e-6    # v37.0-fix — borne basse de `echelle_myeli
 # confronté à l'inconnu plus tôt, pendant qu'il travaille encore les paliers 5/6/7,
 # plutôt que d'attendre une maîtrise complète avant tout lâcher-prise.
 SEUIL_PALIER_MODE_LIBRE = 5
-FORCE_PLANIFICATION_GUIDE = 0.5
-FORCE_PLANIFICATION_LIBRE = 0.85
 COEFF_ENTROPIE_GUIDE = 0.02
 COEFF_ENTROPIE_LIBRE = 0.06
+
+# --- v40.0 : LA PLANIFICATION ÉMERGENTE (force_planification n'est plus une constante) ---
+#
+# Formulation utilisateur : « C1 a toujours raison, SAUF si C2 estime que le bénéfice
+# dépasse le risque au vu des expériences passées. L'enfant est entièrement piloté par C1 ;
+# chaque fois qu'il gagne = OKAY, chaque fois qu'il perd = DANGER ; C2 mesure si le pari en
+# vaut la peine. »
+#
+# Ce qui DISPARAÎT : FORCE_PLANIFICATION_GUIDE (0.5), FORCE_PLANIFICATION_LIBRE (0.85) et
+# RATIO_C1C2_VISE (2.0). Ces trois nombres fixaient un rapport de force posé a priori, jamais
+# confronté à une mesure — et l'ablation du 14/08 a montré qu'aucune valeur unique ne peut
+# être juste : couper C2 MULTIPLIE le succès par 4,5 sur DoorKey-5x5 mais l'ANNULE sur 8x8.
+# Une constante qui devrait dépendre du contexte était figée pour tous les contextes.
+#
+# Ce qui REMPLACE : deux compteurs de vécu, et rien d'autre.
+#
+#                            OKAY
+#     f_planif  =  ────────────────────────────
+#                   OKAY  +  DANGER  +  PRUDENCE_NAISSANCE
+#
+# OKAY et DANGER sont les sommes pondérées des chocs dopaminergiques réellement vécus
+# (positifs / négatifs) — exactement la matière que `chocs_dopamine_journee` collecte déjà.
+# Rien n'est déclaré : l'agent ne sait pas ce qu'est une victoire, il sait qu'il a ressenti
+# n fois un choc positif et m fois un choc négatif.
+#
+# PRUDENCE_NAISSANCE = 1.0 n'est PAS un rapport de force : c'est un a priori de Laplace,
+# l'équivalent d'UNE observation fictive de prudence. Il ne sert qu'à donner un sens à la
+# fraction quand l'agent n'a encore rien vécu (0/0 est indéfini). À la naissance f = 0/1 = 0
+# — C1 SEUL, littéralement l'enfant de la formulation. Au premier succès f = 1/2, après neuf
+# succès et un échec f = 9/11 ≈ 0,82. La force de planification GRANDIT avec l'expérience,
+# elle n'est jamais accordée.
+PRUDENCE_NAISSANCE = 1.0
+
+# Le CLIQUET, repris à l'identique de `reference_choc_dopamine` (v37.1-fix1) : le DANGER
+# s'inscrit vite, il s'efface lentement. Sans lui, un agent traversant une mauvaise passe
+# verrait f s'effondrer et perdrait sa planification PRÉCISÉMENT quand il en a le plus
+# besoin — la boucle qui s'auto-verrouille. La décroissance reste NON NULLE (un monde
+# durablement plus dur doit pouvoir recalibrer), mais sur des centaines de nuits.
+OUBLI_OKAY = 0.9995                # ce qui a marché s'oublie lentement...
+OUBLI_DANGER = 0.99990             # ...et ce qui a fait mal encore plus lentement.
+                                    # L'asymétrie est le cliquet : elle interdit à une
+                                    # bonne série d'effacer la mémoire d'un danger réel.
 
 # --- v37.0 : L'ÉQUILIBRE C1 / C2 ---
 #
@@ -3142,12 +3297,26 @@ COEFF_ENTROPIE_LIBRE = 0.06
 # à égalité avec le réflexe. Mais il ne l'écrase plus d'un facteur 8 à 22, où C1 n'avait
 # structurellement aucune chance d'être entendu, quelle que soit la qualité de son avis.
 AMPLITUDE_C2_NORMALISEE = 2.1      # amplitude d'un z-score sur 7 actions (mesurée, borne)
-RATIO_C1C2_VISE = 2.0              # C2 reste prépondérant, mais cesse d'être écrasant
-VIGUEUR_MIN_C1 = (AMPLITUDE_C2_NORMALISEE * FORCE_PLANIFICATION_LIBRE) / RATIO_C1C2_VISE
-                                    # ≈ 0,89 — la cible vers laquelle l'amplitude de C1 est
-                                    # ramenée, dans les DEUX sens : on règle sa VOIX, jamais
-                                    # son OPINION, les rapports entre ses 7 logits étant
-                                    # préservés (facteur purement scalaire).
+
+# v40.0 — `RATIO_C1C2_VISE = 2.0` A DISPARU, et avec lui le dernier rapport de force posé.
+#
+# Il disait « C2 doit peser 2× C1 ». D'où venait ce 2 ? D'aucune mesure. Désormais la cible
+# de vigueur de C1 est simplement l'amplitude que C2 pèse RÉELLEMENT ce tick-ci :
+#
+#     VIGUEUR_MIN_C1(f)  =  AMPLITUDE_C2_NORMALISEE × f_planif
+#
+# C'est la PARITÉ, et elle est le seul point de référence non arbitraire : « C1 doit être
+# audible à la hauteur de ce que C2 pèse aujourd'hui ». Le rapport de force n'est plus
+# décrété, il devient une CONSÉQUENCE de l'expérience — f petit (agent inexpérimenté) ⇒ C2
+# pèse peu ⇒ C1 domine naturellement. C'est la formulation « C1 a toujours raison, sauf
+# si… » exprimée en une ligne, sans aucun seuil.
+def vigueur_min_c1(force_planification):
+    """La cible vers laquelle l'amplitude de C1 est ramenée, dans les DEUX sens.
+
+    On règle sa VOIX, jamais son OPINION : le gain reste un facteur purement scalaire,
+    les rapports entre les 7 logits de C1 sont rigoureusement préservés (invariant v37.0).
+    """
+    return AMPLITUDE_C2_NORMALISEE * float(force_planification)
 GAIN_C1_MIN = 0.25                 # bornes du gain. Sans la borne HAUTE, un C1 érodé à
 GAIN_C1_MAX = 4.0                  # l'extrême serait amplifié sans limite et son bruit
                                     # deviendrait du signal ; sans la borne BASSE, un C1
@@ -3941,7 +4110,9 @@ class EtatCognitif:
         self.jours_stagnation_niveau = 0
         self.doorkey_actif = False
         self.mode_libre = False
-        self.force_planification_jour = FORCE_PLANIFICATION_GUIDE
+        # v40.0 — à la naissance l'agent n'a rien vécu : f = 0, C1 SEUL. La valeur réelle
+        # est relue au début de chaque journée depuis le vécu de l'agent.
+        self.force_planification_jour = 0.0
         self.coeff_entropie_jour = COEFF_ENTROPIE_GUIDE
 
         # --- Thermostat de neurogenèse ---
@@ -4367,7 +4538,13 @@ def demarrer_journee(etat):
     # une aide qui fluctuerait d'un tick à l'autre serait un signal non stationnaire, donc
     # impossible à apprendre). Voir `facteur_guidage` pour la courbe et ses deux bornes.
     etat.facteur_guidage_jour = facteur_guidage(etat)
-    etat.force_planification_jour = FORCE_PLANIFICATION_LIBRE if etat.mode_libre else FORCE_PLANIFICATION_GUIDE
+    # v40.0 — la force de planification n'est plus choisie par un seuil de palier, elle est
+    # LUE sur le vécu de l'agent (voir `force_planification_vecue`). La bascule
+    # Guidé/Libre (0.5 → 0.85) a disparu : elle décrétait un rapport de force que rien
+    # n'avait mesuré, et l'ablation du 14/08 a montré qu'aucune valeur unique ne peut être
+    # juste sur tous les niveaux. Calculée UNE FOIS par journée, comme le guidage : une
+    # force qui fluctuerait d'un tick à l'autre serait un signal non stationnaire.
+    etat.force_planification_jour = etat.agent.force_planification_vecue()
     etat.coeff_entropie_jour = COEFF_ENTROPIE_LIBRE if etat.mode_libre else COEFF_ENTROPIE_GUIDE
 
     etat.facteur_complexite_jour = etat.gestionnaire_cursus.obtenir_facteur_complexite() if etat.doorkey_actif else 1.0
@@ -5652,6 +5829,21 @@ def executer_nuit(etat, plafond_reve=None):
         chocs_dopamine=getattr(etat, "chocs_dopamine_journee", None),
     )
 
+    # --- v40.0 : LE VÉCU NOURRIT LA FORCE DE PLANIFICATION (une fois par nuit) ---
+    # Placé APRÈS `apprendre_journee` (le buffer est alors complet) et AVANT le bilan
+    # console, qui affiche la valeur mise à jour. La force elle-même n'est relue qu'au
+    # début de la journée suivante — jamais en cours de journée, pour rester stationnaire.
+    #
+    # ⚠️ La source est `recompenses_journee`, la grandeur SIGNÉE — pas
+    # `chocs_dopamine_journee`, qui est une intensité toujours positive (voir la docstring
+    # de `nourrir_vecu`). Sans le signe, DANGER ne se remplit jamais.
+    #
+    # v40.0-fix1 — UNE journée = au plus UN point de vécu (`nourrir_vecu_journee`). La
+    # version par tick faisait passer f de 0,000 à 0,906 en une seule nuit (400 ticks
+    # contre un a priori de 1,0) : l'agent naissait prudent et délibérait largement dès le
+    # lendemain, au lieu de gagner sa confiance sur des dizaines de journées.
+    etat.agent.nourrir_vecu_journee(getattr(etat, "recompenses_journee", None))
+
     # --- v31.0 : capacité mnésique adaptative (une fois par nuit) ---
     # Placée AVANT le calcul du rêve : la nuit est le moment où le cerveau grandit
     # (declencher_neurogenese plus bas) et où la plasticité est réévaluée — c'est donc
@@ -5801,6 +5993,21 @@ def executer_nuit(etat, plafond_reve=None):
         mode_txt = "🕊️ Libre (aucune récompense de guidage)" if etat.mode_libre else "🧭 Guidé (béquille active)"
         print(f"  ├─ Mode Décision  : {mode_txt} — Planification: {etat.force_planification_jour:.2f}, "
               f"Entropie: {etat.coeff_entropie_jour:.2f}")
+    # v40.0 — la confiance en la planification, affichée sur TOUS les niveaux (la mécanique
+    # est globale, contrairement au bloc DoorKey ci-dessus). Se lit comme une balance : la
+    # part de vécu que l'agent a trouvée bénéfique.
+    _f = etat.agent.force_planification_vecue()
+    _okay, _danger = etat.agent.vecu_okay, etat.agent.vecu_danger
+    if _f < 0.15:
+        _profil = "🐣 réflexe pur (n'ose pas encore planifier)"
+    elif _f < 0.50:
+        _profil = "🌱 planification naissante"
+    elif _f < 0.80:
+        _profil = "🧭 planifie volontiers"
+    else:
+        _profil = "🦉 délibère largement"
+    print(f"  ├─ Planif. v40    : {_profil} — force {_f:.3f} "
+          f"(okay {_okay:.2f} / danger {_danger:.2f})")
     if etat.detecteur_portes.actif and etat.portes_franchies_jour > 0:
         print(f"  ├─ Portes         : 🚪 {etat.portes_franchies_jour} porte(s) franchie(s) aujourd'hui")
     if _quete_auto_active(etat) and etat.detecteur_progres.actif and etat.progres_personnel_jour > 0:
@@ -6336,11 +6543,18 @@ def executer_nuit(etat, plafond_reve=None):
 
     if etat.mode_libre:
         log_wandb["Sous_Objectifs_Curiosite_Jour"] = etat.sous_objectifs_curiosite_jour
+    # v40.0 — la planification émergente est GLOBALE : ses trois métriques sortent du bloc
+    # DoorKey. `Force_Planification` y était enfermée du temps où elle valait 0.5 ou 0.85
+    # selon le palier ; elle dépend maintenant du vécu, donc elle vit sur tous les niveaux.
+    # Les deux réservoirs sont loggés séparément : c'est leur RAPPORT qui pilote, mais leur
+    # évolution respective est ce qui dira si le cliquet fait son travail.
+    log_wandb["Force_Planification"] = etat.force_planification_jour
+    log_wandb["Planif_Vecu_Okay"] = etat.agent.vecu_okay
+    log_wandb["Planif_Vecu_Danger"] = etat.agent.vecu_danger
     if etat.doorkey_actif and etat.detecteur.actif:
         log_wandb["Palier_Cible"] = etat.palier_cible
         log_wandb["Guidage_But"] = etat.guidage_but_journee
         log_wandb["Mode_Libre"] = int(etat.mode_libre)
-        log_wandb["Force_Planification"] = etat.force_planification_jour
         log_wandb["Coeff_Entropie"] = etat.coeff_entropie_jour
         log_wandb["Sous_Seuil_Abnegation"] = etat.gestionnaire_cursus.sous_seuil_actuel
         log_wandb["Succes_Sous_Seuil_Courant"] = etat.gestionnaire_cursus.succes_sous_seuil_courant

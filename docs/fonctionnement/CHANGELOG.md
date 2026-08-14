@@ -4,6 +4,83 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v40.0-experimental] - 2026-08-14 — La Planification Émergente
+
+### « C1 a toujours raison, sauf si C2 estime que le bénéfice dépasse le risque »
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | feat |
+| **Impact** | Critique — change le chemin de décision |
+| **Branche** | `feat/v40-planification-emergente` |
+| **Portée** | `noyau.py` uniquement — `colab.py` **non touché** |
+
+**`force_planification` n'est plus une constante. Elle est la fraction du vécu que l'agent
+a trouvée bénéfique.**
+
+$$f_{planif} = \frac{\text{OKAY}}{\text{OKAY} + \text{DANGER} + \text{PRUDENCE\_NAISSANCE}}$$
+
+OKAY et DANGER sont les sommes pondérées des récompenses internes **réellement ressenties**
+(positives / négatives). Rien n'est déclaré : l'agent ne sait pas ce qu'est une victoire,
+il sait qu'il a ressenti *n* fois du bon et *m* fois du mauvais.
+
+### Trois constantes supprimées
+
+| Constante | Valeur | Ce qu'elle décrétait |
+|---|---|---|
+| `FORCE_PLANIFICATION_GUIDE` | 0.5 | le poids de C2 en mode guidé |
+| `FORCE_PLANIFICATION_LIBRE` | 0.85 | le poids de C2 en mode libre |
+| `RATIO_C1C2_VISE` | 2.0 | « C2 doit peser 2× C1 » — sans aucune mesure |
+
+`VIGUEUR_MIN_C1` devient la fonction `vigueur_min_c1(f)` = `AMPLITUDE_C2_NORMALISEE × f` :
+la **parité**, seul point de référence non arbitraire. Le rapport de force n'est plus
+décrété, il est une **conséquence** de l'expérience.
+
+**Ce qui a motivé la suppression** : l'ablation du 14/08 a montré que couper C2 **multiplie
+le succès par 4,5 sur `DoorKey-5x5` mais l'annule sur `8x8`**. Aucune valeur unique ne peut
+être juste — une constante qui devrait dépendre du contexte était figée pour tous.
+
+### Le cliquet (repris de v37.1-fix1)
+
+`OUBLI_OKAY = 0.9995` / `OUBLI_DANGER = 0.99990` — le danger s'efface **~5× plus lentement**.
+Sans cette asymétrie, un agent traversant une mauvaise passe verrait `f` s'effondrer et
+perdrait sa planification précisément quand il en a le plus besoin.
+
+### ⚠️ Défaut trouvé et corrigé pendant l'implémentation
+
+La première version branchait `nourrir_vecu` sur `chocs_dopamine_journee`. **Erreur** :
+`poids_evenement` est une **intensité**, toujours positive (la distillation v37.1 ne
+s'intéresse qu'à « à quel point c'était marquant »). Mesuré sur 10 jours : `danger` restait
+à **0,00 exact** et `f` saturait à **0,97** — l'agent ne pouvait jamais enregistrer un échec.
+
+Source corrigée : `recompenses_journee`, la grandeur **signée**.
+
+> **Leçon** : le DANGER exige une grandeur qui peut être négative. Une intensité ne porte
+> pas de jugement.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `force_planification_vecue()`, `nourrir_vecu()`, `vigueur_min_c1()` ; 3 constantes supprimées ; métrique `accord` corrigée (`.all()` → moyenne) ; ligne console `Planif. v40` ; 3 clés W&B |
+| `src/naulthene/cerveau/persistance.py` | `vecu_okay` / `vecu_danger` sérialisés — `.get(…, 0.0)`, un `.brain` antérieur repart à f=0 sans greffe |
+| `src/naulthene/instruments/sonde_c1_c2.py` | lit la force **vécue** au lieu de la constante supprimée |
+
+### 🐛 Correctif joint — la métrique d'accord C1/C2 était fausse
+
+`noyau.py:868` fermait sur `.all()` : l'accord ne valait 1 que si les **400 ticks** du batch
+votaient la même action. Une seule divergence écrivait 0 — **le résultat était garanti à 0 %
+par construction**.
+
+| Source | Accord mesuré |
+|---|---|
+| Log de nuit (avant) | **0,0 %** |
+| Banc d'ablation (par tick) | **26 à 31 %** |
+
+Ce 0 % circulait depuis le chantier v37 et faisait paraître le désaccord total. Le désaccord
+réel est de ~70 %. **Défaut de mesure, pas de cognition** — aucune décision ne change.
+
+---
+
 ## [v39.0-experimental] - 2026-08-13 (nuit) — L'abstraction s'émancipe de l'espace
 
 ### Le QUOI survit au OÙ — et `noyau.py` entre enfin dans git

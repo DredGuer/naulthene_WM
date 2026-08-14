@@ -65,6 +65,7 @@ autorité sur l'état courant.**
 | [recherche_bug_or_not_bug.md](recherche/recherche_bug_or_not_bug.md) | **H1 → H18** : bug ou erreur de conception ? | 15 erreurs de diagnostic consignées |
 | [dia_Aout_2026.md](recherche/dia_Aout_2026.md) | Pourquoi bloqué au niveau 2/15 ? | 3 causes, **aucune cognitive** |
 | **[DISSECTION_g22_aout_2026.md](recherche/DISSECTION_g22_aout_2026.md)** | Que contient le cerveau le plus avancé (248 victoires) ? | **Le but vaut 16× le reste — appris, jamais déclaré** |
+| **[CAMPAGNE_P17_ABLATION_aout_2026.md](recherche/CAMPAGNE_P17_ABLATION_aout_2026.md)** | Le cursus gaussien aide-t-il ? À quoi servent les organes ? | **C2 change de signe selon le niveau** · accord C1/C2 toujours à 0 % |
 | [CHANTIER_v37_equilibre_c1_c2.md](ameliorations_appliquees/CHANTIER_v37_equilibre_c1_c2.md) | C2 écrase-t-il C1 ? | Équilibre atteint, blocage persiste |
 | [CHANTIER_v38_monde_continu.md](ameliorations_appliquees/CHANTIER_v38_monde_continu.md) | Un monde continu débloque-t-il ? | **1 brique validée sur 6** |
 | [les_sens_combinatoire.md](ameliorations/les_sens_combinatoire.md) | Les sens se lient-ils entre eux ? | Cadrage du liage multimodal |
