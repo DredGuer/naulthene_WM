@@ -93,12 +93,41 @@ arbitrage utilisateur, option B.
 s'est même inversé : C2 parle désormais plus fort que C1, et ça se stabilise dès le
 jour ~30 (ratio 0,96×–1,32× sur tout le run).
 
-### ⚠️ Ce que ce run ne démontre PAS
+### ✅ Le run long a tranché — 2000 jours × 3 graines
 
-**Niveau 1/15, maîtrise 0 %, 54 victoires en 300 jours** (intervalle 5 j, contre 3 j
-en V40). La v41 a rendu C2 **vivant et audible** ; elle n'a **pas encore montré qu'il
-sert**. Un run 2000 jours × 3 graines, directement comparable à l'étalon « C1 pur »,
-est en cours pour trancher.
+**Le premier franchissement de palier du projet.** Zéro graine V40 n'a quitté le
+niveau 1 en 2000 jours ; **g22 atteint le niveau 4** et y tient 1223 jours.
+
+| | V40 (étalon) | **V41** |
+|---|---|---|
+| Niveau max (3 graines) | **1/15** | **4/15** |
+| Victoires g11 | 774 | **1266** (+64 %) |
+| force | 0,000–0,002 | 0,370–**0,724** |
+| envie | 0,0000 sur les 3 | 0,46–**1,00** |
+| C2 mort | **2000 nuits/2000** | ~0 |
+
+**La promotion est un DÉBLOCAGE, pas une montée** : jour 770 → niv. 2, jour 775 →
+niv. 3, jour 778 → niv. 4, puis plus rien pendant 1223 jours. Trois paliers en 8 jours
+après 769 jours de plateau — la compétence était là bien avant, il manquait le seuil.
+
+### ⚠️ La loterie natale — le résultat le plus dérangeant
+
+Les trois graines partent du **postulat strictement identique**. La divergence est
+visible dès la **nuit 1** : g22 a eu une première nuit **sans aucun danger** (zéro, pas
+« peu ») et sa 1ʳᵉ victoire au jour 2 contre 6–7 pour les autres. **Au jour 50, l'écart
+de `danger` est déjà de 38×** (1,28 contre 41–48).
+
+Le mécanisme s'auto-entretient : carte facile → danger bas → force haute → C2 délibère
+→ C2 fait gagner → force encore plus haute. Et symétriquement pour g33, qui s'éteint
+(C1 = 6,788 contre C2 = 0,567). **Les demi-vies rendent la divergence quasi
+irréversible** — un danger accumulé au jour 50 met 500 jours à s'effacer de moitié.
+
+> La boule de neige demandée en v40.1 fonctionne dans les deux sens, comme spécifié.
+> Mais **la trajectoire se joue dans les 50 premiers jours** : on mesure aussi une part
+> de chance natale. `PRUDENCE_NAISSANCE = 1,0` ne pèse rien face à 38×.
+>
+> **Campagne de 10 graines lancée** (14/08, 19h35) pour savoir si 1/3 est le taux réel.
+> Détail complet : [chantier §10.3](../ameliorations/CORRECTIFS_v41_ligne_de_flottaison.md).
 
 ### Note de méthode — une projection démentie
 

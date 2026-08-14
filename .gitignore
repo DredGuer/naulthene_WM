@@ -75,3 +75,4 @@ docs/notes/evals/
 # .tmp puis renomme). Un `git add -A` lance pendant une sauvegarde echouait sur un
 # .tmp deja disparu — vu le 2026-08-13.
 *.brain.tmp
+brains/cas_isole_g22_v41/*.log.gz

@@ -397,13 +397,98 @@ battue par l'apport (`0,03 × 0,462 = 0,0139`).
 
 ---
 
-## 10. Ce qui reste ouvert
+## 10. LE RÉSULTAT — 2000 jours × 3 graines
+
+**Le premier franchissement de palier du projet.** Zéro graine V40 n'a quitté le
+niveau 1 en 2000 jours ; g22 atteint le **niveau 4** et y tient 1223 jours.
+
+| | g11 | **g22** | g33 |
+|---|---|---|---|
+| **Niveau** | 1/15 | **4/15** | 1/15 |
+| Victoires | **1266** | 1011 | 503 |
+| Maîtrise | 25 % | 30 % | 15 % |
+| force | 0,383 | **0,724** | 0,370 |
+| envie | 1,0000 | 1,0000 | 0,4563 |
+| ratio C1/C2 | 1,58× | **4,59×** | 0,08× |
+| `okay`/`danger` | 420/676 | **426/161** | 397/676 |
+
+### 10.1 Face à l'étalon « C1 pur »
+
+| | V40 | **V41** |
+|---|---|---|
+| Niveau max (3 graines) | **1/15** | **4/15** |
+| Victoires g11 | 774 | **1266** (+64 %) |
+| Victoires g22 | 880 | **1011** (+15 %) |
+| Victoires g33 | 624 | 503 (−19 %) |
+| force | 0,000–0,002 | 0,370–**0,724** |
+| envie | 0,0000 sur les 3 | 0,46–**1,00** |
+| C2 mort | **2000 nuits/2000** | ~0 |
+
+### 10.2 La promotion est un DÉBLOCAGE, pas une montée
+
+```
+jour 770 → niveau 2
+jour 775 → niveau 3
+jour 778 → niveau 4     puis PLUS RIEN pendant 1223 jours
+```
+
+**Trois paliers en 8 jours après 769 jours de plateau.** L'agent avait la compétence
+bien avant ; il lui manquait le seuil de maturité. Une fois franchi, les deux suivants
+tombent presque immédiatement — puis le niveau 4 se révèle un vrai mur.
+
+### 10.3 ⚠️ LA LOTERIE NATALE — le résultat le plus dérangeant
+
+Les trois graines partent du **postulat strictement identique** : même code, mêmes
+constantes, `.brain` vierge. Seule la graine change (init des poids, cartes MiniGrid,
+échantillonnage des actions).
+
+**La divergence est visible dès la NUIT 1.**
+
+| | g11 | **g22** | g33 |
+|---|---|---|---|
+| Nuit 1 — `okay`/`danger` | 1,00 / **1,00** | 1,00 / **0,00** | 1,00 / **1,00** |
+| Nuit 1 — force | 0,333 | **0,500** | 0,333 |
+| 1ʳᵉ victoire | jour 7 | **jour 2** | jour 6 |
+| Jour 50 — `danger` | 48,34 | **1,28** | 41,53 |
+
+g22 a eu une première nuit **sans aucun danger** — pas moins : *zéro*. Au jour 50,
+l'écart est déjà de **38×**.
+
+**Le mécanisme s'auto-entretient :**
+
+```
+carte facile au départ → danger bas → force haute → C2 délibère
+   → C2 fait gagner → okay monte, danger stagne → force encore plus haute
+```
+
+Et symétriquement pour g33 : danger élevé → force basse → C2 se tait → C1 seul →
+moins de victoires → danger monte. À 2000 jours, C1 = 6,788 contre C2 = 0,567.
+
+**Les demi-vies rendent la divergence quasi irréversible** : un danger accumulé au
+jour 50 met 500 jours à s'effacer de moitié. L'écart de 38× ne se rattrape pas.
+
+> C'est à double tranchant. **Le bon côté** : la boule de neige demandée en v40.1
+> (« effet boule de neige, mais certains éléments peuvent changer le sens ») est là,
+> mesurable, dans les deux directions. **Le côté gênant** : la trajectoire se joue dans
+> les **50 premiers jours**, donc on mesure aussi une part de chance natale.
+>
+> `PRUDENCE_NAISSANCE = 1,0` — une seule observation fictive — ne pèse rien face à un
+> écart de 38×. C'est le candidat de correctif direct, mais il exige d'abord de savoir
+> si le taux de réussite est de 1/3 ou si g22 était un coup de chance : **campagne de
+> 10 graines lancée** le 14/08 à 19h35.
+
+---
+
+## 11. Ce qui reste ouvert
 
 | # | Sujet | État |
 |---|---|---|
-| **C3** | Renaissance nocturne | **proposé, non implémenté** (§2) |
-| **P-lucidité** | Le rapport `POIDS_LUCIDITE`/`POIDS_FOI` | jamais confronté à une mesure de la force atteignable — candidat suivant |
-| **Palier** | C2 réveillé permet-il de franchir le niveau 1 ? | run 2000 j × 3 graines en cours |
+| **Population** | 1/3 est-il le taux réel ? | **10 graines en cours** (101→111) |
+| **Ablation** | Que porte réellement g22 ? | **en cours** — g22 sur niv. 3/4/5, g11 sur niv. 0/1/2 |
+| **C3** | Renaissance nocturne | proposé, non implémenté (§2) |
+| **P-lucidité** | Rapport `POIDS_LUCIDITE`/`POIDS_FOI` | jamais confronté à une mesure |
+| **`PRUDENCE_NAISSANCE`** | Amortir la loterie natale | candidat, après la campagne |
+| **Le mur du niveau 4** | 1223 jours sans bouger | diagnostic à part entière |
 
 ---
 
