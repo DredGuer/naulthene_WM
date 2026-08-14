@@ -76,6 +76,7 @@ autorité sur l'état courant.**
 | Document | Ce qu'il contient |
 |---|---|
 | **[AVIS_ET_PROPOSITIONS_aout_2026.md](ameliorations/AVIS_ET_PROPOSITIONS_aout_2026.md)** | **P1 → P17** : les pistes, sous la règle « rien en dur si ça peut émerger » + la grille développementale + **la gaussienne d'apprentissage (P17)** |
+| **[CORRECTIFS_v41_ligne_de_flottaison.md](ameliorations/CORRECTIFS_v41_ligne_de_flottaison.md)** | **PROPOSÉ, non implémenté** — la moyenne sur 400 ticks noie la victoire sous le coût métabolique : `force 0.003` reproduite au millième. 3 correctifs (flottaison, phasique/tonique, renaissance nocturne) |
 | [CONCEPTION_v34_fatigue_mortalite.md](ameliorations/CONCEPTION_v34_fatigue_mortalite.md) | Fatigue, mortalité, les 4 gestes du parent |
 
 ### E. Opérationnel
