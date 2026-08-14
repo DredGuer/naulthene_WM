@@ -1259,10 +1259,16 @@ class AGI_Naulthene(nn.Module):
             if self.reference_choc_dopamine is None:
                 self.reference_choc_dopamine = moyenne_jour
             else:
-                monte = moyenne_jour > self.reference_choc_dopamine
-                inertie = INERTIE_REFERENCE_CHOC if monte else INERTIE_OUBLI_REFERENCE_CHOC
-                self.reference_choc_dopamine += ((moyenne_jour - self.reference_choc_dopamine)
-                                                 * (1.0 - inertie))
+                # v40.1-fix4 — le cliquet écrit en FORMULE, plus en branche (règle « pas de
+                # if/else hors mesure »). L'ancienne forme choisissait l'inertie selon le
+                # sens (`A if monte else B`) ; la décomposition partie positive / partie
+                # négative de l'écart est STRICTEMENT équivalente : la montée n'emprunte
+                # que max(Δ,0), la descente que min(Δ,0), et l'un des deux vaut toujours 0.
+                # Même patron que le tri du signe de `nourrir_vecu_journee`.
+                delta = moyenne_jour - self.reference_choc_dopamine
+                self.reference_choc_dopamine += (
+                    (1.0 - INERTIE_REFERENCE_CHOC) * max(delta, 0.0)
+                    + (1.0 - INERTIE_OUBLI_REFERENCE_CHOC) * min(delta, 0.0))
         if not self.reference_choc_dopamine:
             return None
 
@@ -2057,15 +2063,21 @@ class ModuleSursautVolonte:
     def reinitialiser_episode(self):
         self.disponible = True
 
-    def evaluer_tick(self, tick_episode: int, patience_courante: int, patience_max: int, fin_episode: bool):
-        """Retourne (declenche: bool, nouvelle_patience: int)."""
+    def evaluer_tick(self, tick_episode: int, patience_courante: int, patience_max: int,
+                     fin_episode: bool, facteur: float = 1.0):
+        """Retourne (declenche: bool, nouvelle_patience: int).
+
+        v40.1-fix4 — `facteur` (∈ [0, 1], l'envie de vivre) dose l'AMPLEUR de l'extension
+        sans toucher au déclenchement : l'événement reste discret, sa force est continue.
+        """
         if fin_episode or not self.disponible:
             return False, patience_courante
         if tick_episode < patience_courante * self.seuil_declenchement:
             return False, patience_courante
 
         self.disponible = False
-        nouvelle_patience = min(patience_max, patience_courante + self.extension_patience)
+        extension = int(round(self.extension_patience * facteur))
+        nouvelle_patience = min(patience_max, patience_courante + extension)
         return True, nouvelle_patience
 
 
@@ -3887,23 +3899,25 @@ def facteur_guidage(etat) -> float:
 
     Lecture seule : ne modifie rien, peut être appelée autant de fois que voulu.
     """
+    # v40.1-fix4 — LE SEVRAGE ÉCRIT COMME UNE RAMPE, plus comme un escalier à 3 marches.
+    # Les trois branches (`<= DEBUT`, `>= FIN`, sinon interpolation) sont exactement les
+    # deux saturations d'une rampe linéaire : un `clip` les absorbe toutes. Le `None`
+    # (« pas encore mesurable ») reste une garde technique, pas un régime cognitif — il
+    # distingue « aucune donnée » de « mesuré à zéro », ce qu'aucune formule ne peut faire.
     taux = _taux_maitrise_niveau(etat)
-    if taux is None:
-        base = 1.0                       # pas encore mesurable ⇒ débutant ⇒ aide pleine
-    elif taux <= SEUIL_DEBUT_SEVRAGE:
-        base = 1.0
-    elif taux >= SEUIL_FIN_SEVRAGE:
-        base = 0.0
-    else:
-        base = 1.0 - (taux - SEUIL_DEBUT_SEVRAGE) / (SEUIL_FIN_SEVRAGE - SEUIL_DEBUT_SEVRAGE)
+    taux_effectif = SEUIL_DEBUT_SEVRAGE if taux is None else taux
+    base = 1.0 - max(0.0, min(1.0, (taux_effectif - SEUIL_DEBUT_SEVRAGE)
+                                   / (SEUIL_FIN_SEVRAGE - SEUIL_DEBUT_SEVRAGE)))
 
     # --- Le filet : renfort progressif après une longue stagnation ---
     # `jours_stagnation_niveau` compte les jours consécutifs SANS victoire sur le niveau
     # courant ; il est remis à zéro à la première victoire et à chaque promotion.
+    #
+    # Le `if jours_bloque <= JOURS_AVANT_RENFORT: return base` était la borne basse de la
+    # même rampe : `max(0, ...)` la porte, et `progression = 0` rend le facteur 1.0 donc
+    # `base` inchangée. Une seule expression pour les deux cas.
     jours_bloque = getattr(etat, "jours_stagnation_niveau", 0)
-    if jours_bloque <= JOURS_AVANT_RENFORT:
-        return base
-    progression = min(1.0, (jours_bloque - JOURS_AVANT_RENFORT) / PENTE_RENFORT)
+    progression = max(0.0, min(1.0, (jours_bloque - JOURS_AVANT_RENFORT) / PENTE_RENFORT))
     return base * (1.0 + (RENFORT_AIDE_MAX - 1.0) * progression)
 
 
@@ -5440,17 +5454,26 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
     # juste l'agent qui a choisi de tendre la main plutôt que de bouger.
     mur_touche = (action_item != ACTION_DEMANDER) and torch.equal(etat.etat_courant, etat_suivant)
 
-    # --- Muscle de la Volonté : Sursaut avant l'abandon (Mode Libre uniquement, v17.0) ---
-    if etat.mode_libre:
-        sursaut_declenche, etat.patience_jour = etat.sursaut_volonte.evaluer_tick(
-            etat.ticks_episode_courant, etat.patience_jour, PATIENCE_MAX, etat.fin_episode
-        )
-        if sursaut_declenche:
-            etat.teneur_dopamine += BOOST_SECOND_SOUFFLE
-            etat.teneur_dopamine = float(np.clip(etat.teneur_dopamine, DOPAMINE_MIN, DOPAMINE_MAX))
-            etat.sursauts_jour += 1
-            etat.a_utilise_sursaut_episode = True
-            print(f"   🔥 Sursaut de Volonté ! Patience étirée à {etat.patience_jour} ticks.")
+    # --- Muscle de la Volonté : Sursaut avant l'abandon (v17.0 ; continu v40.1-fix4) ---
+    #
+    # L'ancien `if etat.mode_libre` réservait le second souffle au-delà du palier 5 — un
+    # interrupteur cognitif. Le DÉCLENCHEMENT reste un événement discret (95 % du budget,
+    # une fois par épisode : c'est une action, pas un régime), mais son AMPLEUR suit
+    # désormais l'envie de vivre : à envie pleine, extension et boost identiques à l'ancien
+    # Mode Libre ; à envie nulle, un sursaut qui ne porte rien — l'agent n'a plus la force
+    # de son second souffle. « L'envie de vivre pousse au maximum à essayer quand même » :
+    # le sursaut est littéralement cette phrase, son intensité ne pouvait pas être binaire.
+    _envie = etat.agent.envie_de_vivre
+    sursaut_declenche, etat.patience_jour = etat.sursaut_volonte.evaluer_tick(
+        etat.ticks_episode_courant, etat.patience_jour, PATIENCE_MAX, etat.fin_episode,
+        facteur=_envie
+    )
+    if sursaut_declenche:
+        etat.teneur_dopamine += BOOST_SECOND_SOUFFLE * _envie
+        etat.teneur_dopamine = float(np.clip(etat.teneur_dopamine, DOPAMINE_MIN, DOPAMINE_MAX))
+        etat.sursauts_jour += 1
+        etat.a_utilise_sursaut_episode = True
+        print(f"   🔥 Sursaut de Volonté ! Patience étirée à {etat.patience_jour} ticks.")
 
     # --- Potentiomètre d'acceptation : abandon lucide si la patience du jour est dépassée ---
     abandon_par_patience = False
@@ -5503,11 +5526,13 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
     # mesure « l'agent a-t-il battu son record ? », un fait, pas la récompense qu'on lui
     # verse pour ça. Les atténuer ensemble rendrait la télémétrie illisible au moment
     # précis où on veut observer le sevrage.
-    _g = etat.facteur_guidage_jour
-    if _g < 1.0:
-        recompense_continue *= _g
-        micro_recompense_progres *= _g
-        poids_progres *= _g
+    # v40.1-fix4 — `min(_g, 1.0)` au lieu de `if _g < 1.0` : strictement équivalent (le
+    # filet > 1 ne doit pas amplifier ces récompenses, seul le sevrage < 1 les atténue),
+    # mais écrit comme la saturation qu'il est, pas comme une branche.
+    _g = min(etat.facteur_guidage_jour, 1.0)
+    recompense_continue *= _g
+    micro_recompense_progres *= _g
+    poids_progres *= _g
     etat.guidage_but_journee += recompense_continue
 
     attente = etat.agent.generer_attente_reelle(pensee_enrichie, action_item)
@@ -5533,12 +5558,21 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
     etat.erreur_journee += valeur_erreur
     etat.derniere_erreur_jepa = valeur_erreur  # v28.0 : contexte neutre pour la prochaine RequeteC3
 
-    # --- Sous-quête intrinsèque par curiosité JEPA (générique, Mode Libre uniquement, v17.0) ---
-    sous_objectif_intrinseque, poids_curiosite = 0.0, 0.0
-    if etat.mode_libre:
-        sous_objectif_intrinseque, poids_curiosite = etat.detecteur_curiosite.evaluer_tick(valeur_erreur)
-        if sous_objectif_intrinseque > 0:
-            etat.sous_objectifs_curiosite_jour += 1
+    # --- Sous-quête intrinsèque par curiosité JEPA (générique, v17.0 ; continue v40.1-fix4) ---
+    #
+    # L'ancien `if etat.mode_libre` était un interrupteur cognitif : la curiosité passait
+    # de 0 à 100 % au franchissement du palier 5. Elle est désormais TOUJOURS évaluée et
+    # pondérée par l'ACCEPTATION (envie × confiance, v40.1) — le même continuum qui pilote
+    # déjà le poids de C2. Le profil reproduit l'intention d'origine sans le seuil : un
+    # débutant (f≈0) a une curiosité quasi nulle exactement comme l'ancien mode guidé, un
+    # agent mûr la déploie comme l'ancien mode libre, et un agent qui a perdu l'envie
+    # cesse d'être curieux — ce que l'interrupteur était incapable d'exprimer.
+    sous_objectif_intrinseque, poids_curiosite = etat.detecteur_curiosite.evaluer_tick(valeur_erreur)
+    _acc = etat.agent.acceptation()
+    sous_objectif_intrinseque *= _acc
+    poids_curiosite *= _acc
+    if sous_objectif_intrinseque > 0:
+        etat.sous_objectifs_curiosite_jour += 1
 
     # --- Moteur homéostatique biologique (générique, tous niveaux, v18.0) ---
     agent_pos_bio = tuple(etat.env.unwrapped.agent_pos) if _MINIGRID_INTERNALS_OK else None
@@ -5690,8 +5724,15 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
                          + micro_recompense_porte + micro_recompense_progres
                          + penalite_stagnation + sous_objectif_intrinseque + r_bio
                          + micro_recompense_vocale - cout_requete_c3)
-    if not etat.mode_libre:
-        recompense_interne += recompense_continue
+    # v40.1-fix4 — LA FALAISE DU GUIDAGE DISPARAÎT. L'ancien `if not mode_libre` coupait
+    # l'aide continue D'UN COUP au palier 5 — précisément le défaut que le diagnostic
+    # v35.1 documentait (« 0,00 record de proximité par jour pendant 2000 jours. Une
+    # falaise, là où il fallait une pente »). `recompense_continue` est déjà multipliée
+    # par min(facteur_guidage, 1), qui tend continûment vers 0 avec la maîtrise mesurée
+    # (sevrage v35.1) : le retrait de l'aide ÉMERGE de la compétence, il n'est plus
+    # décrété par un seuil de palier. ⚠️ Changement de comportement réel : un agent
+    # au-delà du palier 5 qui NE maîtrise PAS garde son aide — c'est le but.
+    recompense_interne += recompense_continue
     if mur_touche:
         recompense_interne += MALUS_DOULEUR
 
@@ -6742,8 +6783,9 @@ def executer_nuit(etat, plafond_reve=None):
         if etat.agent.reference_choc_dopamine:
             log_wandb["Distillation_Reference_Choc"] = etat.agent.reference_choc_dopamine
 
-    if etat.mode_libre:
-        log_wandb["Sous_Objectifs_Curiosite_Jour"] = etat.sous_objectifs_curiosite_jour
+    # v40.1-fix4 — la curiosité est désormais continue (pondérée par l'acceptation), donc
+    # toujours active : sa clé est loggée sans condition, un 0 y est une vraie mesure.
+    log_wandb["Sous_Objectifs_Curiosite_Jour"] = etat.sous_objectifs_curiosite_jour
     # v40.0 — la planification émergente est GLOBALE : ses trois métriques sortent du bloc
     # DoorKey. `Force_Planification` y était enfermée du temps où elle valait 0.5 ou 0.85
     # selon le palier ; elle dépend maintenant du vécu, donc elle vit sur tous les niveaux.

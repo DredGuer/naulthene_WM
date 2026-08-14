@@ -234,6 +234,97 @@ Les deux derniers cas sont la signature du mécanisme : **l'ignorance protège**
 
 ---
 
+---
+
+# Partie 3 — fix3/fix4 : la chasse aux branches
+
+> Remarque utilisateur : *« Règle numéro 1 du système : rien en dur et pas de If / Else !
+> Ma remarque ne tient que si ce n'est pas lié à la mesure. »*
+
+Audit complet du chemin cognitif de `noyau.py`. **Huit branches** supprimées en deux
+passes, chacune avec son équivalence prouvée numériquement.
+
+## Les deux catégories
+
+Toutes les branches supprimées tombaient dans l'une des deux :
+
+**A — la saturation déguisée.** Un `if x >= BORNE: MAX else: rampe` est un `clip` écrit en
+deux lignes. Il laisse croire à deux régimes cognitifs là où il n'y a qu'une fonction
+bornée.
+
+**B — l'interrupteur cognitif.** Un `if mode_libre:` fait passer une faculté de 0 à 100 %
+au franchissement d'un palier. C'est le défaut que le projet documente depuis la v35.1
+(*« une falaise, là où il fallait une pente »*).
+
+## Le tableau complet
+
+| # | Site | Avant | Après | Cat. | Équivalence |
+|---|---|---|---|---|---|
+| 1 | plasticité nocturne | `if teneur >= NEUTRE` | `clip(rampe)` | A | 10 001 pts, **0.0** |
+| 2 | tri du signe (vécu) | `if bilan >= 0` | `(\|b\|±b)/2` | A | 200k tirages, **0.0** |
+| 3 | garde journée vide | `if not valeurs: return` | `max(len,1)` | A | exact |
+| 4 | cliquet réf. choc | `A if monte else B` | `max(Δ,0)/min(Δ,0)` | A | 200k tirages, **0.0** |
+| 5 | clip guidage | `if _g < 1.0` | `min(_g, 1.0)` | A | 200k tirages, **0.0** |
+| 6 | sevrage (3 marches) | `if/elif/elif/else` | `clip` unique | A | 134k combinaisons, **0.0** |
+| 7 | **falaise du guidage** | `if not mode_libre` | continu | **B** | ⚠️ comportement changé |
+| 8 | **curiosité JEPA** | `if mode_libre` | × acceptation | **B** | ⚠️ comportement changé |
+| 9 | **sursaut de volonté** | `if mode_libre` | ampleur × envie | **B** | ⚠️ comportement changé |
+
+## Les trois interrupteurs cognitifs — ce qui change vraiment
+
+Les six premiers sont des réécritures **à comportement identique**. Les trois derniers
+**changent le comportement**, et c'était l'intention :
+
+### 7. La falaise du guidage
+
+`recompense_continue` était coupée d'un coup au palier 5. Elle est désormais multipliée par
+`min(facteur_guidage, 1)`, qui tend continûment vers 0 avec la maîtrise **mesurée**.
+
+> Le retrait de l'aide **émerge de la compétence** au lieu d'être décrété par un seuil de
+> palier. Un agent au-delà du palier 5 qui ne maîtrise pas **garde son aide** — c'est
+> précisément le défaut que le diagnostic v35.1 chiffrait à *0,00 record de proximité par
+> jour pendant 2 000 jours*.
+
+### 8. La curiosité JEPA
+
+Passait de 0 à 100 % au palier 5. Désormais toujours évaluée, pondérée par
+`acceptation() = envie × confiance`.
+
+Le profil reproduit l'intention d'origine sans le seuil : un débutant ($f \approx 0$) a une
+curiosité quasi nulle comme dans l'ancien mode guidé ; un agent mûr la déploie comme dans
+l'ancien mode libre. **Et un agent qui a perdu l'envie cesse d'être curieux** — ce que
+l'interrupteur était incapable d'exprimer.
+
+### 9. Le sursaut de volonté
+
+Le **déclenchement** reste discret (95 % du budget, une fois par épisode : c'est une
+action, pas un régime). Son **ampleur** suit l'envie de vivre.
+
+> *« L'envie de vivre pousse au maximum à essayer quand même »* — le sursaut est
+> littéralement cette phrase. Son intensité ne pouvait pas être binaire. À envie nulle, le
+> sursaut se déclenche mais ne porte rien : l'agent n'a plus la force de son second souffle.
+
+## Ce qui reste, et pourquoi c'est légitime
+
+Sur les 482 `if` du fichier, ceux qui subsistent dans le chemin cognitif sont de trois
+natures — aucune n'est un seuil de décision :
+
+| Nature | Exemple | Pourquoi ça reste |
+|---|---|---|
+| **Garde technique** | `if taux is None` | distingue « aucune donnée » de « mesuré à zéro » — aucune formule ne peut le faire |
+| **Action discrète** | promotion de palier | on promeut ou non ; il n'existe pas de demi-promotion |
+| **Sélection de source** | `if doorkey_actif` | choisit **où lire**, pas comment décider |
+| **Plancher d'opération** | `if taille_lot < TAILLE_MIN` | rêver 2 souvenirs n'a pas de sens |
+
+> **Un `if` qui choisit une source de donnée n'est pas un seuil de décision.** Ce que la
+> règle interdit, c'est qu'une branche décide du *comportement cognitif*.
+
+⚠️ `SEUIL_PALIER_MODE_LIBRE` **existe encore** : `mode_libre` reste calculé et loggé, mais
+ne pilote plus aucune faculté cognitive — seulement l'affichage. Le retirer complètement
+demanderait de toucher la télémétrie historique ; il est neutralisé, pas supprimé.
+
+---
+
 ## Ce qui reste posé (et pourquoi c'est admissible)
 
 | Constante | Rôle | Statut |

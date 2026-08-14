@@ -4,6 +4,68 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v40.1-fix3/fix4-experimental] - 2026-08-14 — La chasse aux branches
+
+### « Rien en dur et pas de If / Else — sauf si c'est lié à la mesure »
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | refactor + feat |
+| **Impact** | Critique — 3 interrupteurs cognitifs deviennent continus |
+| **Branche** | `feat/v40.1-envie-de-vivre` |
+
+Audit complet du chemin cognitif : **9 branches supprimées**, chacune avec son équivalence
+prouvée numériquement.
+
+### Les six réécritures à comportement IDENTIQUE
+
+| Site | Avant | Après | Équivalence |
+|---|---|---|---|
+| plasticité nocturne | `if teneur >= NEUTRE` | `clip(rampe)` | 10 001 pts, **0.0** |
+| tri du signe (vécu) | `if bilan >= 0` | `(\|b\|±b)/2` | 200k tirages, **0.0** |
+| garde journée vide | `if not valeurs` | `max(len,1)` | exact |
+| cliquet réf. choc | `A if monte else B` | `max(Δ,0)/min(Δ,0)` | 200k tirages, **0.0** |
+| clip guidage | `if _g < 1.0` | `min(_g, 1.0)` | 200k tirages, **0.0** |
+| sevrage (3 marches) | `if/elif/elif/else` | `clip` unique | 134k combinaisons, **0.0** |
+
+Toutes étaient des **saturations déguisées** : un `if x >= BORNE: MAX else: rampe` est un
+`clip` écrit en deux lignes, qui laisse croire à deux régimes cognitifs.
+
+### ⚠️ Les trois interrupteurs cognitifs — comportement CHANGÉ
+
+Ceux-là pilotaient une faculté par `if mode_libre` — de 0 à 100 % au franchissement du
+palier 5.
+
+**1. La falaise du guidage.** `recompense_continue` est désormais multipliée par
+`min(facteur_guidage, 1)`, qui tend continûment vers 0 avec la maîtrise **mesurée**. Le
+retrait de l'aide **émerge de la compétence** — un agent au-delà du palier 5 qui ne
+maîtrise pas **garde son aide**. C'est le défaut chiffré par le diagnostic v35.1 (*0,00
+record de proximité par jour pendant 2 000 jours*).
+
+**2. La curiosité JEPA.** Toujours évaluée, pondérée par `acceptation()`. Un débutant a une
+curiosité quasi nulle comme dans l'ancien mode guidé, un agent mûr la déploie comme dans
+l'ancien mode libre — **et un agent qui a perdu l'envie cesse d'être curieux**, ce que
+l'interrupteur ne pouvait pas exprimer.
+
+**3. Le sursaut de volonté.** Le déclenchement reste discret (c'est une action) ; son
+**ampleur** suit l'envie. À envie nulle, le sursaut se déclenche mais ne porte rien.
+
+### Ce qui reste, et pourquoi
+
+Sur 482 `if`, ceux du chemin cognitif sont des **gardes techniques** (`is None` distingue
+« aucune donnée » de « mesuré à zéro »), des **actions discrètes** (une promotion n'a pas
+de demi-mesure), des **sélections de source** (`if doorkey_actif` choisit *où lire*) ou des
+**planchers d'opération**. Aucun n'est un seuil de décision.
+
+⚠️ `SEUIL_PALIER_MODE_LIBRE` existe encore mais **ne pilote plus aucune faculté** — seulement
+l'affichage. Neutralisé, pas supprimé.
+
+**Non-régression** : grille des 5 scénarios identique (0.0000 / 0.0336 / 1.0000 / 1.0000 /
+1.0000). Run réel 40 jours, **0 erreur**.
+
+---
+
 ## [v40.1-experimental] - 2026-08-14 — L'Envie de Vivre (le couplage C1 ↔ C2)
 
 ### « L'envie de vivre pousse au maximum à essayer quand même »
