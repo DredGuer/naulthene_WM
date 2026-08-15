@@ -4104,6 +4104,43 @@ FACTEUR_ATTENUATION_LIBRE = 1.00         # déplacement libre : pénalité plein
 PATIENCE_MIN = 50
 PATIENCE_MAX = 350
 FENETRE_HISTORIQUE_PATIENCE = 20
+
+# --- v41.8 : LA PATIENCE SE DÉRIVE DU BUDGET DE LA CARTE, ET SE MUSCLE PAR L'ÉCHEC ---
+#
+# Décision utilisateur : *« La patience n'est toujours pas une dérivée calculée comme le
+# reste ! Il faut donc la travailler et la muscler dès le plus jeune âge pour qu'elle
+# permette en avançant de réussir. »*
+#
+# 🔴 DEUX DÉFAUTS MESURÉS.
+#
+# (1) `PATIENCE_MIN/MAX` sont posés en dur et **sans rapport avec la carte**. MiniGrid
+#     accorde un budget natif par environnement (`max_steps`) que le projet n'a **jamais
+#     lu** — 0 occurrence de `max_steps` dans tout le code avant cette version :
+#
+#         Empty-5x5 : 100 ticks   ← le palier où 4 graines sur 6 sont bloquées
+#         Empty-Random-6x6 : 144  ·  Empty-8x8 : 256  ·  SimpleCrossing : 324
+#
+#     La patience calculée valait 119 à 329 ticks : **toujours au-dessus du plafond de
+#     `Empty-5x5`**. Elle n'avait donc aucun effet à ce niveau — c'est `max_steps` qui
+#     coupait l'épisode. Les « 273 ticks, 0 abandon lucide » observés signifiaient « il
+#     n'atteint jamais SA patience », et non « il a le temps qu'il faut ».
+#
+# (2) Elle était **à l'envers** : `potentiometre = 0.7 × taux_succes` faisait CROÎTRE la
+#     patience avec la réussite. Un débutant qui échoue recevait 119 ticks, un expert qui
+#     n'en a plus besoin 329. L'inverse exact de « muscler dès le plus jeune âge ».
+#
+# LA FORME. La patience est désormais une FRACTION du budget réel de la carte, et cette
+# fraction décroît avec la maîtrise :
+#
+#     patience = max_steps × (PATIENCE_PLANCHER_BUDGET + marge × (1 − maîtrise))
+#
+#   maîtrise 0 %   → tout le budget : le débutant a droit à l'épisode entier
+#   maîtrise 100 % → une fraction : l'expert n'a plus besoin d'errer, il tranche vite
+#
+# Le sevrage temporel suit ainsi la même doctrine que le sevrage de l'aide (v41.3) : on
+# retire ce dont l'agent n'a plus besoin, à mesure qu'il n'en a plus besoin.
+PATIENCE_PLANCHER_BUDGET = 0.45   # borne basse : un expert garde toujours ~45 % du budget
+PATIENCE_MARGE_BUDGET = 0.55      # ce que l'échec restitue — plancher + marge = 1.0 budget
 TAUX_FRICTION_DOUCE_ABANDON = 0.05  # friction dopaminergique appliquée sur abandon lucide,
                                      # plus douce qu'un choc négatif : l'agent accepte
                                      # l'échec, il ne le subit pas comme un traumatisme
@@ -5600,6 +5637,46 @@ POIDS_INCURSION_REFERENCE = 0.20   # idem — le défi occupe le reste
 ETALEMENT_MAX_CURSUS = 2.5         # borne : au pire, la révision porte ~2-3 paliers en arrière
 
 
+def _budget_natif_carte(env, defaut: int = PATIENCE_MAX) -> int:
+    """v41.8 — Le nombre de pas que l'ENVIRONNEMENT accorde réellement à un épisode.
+
+    MiniGrid termine l'épisode à `max_steps` quoi qu'il arrive : toute patience
+    au-dessus de cette valeur est inopérante. Le projet ne lisait pas cette grandeur —
+    d'où une patience de 119 à 329 ticks sur une carte qui en accorde 100.
+
+    Lecture défensive : un monde non-MiniGrid (vocal isolé, rêve) n'expose pas
+    `max_steps`, on retombe alors sur la borne historique.
+    """
+    try:
+        budget = int(getattr(env.unwrapped, "max_steps", 0) or 0)
+        return budget if budget > 0 else defaut
+    except Exception:
+        return defaut
+
+
+def _patience_budget(etat, patience_courante: int) -> int:
+    """v41.8 — Ramène la patience dans le budget réel de la carte, part d'autant plus
+    grande que l'agent maîtrise MOINS (« muscler dès le plus jeune âge »).
+
+    ⚠️ L'inversion est le point essentiel. L'ancienne formule
+    (`potentiometre = 0.7 × taux_succes`) donnait 119 ticks au débutant et 329 à
+    l'expert : elle retirait du temps précisément à qui en avait besoin. Ici, un agent
+    sans maîtrise reçoit **l'épisode entier**, et ne s'en voit retirer qu'à mesure qu'il
+    démontre ne plus en avoir besoin — même doctrine que le sevrage de l'aide (v41.3).
+    """
+    budget = _budget_natif_carte(etat.env)
+    taux = _taux_maitrise_niveau(etat)
+    # « Pas encore mesurable » ⇒ régime débutant : le bénéfice du doute va au temps.
+    maitrise = 0.0 if taux is None else max(0.0, min(1.0, taux))
+
+    part = PATIENCE_PLANCHER_BUDGET + PATIENCE_MARGE_BUDGET * (1.0 - maitrise)
+    cible = int(round(budget * part))
+    # La cible REMPLACE la valeur du thermostat plutôt que de la borner : c'est elle qui
+    # porte l'inversion voulue. Bornée au budget (au-delà, inopérante) et au plancher
+    # vital d'un épisode jouable.
+    return max(PATIENCE_MIN, min(budget, cible))
+
+
 def _distribution_cursus(etat):
     """v41.6 (P17) — Poids de tirage de chaque niveau, dérivés de la maîtrise mesurée.
 
@@ -6070,6 +6147,10 @@ def demarrer_journee(etat):
     # y croit s'acharne, celui qui n'y croit plus abandonne tôt. La patience reste par
     # ailleurs adaptative (taux de succès récent) — l'envie la module, ne la remplace pas.
     # Bornée par PATIENCE_MIN pour rester un épisode jouable, jamais un abandon immédiat.
+    # v41.8 — LA PATIENCE EST BORNÉE PAR LE BUDGET RÉEL DE LA CARTE, et le débutant en
+    # reçoit la totalité. Voir le bloc de constantes `PATIENCE_PLANCHER_BUDGET`.
+    etat.patience_jour = _patience_budget(etat, etat.patience_jour)
+
     etat.patience_jour = max(PATIENCE_MIN,
                              int(round(etat.patience_jour * (0.5 + 0.5 * envie))))
     etat.patience_base_jour = etat.patience_jour  # capturée avant tout étirement par Sursaut (v17.0), pour le log
