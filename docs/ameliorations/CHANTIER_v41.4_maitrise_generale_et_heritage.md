@@ -599,3 +599,37 @@ inclut l'autonomie) monte plus vite et franchit le seuil plus tôt.
 > **Le résultat est positif mais repose sur une seule graine.** Il ne peut pas entrer dans
 > les README : la règle du dépôt exige une population, et la loterie natale g22 a déjà
 > montré ce qu'une graine unique peut faire croire.
+
+### 10.4 Où l'effet s'arrête — le niveau 3 est un mur des deux côtés
+
+Comparaison sur **fenêtre égale** (490 premiers jours sur `Empty-8x8`, les deux runs
+n'étant pas au même point du cursus au même jour calendaire) :
+
+| | Maturité max | Maîtrise max | Jours au-dessus de 0,40 |
+|---|---|---|---|
+| Héritage actif | 0,469 | 40 % | **1** |
+| Témoin | 0,400 | 50 % | **1** |
+
+**Aucune 3ᵉ promotion d'aucun côté.** L'héritage donne une avance au démarrage du palier
+(maturité 0,469 contre 0,400), mais elle s'épuise en ~20 épisodes et ne suffit pas à
+franchir `Empty-8x8`.
+
+> 🎯 **La portée de l'effet est donc précisément bornée** : l'héritage réduit le **délai
+> entre deux promotions** quand l'agent est capable des deux (16 j contre 50 j), et
+> **rien de plus**. Il n'ouvre aucun palier que l'agent ne pouvait pas franchir.
+>
+> C'est cohérent avec sa nature : il transfère de l'**autonomie**, pas de la
+> **compétence**. Un agent qui ne sait pas résoudre la carte reste un agent qui ne sait
+> pas résoudre la carte — seule l'aide qu'on lui retire change.
+
+### 10.5 Convergence à mi-parcours (j~1020, les deux campagnes)
+
+| Graine | Avec héritage | Sans héritage |
+|---|---|---|
+| g11 | niveau 1, 0 promo | niveau 1, 0 promo |
+| g22 | niveau 1, 0 promo | niveau 1, 0 promo |
+| g33 | niveau 1, 0 promo | niveau 1, 0 promo |
+| g44 | **niveau 3**, 2 promo | **niveau 3**, 2 promo |
+
+**Le niveau atteint est identique des deux côtés sur les 4 graines.** Seul le *délai*
+diffère (g44 : 2ᵉ promotion 3,1× plus rapide).
