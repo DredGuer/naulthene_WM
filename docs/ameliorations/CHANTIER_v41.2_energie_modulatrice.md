@@ -721,3 +721,102 @@ rapporte pas assez plus que *mitrailler*.
 
 Ma lecture : **C d'abord** — la mesure est en cours et coûte zéro décision. A et B modifient
 tous deux un ancrage posé, et A risque de produire l'effet inverse de celui recherché.
+
+---
+
+## 10. 🏁 Le run de 300 jours — résultat et verrou trouvé
+
+### 10.1 Face au témoin, à durée égale
+
+| | témoin (300 j) | **v41.2 (300 j)** |
+|---|---|---|
+| **Victoires** | 130 | **231** (×1,78) |
+| **Maîtrise max** | 30 % | **60 %** (le seuil !) |
+| Récolte/jour | 3,69 | **7,54** (×2,04) |
+| Accord C1/C2 moyen | 47,4 % | **61,3 %** |
+| Accord, 50 derniers jours | 50,6 % | **84,6 %** |
+| Énergie moyenne | 0,200 | 0,120 |
+| Niveau final | 1/15 | 1/15 |
+
+**Le meilleur résultat du chantier** — et le premier à battre le témoin sur presque tous
+les axes. L'énergie reste plus basse, ce qui est cohérent : l'agent bouge et agit davantage.
+
+### 10.2 ⚠️ Ce qui n'a pas bougé
+
+L'agent **n'apprend toujours pas à viser** : efficacité 13,5 % → 13,4 % sur 300 jours,
+58 → 59 gestes/jour, récolte 7,8 → 7,8. Parfaitement plat, comme au jalon 65. Le §9.3 tient :
+l'espérance du geste est noyée dans le bruit, et rater ne coûte presque rien.
+
+Le soulagement moyen baisse même légèrement (+2,17 → +2,08) : l'agent ne mange pas *mieux à
+propos* avec le temps.
+
+### 10.3 🔒 LE VERROU — la promotion est mathématiquement impossible
+
+La maîtrise a touché **60 % deux fois** (jours 137 et 195) — soit `TAUX_PROMOTION` exactement.
+Aucune promotion. Diagnostic :
+
+```
+maturité = régularité × consolidation × autonomie      (v40.2, un PRODUIT)
+```
+
+Mesuré sur les 300 jours :
+
+| Facteur | max | moyenne |
+|---|---|---|
+| régularité | 60 % | 30 % |
+| consolidation | 100 % | 99 % |
+| **autonomie** | **0 %** | **0 %** |
+| **→ maturité** | **0,000** | seuil : **0,38** |
+
+**`autonomie` vaut zéro sur les 300 jours, donc le produit est nul quoi qu'il arrive.**
+
+La cause est une **dépendance circulaire entre deux constantes** :
+
+```
+autonomie      = 1 − facteur_guidage
+facteur_guidage = 1 − clip((maîtrise − SEUIL_DEBUT_SEVRAGE) / (FIN − DEBUT))
+SEUIL_DEBUT_SEVRAGE = 0.60   ← le sevrage COMMENCE à 60 %
+TAUX_PROMOTION      = 0.60   ← la promotion EXIGE 60 %
+```
+
+| Maîtrise | Guidage | Autonomie |
+|---|---|---|
+| 30 % | 1,00 | **0,00** |
+| **60 %** | **1,00** | **0,00** |
+| 75 % | 0,50 | 0,50 |
+| 90 % | 0,00 | 1,00 |
+
+**À 60 % de maîtrise, l'autonomie vaut encore exactement 0.** Le sevrage *démarre* là où la
+promotion était censée être acquise — il faut atteindre ~75 % pour que l'autonomie devienne
+non nulle, et le run n'a tenu 60 % que 2 jours sur 300 (18 jours ≥ 50 %).
+
+L'aide est restée **« pleine » 300 jours sur 300**.
+
+> ⚠️ **Ce n'est pas un bug, c'est un défaut de conception entre deux mécaniques justes
+> séparément.** La v40.2 a remplacé les deux portes scolaires par une maturité continue —
+> décision saine (« un examen se passe par chance »). Mais elle a introduit `autonomie`
+> comme facteur multiplicatif sans vérifier que le sevrage pouvait le rendre non nul dans
+> la plage où la promotion se joue. Le commentaire du code le dit d'ailleurs en toutes
+> lettres (l. 4623) : *« le sevrage n'a pas commencé, donc l'autonomie y est nulle par
+> construction »* — écrit, jamais confronté au seuil de promotion.
+>
+> **Quatrième occurrence du fil n°3 de l'INDEX** (« un invariant en commentaire finit par
+> être violé »).
+
+### 10.4 Ce que cela implique
+
+Le blocage au niveau 1/15 mesuré sur **10 graines × 2000 jours** (campagne v41) doit être
+relu : aucune de ces graines ne pouvait être promue, quelle que soit sa performance. Le
+« mur du cursus » n'était peut-être pas un mur de compétence.
+
+**Ce que ce chantier a produit de plus solide n'est donc pas le métabolisme, mais ceci :**
+un agent qui gagne 1,78× plus, atteint 2× la maîtrise du témoin, et reste bloqué par une
+incompatibilité entre deux constantes.
+
+⚠️ **Ne rien corriger sans arbitrage.** Trois options, aucune neutre :
+
+| Option | Effet | Risque |
+|---|---|---|
+| Abaisser `SEUIL_DEBUT_SEVRAGE` sous `TAUX_PROMOTION` | rend l'autonomie non nulle dans la plage utile | sevrer trop tôt un agent qui n'a rien acquis |
+| Retirer `autonomie` du produit de maturité | débloque immédiatement | perd le critère « il n'a plus besoin d'aide », qui est le plus significatif des trois |
+| Remplacer le produit par une moyenne pondérée | un facteur nul ne bloque plus tout | change la sémantique : « toutes les conditions » devient « en moyenne » |

@@ -115,6 +115,47 @@ c'est que **viser ne rapporte pas assez plus que mitrailler**.
 > entre l'action la moins chère (0,1) et la plus chère (0,8) ne représente que **24 %** de
 > variation sur la dépense réelle du tick.
 
+### 🏁 Run de 300 jours terminé — et un verrou trouvé
+
+| | témoin (300 j) | **v41.2 (300 j)** |
+|---|---|---|
+| **Victoires** | 130 | **231** (×1,78) |
+| **Maîtrise max** | 30 % | **60 %** |
+| Récolte/jour | 3,69 | **7,54** (×2,04) |
+| Accord C1/C2 (50 derniers j) | 50,6 % | **84,6 %** |
+| Niveau final | 1/15 | 1/15 |
+
+### 🔒 LA PROMOTION ÉTAIT MATHÉMATIQUEMENT IMPOSSIBLE
+
+La maîtrise a touché **60 %** — exactement `TAUX_PROMOTION` — deux fois, sans promotion.
+
+```
+maturité = régularité × consolidation × autonomie      (v40.2, un PRODUIT)
+```
+
+| Facteur | max sur 300 j |
+|---|---|
+| régularité | 60 % |
+| consolidation | 100 % |
+| **autonomie** | **0 %** |
+| **→ maturité** | **0,000** (seuil : 0,38) |
+
+**Dépendance circulaire entre deux constantes** : `SEUIL_DEBUT_SEVRAGE = 0.60` est le point
+où le sevrage *commence*, et `TAUX_PROMOTION = 0.60` celui où la promotion est *exigée*. À
+60 % de maîtrise, `autonomie = 1 − guidage` vaut donc encore **exactement 0** — il faut
+~75 % pour qu'elle devienne non nulle. L'aide est restée **pleine 300 jours sur 300**.
+
+> ⚠️ Le commentaire du code le disait déjà (l. 4623) : *« le sevrage n'a pas commencé, donc
+> l'autonomie y est nulle par construction »* — écrit, jamais confronté au seuil de
+> promotion. **4ᵉ occurrence du fil n°3 de l'INDEX.**
+
+**Conséquence pour la campagne v41** : le blocage au niveau 1/15 sur 10 graines × 2000 jours
+doit être relu — aucune de ces graines ne *pouvait* être promue, quelle que soit sa
+performance. Le « mur du cursus » n'était peut-être pas un mur de compétence.
+
+**Non corrigé** — trois options possibles, aucune neutre, arbitrage utilisateur requis (voir
+[chantier §10.4](../ameliorations/CHANTIER_v41.2_energie_modulatrice.md)).
+
 ### 📈 Signal à confirmer
 
 À jour égal contre le témoin : **83 victoires contre 26** (j61), récolte **7,4/jour** contre
