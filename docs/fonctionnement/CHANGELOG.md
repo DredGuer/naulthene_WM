@@ -4,6 +4,82 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.2-experimental] - 2026-08-15 — Le métabolisme à deux étages (EN COURS)
+
+### « L'énergie module tout — et la faim s'indexe sur elle, pas seulement sur le ventre »
+
+| Type | Details |
+|------|---------|
+| **Commits** | `4c85452`, `84ee828`, `95fdb31`, `b33f3dd`, `cb61f7f` |
+| **Catégorie** | feat (expérimental) |
+| **Impact** | Fonctionnel — **`noyau.py` uniquement**, `colab.py` inchangé |
+| **Branche** | `feat/v41-ligne-flottaison` |
+| **Chantiers** | [métabolisme](../ameliorations/CHANTIER_v41.2_metabolisme_deux_etages.md) · [énergie modulatrice](../ameliorations/CHANTIER_v41.2_energie_modulatrice.md) |
+
+⚠️ **CALIBRAGE NON VALIDÉ — ne pas porter sur `colab.py`.** La mécanique est vérifiée,
+le barème ne l'est pas (voir « ce qui bloque » plus bas).
+
+### Ce qui est livré et vérifié
+
+| Mécanique | Vérification |
+|---|---|
+| **Deux étages** — satiété = *stock*, énergie = *flux* | l'estomac plein avec l'énergie basse devient représentable |
+| **Mort par insolvabilité, sans aucun `if`** | repos sans manger → mort t=411 ; activité sans manger → t=319. Le repos **retarde** sans prévenir |
+| **Seuil non linéaire** `vigueur = énergie ** κ` | à mi-énergie C1 garde 25 % de sa voix, **C2 seulement 6 %** — la délibération s'éteint avant le réflexe |
+| **Invariant d'échelle** 400 ↔ 3600 ticks | E_moy 0,929 vs 0,928 — **écart < 1 %** |
+| **Bornes dérivables** `norme × exp(dérive)` | sur 1200 nuits la dérive **sature** (+24 % monde dur, +14,5 % monde moyen), ne diverge jamais |
+| **Profils à 3 axes + coût de digestion** | eau : +0,700 hydratation, 0 calorie · nourriture : +0,700 satiété, **−0,133 énergie** |
+| **Faim indexée énergie × satiété** | corrige un agent qui cherchait de l'eau à `énergie 0,015` parce que son ventre était à 0,70 |
+
+`VIGUEUR_PLANCHER` est indispensable : sans lui, `vigueur → 0` annule C1 **et** C2, les
+logits deviennent tous nuls et l'action **aléatoire**. Un mourant doit rester cohérent.
+
+⚠️ Le couplage à C2 **n'est pas** le court-circuit refusé en v29.0 : C2 est toujours
+sollicité à chaque tick, seul son **poids** varie. Pas de branche, un facteur.
+
+### Quatre défauts trouvés PAR la mesure
+
+1. **Double comptage du stock** — la satiété se vidait par décroissance *et* par digestion : un repas finançait 59 ticks au lieu de 133.
+2. **Valeur nutritive en dur (0,4)** — l'agent mourait *le ventre à moitié plein*, satiété bloquée à 0,392.
+3. **Cofacteur hydrique linéaire** — sous 50 % d'hydratation, bilan négatif **quoi que l'agent mange**.
+4. **Portion unique partagée entre les axes** — 2,0 unités d'eau perdues par débordement/jour ; corrigé en dérivant chaque axe de sa propre perte (**÷28**).
+
+### 🐛 Bug préexistant corrigé (hors périmètre)
+
+Les compteurs de calibrage v34 (`jauge_min_*_jour`, `ticks_deficit_critique_jour`,
+`effort_*_jour`, `ressources_vues_jour`) n'étaient **jamais réarmés** entre les journées.
+`jauge_min_satiete_jour` était donc le minimum **depuis la naissance**.
+
+> C'est ce qui produisait les « **400/400 ticks en zone critique** » de tous les runs de la
+> campagne : le chiffre **surestimait la détresse réelle du jour**. Le commentaire d'origine
+> invoquait pourtant *« le piège du bug `score_vocal_jour` v27.0 »* — **3ᵉ occurrence du
+> fil n°3** de l'INDEX.
+
+### ⚠️ Ce qui bloque — et deux erreurs de diagnostic consignées
+
+Taux de récolte réel, 60 premiers jours, trois runs :
+
+| Version | sources/carte | consommé/jour |
+|---|---|---|
+| témoin | 20 | **3,72** |
+| profils | 35 | **3,52** |
+| + hydrique découplé | 35 | **3,47** |
+
+**Le nombre absolu consommé est identique.** Multiplier les sources par 1,75 n'a rien
+changé : l'agent rate ~90 % des opportunités.
+
+1. **« Le déficit est structurel, le monde est trop pauvre »** — **faux**. +75 % de sources
+   → 0 % de récolte en plus. Le monde n'était pas le facteur limitant.
+2. **Le simulateur postulait la réponse** — les calibrages ont été validés sur un modèle qui
+   **suppose l'agent mangeant à intervalles réguliers**, alors qu'il mange quand il trébuche
+   sur une ressource. *Ne calibrer un métabolisme qu'avec une trace de run réel.*
+
+La cause réelle est **comportementale** : besoin 6,5/jour contre une capacité de récolte de
+~3,5/jour, invariante. Cohérent avec les 48,6 % d'approche olfactive (= le hasard, H15) et
+l'odorat mesuré **inerte** à l'ablation.
+
+---
+
 ## [v41.0-docs] - 2026-08-15 — Les README disent enfin ce que les mesures disent
 
 ### « Couper C2 double le taux de succès » → **0,0 point sur 6 niveaux**

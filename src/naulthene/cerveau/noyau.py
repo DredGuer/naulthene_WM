@@ -2516,20 +2516,58 @@ class BiologicalHomeostasisEngine:
         self.energie = float(np.clip(self.energie - cout_digestion,
                                      ENERGIE_MIN, ENERGIE_MAX))
 
+    def faim(self) -> float:
+        """v41.2-fix2 — LA FAIM EST INDEXÉE SUR L'ÉNERGIE **ET** LA SATIÉTÉ.
+
+        Décision utilisateur (15/08) : *« pour qu'il fasse le choix de boire ou de manger
+        il faut qu'il ait soif ou faim ; la faim est indexée sur l'énergie et la satiété,
+        alors que la soif n'est indexée que sur l'hydratation »*.
+
+        C'est la correction d'un défaut de conception introduit avec le second étage : la
+        faim ne regardait QUE la satiété, donc un agent à l'énergie effondrée mais au
+        ventre encore à moitié plein ne se déclarait **pas** affamé — il ne cherchait donc
+        pas à manger alors qu'il était en train de mourir. Mesuré : `Satiété 0.70 |
+        Hydratation 0.00 | énergie 0.015`, l'agent en quête d'eau pendant que son énergie
+        gisait au plancher.
+
+        Les deux termes se **multiplient** plutôt que de se moyenner : avoir du stock
+        *et* de l'énergie est nécessaire pour ne pas avoir faim. Un seul des deux à zéro
+        suffit à déclencher la faim — c'est ce que « indexée sur les deux » veut dire."""
+        return 1.0 - (self.satiete * self.energie)
+
+    def soif(self) -> float:
+        """v41.2-fix2 — LA SOIF N'EST INDEXÉE QUE SUR L'HYDRATATION (décision
+        utilisateur). L'eau n'apporte aucune calorie : sa carence ne se lit nulle part
+        ailleurs que dans sa propre jauge."""
+        return 1.0 - self.hydratation
+
     def evaluer_quetes_biologiques(self):
-        """Génère la quête la plus prioritaire : Nourriture > Eau > Stimulation, dans
-        cet ordre de survie. Une seule quête active à la fois — pas de superposition."""
-        if self.satiete < self.seuil_critique:
-            self.quete_active = {"type": "SURVIVAL_FOOD", "priorite": 1.0 - self.satiete,
-                                  "vecteur_cible": [1.0, 0.0, 0.0]}
-        elif self.hydratation < self.seuil_critique:
-            self.quete_active = {"type": "SURVIVAL_WATER", "priorite": 1.0 - self.hydratation,
-                                  "vecteur_cible": [0.0, 1.0, 0.0]}
-        elif self.stimulation < self.seuil_critique:
-            self.quete_active = {"type": "EXPLORATION_STIM", "priorite": 1.0 - self.stimulation,
-                                  "vecteur_cible": [0.0, 0.0, 1.0]}
-        else:
+        """Génère la quête la plus urgente. v41.2-fix2 : l'urgence est COMPARÉE, plus
+        arbitrée par un ordre figé.
+
+        ⚠️ L'ancienne version était une cascade `if satiété < seuil / elif hydratation <
+        seuil` : la faim l'emportait TOUJOURS sur la soif dès qu'elle était déclenchée,
+        quelle que soit l'intensité respective des deux. Un agent mourant de soif restait
+        en quête de nourriture tant que sa satiété était basse — et l'ordre `Nourriture >
+        Eau > Stimulation` était un « rien en dur » violé au cœur du chemin motivationnel.
+
+        Désormais les trois besoins déclarent leur urgence sur la même échelle et le plus
+        pressant l'emporte. Le seuil ne sert plus qu'à décider s'il y a lieu d'avoir une
+        quête, pas laquelle — c'est `max()` qui tranche, donc l'ordre n'est plus décrété.
+        """
+        besoins = (
+            ("SURVIVAL_FOOD", self.faim(), [1.0, 0.0, 0.0]),
+            ("SURVIVAL_WATER", self.soif(), [0.0, 1.0, 0.0]),
+            ("EXPLORATION_STIM", 1.0 - self.stimulation, [0.0, 0.0, 1.0]),
+        )
+        type_besoin, urgence, cible = max(besoins, key=lambda b: b[1])
+        # Le seuil décide s'il y a QUÊTE, jamais LAQUELLE : `1 - seuil_critique` est le
+        # niveau d'urgence à partir duquel un besoin mérite de mobiliser l'agent.
+        if urgence <= 1.0 - self.seuil_critique:
             self.quete_active = None
+        else:
+            self.quete_active = {"type": type_besoin, "priorite": urgence,
+                                 "vecteur_cible": cible}
         return self.quete_active
 
     def obtenir_vecteur_bio(self, rappel_spatial=None, cible_vocale=None,

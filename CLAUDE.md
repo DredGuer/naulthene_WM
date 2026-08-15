@@ -35,9 +35,13 @@ caméra, un micro et un bus moteur.
 Deux conséquences pour la rédaction de toute doc, tout commit, toute description :
 
 - Ne jamais présenter le projet comme un solveur MiniGrid, ni comme un système livré.
-- Ne jamais masquer l'état réel : l'agent est **bloqué au niveau 2 sur 15** et n'a pas gagné
-  depuis 678 jours simulés. L'échec fait partie du carnet de recherche et se documente
-  (voir `docs/recherche/dia_Aout_2026.md`).
+- Ne jamais masquer l'état réel : l'agent est **bloqué au niveau 1 sur 15** — **0 promotion
+  sur 10 graines × 2000 jours**, maîtrise maximale 40 % pour un seuil à 60 %, et **couper C2
+  ne change le score de 0,0 point sur les 6 niveaux** (78 cellules d'ablation). Une graine
+  antérieure avait atteint le niveau 4 : c'était une **loterie natale**, non reproductible.
+  L'échec fait partie du carnet de recherche et se documente (voir
+  `docs/recherche/CAMPAGNE_v41_population_et_ablation_aout_2026.md` pour la mesure, et
+  `docs/recherche/dia_Aout_2026.md` pour le diagnostic).
 
 ## Architecture
 

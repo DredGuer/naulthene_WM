@@ -11,6 +11,7 @@
 
 | Ta question | Le document | Temps |
 |---|---|---|
+| **« Objectifs, cerveau, parcours — tout en un »** | **[etat_des_lieux/15082026_v41.2.md](etat_des_lieux/15082026_v41.2.md)** | 20 min |
 | **« Où en est le projet ? »** | [ETAT_DU_PROJET_aout_2026.md](recherche/ETAT_DU_PROJET_aout_2026.md) | 15 min |
 | « Qu'est-ce qui a changé et quand ? » | [CHANGELOG.md](fonctionnement/CHANGELOG.md) | consultation |
 | « Comment je lance un run ? » | [LANCEMENT.md](fonctionnement/LANCEMENT.md) | 5 min |
@@ -31,6 +32,12 @@ autorité sur l'état courant.**
 | `docs/recherche/` | **enquêtes** — ce qui bloque, ce qui a été réfuté | ❌ non |
 | `docs/ameliorations/` | **idées** — pistes proposées, pas encore validées | ❌ non |
 | `docs/ameliorations_appliquees/` | **livré** — mécaniques posées dans le code | 🟡 partiellement |
+| `docs/etat_des_lieux/` | **synthèses datées** — une photo à un instant donné | ❌ non (**périmable**) |
+
+> ⚠️ Un document d'`etat_des_lieux/` est une **photo horodatée**, jamais une référence
+> vivante : il n'est pas mis à jour après sa date. Un fichier par point d'étape
+> (`DDMMYYYY_Version.md`), les anciens sont **conservés**, jamais écrasés — c'est ce qui
+> permet de comparer deux dates. Pour l'état courant, aller au CHANGELOG.
 
 > Un carnet est *vivant mais non normatif* : il raconte une enquête, avec ses erreurs.
 > **Ne jamais y chercher l'état courant** (c'est le rôle du CHANGELOG) — mais **toujours
@@ -54,6 +61,7 @@ autorité sur l'état courant.**
 
 | Document | Ce qu'il contient | Lié à |
 |---|---|---|
+| **[etat_des_lieux/15082026_v41.2.md](etat_des_lieux/15082026_v41.2.md)** | **Synthèse en 3 volets : les objectifs · l'état du cerveau (fonctionnement, contraintes, blocages) · le parcours (grilles, nourriture, jours, ticks).** Inclut le chantier v41.2 en cours, non encore au CHANGELOG | tout |
 | **[ETAT_DU_PROJET_aout_2026.md](recherche/ETAT_DU_PROJET_aout_2026.md)** | **Forces, faiblesses, ce qui reste à faire.** Le point d'entrée | tout |
 | [CHANGELOG.md](fonctionnement/CHANGELOG.md) | Historique version par version — **la référence factuelle** | tout |
 | [REVUE_CODE_v39_aout_2026.md](recherche/REVUE_CODE_v39_aout_2026.md) | **6 défauts trouvés le 13-14/08**, dont le biais qui faussait 2a/2b | §B, §D |
@@ -135,8 +143,15 @@ une docstring, jamais transformées en test.
    le palier joué est *tiré au sort* autour du niveau courant, au lieu d'être un pointeur qui
    ne recule jamais. Retours en arrière et « pas au-delà tant que ce n'est pas acquis »
    **émergent** de la distribution, sans un seul seuil.
+10. **En cours — v41.2, le métabolisme à deux étages** ([chantier](ameliorations/CHANTIER_v41.2_metabolisme_deux_etages.md) ·
+    [énergie modulatrice](ameliorations/CHANTIER_v41.2_energie_modulatrice.md)) : l'agent vivait
+    **400 ticks sur 400 en zone critique**, un vécu sans variance — cause amont plausible du
+    C2 déconnecté. L'agent **ne meurt plus et regagne** (26 victoires/65 j), mais le déficit
+    de **trouvabilité** est structurel (1,92 trouvée/jour pour 2,5 demandées).
+    ⏳ **Arbitrage ouvert** : caler le barème sur ce que l'agent trouve déjà ne démontrerait
+    rien — agir sur le **monde** est le seul levier qui ait jamais marché.
 
 ---
 
 *Index créé le 14 août 2026. Si un document est ajouté, il doit apparaître ici — sinon il
-sera oublié.*
+sera oublié. Dernier ajout : `etat_des_lieux/` (15/08/2026).*
