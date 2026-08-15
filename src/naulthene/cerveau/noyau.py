@@ -4617,6 +4617,47 @@ MIN_EPISODES_PROMOTION = 10  # sous ce nombre, le taux n'est pas encore signific
 # expert — lui couper l'aide faute de données serait exactement l'erreur du Mode Libre.
 SEUIL_FIN_SEVRAGE = 0.90     # borne haute : au-dessus, plus aucune aide
 
+# --- v41.4 : LA MAÎTRISE GÉNÉRALE ET L'HÉRITAGE D'AUTONOMIE ---
+#
+# Décision utilisateur : *« tu as une maîtrise générale des cartes et une maîtrise carte
+# par carte »*, et *« reporter une proportion du niveau précédent de maîtrise sur le
+# suivant »*.
+#
+# 🔴 CE QUE ÇA CORRIGE. Mesuré sur le run v41.3 de 300 jours : à chaque promotion,
+# `historique_episodes_niveau` est vidé (invariant non négociable), donc la maturité
+# retombe à **0,000 exactement** et le guidage à **1,0 — l'aide maximale**. L'agent
+# redevient un nouveau-né sur chaque carte. Après deux promotions (j74, ~j180), la
+# maîtrise s'est effondrée à 2 % et l'autonomie à 3 % sur les 185 derniers jours.
+#
+# Or un agent qui vient de tenir 60 % sur trois cartes n'est pas un débutant absolu : il
+# sait terminer un épisode. Ce qui est périmé, c'est le PLAN de la carte — pas la
+# compétence motrice.
+#
+# LA FORME. Deux grandeurs distinctes, comme demandé :
+#   • maîtrise PAR CARTE  (`historique_episodes_niveau`)  → pilote la PROMOTION
+#   • maîtrise GÉNÉRALE   (`historique_episodes_general`) → pilote le SEVRAGE, en attendant
+#
+# L'héritage est reporté **à proportion de la parenté mesurée** entre l'ancienne carte et
+# la nouvelle (`_parente_cartes`), jamais d'un pourcentage posé : la parenté entre voisins
+# du PROGRAMME varie de 0,85 à 0,00 selon la paire. Il s'efface ensuite à mesure que les
+# données réelles de la nouvelle carte arrivent (pondération par le remplissage de la
+# fenêtre) — sans quoi une baisse de compréhension ne pourrait plus faire remonter l'aide,
+# ce que l'utilisateur exige explicitement : *« une baisse de compréhension augmente aussi
+# l'aide proportionnellement »*.
+#
+# ⚠️ TROIS INVARIANTS.
+#   1. L'héritage ne touche QUE le sevrage. `_maturite_niveau` continue de lire la seule
+#      maîtrise par carte : la promotion exige une preuve fraîche, sinon un agent
+#      enchaînerait les paliers sans rien montrer (mesuré en P17 : palier 5/6 avec
+#      4 victoires au total).
+#   2. Il s'EFFACE quand la fenêtre se remplit. À fenêtre pleine, le sevrage ne dépend
+#      plus que du niveau courant — exactement comme en v41.3.
+#   3. La parenté est LUE sur la grille, jamais tabulée. Aucune table
+#      `niveau → difficulté` : ce serait renommer une constante en dur.
+FENETRE_MAITRISE_GENERALE = 100   # borne : ~5 fenêtres de niveau, assez long pour
+                                   # traverser plusieurs cartes, assez court pour qu'un
+                                   # décrochage durable finisse par s'y voir
+
 # --- v40.2 : LE SEUIL DE MATURITÉ, DÉRIVÉ (voir `_maturite_niveau`) ---
 #
 # Il n'est PAS posé. Il vaut la maturité d'un agent qui réussit `TAUX_PROMOTION` du temps
@@ -4724,7 +4765,33 @@ def facteur_guidage(etat) -> float:
     # constantes redeviennent cohérentes au lieu de se neutraliser.
     taux = _taux_maitrise_niveau(etat)
     taux_effectif = 0.0 if taux is None else taux
-    base = 1.0 - max(0.0, min(1.0, taux_effectif / SEUIL_FIN_SEVRAGE))
+
+    # --- v41.4 : L'HÉRITAGE — ce qu'il sait déjà compte, à proportion de la parenté ---
+    #
+    # Le taux qui pilote le sevrage est un mélange entre ce que l'agent démontre ICI et
+    # ce qu'il a démontré AILLEURS, pondéré par deux facteurs mesurés :
+    #
+    #   • le REMPLISSAGE de la fenêtre du niveau — plus il a joué ici, moins le passé
+    #     compte. À fenêtre pleine l'héritage vaut 0 : on retombe exactement sur v41.3.
+    #   • la PARENTÉ entre la carte quittée et la carte courante — un saut de vocabulaire
+    #     ne se transfère pas.
+    #
+    # Le produit des deux est la seule chose qui décide : rien n'est posé.
+    h_niveau = etat.historique_episodes_niveau
+    fraicheur = min(1.0, len(h_niveau) / FENETRE_PROMOTION)   # 0 = rien joué ici
+    taux_general = _taux_maitrise_generale(etat)
+    parente = max(0.0, min(1.0, getattr(etat, "parente_niveau_precedent", 0.0)))
+
+    if taux_general is None:
+        # Aucun vécu transversal significatif : le débutant reste un débutant.
+        taux_pour_sevrage = taux_effectif
+    else:
+        poids_heritage = (1.0 - fraicheur) * parente
+        taux_pour_sevrage = (taux_effectif * (1.0 - poids_heritage)
+                             + taux_general * poids_heritage)
+
+    etat.taux_sevrage_jour = taux_pour_sevrage   # télémétrie (bilan de nuit + W&B)
+    base = 1.0 - max(0.0, min(1.0, taux_pour_sevrage / SEUIL_FIN_SEVRAGE))
 
     # --- Le filet : renfort progressif après une longue stagnation ---
     # `jours_stagnation_niveau` compte les jours consécutifs SANS victoire sur le niveau
@@ -5081,6 +5148,16 @@ class EtatCognitif:
         # Vidé à chaque promotion : un taux calculé sur des épisodes d'un niveau plus
         # facile promouvrait l'agent sans qu'il ait rien montré sur le niveau courant.
         self.historique_episodes_niveau = []
+        # v41.4 — historique TRANSVERSAL, jamais vidé à la promotion : c'est la « maîtrise
+        # générale des cartes ». Il ne pilote que le sevrage, jamais la promotion.
+        self.historique_episodes_general = []
+        # v41.4 — parenté mesurée entre la carte quittée et la carte courante, calculée
+        # UNE FOIS au moment de la promotion (voir `_parente_cartes`). 0.0 à la naissance :
+        # il n'y a aucune carte précédente dont hériter.
+        self.parente_niveau_precedent = 0.0
+        # v41.4 — télémétrie : le taux effectivement utilisé pour le sevrage (mélange du
+        # niveau courant et de l'héritage). Égal au taux du niveau quand l'héritage est nul.
+        self.taux_sevrage_jour = 0.0
         # v35.1 — curseur d'aide, recalculé chaque `demarrer_journee`. 1.0 par défaut :
         # un cerveau qui n'a pas encore ouvert sa première journée est un débutant.
         self.facteur_guidage_jour = 1.0
@@ -5454,6 +5531,104 @@ def _enregistrer_episode_niveau(etat, reussi: bool) -> None:
     etat.historique_episodes_niveau.append(1.0 if reussi else 0.0)
     if len(etat.historique_episodes_niveau) > FENETRE_PROMOTION:
         etat.historique_episodes_niveau.pop(0)
+
+    # v41.4 — LA MAÎTRISE GÉNÉRALE, transversale aux cartes (décision utilisateur :
+    # « tu as une maîtrise générale des cartes et une maîtrise carte par carte »).
+    #
+    # Elle n'est PAS vidée à la promotion : c'est tout son intérêt. Un agent qui a
+    # réussi 60 % sur trois cartes d'affilée n'est pas un débutant absolu sur la
+    # quatrième — il sait tenir un but, éviter un mur, terminer un épisode. Cette
+    # grandeur porte ce qui TRAVERSE les cartes, là où `historique_episodes_niveau`
+    # porte ce qui appartient à la carte courante.
+    #
+    # ⚠️ Elle ne touche JAMAIS à la promotion (voir `_maturite_niveau`) — uniquement au
+    # sevrage. L'invariant du projet est explicite : un taux hérité d'un niveau plus
+    # facile promouvrait en chaîne. Il reste entier ici : la promotion continue d'exiger
+    # une preuve fraîche sur la carte courante ; seule l'AIDE tient compte du passé.
+    etat.historique_episodes_general.append(1.0 if reussi else 0.0)
+    if len(etat.historique_episodes_general) > FENETRE_MAITRISE_GENERALE:
+        etat.historique_episodes_general.pop(0)
+
+
+def _taux_maitrise_generale(etat):
+    """v41.4 — Taux de réussite sur les `FENETRE_MAITRISE_GENERALE` derniers épisodes,
+    TOUTES CARTES CONFONDUES, ou None s'il n'est pas encore significatif.
+
+    C'est la « maîtrise générale des cartes » : ce que l'agent sait faire en général,
+    indépendamment du décor. Même garde `None` que le taux par niveau — « pas encore
+    mesurable » n'est pas « mesuré à zéro »."""
+    h = getattr(etat, "historique_episodes_general", [])
+    if len(h) < MIN_EPISODES_PROMOTION:
+        return None
+    return sum(h) / len(h)
+
+
+def _profil_carte(env):
+    """v41.4 — Signature structurelle de la carte courante, LUE sur la grille.
+
+    Rien n'est déclaré : le cerveau ne sait pas ce qu'est une clé ni une porte. On ne
+    lit que des grandeurs de forme (taille, espace libre, densité d'obstacles) et
+    l'ENSEMBLE OPAQUE des étiquettes d'objets présents — jamais leur signification.
+    C'est la même discipline que l'empreinte de type (v39.0) : les étiquettes servent
+    à comparer, jamais à interpréter.
+    """
+    g = env.unwrapped.grid
+    surface = float(g.width * g.height)
+    libres = 0.0
+    murs = 0.0
+    types = set()
+    for y in range(g.height):
+        for x in range(g.width):
+            c = g.get(x, y)
+            if c is None:
+                libres += 1.0
+            else:
+                t = c.type
+                if t == "wall":
+                    murs += 1.0
+                else:
+                    types.add(t)
+    return {"surface": surface, "libres": libres,
+            "densite": murs / max(surface, 1.0), "types": types}
+
+
+def _parente_cartes(profil_a, profil_b):
+    """v41.4 — Similarité dans [0, 1] entre deux cartes, DÉRIVÉE de leurs profils.
+
+    Le report de maîtrise d'un niveau au suivant (décision utilisateur : « reporter une
+    proportion du niveau précédent de maîtrise sur le suivant ») ne peut pas être un
+    pourcentage posé : les paliers ne se ressemblent pas tous. Mesuré sur les 15 niveaux
+    du PROGRAMME (40 resets chacun, `docs/recherche/`), la parenté entre voisins va de
+    **0,85** (`Empty-8x8` → `SimpleCrossing`, même tâche à une autre échelle) à
+    **0,00** (`MemoryS7` → `MultiRoom`, vocabulaire entièrement neuf). Reporter le même
+    pourcentage dans les deux cas serait faux dans au moins un des deux.
+
+    Deux termes MULTIPLIÉS, jamais sommés — pour la même raison que la maturité est un
+    produit : une carte de forme identique mais au vocabulaire inconnu n'est PAS un
+    niveau parent, et une somme laisserait la forme compenser la nouveauté.
+
+      1. la FORME  — surface, espace libre, densité d'obstacles (écarts relatifs)
+      2. le VOCABULAIRE — la part des étiquettes de b déjà rencontrées dans a
+
+    ⚠️ Le vocabulaire est comparé comme un ENSEMBLE OPAQUE. Aucune table
+    `objet → difficulté` : « lava est dangereux » n'est écrit nulle part, seulement
+    « lava est un symbole que cette carte-ci n'avait pas ».
+    """
+    ecarts = []
+    for axe in ("surface", "libres", "densite"):
+        va, vb = profil_a[axe], profil_b[axe]
+        denom = max(abs(va), abs(vb), 1e-9)
+        ecarts.append(min(1.0, abs(va - vb) / denom))
+    forme = 1.0 - (sum(ecarts) / len(ecarts))
+
+    types_b = profil_b["types"]
+    if not types_b:
+        vocabulaire = 1.0        # rien de neuf à apprendre : la forme décide seule
+    else:
+        connus = len(types_b & profil_a["types"])
+        vocabulaire = connus / len(types_b)
+
+    return max(0.0, min(1.0, forme * vocabulaire))
 
 
 def _taux_maitrise_niveau(etat):
@@ -6944,11 +7119,30 @@ def executer_nuit(etat, plafond_reve=None):
             # agent promu arriverait sur son nouveau palier avec un renfort maximal déjà
             # armé, et le sevrage ne pourrait jamais démarrer.
             etat.jours_stagnation_niveau = 0
+            # v41.4 — profil de la carte QUITTÉE, lu avant de la fermer : il servira à
+            # mesurer combien la nouvelle lui ressemble, donc combien de sevrage se
+            # reporte. Lu sur la grille, jamais tabulé (voir `_profil_carte`).
+            try:
+                profil_ancien = _profil_carte(etat.env)
+            except Exception:
+                profil_ancien = None   # un monde non-MiniGrid n'a pas de grille : pas
+                                        # d'héritage, l'agent repart en débutant complet
             etat.env_id, etat.nom_classe = PROGRAMME[etat.niveau_actuel]
             etat.env.close()
             etat.env = creer_env(etat.env_id, DIM_VISUELLE)
+            # La parenté exige une carte instanciée : le reset a lieu au prochain épisode,
+            # mais la grille existe déjà après `creer_env` sur MiniGrid.
+            try:
+                etat.env.reset()
+                parente = (_parente_cartes(profil_ancien, _profil_carte(etat.env))
+                           if profil_ancien is not None else 0.0)
+            except Exception:
+                parente = 0.0
+            etat.parente_niveau_precedent = parente
             etat.memoire_episodique_spatiale.reinitialiser_niveau()
             print(f"\n🎓 [PROMOTION] L'Agent passe en {etat.nom_classe} ! 🚀  ({motif})")
+            print(f"   🧬 parenté avec la carte quittée : {parente:.0%} "
+                  f"→ sevrage hérité à proportion (v41.4)")
         else:
             print(f"🏆 [MAÎTRISE] L'Agent a vaincu le dernier niveau ({etat.nom_classe}) !")
 
@@ -7323,6 +7517,17 @@ def executer_nuit(etat, plafond_reve=None):
           f"maîtrise {_txt} | {_aide}")
     print(f"  ├─ Maturité v40.2 : 🌡️ {_mat:.3f} / {SEUIL_MATURITE:.2f} — "
           f"régularité {_reg:.0%} × consolidation {_cons:.0%} × autonomie {_auto:.0%}")
+    # v41.4 — la maîtrise générale et l'héritage. L'écart entre le taux de sevrage et le
+    # taux du niveau EST l'héritage : à fenêtre pleine il se referme, par construction.
+    _tg = _taux_maitrise_generale(etat)
+    _tg_txt = (f"{_tg:.0%}" if _tg is not None
+               else f"— (n={len(getattr(etat, 'historique_episodes_general', []))}"
+                    f"/{MIN_EPISODES_PROMOTION})")
+    _tsev = getattr(etat, "taux_sevrage_jour", 0.0)
+    _par = getattr(etat, "parente_niveau_precedent", 0.0)
+    _herit = _tsev - (_t if _t is not None else 0.0)
+    print(f"  ├─ Maîtrise v41.4 : 🌍 générale {_tg_txt} | sevrage sur {_tsev:.0%} "
+          f"(héritage {_herit:+.0%}, parenté carte {_par:.0%})")
 
     # v36.0 — ce que la mémoire reçoit, ce qu'elle abstrait, ce qu'elle rend.
     _sv = etat.memoire_episodique_spatiale.souvenirs
@@ -7515,6 +7720,18 @@ def executer_nuit(etat, plafond_reve=None):
         # l'un ni l'autre ne mord — donc que la mécanique ne sert à rien.
         "Cursus_Facteur_Guidage": etat.facteur_guidage_jour,
         "Cursus_Jours_Stagnation": etat.jours_stagnation_niveau,
+        # --- v41.4 : la maîtrise générale et l'héritage de sevrage ---
+        # `Maitrise_Generale` est ce que l'agent sait faire TOUTES CARTES CONFONDUES ;
+        # `Taux_Sevrage` est le mélange réellement utilisé pour doser l'aide. L'écart
+        # entre `Taux_Sevrage` et `Cursus_Taux_Maitrise_Niveau` EST l'héritage : s'il
+        # reste nul en permanence, la mécanique ne mord pas. `Parente_Niveau` dit
+        # combien la dernière promotion a transféré (0 = rupture de vocabulaire).
+        "Cursus_Maitrise_Generale": (_taux_maitrise_generale(etat)
+                                      if _taux_maitrise_generale(etat) is not None
+                                      else -1.0),
+        "Cursus_Taux_Sevrage": getattr(etat, "taux_sevrage_jour", 0.0),
+        "Cursus_Parente_Niveau": getattr(etat, "parente_niveau_precedent", 0.0),
+        "Cursus_Episodes_General": len(getattr(etat, "historique_episodes_general", [])),
         # --- v36.0 : le flux enrichi & l'abstraction par récurrence ---
         # `Ecritures` mesure ce que la mémoire REÇOIT (2 types seulement avant v36.0).
         # `Rappels_Ratio` mesure ce qu'elle REND : si ce ratio reste à 0, le canal ne sert

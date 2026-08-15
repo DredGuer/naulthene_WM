@@ -279,6 +279,12 @@ class PersistanceAnatomique:
             'historique_episodes_niveau': list(etat.historique_episodes_niveau),
             # v35.1 — filet de sécurité : jours consécutifs sans victoire sur le niveau.
             'jours_stagnation_niveau': etat.jours_stagnation_niveau,
+            # v41.4 — la maîtrise GÉNÉRALE (transversale aux cartes) et la parenté de la
+            # dernière promotion. Toutes deux sont des mesures de VIE, pas de journée :
+            # sans persistance, une reprise de run ferait repartir l'agent en débutant
+            # absolu sur le plan du sevrage, exactement le défaut que la v41.4 corrige.
+            'historique_episodes_general': list(getattr(etat, 'historique_episodes_general', [])),
+            'parente_niveau_precedent': getattr(etat, 'parente_niveau_precedent', 0.0),
             'victoires_consecutives': etat.victoires_consecutives,
             # v33.0-etape0.6 — chronologie des victoires. DOIT être persistée : c'est une
             # mesure de VIE (intervalles entre victoires sur des centaines de jours), pas
@@ -596,6 +602,13 @@ class PersistanceAnatomique:
         # v35.1 — un `.brain` antérieur repart à 0 : le filet se réarmera naturellement si
         # l'agent stagne réellement, plutôt que d'hériter d'un renfort qu'il n'a pas mérité.
         etat.jours_stagnation_niveau = checkpoint.get('jours_stagnation_niveau', 0)
+        # v41.4 — lecture DÉFENSIVE : un `.brain` antérieur n'a aucune de ces clés et
+        # repart avec une maîtrise générale vierge. Conséquence assumée et sans danger :
+        # `_taux_maitrise_generale` renvoie None tant que MIN_EPISODES_PROMOTION épisodes
+        # n'ont pas été rejoués, donc l'héritage vaut 0 et le sevrage retombe exactement
+        # sur le comportement v41.3 — jamais sur une aide erronée.
+        etat.historique_episodes_general = checkpoint.get('historique_episodes_general', [])
+        etat.parente_niveau_precedent = checkpoint.get('parente_niveau_precedent', 0.0)
         # v33.0-etape0.6 — lecture DÉFENSIVE (`.get`) : les `.brain` antérieurs à cette
         # version n'ont aucune de ces clés. Un cerveau ancien repart donc d'une
         # chronologie vierge (aucune victoire connue) plutôt que de faire planter le
