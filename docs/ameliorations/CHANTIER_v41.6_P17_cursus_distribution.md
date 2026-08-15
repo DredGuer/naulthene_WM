@@ -112,13 +112,61 @@ Ligne `Cursus P17` au bilan de nuit + 6 clés W&B. La plus importante est
 distingue une distribution *dérivée* de trois constantes en dur — si elle reste plate, la
 mécanique est un pointeur déguisé.
 
-## 7. Résultats
+## 7. Résultats — point d'étape à j468 (run en cours)
 
-*(en attente — cette section sera remplie par la mesure)*
+### 7.1 La comparaison directe : g44, même graine, avec et sans P17
 
-**Comparaison de référence** (v41.4, sans P17, 2000 j) :
+| g44 | 1ʳᵉ promotion | 2ᵉ promotion |
+|---|---|---|
+| **Sans P17** (v41.4, 2000 j) | jour **477** | jour **493** |
+| **Avec P17** | jour **243** | jour **332** |
 
-| | Résultat |
-|---|---|
-| Graines bloquées au niveau 1 | **3 sur 4** |
-| g44 au niveau 3 | **1500 jours à 2 % de maîtrise** |
+**Les deux paliers sont franchis presque 2× plus tôt.**
+
+⚠️ **Deux correctifs ont changé en même temps** — la maturité synchrone (v41.5) et P17
+(v41.6). Cette accélération ne peut pas être attribuée à P17 seul : la maturité synchrone
+supprime à elle seule des refus mesurés (7 sur le corpus précédent). L'attribution exigera
+une ablation séparée.
+
+### 7.2 État des 6 graines à j468
+
+| Graine | Niveau | Promotions | Maîtrise max | Maturité max |
+|---|---|---|---|---|
+| g11 | 1/15 | 0 | 50 % | 0,278 |
+| g22 | 1/15 | 0 | 55 % | 0,336 |
+| g33 | 1/15 | 0 | 45 % | 0,225 |
+| **g44** | **3/15** | **2** (j243, j332) | — | 0,400 |
+| **g55** | **3/15** | **2** (j300, j361) | — | 0,400 |
+| g66 | 1/15 | 0 | 55 % | 0,336 |
+
+**2 graines sur 6 franchissent deux paliers** (contre 1 sur 4 en v41.4). Les 4 autres
+plafonnent entre 45 % et 55 % de maîtrise — sous le seuil de 60 %, donc **un mur réel**,
+pas un défaut de mesure : leur maturité maximale (0,225 → 0,336) reste loin de 0,400.
+
+### 7.3 La distribution s'adapte réellement à l'échec
+
+Sur g44 bloqué au niveau 3, la ligne de bilan montre le couplage attendu :
+
+```
+🎲 2 révision(s) · 0 incursion(s) — défi visé 33% | hors palier 0/2 réussis
+```
+
+Le **défi visé est tombé à 33 %** (contre 78-95 % au niveau 1 en début de run) : la
+distribution a détecté l'échec et bascule vers la révision, **sans aucun `if`**. C'est
+exactement le comportement recherché — et c'est la preuve que `P17_Poids_Defi` est bien
+couplé à la maîtrise, donc que la distribution est dérivée et non figée.
+
+### 7.4 L'incursion produit des victoires
+
+**839 victoires sur 3179 épisodes hors palier — 26,4 %.**
+
+L'agent réussit régulièrement sur des niveaux où il n'est **pas encore promu**. Sous
+l'ancien pointeur, ces épisodes n'auraient jamais existé.
+
+### 7.5 ❌ Ce que P17 ne corrige pas (à ce stade)
+
+g44 au niveau 3 reste à **10 % de maîtrise** malgré la révision active. La révision
+entretient les acquis, elle n'enseigne pas le palier courant. **Le mur d'`Empty-8x8`
+tient.**
+
+*Section à compléter à la fin du run (1000 j).*
