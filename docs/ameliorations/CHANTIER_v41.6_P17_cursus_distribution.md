@@ -170,3 +170,65 @@ entretient les acquis, elle n'enseigne pas le palier courant. **Le mur d'`Empty-
 tient.**
 
 *Section à compléter à la fin du run (1000 j).*
+
+
+---
+
+## 8. Point d'étape à j932 — ce que P17 change, et ce qu'il ne change pas
+
+### 8.1 ✅ L'effondrement au niveau 3 est enrayé
+
+C'est le résultat le plus net, et il est directement comparable à v41.4 (même graine) :
+
+| g44 au niveau 3 (`Empty-8x8`) | Sans P17 | **Avec P17** |
+|---|---|---|
+| Maîtrise maximale atteinte | **2 %** | **30 %** |
+| Jours passés au palier | 1500 | 603 (run plus court) |
+
+**L'agent n'est plus effondré** — il tient 30 % là où il était à 2 %. La révision entretient
+réellement quelque chose. g55 donne le même chiffre (30 %), sur une graine indépendante.
+
+**Mais 30 % reste sous le seuil de 60 %** : aucune 3ᵉ promotion, ni sur g44 ni sur g55, en
+~600 jours au palier. **Le mur d'`Empty-8x8` tient.**
+
+### 8.2 L'incursion travaille — 32 % de réussite hors palier
+
+Sur g44 : **524 victoires sur 1649 épisodes hors palier**. Un tiers des incursions réussit.
+Sous l'ancien pointeur, aucun de ces épisodes n'aurait existé.
+
+### 8.3 🔴 Un bloquant documenté du projet a DISPARU — la patience
+
+Le dépôt documente depuis des semaines *« le bloquant le mieux mesuré du projet : la
+patience plafonne à 120 ticks contre 256 pour MiniGrid lui-même — réussite atteignable
+4,7 % contre 21,0 % »*.
+
+**Mesuré sur ce run :**
+
+```
+⏳ Patience de base du jour: 273 ticks/épisode (0 abandon(s) lucide(s), patience_min: 220)
+```
+
+| | Valeur documentée | **Mesurée ce soir** |
+|---|---|---|
+| Patience | 120 ticks | **258 → 273 ticks** |
+| Abandons lucides | — | **0** |
+
+> ⚠️ **L'agent dispose de plus de temps que MiniGrid n'en alloue (256), et n'en utilise même
+> pas la totalité — zéro abandon lucide.** Le bloquant « patience » de l'étape 4a de la
+> feuille de route **n'existe plus** : il a été résorbé par la patience adaptative sans que
+> la documentation soit mise à jour.
+>
+> **Conséquence** : l'agent a le temps qu'il faut. S'il échoue sur `Empty-8x8`, ce n'est pas
+> faute de pas disponibles. L'étape 4a est **sans objet**, et il faut corriger le §2.4e de
+> l'état des lieux et le §3.7 qui l'annoncent encore comme le bloquant principal.
+
+### 8.4 Le métabolisme reste déficitaire
+
+```
+r_bio cumulé -2,745 — 4 Nourriture(s), 4 Eau(x) consommée(s)
+r_bio cumulé -3,778 — 3 Nourriture(s), 2 Eau(x) consommée(s)
+```
+
+L'agent **mange et boit** (3 à 5 unités par jour, la boucle corporelle fonctionne), mais
+`r_bio` cumulé reste **négatif** : le déficit structurel identifié en v41.2 (§2.6) n'est pas
+résorbé. C'est cohérent avec le diagnostic d'alors — la trouvabilité, pas le barème.
