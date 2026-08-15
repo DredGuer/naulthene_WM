@@ -43,15 +43,26 @@ six fois. En vol, g44 mesure **65 %** puis **55 %**, cohérent avec la mesure ho
 - **Télémétrie décalée** : héritage comparé entre début et fin de journée → jusqu'à
   **−33 pt** affichés sous ablation.
 
-### Résultats
+### Résultats — comparaison appariée définitive (8 × 2000 jours)
 
-| Mesure | Valeur |
+| Graine | Héritage | Témoin | Δ |
+|---|---|---|---|
+| g11, g22, g33 | niveau 1, 0 promo | niveau 1, 0 promo | **bit-identiques** |
+| **g44** | niveau 3 — promos j477, **j493** | niveau 3 — promos j477, **j527** | **délai 16 j vs 50 j** |
+
+| Question | Réponse mesurée |
 |---|---|
-| Campagne appariée 300 j, 5 paires | **Δ +0,00** — mais héritage **0,0 pt des deux côtés** |
-| Autonomie moyenne, 10 runs | **28,5 %** *(v41.2 : 0 % sur 300 j)* |
-| g44 — 1ʳᵉ / 2ᵉ promotion | jour **477** puis jour **493** (**+16 j**) |
-| g44 après promotion | maturité 0,469 → **0,033**, **355 j** de stagnation |
-| Blocage niveau 1 | **3 graines /4** à 1300 j · **10 runs /10** à 300 j |
+| Change le **niveau atteint** ? | ❌ **Δ +0,00** sur 4 paires |
+| Change le **nombre de promotions** ? | ❌ **Δ +0,00** |
+| Change le **délai** entre paliers franchissables ? | ✅ **3,1× plus rapide** *(n = 1)* |
+| Débloque un agent bloqué ? | ❌ **non** — jamais activé sur 3 graines /4 |
+| L'ablation est-elle propre ? | ✅ **oui** — 3 runs strictement inchangés |
+
+Autonomie moyenne en population : **26,1 % sur 20 runs** *(v41.2 : 0 % sur 300 j)*.
+
+**Décision : conservé et actif** — il ne dégrade rien (deltas nuls, inerte sans
+promotion), son seul effet mesuré est favorable, son coût est nul (aucune constante
+posée). **Non revendiqué, rien dans les README** : l'effet repose sur **une graine**.
 
 ⚠️ **L'ablation est VIDE, pas négative** : sans promotion, la parenté n'est jamais
 calculée, donc les deux branches exécutent le même code. Distinction déjà posée par
@@ -87,6 +98,21 @@ l'autonomie, la marge est **nulle par construction** — un décalage d'un jour 
 Même motif que le verrou du §10 (v41.2) : deux constantes justes séparément dont la
 composition se neutralise. **Correctif NON appliqué** — il modifie le critère de
 promotion, donc arbitrage utilisateur (3 options consignées au §7.4).
+
+**Coût chiffré** (rejeu du critère sur les 8 runs longs, §11) :
+
+| Run | Promotions réelles | Si synchrone | **Manquées** |
+|---|---|---|---|
+| **g11** | **0** | **2** | **2** |
+| g22 / g33 | 0 | 0 | 0 |
+| g44 | 2 | 3 | 1 |
+
+> 🎯 **Le « mur du niveau 1 » recouvrait DEUX phénomènes distincts** : un **défaut de
+> mesure** (g11 remplissait la condition deux fois et a été refusé — 1 graine /4) et un
+> **mur d'apprentissage réel** (g22, g33 plafonnent à 55 %, sous le seuil — 2 graines /4).
+> Le blocage historique (**0 promotion sur 10 graines × 2000 jours**, cité dans les README
+> et `CLAUDE.md`) a été mesuré avec ce même critère : **cette mesure doit être rejouée
+> dessus avant d'attribuer le blocage à la cognition**. Chiffre = borne supérieure.
 
 ---
 
