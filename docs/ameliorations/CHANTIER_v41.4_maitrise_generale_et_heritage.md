@@ -542,3 +542,60 @@ README**.
 | Le sevrage v41.3 fonctionne-t-il en population ? | ✅ **autonomie 26,1 % sur 20 runs** (v41.2 : 0 %) |
 | L'héritage aide-t-il après promotion ? | ❓ **une paire, signal défavorable** (maîtrise 38 % vs 47 %) |
 | Faut-il une campagne plus longue ? | ✅ **≥ 1000 jours** — la promotion médiane arrive vers j290-477 |
+
+---
+
+## 10. 🏁 LA COMPARAISON APPARIÉE 2000 JOURS — l'héritage accélère la 2ᵉ promotion de 3,1×
+
+Campagne décisive : **mêmes 4 graines, 2000 jours, héritage ON vs `--sans-heritage`**.
+Contrairement à la campagne 300 jours (§6.8), les promotions ont ici le temps d'arriver —
+la comparaison n'est donc plus vide.
+
+**L'ablation est propre** : côté témoin, **0 ligne** d'héritage non nul sur tout le run,
+alors que la parenté est bien calculée (65 % affichée). Le drapeau coupe exactement ce
+qu'il doit couper, et rien d'autre.
+
+### 10.1 g44 — le seul agent qui franchit des paliers
+
+| | 1ʳᵉ promotion | 2ᵉ promotion | Écart entre les deux |
+|---|---|---|---|
+| **Héritage ACTIF** | jour **477** | jour **493** | **16 jours** |
+| **Témoin (sans)** | jour **477** | jour **527** | **50 jours** |
+
+> ✅ **La 1ʳᵉ promotion est identique au jour près** (477, maturité 40 %, mêmes facteurs
+> `régularité 60 % × 20 épisodes × autonomie 67 %`). C'est **attendu et c'est une
+> validation** : avant toute promotion la parenté vaut 0, donc les deux codes sont
+> strictement identiques. Voir un écart ici aurait signalé une fuite du drapeau.
+>
+> ✅ **La 2ᵉ promotion arrive 3,1× plus vite avec l'héritage** — 16 jours contre 50.
+> C'est le premier effet **apparié** et **positif** mesuré pour cette mécanique.
+
+Maturité maximale sur les 45 premiers jours du niveau 2, même fenêtre de jours :
+
+| | Maturité max |
+|---|---|
+| Héritage actif | **0,469** |
+| Témoin | 0,400 |
+
+### 10.2 Ce que cela corrige de la lecture du §9
+
+Le §9 (paire g77, campagne 300 j) donnait un signal **défavorable** : maîtrise 38 % contre
+47 % pour le témoin. Cette lecture portait sur **10 jours** après promotion et **une seule
+paire** — j'avais écrit qu'elle n'était pas concluante, elle ne l'était effectivement pas.
+
+Sur 50 jours et avec le résultat qui compte (la promotion suivante), le signe s'inverse :
+l'héritage **accélère**. Les deux mesures ne se contredisent pas vraiment — l'héritage
+sèvre plus tôt, donc la maîtrise instantanée peut baisser, mais la **maturité** (qui
+inclut l'autonomie) monte plus vite et franchit le seuil plus tôt.
+
+### 10.3 Ce que cela ne change PAS
+
+| Fait | Statut |
+|---|---|
+| 3 graines sur 4 (g11, g22, g33) restent au **niveau 1** sur 2000 jours | ⚠️ inchangé — l'héritage n'y est **jamais activé** (0,0 pt) |
+| Le blocage initial | ⚠️ **non résolu** — l'héritage accélère, il ne débloque pas (§6.2, §6.7) |
+| n = **1 graine** pour l'effet mesuré | ⚠️ g44 est le seul à franchir des paliers |
+
+> **Le résultat est positif mais repose sur une seule graine.** Il ne peut pas entrer dans
+> les README : la règle du dépôt exige une population, et la loterie natale g22 a déjà
+> montré ce qu'une graine unique peut faire croire.
