@@ -820,3 +820,98 @@ incompatibilité entre deux constantes.
 | Abaisser `SEUIL_DEBUT_SEVRAGE` sous `TAUX_PROMOTION` | rend l'autonomie non nulle dans la plage utile | sevrer trop tôt un agent qui n'a rien acquis |
 | Retirer `autonomie` du produit de maturité | débloque immédiatement | perd le critère « il n'a plus besoin d'aide », qui est le plus significatif des trois |
 | Remplacer le produit par une moyenne pondérée | un facteur nul ne bloque plus tout | change la sémantique : « toutes les conditions » devient « en moyenne » |
+
+---
+
+## 11. 🏁 v41.3 — le sevrage proportionnel : deux promotions, puis le mur
+
+**Décision utilisateur du 15/08** : *« il faut créer une autonomisation inversement
+proportionnelle au taux de maîtrise ! on essaye déjà avec ça et on avisera »* — soit la
+première des trois options du §10.4, dans sa forme la plus radicale : pas d'abaissement du
+seuil de départ, mais sa **suppression**.
+
+### 11.1 Le correctif
+
+`SEUIL_DEBUT_SEVRAGE` est supprimé. Le guidage décroît **dès le premier point de maîtrise** :
+
+```python
+taux = _taux_maitrise_niveau(etat)
+taux_effectif = 0.0 if taux is None else taux
+base = 1.0 - max(0.0, min(1.0, taux_effectif / SEUIL_FIN_SEVRAGE))
+```
+
+L'autonomie devient donc strictement proportionnelle à la maîtrise, et `SEUIL_MATURITE`
+cesse d'être posé — il est **dérivé** de l'autonomie réellement atteignable au point de
+promotion :
+
+```python
+_AUTONOMIE_A_PROMOTION = min(1.0, TAUX_PROMOTION / SEUIL_FIN_SEVRAGE)   # 0.667
+SEUIL_MATURITE = TAUX_PROMOTION * _AUTONOMIE_A_PROMOTION                # 0.400
+```
+
+Le seuil de maturité n'est plus un chiffre choisi : c'est **ce qu'un agent tout juste
+promouvable peut atteindre**, par construction.
+
+### 11.2 Le résultat — run de 300 jours, graine unique
+
+| Jalon | Niveau | Victoires | Maîtrise max | Maîtrise 50 derniers | Autonomie moy | Maturité max | Maturité moy |
+|---|---|---|---|---|---|---|---|
+| 62 j | 1/15 | 57 | 55 % | 35 % | 38 % | 0,336 | 0,139 |
+| **117 j** | **2/15** | 98 | 70 % | 41 % | 43 % | **0,467** | 0,182 |
+| **215 j** | **3/15** | 118 | 70 % | 6 % | 7 % | 0,469 | 0,008 |
+| 300 j | 3/15 | 127 | 70 % | **2 %** | **3 %** | 0,469 | **0,002** |
+| *v41.2 (témoin)* | *1/15* | *231* | *60 %* | — | **0 % sur 300 j** | **0,000** | *0,000* |
+
+**Première promotion : jour 74.**
+
+```
+🎓 [PROMOTION] L'Agent passe en Éveil (Départ aléatoire) ! 🚀
+   maturité 47% (régularité 60% × 20 épisodes × autonomie 78%)
+```
+
+Elle est légitime au sens strict de la v40.2 : fenêtre **pleine** (20 épisodes), taux tenu à
+`TAUX_PROMOTION` exactement, agent sevré à 78 %. Ce n'est pas un examen réussi par chance.
+Une seconde promotion suit, entre les jalons 117 et 215.
+
+### 11.3 Ce que le correctif a levé — et ce qu'il n'a pas levé
+
+✅ **Levé — le verrou de MESURE.** La maturité passe de 0,000 (300 jours) à 0,469, et deux
+paliers sont franchis. Le §10 est confirmé : la promotion était **mathématiquement
+impossible**, indépendamment de toute compétence.
+
+❌ **Non levé — le verrou de COMPÉTENCE.** Après le niveau 3, l'effondrement est net :
+20 victoires en 98 jours, maîtrise à **2 %** sur les 50 derniers jours, maturité moyenne à
+0,002. Les 185 derniers jours ne produisent **aucune** promotion supplémentaire.
+
+> **L'autonomie retombée à 3 % n'est pas une régression du correctif** — c'est son
+> fonctionnement nominal : le sevrage étant inversement proportionnel à la maîtrise, une
+> maîtrise à 2 % **doit** produire un guidage quasi maximal. Le mécanisme aide beaucoup un
+> agent qui échoue beaucoup. Le défaut est en amont : il échoue.
+
+### 11.4 Relecture de la campagne v41
+
+Le §10.4 supposait que le blocage au niveau 1/15 sur 10 graines × 2000 jours pouvait n'être
+qu'un artefact de mesure. **Ce run tranche partiellement** : les niveaux 1 et 2 étaient
+effectivement acquis sans pouvoir être validés — c'était bien un artefact. Mais le mur
+réapparaît **deux paliers plus loin**, sur le premier niveau qui exige une séquence.
+
+Autrement dit : le correctif déplace le mur, il ne le supprime pas. Les deux promotions sont
+du **rattrapage** — la validation de compétences déjà installées — et non un apprentissage
+neuf.
+
+### 11.5 ⚠️ Ce que ce run NE prouve PAS
+
+- **Une graine ne prouve rien.** Précédent établi par ce projet même : g22 avait atteint le
+  niveau 4 seule, et la campagne à 10 graines a montré que c'était une **loterie natale**
+  (§ `CAMPAGNE_v41_population_et_ablation_aout_2026.md`). Affirmer que le sevrage
+  proportionnel « débloque le cursus » sur la foi de ce seul run répéterait exactement
+  l'erreur que la campagne avait servi à corriger.
+- **Rien n'entre dans les README** tant qu'une campagne à ≥ 10 graines n'a pas confirmé la
+  reproductibilité. La règle de miroir ne s'applique qu'aux chiffres mesurés sur population.
+- Le verdict de **couper C2 = 0,0 pt** n'est pas affecté par ce correctif.
+
+### 11.6 Prochaine étape proposée (non engagée)
+
+Rejouer les **10 graines de la campagne v41** avec le sevrage proportionnel, sur 2000 jours,
+et comparer les distributions de niveau atteint. C'est la seule mesure qui distingue un
+correctif réel d'une seconde loterie natale.

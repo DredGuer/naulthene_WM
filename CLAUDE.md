@@ -43,6 +43,38 @@ Deux conséquences pour la rédaction de toute doc, tout commit, toute descripti
   `docs/recherche/CAMPAGNE_v41_population_et_ablation_aout_2026.md` pour la mesure, et
   `docs/recherche/dia_Aout_2026.md` pour le diagnostic).
 
+### La règle de miroir — `readme.md` (EN) ↔ `readme_fr.md` (FR)
+
+**`readme.md` est la page d'accueil GitHub et il est en ANGLAIS.** `readme_fr.md` en est le
+**miroir français** : son en-tête reprend la même thèse, les mêmes chiffres et les mêmes
+tableaux, avant de dérouler la documentation narrative longue (architecture, formules, journal
+des versions) qui n'existe qu'en français.
+
+**Toute modification de l'en-tête de l'un doit être répercutée dans l'autre, dans le même
+commit** — un lecteur francophone et un lecteur anglophone doivent lire les mêmes faits.
+
+| Bloc | Dans les deux |
+|---|---|
+| La thèse (espace vectoriel unifié) · « un cerveau complet en attente d'un corps » | ✅ |
+| L'avertissement **« cela ne fonctionne pas encore »** | ✅ |
+| Paramètres par couche + total · comparaison aux baselines RL et son verdict défavorable | ✅ |
+| L'état du blocage · le tableau d'ablation sensorielle · l'empreinte mémoire | ✅ |
+| Le lien W&B public | ✅ |
+| Journal des versions, formules détaillées, paliers | ❌ **français seulement** |
+
+Ne mettre ces blocs à jour que si l'un de ces trois éléments bouge : **(1)** le nombre de
+paramètres — le recompter réellement, jamais l'estimer (`sum(p.numel() for p in
+agent.parameters())`) ; **(2)** l'état du blocage ; **(3)** un tableau de benchmark — dès
+qu'une mesure existe, elle y entre, des deux côtés.
+
+⚠️ **Ne jamais écrire une supériorité non mesurée.** Les deux README affirment que Naulthène
+est **2,85× plus lourd** qu'un PPO CNN (55 232 contre 19 384 paramètres), qu'il **ne résout
+pas** `Empty-8x8`, et que **couper C2 ne change rien** (0,0 pt sur 6 niveaux). Ces chiffres
+sont vérifiables en cinq minutes par n'importe quel lecteur ; les enjoliver coûterait toute la
+crédibilité du dépôt. La thèse défendable est **l'unification** (une seule règle de
+plasticité, un seul bus, ajout de sens additif) — la légèreté reste à démontrer par un
+benchmark à budget égal.
+
 ## Architecture
 
 Le projet est organisé en **package Python** sous `src/naulthene/`, avec un dossier par grande fonction cognitive — le vocabulaire des dossiers suit celui du projet (le cerveau, les salles de classe, la Cuve) :
@@ -242,19 +274,32 @@ Il n'y a ni linter ni suite de tests automatisés configurés. Toute vérificati
 
 ## Git Workflow
 
-### État des branches (2026-08-02)
+### État des branches (2026-08-15)
 
 | Branche | Contenu | État |
 |---|---|---|
-| `master` | v28.0 (Port Exocortex C3) + v29.0 (Bus Sensoriel & identité C1/C2) + v29.1 (télémétrie des 5 sens) | intégrée, poussée |
-| `feat/v30-exo-sens` | v30.0 — l'Exo-Sens (C3 en 6ᵉ sens, odorat dynamique exponentiel) | **implémentée et validée**, en attente de merge — voir `docs/ameliorations_appliquees/CONCEPTION_v30_exo_sens.md` |
-| `feat/v28-exocortex-c3` | branche d'origine des v28/v29, désormais mergée dans `master` | conservée pour l'historique |
+| `master` | tout le cycle **v28 → v38** (Port C3, Bus Sensoriel, Exo-Sens, odorat topologique, mémoire proportionnelle, extinction synaptique, cursus à 15 niveaux, flux enrichi, équilibre C1/C2, monde continu) | intégrée, poussée |
+| **`feat/v41-ligne-flottaison`** | **branche de travail courante** — v39 → v41.2, **48 commits d'avance sur `master`**, dont **15 non poussés** | ⚠️ **non mergée** |
+| `feat/v39-…`, `feat/v40-…`, `feat/v40.1-…` | étapes intermédiaires du même cycle | conservées pour l'historique |
+| `feat/v28-…` → `feat/v38-…` | branches déjà mergées dans `master` | conservées pour l'historique |
 
-Le travail en cours se fait sur `feat/v30-exo-sens`, rebasée sur `master`. Décisions structurantes
-de la v30, déjà appliquées : `num_actions` **reste à 8** avec `ACTION_DEMANDER` masquée en
-permanence (ne jamais amputer un `.brain` — 4 des cerveaux du dépôt sont déjà à 8 actions), le
-vecteur bio passe de 24 à 32 dims **en queue**, et l'Exo-Sens est perçu **en continu sans aucun
-seuil de déclenchement**.
+Le travail en cours se fait sur **`feat/v41-ligne-flottaison`**. Ce qu'elle porte et que
+`master` **n'a pas encore** :
+
+- **v39.0** — `noyau.py` versionné (risque structurel n°1 levé) ; empreinte de type ; silence auditif rendu explicite (correctif bit-identique)
+- **v40.0/v40.1** — planification émergente : 3 constantes d'arbitrage supprimées, **9 branches `if` éliminées** du chemin cognitif, 3 interrupteurs cognitifs rendus continus
+- **v41.0** — la **ligne de flottaison métabolique** : le vécu se compte en saillances au-dessus du coût d'exister, plus en moyenne
+- **v41.2** *(en cours, non entrée au CHANGELOG)* — métabolisme à deux étages, `vigueur = énergie ** κ` comme modulateur global unique, profil nutritionnel à 3 axes
+
+⚠️ **Deux résultats de cette branche contredisent des affirmations antérieures** — les avoir en
+tête avant toute nouvelle piste : la campagne de 10 graines donne **0 promotion** (le niveau 4 de
+g22 était une **loterie natale**), et **couper C2 ne change le score de 0,0 point sur les 6
+niveaux**. Voir `docs/recherche/CAMPAGNE_v41_population_et_ablation_aout_2026.md`.
+
+Décisions structurantes toujours en vigueur depuis la v30 : `num_actions` **reste à 8** avec
+`ACTION_DEMANDER` masquée en permanence (ne jamais amputer un `.brain`), toute dimension du
+vecteur bio s'ajoute **en queue**, et l'Exo-Sens est perçu **en continu sans aucun seuil de
+déclenchement**.
 
 - Ne créer un commit que si l'utilisateur le demande explicitement
 - Toujours créer un nouveau commit plutôt qu'un `--amend`, sauf demande contraire
@@ -291,7 +336,17 @@ Ajouter une entrée **en haut du fichier** (juste après l'introduction) avec ce
 
 Utiliser le hash court réel du commit (`git rev-parse --short HEAD`) une fois le commit créé. Si l'entrée est rédigée avant le commit correspondant, renseigner temporairement `N/A — en attente du commit de cette version` puis la corriger après coup.
 
-### 3bis. Les quatre dossiers de `docs/` (réorganisés le 2026-08-14)
+### 2. `readme_fr.md`
+
+- Mettre à jour la ligne `#Version actuelle N.` en tête de `src/naulthene/cerveau/colab.py` si la version change
+- Ajouter une nouvelle section "Nouveautés vX.X — Titre" en haut du Journal des Mises à Jour si le changement est significatif (feat / fix majeur), et mettre à jour la table des matières en conséquence
+- Ne pas toucher aux sections narratives (architecture, formules) pour des commits `docs` / `chore` mineurs
+
+⚠️ Si le changement touche l'**en-tête** de `readme_fr.md`, la **règle de miroir** s'applique
+(voir [Projet Overview](#la-règle-de-miroir--readmemd-en--readme_frmd-fr)) : `readme.md` doit
+être modifié **dans le même commit**.
+
+### 3. Les cinq dossiers de `docs/` (réorganisés le 2026-08-14)
 
 **Point d'entrée : [`docs/INDEX.md`](docs/INDEX.md)** — il dit quelle question mène à quel
 document. Tout nouveau document doit y être ajouté, sinon il sera oublié.
@@ -302,6 +357,11 @@ document. Tout nouveau document doit y être ajouté, sinon il sera oublié.
 | `docs/recherche/` | **enquêtes** — investigations, hypothèses réfutées | ❌ non |
 | `docs/ameliorations/` | **idées** proposées, non validées | ❌ non |
 | `docs/ameliorations_appliquees/` | **livré** dans le code | 🟡 partiellement |
+| `docs/etat_des_lieux/` | **synthèses datées** — une photo à un instant donné | ❌ non (**périmable**) |
+
+Un document d'`etat_des_lieux/` est une **photo horodatée** (`DDMMYYYY_Version.md`), jamais
+mise à jour après sa date : les anciennes sont **conservées**, jamais écrasées — c'est ce qui
+permet de comparer deux dates.
 
 Un document de `recherche/` est **vivant mais non normatif** : il raconte une
 investigation, conserve les hypothèses réfutées et les erreurs de diagnostic. **Ne jamais
@@ -316,60 +376,11 @@ Procédure de déplacement : `git mv` (jamais `mv` seul) et correction de **tous
 entrants — README (FR **et** EN, règle de miroir), `CLAUDE.md`, les autres docs, **et les
 docstrings du code source**. Vérifier ensuite qu'aucun lien ne pointe dans le vide.
 
-### 3. Où ranger un document
+### 4. Où ranger un document
 
 Un document rejoint `ameliorations_appliquees/` quand sa mécanique est **livrée et
 documentée ailleurs** — jamais parce qu'il est simplement « vieux ». Une idée non encore
-testée reste dans `ameliorations/`. Voir §3bis pour les quatre dossiers et la procédure.
-
-### 2. `readme_fr.md`
-
-- Mettre à jour la ligne `#Version actuelle N.` en tête de `src/naulthene/cerveau/colab.py` si la version change
-- Ajouter une nouvelle section "Nouveautés vX.X — Titre" en haut du Journal des Mises à Jour si le changement est significatif (feat / fix majeur), et mettre à jour la table des matières en conséquence
-- Ne pas toucher aux sections narratives (architecture, formules) pour des commits `docs` / `chore` mineurs
-
-### 2bis. `readme.md` (anglais) et `readme_fr.md` (miroir français) — RÈGLE DE MIROIR
-
-**`readme.md` est la page d'accueil GitHub et il est en ANGLAIS.** `readme_fr.md` en est le
-**miroir français** : son en-tête reprend la même thèse, les mêmes chiffres et les mêmes tableaux,
-avant de dérouler la documentation narrative longue (architecture, formules, journal v7→v37) qui
-n'existe qu'en français.
-
-**Toute modification de l'en-tête de l'un doit être répercutée dans l'autre, dans le même
-commit.** Un lecteur francophone et un lecteur anglophone doivent lire les mêmes faits. Ce qui
-doit rester en miroir :
-
-| Bloc | Présent dans les deux |
-|---|---|
-| La thèse (espace vectoriel unifié) | ✅ |
-| « Un cerveau complet, en attente d'un corps » | ✅ |
-| L'avertissement **« cela ne fonctionne pas encore »** | ✅ |
-| Le tableau des paramètres par couche + total | ✅ |
-| La comparaison aux baselines RL (et son verdict défavorable) | ✅ |
-| L'état du blocage (niveau, taux de victoire, jours sans victoire) | ✅ |
-| Le tableau d'ablation sensorielle | ✅ |
-| L'empreinte mémoire | ✅ |
-| Le lien W&B public | ✅ |
-| Journal des versions, formules détaillées, paliers | ❌ **français seulement** |
-
-Ne mettre à jour ces blocs que si l'un de ces éléments bouge :
-
-1. **Le nombre de paramètres**. Le recompter réellement, jamais l'estimer :
-   `sum(p.numel() for p in agent.parameters())`.
-2. **L'état du blocage** (niveau atteint, taux de victoire, jours sans victoire).
-3. **Un tableau de benchmark** — dès qu'une mesure existe, elle y entre, des deux côtés.
-
-⚠️ **Ne jamais écrire une supériorité non mesurée.** Les deux README affirment explicitement que
-Naulthène est **2,85× plus lourd** qu'un PPO CNN standard (55 232 contre 19 384 paramètres), qu'il
-**ne résout pas** `Empty-8x8`, et que **couper C2 double le taux de succès**. Ces chiffres sont
-vérifiables en cinq minutes par n'importe quel lecteur ; les enjoliver coûterait toute la
-crédibilité du dépôt. La thèse défendable est **l'unification** (une seule règle de plasticité, un
-seul bus, ajout de sens additif) — la légèreté reste à démontrer par un benchmark à budget égal.
-
-⚠️ **Le positionnement doit rester « un cerveau complet en attente d'un corps », et
-« en cours de développement ».** MiniGrid est un berceau, pas la finalité : rien dans le cœur ne
-nomme « grille », « clé » ni « porte », et c'est ce qui rend le remplacement du berceau par un
-corps réel envisageable. Ne jamais présenter le projet comme un système livré ou fonctionnel.
+testée reste dans `ameliorations/`. Voir §3 pour les cinq dossiers et la procédure.
 
 ### Règles de versioning
 

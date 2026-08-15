@@ -211,7 +211,7 @@ Les deux README affirment que **« couper C2 double le taux de succès »**. La 
 cette campagne, sur 6 niveaux et 2 cerveaux, donne **0,0 point d'écart**.
 
 L'affirmation doit être corrigée dans `readme.md` **et** `readme_fr.md` dans le même
-commit (règle de miroir, CLAUDE.md §2bis). C'est le genre de chiffre qu'un lecteur
+commit (règle de miroir, CLAUDE.md §Projet Overview). C'est le genre de chiffre qu'un lecteur
 vérifie en cinq minutes.
 
 ---

@@ -4,6 +4,60 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.3-experimental] - 2026-08-15 — Le sevrage proportionnel : deux promotions, puis le mur revient
+
+### Le premier franchissement de palier du projet — et ce qu'il ne prouve pas
+
+| Type | Details |
+|------|---------|
+| **Commit** | `2b042c0` |
+| **Catégorie** | fix (expérimental) |
+| **Impact** | Critique — **`noyau.py` uniquement** |
+| **Branche** | `feat/v41-ligne-flottaison` |
+| **Chantier** | [`CHANTIER_v41.2_energie_modulatrice.md`](../ameliorations/CHANTIER_v41.2_energie_modulatrice.md) §10 (diagnostic) et §11 (résultat) |
+
+**Le §10 avait établi que la promotion était mathématiquement impossible** : la maturité
+v40.2 est un **produit** (`régularité × consolidation × autonomie`), et `SEUIL_DEBUT_SEVRAGE
+= 0.60` plaçait le début du sevrage exactement où `TAUX_PROMOTION = 0.60` exigeait la
+promotion. À 60 % de maîtrise, l'autonomie valait encore **exactement 0** — donc la maturité
+aussi, quelle que soit la performance.
+
+Décision utilisateur : *« une autonomisation inversement proportionnelle au taux de
+maîtrise »*.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `SEUIL_DEBUT_SEVRAGE` **supprimée** ; `facteur_guidage` devient `1 − min(1, taux / SEUIL_FIN_SEVRAGE)` — l'aide décroît dès le premier point de maîtrise |
+| `src/naulthene/cerveau/noyau.py` | `SEUIL_MATURITE` n'est plus posé mais **dérivé** : `TAUX_PROMOTION × min(1, TAUX_PROMOTION / SEUIL_FIN_SEVRAGE)` = 0,400 — soit ce qu'un agent tout juste promouvable peut atteindre |
+
+### Résultat — run 300 jours, graine unique
+
+| Jalon | Niveau | Maîtrise 50 derniers | Autonomie moy | Maturité max |
+|---|---|---|---|---|
+| 62 j | 1/15 | 35 % | 38 % | 0,336 |
+| **117 j** | **2/15** | 41 % | 43 % | **0,467** |
+| **215 j** | **3/15** | 6 % | 7 % | 0,469 |
+| 300 j | 3/15 | **2 %** | 3 % | 0,469 |
+| *v41.2 (témoin)* | *1/15* | — | **0 % / 300 j** | **0,000** |
+
+**Première promotion au jour 74** — maturité 47 % (régularité 60 % × 20 épisodes ×
+autonomie 78 %), fenêtre pleine, agent quasi sevré. Une seconde suit avant le jalon 215.
+
+✅ **Verrou de MESURE levé** — maturité 0,000 → 0,469, deux paliers franchis.
+❌ **Verrou de COMPÉTENCE intact** — au niveau 3, effondrement à 2 % de maîtrise, aucune
+promotion sur les 185 derniers jours. Les deux promotions sont du **rattrapage** de
+compétences déjà acquises, pas un apprentissage neuf.
+
+> L'autonomie retombée à 3 % **n'est pas une régression** : le sevrage étant inversement
+> proportionnel à la maîtrise, une maîtrise à 2 % doit produire un guidage maximal. Le
+> mécanisme fonctionne ; c'est en amont que l'agent échoue.
+
+⚠️ **Une graine ne prouve rien** — précédent g22 (niveau 4 en solo, invalidé comme loterie
+natale par la campagne à 10 graines). **Rien n'entre dans les README** avant une campagne
+≥ 10 graines. Le verdict « couper C2 = 0,0 pt » n'est pas affecté.
+
+---
+
 ## [v41.2-fix5→fix8-experimental] - 2026-08-15 — Manger devient un acte, et le corps fait des réserves
 
 ### « C'est le corps qui pousse à manger pour vivre »
