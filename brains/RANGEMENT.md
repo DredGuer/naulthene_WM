@@ -1,0 +1,41 @@
+# Rangement des cerveaux (`brains/`)
+
+> ⚠️ **Règle du projet : toujours ARCHIVER, jamais SUPPRIMER.** Un `.brain` représente
+> des centaines de jours de run. Aucun fichier de ce dossier n'a jamais été effacé.
+>
+> `brains/**/*.brain` est gitignoré (sous-dossiers compris) — vérifier avec
+> `git check-ignore -v <chemin>` après avoir créé un nouveau sous-dossier.
+
+## Organisation (rangé le 15/08/2026)
+
+| Dossier | Contenu |
+|---|---|
+| `old_testV30-V34/` | générations d'essai v30 → v34 |
+| `old_V30/` | tout ce qui précède la v30.0 |
+| `old_V37/` | lignée v34 → v37 + `recherche_aout2026/` (campagne d'ablation du 11-12/08) |
+| `old_V39/` | génération v39.0 |
+| `old_V40/` | campagne v40 (3 graines × 2000 j) |
+| `old_V41_campagne/` | **campagne v41** — 10 graines × 2000 j, celle du « 0 promotion » |
+| `old_V414_campagne/` | campagne v41.4 — 300 j appariés + 2000 j héritage actif |
+| `old_V414_temoin/` | témoins v41.4 `--sans-heritage` (comparaison appariée) |
+| `old_V414_invalides/` | ⚠️ **campagne du 15/08 14h20 — INVALIDE**, l'ablation n'atteignait pas le module (voir CHANTIER_v41.4 §6.1). Conservés pour la traçabilité, **à ne pas exploiter** |
+| `cas_isole_g22_v41/` | le cerveau de la « loterie natale » (niveau 4, non reproductible) |
+| `ablations/` | résultats JSON du banc d'ablation |
+| `doublons_icloud/` | copies `… 2.brain`, `… 3.brain` créées par la synchro iCloud. **Redondantes**, conservées par prudence — supprimables si l'espace manque |
+
+## Convention de nommage
+
+```
+DDMMYYYYHHMM_VXX_NMRTOUR_RMD.brain
+└──────┬───┘ └┬┘ └───┬──┘ └┬┘
+       │      │      │     └── identifiant du run
+       │      │      └──────── nombre de jours demandé
+       │      └─────────────── version de l'architecture AU LANCEMENT
+       └────────────────────── date+heure de LANCEMENT (jamais mise à jour ensuite)
+```
+
+Le fichier est réécrit à chaque nuit, mais son nom garde la trace du **départ** du run.
+`VXX` est la version de naissance, pas celle de l'état courant : un `.brain` v29 rechargé
+par un binaire v30 est greffé automatiquement et **garde son nom d'origine**.
+
+**Un `.brain` par run** — deux runs partageant le même fichier s'écrasent mutuellement.
