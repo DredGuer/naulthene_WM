@@ -4063,7 +4063,7 @@ TICKS_JOUR_REFERENCE = 3600.0   # borne : la journée nycthémérale de référe
 #   - 3 repas par journée  ⇒ un repas doit couvrir ~1/3 de journée
 #   - l'eau tue ~10× plus vite que la faim (3 jours contre 30)
 #   - le métabolisme BASAL représente ~60-70 % de la dépense totale
-PRISES_HYDRIQUES_PAR_JOURNEE = 4.0       # borne : on boit PLUS SOUVENT qu'on ne mange, et
+PRISES_HYDRIQUES_PAR_JOURNEE = 2.0       # borne : on boit PLUS SOUVENT qu'on ne mange, et
                                          # par plus petites gorgées. C'est ce qui évite le
                                          # gaspillage par débordement : une prise ne doit
                                          # jamais dépasser de beaucoup ce qui manque à la
@@ -4071,6 +4071,19 @@ PRISES_HYDRIQUES_PAR_JOURNEE = 4.0       # borne : on boit PLUS SOUVENT qu'on ne
                                          # (0,889 par eau sur une jauge à 1,0) : 2,0 unités
                                          # perdues en une journée, hydratation à 0,00 la
                                          # plupart des jours, énergie à 0,072, 0 victoire.
+                                         #
+                                         # ⚠️ RAMENÉ DE 4,0 À 2,0 (v41.2-fix4) après
+                                         # confrontation au monde réel : sur `Empty-5x5`
+                                         # (8 cases libres) la carte ne peut offrir qu'une
+                                         # source d'eau par épisode, soit ~4,2 prises/jour
+                                         # pour un besoin de 4,0 — aucune marge d'erreur.
+                                         # Mesuré : hydratation à 0,00 en fin de journée,
+                                         # 1 eau bue pour 4 requises, énergie à 0,023. Un
+                                         # besoin que le monde ne peut satisfaire QUE dans
+                                         # le cas parfait n'est pas une pression, c'est une
+                                         # condamnation. Le ratio soif/faim reste > 1 (on
+                                         # boit plus souvent qu'on ne mange), ce qui était
+                                         # le point de la v41.2-fix.
 REPAS_PAR_JOURNEE = 2.5                  # borne : le rythme alimentaire d'espèce, dont la
                                          # valeur nutritive d'une ressource est DÉRIVÉE.
                                          # CALIBRÉ PAR MESURE : un agent débutant ne trouve

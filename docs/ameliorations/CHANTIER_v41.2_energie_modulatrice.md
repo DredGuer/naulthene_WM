@@ -576,3 +576,53 @@ accueillir ce que le calibrage suppose.*
 Une seule commande — compter les cases libres — aurait invalidé les trois hypothèses avant
 d'écrire la moindre ligne. C'est le coût de raisonner sur un modèle du monde plutôt que sur
 le monde.
+
+### 8.5 ✅ Premier résultat positif de tout le chantier
+
+Run avec densité relative, comparé **à jour égal** (j61) :
+
+| | témoin | v1 | v2 | v3 | **v4 (densité relative)** |
+|---|---|---|---|---|---|
+| **Victoires à j61** | 26 | 0 | 0 | 0 | **46** |
+| Taux de récolte | 18,5 % | 10,0 % | 9,9 % | ~10 % | **26 %** |
+| **Accord C1/C2** | ~0,5 % | — | — | — | **94,8 %** |
+
+**+77 % de victoires sur le témoin**, et un rythme d'une victoire par jour (intervalle
+moyen : 1 jour, n=53). Les trois runs intermédiaires étaient à **zéro**.
+
+Le taux de récolte passe de 10 % à **26 %** : l'agent exploite bien mieux un monde
+praticable, alors même qu'il y a **moins** de ressources (10,7 disponibles contre 35).
+
+> ⚠️ **L'accord C1/C2 à 94,8 %** est le chiffre le plus frappant. Toute la campagne v41
+> l'avait mesuré à **0,5 %** au terme de 2000 jours, et le chantier v37 à **0 %**. Il est
+> trop tôt pour conclure (68 jours, une seule graine) — mais aucune mécanique cognitive
+> n'avait jamais produit un tel écart. À confirmer sur ≥ 10 graines avant toute annonce.
+
+### 8.6 Dernier ajustement — un besoin que le monde ne peut satisfaire n'est pas une pression
+
+Malgré ces victoires, l'énergie restait à 0,023 et l'hydratation à 0,00. Cause mesurée :
+
+```
+Empty-5x5 : 1 source d'eau/épisode × 4,2 épisodes = 4,2 prises/jour
+besoin (PRISES_HYDRIQUES_PAR_JOURNEE = 4,0)      = 4,0 prises/jour
+→ marge : ×1,05, soit AUCUNE marge d'erreur
+```
+
+L'agent devait boire **à chaque occasion, sans jamais en rater une**. C'est le défaut du
+§8.1 en plus subtil : non plus un monde physiquement saturé, mais un besoin que le monde ne
+peut satisfaire **que dans le cas parfait**.
+
+`PRISES_HYDRIQUES_PAR_JOURNEE` ramené de **4,0 à 2,0** — le ratio soif/faim reste > 1 (on
+boit plus souvent qu'on ne mange, ce qui était le point du §7.5), mais les marges
+redeviennent réelles :
+
+| Carte | food | eau | marge food | marge eau |
+|---|---|---|---|---|
+| `Empty-5x5` | 4,2/j | 4,2/j | **×1,7** | **×2,1** |
+| `Empty-6x6` | 8,4/j | 8,4/j | ×3,4 | ×4,2 |
+| `Empty-8x8` | 21,0/j | 16,8/j | ×8,4 | ×8,4 |
+
+> **La règle qui sort de tout le chantier** : un barème métabolique doit être confronté à
+> ce que le monde peut **physiquement** offrir, carte par carte. Ni la simulation (§7.7) ni
+> la trace de run (§8.4) ne suffisent — il faut mesurer **l'offre du monde**, puis vérifier
+> que le besoin tient dedans avec de la marge.
