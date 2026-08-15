@@ -479,3 +479,63 @@ le jour 74 (v41.3, graine 42).
 ⚠️ **À ne pas surinterpréter** : c'est une graine, à mi-parcours, et le projet a déjà été
 trompé exactement ainsi (g22 v41, niveau 4 en solo, invalidée par la population). Le bilan
 final départagera.
+
+---
+
+## 🎲 Le résultat le plus dérangeant de la nuit — qui réussit change à chaque campagne
+
+Trois campagnes, **mêmes six graines**, mêmes 1000 jours. Qui atteint le niveau 3 ?
+
+| Graine | v41.6 | v41.7+v41.8 | fix1 *(j747)* | Total |
+|---|---|---|---|---|
+| g11 | — | — | — | **0/3** |
+| g22 | — | — | ✅ | 1/3 |
+| g33 | — | — | — | **0/3** |
+| g44 | ✅ | ✅ | — | 2/3 |
+| g55 | ✅ | ✅ | ✅ | **3/3** |
+| g66 | — | ✅ | — | 1/3 |
+| **Total** | **2/6** | **3/6** | **2/6** | |
+
+### L'accord entre campagnes
+
+| Paire | Accord |
+|---|---|
+| v41.6 vs v41.7+v41.8 | 5/6 |
+| v41.6 vs fix1 | 4/6 |
+| v41.7+v41.8 vs fix1 | **3/6** |
+| **Moyenne** | **4,0 / 6** |
+
+| Hypothèse | Accord attendu |
+|---|---|
+| Le succès est une propriété de la **graine** | **6/6** |
+| Le succès est **pur hasard** (taux ~2,3/6) | ~3,6/6 |
+| **Mesuré** | **4,0/6** |
+
+> 🔴 **L'accord observé est à peine au-dessus du hasard pur.** g44 réussissait deux fois
+> puis échoue ; g22 n'avait jamais rien franchi et devient la plus précoce du projet
+> (jour 23). Seule g55 est stable sur les trois.
+>
+> **La réussite d'une graine n'est donc pas une propriété robuste** — ni de la graine, ni
+> du correctif. Elle est dominée par le bruit.
+
+### ⚠️ Ce que cela implique pour toutes les conclusions du projet
+
+**Comparer deux campagnes sur 6 graines ne permet de distinguer aucun effet plus petit que
+le bruit** — et le bruit vaut ici ±1 graine sur 6.
+
+Cela vaut rétroactivement pour les lectures de cette nuit :
+
+| Ce que j'ai écrit | Ce que le bruit permet d'affirmer |
+|---|---|
+| « v41.7+v41.8 : 3/6 contre 2/6, une graine de plus » | **rien** — dans le bruit |
+| « fix1 restaure la vitesse (g55 : j869 → j336) » | plausible mais **non établi** sur une graine |
+| « g22 promue au jour 23, record du projet » | **un fait**, mais pas la preuve d'un effet |
+
+> **Conséquence de méthode** : toute campagne future visant à départager deux versions doit
+> tourner sur **≥ 20 graines**, pas 6. En dessous, on mesure la loterie natale — exactement
+> ce que la campagne v41 avait déjà démontré, et que je viens de re-démontrer sans le
+> vouloir.
+
+Le seul résultat de la nuit qui ne dépende pas de la population reste **les trois bugs
+trouvés et corrigés** (valence nulle, patience inversée, patience écrasée), chacun établi
+par une mesure directe et non par une comparaison de graines.
