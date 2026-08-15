@@ -423,3 +423,84 @@ pas la négligence d'un axe.
 > **Leçon de méthode.** Le fourrage *s'était amélioré* — un tableau de bord qui n'aurait
 > regardé que « ressources trouvées » aurait conclu au succès. C'est l'écart entre deux
 > métriques (fourrage ↑, énergie ↓) qui a révélé le défaut, pas l'une des deux seule.
+
+### 7.6 ❌❌ Deuxième échec — et la vraie cause, qui invalide les deux correctifs
+
+Le run relancé avec les portions découplées est **pire encore**, arrêté au jour 78 :
+
+| | témoin | v1 (profils) | **v2 (hydrique découplé)** |
+|---|---|---|---|
+| énergie moyenne | 0,21 | 0,072 | **0,012** |
+| % jours énergie saine | 18 % | 4 % | **2 %** |
+| victoires | 130 (300 j) | 0 (57 j) | **0** (78 j) |
+
+**La mesure qui tranche** — taux de récolte réel sur les 60 premiers jours des trois runs :
+
+| Version | sources/carte | consommé/jour | **taux de récolte** |
+|---|---|---|---|
+| témoin | 20 | **3,72** | 18,5 % |
+| v1 | 35 | **3,52** | 10,0 % |
+| v2 | 35 | **3,47** | 9,9 % |
+
+> **Le nombre absolu de ressources consommées est IDENTIQUE dans les trois versions
+> (~3,5/jour).** Multiplier les sources par 1,75 n'a strictement rien changé : l'agent en
+> ramasse autant, pas plus. Il rate ~90 % des opportunités (≈39 par jour, 13 par épisode ×
+> 4,2 épisodes).
+
+**Le correctif §7.3 était donc inopérant, et mon diagnostic était faux.** J'avais conclu
+« déficit structurel, le monde est trop pauvre » — le monde n'était pas le facteur
+limitant. L'agent ne récolte pas plus quand il y a plus.
+
+**La vraie cause, arithmétique :**
+
+```
+besoin   = 2,5 food + 4,0 eau = 6,5 ressources/jour
+capacité = ~3,5 ressources/jour, invariante depuis le début
+```
+
+Le besoin est **près du double** de ce que l'agent sait récolter. Et ce n'est pas un
+problème de monde : c'est un problème de **comportement**. Il ne cherche pas sa
+nourriture — cohérent avec les 48,6 % d'approche olfactive (= le hasard) mesurés dès H15,
+et avec l'ablation qui montre l'odorat **inerte** (+0,0 sur 6 niveaux).
+
+⚠️ **Le correctif §7.5 (portions découplées) a aggravé la situation** : en portant le
+besoin hydrique de 1 à 4 prises/jour, il a creusé l'écart entre besoin et capacité. La
+mécanique interne est plus juste (gaspillage ÷28, vérifié en simulation), mais elle exige
+davantage d'un agent qui ne suit déjà pas.
+
+### 7.7 Deux erreurs de diagnostic à consigner
+
+1. **« Le déficit est structurel, il faut plus de ressources » (§7.3)** — faux. Mesuré :
+   +75 % de sources → **0 % de récolte en plus**. J'ai raisonné sur la disponibilité
+   théorique sans vérifier que l'agent y répondait.
+2. **La simulation ne prédisait pas le run.** Mes trois calibrages (`DEPENSE_ENERGIE_JOUR`,
+   `REPAS_PAR_JOURNEE`, portions) ont été validés sur un simulateur qui **suppose l'agent
+   mangeant à intervalles réguliers**. Le run réel montre un agent qui mange **quand il
+   trébuche sur une ressource**. Un simulateur qui postule le comportement qu'on cherche à
+   obtenir ne peut rien valider.
+
+> **La règle qui en sort** : ne calibrer un métabolisme qu'avec une trace de consommation
+> **issue d'un run réel**, jamais avec un rythme supposé.
+
+### 7.8 État : la mécanique est saine, le calibrage ne l'est pas
+
+**Ce qui est acquis et vérifié** — invariant d'échelle (< 1 % d'écart 400 vs 3600), seuil
+non linéaire (C2 s'éteint avant C1), dérive qui sature sans diverger, mort par
+insolvabilité sans `if`, profils à trois axes conformes à la spécification, trois défauts
+d'implémentation trouvés et corrigés, un bug préexistant corrigé.
+
+**Ce qui ne l'est pas** : le barème est calé sur un agent qui saurait se nourrir. Il ne
+sait pas. Tant que la récolte plafonne à 3,5/jour, **tout métabolisme exigeant plus de
+3,5 le condamne**, et aucun réglage de densité ou de portion n'y changera rien.
+
+**Trois voies possibles — arbitrage utilisateur nécessaire, je n'en prends aucune :**
+
+| Voie | Ce qu'elle fait | Risque |
+|---|---|---|
+| **A.** Caler le besoin sous 3,5/jour | l'agent survit dès aujourd'hui et le reste de la mécanique devient mesurable | supprime la pression alimentaire — mais c'est peut-être le prix à payer pour tester le reste |
+| **B.** Rendre l'odorat réellement utile | attaque la vraie cause (il ne cherche pas) | c'est un chantier en soi, et H15 a montré que le capteur seul ne suffit pas : il faut **retirer à la vue** ce qu'on confie à l'odorat |
+| **C.** Ressource consommée au contact | supprime le besoin de viser | change les règles du monde, effet non mesuré |
+
+Ma recommandation : **A d'abord** (pour débloquer la mesure du reste), **B ensuite** comme
+chantier séparé. Faire B seul reviendrait à parier sur un mécanisme qui n'a jamais rien
+donné en 9 tentatives.
