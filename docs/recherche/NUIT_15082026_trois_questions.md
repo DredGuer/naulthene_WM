@@ -351,17 +351,24 @@ mesurés sur une carte plus difficile). Le bilan final départagera.
 
 ## 🏁 Bilan de la campagne de nuit (v41.7 + v41.8) — et le défaut qu'elle a révélé
 
+⚠️ *Chiffres corrigés après achèvement des 1000 jours — une première lecture faite à
+j965 donnait g55 au niveau 2, elle était prématurée.*
+
 | Graine | v41.6 (P17 seul) | **v41.7 + v41.8** |
 |---|---|---|
 | g11 | niveau 1 | niveau 1 |
 | g22 | niveau 1 | niveau 1 |
 | g33 | niveau 1 | niveau 1 |
 | **g44** | niveau 3 — **j243, j332** | niveau 3 — **j534, j587** ⚠️ |
-| **g55** | niveau 3 — j300, j361 | niveau 2 — j869 ⚠️ |
+| **g55** | niveau 3 — j300, j361 | niveau 3 — **j869, j989** ⚠️ |
 | **g66** | niveau 1 | **niveau 3 — j305, j388** ✅ |
 
-**2 graines dégradées, 1 améliorée.** Verdict défavorable — et la cause est un défaut de
-**ma** v41.8, pas des correctifs eux-mêmes.
+**Population : 3 graines sur 6 au niveau 3, contre 2 sur 6 en v41.6.**
+
+Mais **le délai se dégrade sur les deux graines communes** (g44 : j243 → j534 ; g55 :
+j300 → j869), et l'amélioration ne tient qu'à g66. Verdict **ambigu et globalement
+défavorable sur la vitesse** — et la cause est un défaut de **ma** v41.8, pas des
+correctifs eux-mêmes.
 
 ### La cause, mesurée sur g44
 
