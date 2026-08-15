@@ -5168,6 +5168,14 @@ class EtatCognitif:
         # Vidé à chaque promotion : un taux calculé sur des épisodes d'un niveau plus
         # facile promouvrait l'agent sans qu'il ait rien montré sur le niveau courant.
         self.historique_episodes_niveau = []
+        # v41.6 (P17) — niveau réellement joué par l'épisode courant. Distinct de
+        # `niveau_actuel`, qui reste le niveau de RÉFÉRENCE (celui que la promotion
+        # déplace). À la naissance les deux coïncident : aucun tirage n'a encore eu lieu.
+        self.niveau_episode = 0
+        self.p17_episodes_hors_reference_jour = 0
+        self.p17_victoires_hors_reference_jour = 0
+        self.p17_revisions_jour = 0
+        self.p17_incursions_jour = 0
         # v41.4 — historique TRANSVERSAL, jamais vidé à la promotion : c'est la « maîtrise
         # générale des cartes ». Il ne pilote que le sevrage, jamais la promotion.
         self.historique_episodes_general = []
@@ -5311,6 +5319,14 @@ class EtatCognitif:
 
     def _reinitialiser_buffers_journee(self):
         self._reinitialiser_buffers_calibrage()
+        # v41.6 (P17) — compteurs de distribution du cursus. Réarmés ici comme tout buffer
+        # journalier : sans cela ils cumuleraient depuis la naissance et la « part de
+        # révision du jour » serait en réalité la part depuis toujours (piège du bug
+        # `score_vocal_jour` v27.0, et de `jauge_min_satiete_jour` v41.2).
+        self.p17_revisions_jour = 0
+        self.p17_incursions_jour = 0
+        self.p17_episodes_hors_reference_jour = 0
+        self.p17_victoires_hors_reference_jour = 0
         self.memoire_moyen_terme = []
         self.jepa_losses, self.log_probs_journee, self.entropies_journee = [], [], []
         self.valeurs_journee, self.recompenses_journee, self.dones_journee = [], [], []
@@ -5540,6 +5556,197 @@ def _memoriser_si_saillant(etat, intensite: float) -> bool:
         return False
 
 
+# --- v41.6 : P17 — LE CURSUS COMME DISTRIBUTION, PLUS COMME POINTEUR ---
+#
+# Décision utilisateur (P17, formulée le 14/08) : *« Tu fais 3×3 vingt fois, puis 4×4 cinq
+# fois, puis 3×3 deux fois, comme ça aléatoirement — mais tant que le 3×3 n'est pas réussi,
+# tu ne vas pas au-delà du 5×5, sauf exceptionnellement. Tu peux le présenter sous forme de
+# gaussienne : chaque étape à valider est en haut de la courbe. »*
+#
+# 🔴 CE QUE ÇA REMPLACE. `niveau_actuel` était un POINTEUR : on jouait ce niveau et rien
+# d'autre. Mesuré sur les runs de 2000 jours : g44 promu au niveau 3 (`Empty-8x8`) s'y
+# effondre à **2 % de maîtrise** et y reste **1500 jours**, sans jamais rejouer les deux
+# niveaux qu'il maîtrisait. Un pointeur qui ne recule jamais transforme le moindre mur en
+# cul-de-sac définitif.
+#
+# LA FORME. Le niveau joué est TIRÉ AU SORT à chaque épisode, autour du niveau de
+# référence. Trois propriétés tombent alors sans un seul `if` :
+#   • les retours en arrière — la queue gauche de la distribution
+#   • « pas au-delà tant que ce n'est pas acquis » — le sommet ne bouge qu'avec la maîtrise
+#   • « sauf exceptionnellement » — la queue droite est fine, jamais nulle
+#
+# ⚠️ LES PROPORTIONS SONT DÉRIVÉES, JAMAIS POSÉES. La formulation initiale proposait
+# 65 % / 15 % / 20 % (défi / révision / incursion). Trois constantes en dur auraient
+# remplacé un pointeur rigide par trois chiffres arbitraires — exactement ce que le projet
+# refuse (« remplacer un chiffre arbitraire par une formule arbitraire ne vaut pas mieux »,
+# méthode v30.1). Ces trois valeurs sont donc devenues le **point de passage** de la courbe
+# à `TAUX_PROMOTION`, et non son socle :
+#
+#   maîtrise 0 %   → l'agent ne sait rien : il révise beaucoup, n'explore rien
+#   maîtrise 60 %  → 65 / 15 / 20, le point demandé
+#   maîtrise 90 %  → il s'ennuie ici : l'incursion domine
+#
+# La largeur de la distribution suit `1 − maîtrise` : un agent qui maîtrise reste concentré,
+# un agent qui échoue s'étale vers ce qu'il sait faire. C'est la même doctrine que le rêve
+# adaptatif (le pourcentage rejoué émerge de la plasticité × richesse).
+#
+# INVARIANT DE MESURE : seuls les épisodes joués SUR LE NIVEAU DE RÉFÉRENCE alimentent
+# `historique_episodes_niveau`. Créditer une révision réussie sur `Empty-5x5` au compte du
+# niveau 3 gonflerait la maîtrise et promouvrait un agent qui n'a rien montré là où il
+# fallait — c'est le défaut que l'invariant « vider la fenêtre à la promotion » existe pour
+# empêcher, et P17 le réintroduirait par une autre porte.
+POIDS_REVISION_REFERENCE = 0.15    # point de passage à TAUX_PROMOTION (formulation P17)
+POIDS_INCURSION_REFERENCE = 0.20   # idem — le défi occupe le reste
+ETALEMENT_MAX_CURSUS = 2.5         # borne : au pire, la révision porte ~2-3 paliers en arrière
+
+
+def _distribution_cursus(etat):
+    """v41.6 (P17) — Poids de tirage de chaque niveau, dérivés de la maîtrise mesurée.
+
+    Retourne `(niveaux, poids)` normalisés, bornés à `[0, len(PROGRAMME) - 1]`.
+
+    Rien n'est posé : les trois masses (révision / défi / incursion) sont calculées à
+    partir du seul taux de maîtrise du niveau de référence, et coïncident avec la
+    formulation P17 (15 / 65 / 20) quand ce taux vaut `TAUX_PROMOTION`.
+    """
+    ref = etat.niveau_actuel
+    dernier = len(PROGRAMME) - 1
+
+    taux = _taux_maitrise_niveau(etat)
+    # « Pas encore mesurable » ⇒ traité comme un débutant : c'est le régime prudent, il
+    # révise et n'explore pas. Même garde que `facteur_guidage`.
+    maitrise = 0.0 if taux is None else max(0.0, min(1.0, taux))
+
+    # Progression vers la promotion, dans [0, 1] : 1.0 = l'agent est promouvable ici.
+    avancement = min(1.0, maitrise / TAUX_PROMOTION) if TAUX_PROMOTION > 0 else 1.0
+
+    # RÉVISION — maximale quand l'agent échoue, elle s'efface quand il maîtrise.
+    # À l'avancement de référence (1.0), elle vaut exactement POIDS_REVISION_REFERENCE.
+    poids_revision = POIDS_REVISION_REFERENCE + (1.0 - avancement) * (1.0 - POIDS_REVISION_REFERENCE)
+    # INCURSION — faible chez le débutant (rien à explorer si les bases ne tiennent pas),
+    # elle croît avec la maîtrise et dépasse la référence quand l'agent s'ennuie ici.
+    # Elle n'est JAMAIS nulle : c'est le « sauf exceptionnellement » de P17, et c'est aussi
+    # ce qui permet à un agent bloqué de découvrir que le palier suivant lui conviendrait
+    # mieux (mesuré : `Empty-Random-6x6` est parfois plus facile que `Empty-5x5`).
+    # Le facteur vaut exactement 1 à l'avancement de référence (`avancement = 1`,
+    # `maitrise = TAUX_PROMOTION`), de sorte que l'incursion y vaille précisément
+    # `POIDS_INCURSION_REFERENCE` — le 20 % demandé par P17. En deçà elle se réduit sans
+    # jamais s'annuler, au-delà elle croît avec l'ennui.
+    _croissance = (0.15 + 0.85 * avancement) * (1.0 + maitrise) / (1.0 + TAUX_PROMOTION)
+    poids_incursion = POIDS_INCURSION_REFERENCE * _croissance
+
+    # ⚠️ LE DÉFI NE DESCEND JAMAIS SOUS SA MOITIÉ DE RÉFÉRENCE. Sans ce plancher, un agent
+    # à 0 % de maîtrise voyait son propre palier tomber à **2 %** des tirages : il ne
+    # pouvait alors plus jamais y progresser, et P17 l'aurait enfermé dans la révision au
+    # lieu de l'en sortir. Le plancher est DÉRIVÉ du point de passage P17, pas posé.
+    defi_reference = 1.0 - POIDS_REVISION_REFERENCE - POIDS_INCURSION_REFERENCE   # 0,65
+    poids_defi = max(defi_reference * 0.5, 1.0 - poids_revision - poids_incursion)
+
+    # Renormalisation : le plancher du défi peut faire dépasser 1, la révision doit alors
+    # céder la place (jamais l'incursion, qui est déjà la plus fine des trois).
+    total_masses = poids_revision + poids_defi + poids_incursion
+    if total_masses > 1.0:
+        exces = total_masses - 1.0
+        poids_revision = max(0.0, poids_revision - exces)
+
+    # L'ÉTALEMENT suit l'échec : un agent qui maîtrise reste concentré sur son palier,
+    # un agent qui bloque s'étale vers ce qu'il sait faire.
+    etalement = max(0.5, ETALEMENT_MAX_CURSUS * (1.0 - maitrise))
+
+    # ⚠️ Les trois masses sont réparties SÉPARÉMENT puis normalisées à leur cible.
+    #
+    # Une première version laissait la gaussienne porter directement `poids_revision` par
+    # palier : la masse totale d'un côté dépendait alors du NOMBRE de paliers disponibles
+    # et de l'étalement, pas de l'intention. Mesuré, deux effets absurdes : à 0 % de
+    # maîtrise le défi tombait à **2 %** (l'agent ne jouait plus son propre palier, donc
+    # ne pouvait plus jamais y progresser), et à 80 % l'incursion tombait à **0 %** —
+    # l'inverse exact de l'intention, l'étalement s'annulant avec la maîtrise.
+    #
+    # Ici, chaque côté est d'abord distribué en forme (gaussienne), puis remis à l'échelle
+    # de la masse voulue. La forme décide de la RÉPARTITION, les poids décident du VOLUME.
+    def _former(ecarts, sigma):
+        formes = [math.exp(-(e ** 2) / (2.0 * sigma ** 2)) for e in ecarts]
+        s = sum(formes)
+        return [f / s for f in formes] if s > 0 else []
+
+    gauche = list(range(0, ref))            # révision — peut être vide (niveau 0)
+    droite = list(range(ref + 1, dernier + 1))  # incursion — peut être vide (dernier palier)
+
+    masses = {ref: poids_defi}
+    if gauche:
+        for niveau, part in zip(gauche, _former([n_ - ref for n_ in gauche], etalement)):
+            masses[niveau] = poids_revision * part
+    if droite:
+        # Queue droite plus resserrée : on explore le palier suivant, pas le doctorat.
+        # `max(…, 0.4)` empêche l'incursion de s'éteindre quand l'étalement tend vers 0 —
+        # c'est le « sauf exceptionnellement » de P17, qui doit rester **jamais nul**.
+        sigma_d = max(0.4, etalement * 0.6)
+        for niveau, part in zip(droite, _former([n_ - ref for n_ in droite], sigma_d)):
+            masses[niveau] = poids_incursion * part
+
+    niveaux = sorted(k for k, v in masses.items() if v > 1e-9)
+    poids = [masses[k] for k in niveaux]
+
+    total = sum(poids)
+    if total <= 0.0:            # garde-fou : ne jamais rendre une distribution vide
+        return [ref], [1.0]
+    return niveaux, [p / total for p in poids]
+
+
+def _tirer_niveau_episode(etat) -> int:
+    """v41.6 (P17) — Tire le niveau du prochain épisode, borné à `[0, len(PROGRAMME)-1]`.
+
+    Le tirage porte sur la distribution de `_distribution_cursus`. Le résultat est un
+    INDEX valide du `PROGRAMME` par construction (la distribution n'énumère que des
+    index existants), ce que l'assertion vérifie explicitement.
+    """
+    niveaux, poids = _distribution_cursus(etat)
+    # `np.random` et non `random` : c'est le générateur que tout le module utilise déjà
+    # (placement des ressources, rêve, shuffle), et le seul que `--graine` réamorce — un
+    # second générateur rendrait les runs non reproductibles à graine fixée.
+    tire = int(np.random.choice(niveaux, p=poids))
+    assert 0 <= tire < len(PROGRAMME), f"niveau tiré hors cursus : {tire}"
+    return tire
+
+
+def _appliquer_niveau_episode(etat, niveau: int) -> None:
+    """v41.6 (P17) — Bascule l'environnement sur le niveau tiré, si besoin.
+
+    Ne touche NI `niveau_actuel` (le niveau de référence, que seule la promotion déplace)
+    NI `historique_episodes_niveau` : une révision n'est pas une preuve de maîtrise du
+    palier courant. Voir l'invariant de mesure en tête de section.
+    """
+    etat.niveau_episode = niveau
+    # Télémétrie P17, comptée AU TIRAGE (pas au résultat) : c'est la distribution qu'on
+    # veut observer, indépendamment de ce que l'agent en fait.
+    if niveau < etat.niveau_actuel:
+        etat.p17_revisions_jour = getattr(etat, "p17_revisions_jour", 0) + 1
+    elif niveau > etat.niveau_actuel:
+        etat.p17_incursions_jour = getattr(etat, "p17_incursions_jour", 0) + 1
+
+    env_id_voulu = PROGRAMME[niveau][0]
+    if env_id_voulu == etat.env_id:
+        return
+    etat.env.close()
+    etat.env_id = env_id_voulu
+    etat.env = creer_env(env_id_voulu, DIM_VISUELLE)
+    # La mémoire spatiale est indexée par coordonnées : elles n'ont aucun sens d'une carte
+    # à l'autre (même discipline qu'à la promotion, v39.0 — on efface le OÙ, pas le QUOI).
+    etat.memoire_episodique_spatiale.reinitialiser_niveau()
+
+    # ⚠️ `doorkey_actif` était jusqu'ici fixé UNE FOIS par journée (`demarrer_journee`) —
+    # ce qui était juste tant qu'une journée ne voyait qu'une seule carte. P17 change de
+    # carte EN COURS DE JOURNÉE : sans cette réévaluation, les détecteurs de jalons
+    # DoorKey tourneraient sur une carte qui n'en est pas une (ou l'inverse), et
+    # `etat.detecteur` serait interrogé sur une grille sans clé ni porte.
+    etat.doorkey_actif = est_doorkey(env_id_voulu)
+    if etat.doorkey_actif and etat.detecteur is None:
+        etat.detecteur = DetecteurJalonsDoorKey()
+        etat.palier_cible = 1
+        etat.gestionnaire_cursus.reinitialiser_palier()
+    etat.mode_libre = etat.doorkey_actif and (etat.palier_cible >= SEUIL_PALIER_MODE_LIBRE)
+
+
 def _enregistrer_episode_niveau(etat, reussi: bool) -> None:
     """v35.0 — alimente l'historique glissant qui sert à la promotion par taux de maîtrise.
 
@@ -5548,9 +5755,26 @@ def _enregistrer_episode_niveau(etat, reussi: bool) -> None:
     qui progresse doit voir ses vieux échecs sortir de la moyenne, sinon il resterait
     puni indéfiniment pour ses débuts.
     """
-    etat.historique_episodes_niveau.append(1.0 if reussi else 0.0)
-    if len(etat.historique_episodes_niveau) > FENETRE_PROMOTION:
-        etat.historique_episodes_niveau.pop(0)
+    # v41.6 (P17) — SEULS les épisodes joués sur le NIVEAU DE RÉFÉRENCE comptent pour la
+    # promotion. Une révision réussie sur un palier plus facile n'est pas une preuve de
+    # maîtrise du palier courant : la créditer promouvrait un agent qui n'a rien montré là
+    # où il fallait — exactement ce que l'invariant « vider la fenêtre à la promotion »
+    # existe pour empêcher (P17 le réintroduirait par une autre porte).
+    #
+    # Les statistiques de révision/incursion sont comptées séparément (télémétrie), et la
+    # maîtrise GÉNÉRALE (v41.4), elle, prend tout : c'est son rôle de traverser les cartes.
+    sur_reference = getattr(etat, "niveau_episode", etat.niveau_actuel) == etat.niveau_actuel
+    if sur_reference:
+        etat.historique_episodes_niveau.append(1.0 if reussi else 0.0)
+        if len(etat.historique_episodes_niveau) > FENETRE_PROMOTION:
+            etat.historique_episodes_niveau.pop(0)
+    else:
+        # Télémétrie P17 : ce que l'agent fait hors de son palier de référence.
+        etat.p17_episodes_hors_reference_jour = getattr(
+            etat, "p17_episodes_hors_reference_jour", 0) + 1
+        if reussi:
+            etat.p17_victoires_hors_reference_jour = getattr(
+                etat, "p17_victoires_hors_reference_jour", 0) + 1
 
     # v41.4 — LA MAÎTRISE GÉNÉRALE, transversale aux cartes (décision utilisateur :
     # « tu as une maîtrise générale des cartes et une maîtrise carte par carte »).
@@ -7010,6 +7234,9 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
                 etat.jalon_delta3_n_jour += 1
             etat.jalon_ressources_post_cle_jour += etat.chronometre_jalons.ressources_post_cle
 
+        # v41.6 (P17) — le niveau du prochain épisode est TIRÉ, pas imposé. Le tirage doit
+        # précéder le `reset()` : c'est lui qui décide de quelle carte on parle.
+        _appliquer_niveau_episode(etat, _tirer_niveau_episode(etat))
         obs, info = etat.env.reset()
         etat.etat_courant = encoder(obs)
         etat.memoire_tampon = torch.zeros(1, etat.agent.dim_bus, device=DEVICE)
@@ -7188,6 +7415,10 @@ def executer_nuit(etat, plafond_reve=None):
             except Exception:
                 parente = 0.0
             etat.parente_niveau_precedent = parente
+            # v41.6 (P17) — le niveau de l'épisode suit la promotion : sans cela, le
+            # prochain épisode serait compté « hors référence » alors qu'il est joué sur
+            # la nouvelle carte, et n'alimenterait pas la fenêtre de promotion.
+            etat.niveau_episode = etat.niveau_actuel
             etat.memoire_episodique_spatiale.reinitialiser_niveau()
             print(f"\n🎓 [PROMOTION] L'Agent passe en {etat.nom_classe} ! 🚀  ({motif})")
             print(f"   🧬 parenté avec la carte quittée : {parente:.0%} "
@@ -7581,6 +7812,19 @@ def executer_nuit(etat, plafond_reve=None):
     # v41.4-fix1 — les deux termes sont lus AU MÊME INSTANT (début de journée), sinon
     # l'écart mesure la dérive de la fenêtre glissante et non l'héritage.
     _herit = _tsev - getattr(etat, "taux_niveau_au_sevrage", _tsev)
+    # v41.6 (P17) — la distribution réellement tirée dans la journée. Si `révisions` reste
+    # à 0 sur un agent qui échoue, la mécanique ne mord pas ; si `incursions` reste à 0 sur
+    # un agent qui maîtrise, la queue droite est trop fine.
+    _rev = getattr(etat, "p17_revisions_jour", 0)
+    _inc = getattr(etat, "p17_incursions_jour", 0)
+    _hors = getattr(etat, "p17_episodes_hors_reference_jour", 0)
+    _vhors = getattr(etat, "p17_victoires_hors_reference_jour", 0)
+    _tot_ep = len(_h) + _hors
+    if _tot_ep > 0:
+        _nv, _pd = _distribution_cursus(etat)
+        _p_ref = next((p for n_, p in zip(_nv, _pd) if n_ == etat.niveau_actuel), 0.0)
+        print(f"  ├─ Cursus P17     : 🎲 {_rev} révision(s) · {_inc} incursion(s) — "
+              f"défi visé {_p_ref:.0%} | hors palier {_vhors}/{_hors} réussis")
     print(f"  ├─ Maîtrise v41.4 : 🌍 générale {_tg_txt} | sevrage sur {_tsev:.0%} "
           f"(héritage {_herit:+.0%}, parenté carte {_par:.0%})")
 
@@ -7787,6 +8031,20 @@ def executer_nuit(etat, plafond_reve=None):
         "Cursus_Taux_Sevrage": getattr(etat, "taux_sevrage_jour", 0.0),
         "Cursus_Parente_Niveau": getattr(etat, "parente_niveau_precedent", 0.0),
         "Cursus_Episodes_General": len(getattr(etat, "historique_episodes_general", [])),
+        # --- v41.6 (P17) : le cursus comme distribution ---
+        # `Revisions` et `Incursions` disent si la queue gauche et la queue droite mordent
+        # réellement. Deux zéros permanents signifieraient un pointeur déguisé.
+        # `Poids_Defi` est la masse théorique du palier de référence : elle doit MONTER
+        # quand la maîtrise monte (moins de révision), et c'est ce couplage qui distingue
+        # une distribution dérivée de trois constantes en dur.
+        "P17_Revisions": getattr(etat, "p17_revisions_jour", 0),
+        "P17_Incursions": getattr(etat, "p17_incursions_jour", 0),
+        "P17_Episodes_Hors_Reference": getattr(etat, "p17_episodes_hors_reference_jour", 0),
+        "P17_Victoires_Hors_Reference": getattr(etat, "p17_victoires_hors_reference_jour", 0),
+        "P17_Poids_Defi": next(
+            (p for n_, p in zip(*_distribution_cursus(etat)) if n_ == etat.niveau_actuel),
+            0.0),
+        "P17_Niveau_Episode": getattr(etat, "niveau_episode", etat.niveau_actuel),
         # --- v36.0 : le flux enrichi & l'abstraction par récurrence ---
         # `Ecritures` mesure ce que la mémoire REÇOIT (2 types seulement avant v36.0).
         # `Rappels_Ratio` mesure ce qu'elle REND : si ce ratio reste à 0, le canal ne sert
