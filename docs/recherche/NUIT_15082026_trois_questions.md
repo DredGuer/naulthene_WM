@@ -398,3 +398,42 @@ son intention et n'est rattrapé que par la mesure appariée :
 La différence entre les deux : P17 a été testé **avant** lancement, la patience seulement
 **après**. Une distribution se teste en trois lignes ; un effet de composition entre deux
 modulations ne se voit qu'en conditions réelles — ou en lisant l'ordre des opérations.
+
+---
+
+## Le métabolique : ce qu'il faudrait pour rééquilibrer (aucune modification faite)
+
+`r_bio` entre dans `recompense_interne` **sans aucun coefficient** — d'où sa domination
+mesurée à 90-98 %. Calcul du facteur qui égaliserait les deux signaux :
+
+| Niveau | `r_bio` | Victoire | Ratio | Coefficient nécessaire |
+|---|---|---|---|---|
+| `Empty-5x5` | 5,36 | 0,60 | **9×** | 0,112 |
+| `Empty-Random-6x6` | 5,88 | 0,82 | 7× | 0,139 |
+| `Empty-8x8` | 4,92 | 0,08 | **62×** | **0,016** |
+
+> Il faudrait **diviser `r_bio` par 62** sur `Empty-8x8` pour que la victoire pèse autant.
+> Ce n'est pas un réglage de coefficient — c'est un problème de structure.
+
+### ⚠️ Pourquoi je n'ai rien modifié
+
+1. **Baisser `r_bio` rendrait l'agent indifférent à sa survie** — le projet pose que le
+   corps DOIT pousser (« c'est le corps qui pousse à manger pour vivre »). Un coefficient
+   à 0,016 est un débranchement déguisé.
+2. **Le coefficient dépendrait du niveau** (9× ici, 62× là) : une constante unique serait
+   fausse partout, et une formule par niveau serait un chiffre en dur de plus.
+3. **La piste « rendre le déficit soluble » a été tentée cette nuit et n'a pas suffi** :
+   la v41.7 rend la valence apprenable, la consommation reste à 4,0/4,0 — identique au
+   marcheur aléatoire.
+
+**Trois options pour la suite, aucune neutre, toutes à arbitrer :**
+
+| Option | Principe | Risque |
+|---|---|---|
+| Pondérer `r_bio` | le faire taire | l'agent cesse de se soucier de survivre |
+| Espacer `r_bio` (verser par épisode, pas par tick) | corriger le **rapport de fréquence 300:1**, pas l'amplitude | change la granularité du signal corporel |
+| Rendre le monde plus nourrissant | supprimer le déficit à la source | le monde est déjà vivable (un marcheur aléatoire survit) |
+
+> 💡 **La deuxième option est la seule qui ne contredise aucun principe du projet** : elle
+> ne touche ni à l'amplitude du corps ni au monde, seulement à la **fréquence** de versement
+> — qui est la vraie cause du 300:1. Elle n'a jamais été testée.
