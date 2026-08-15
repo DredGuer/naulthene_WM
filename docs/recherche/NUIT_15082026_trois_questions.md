@@ -192,3 +192,59 @@ place ? »**. Deux pistes, non testées à cette heure :
    effectivement quelque chose : à gérer un déficit qu'il ne peut pas résoudre.
 2. **Le crédit temporel ne remonte pas jusqu'à la cause.** Une victoire sur `Empty-5x5`
    demande ~10 pas ; si l'avantage n'est pas propagé, seul le dernier pas est renforcé.
+
+---
+
+## Les deux correctifs livrés cette nuit
+
+### v41.7 — la nourriture n'avait aucune valeur apprise
+
+**Le bug** : `enregistrer_evenement` était appelé pour `"FOOD"`/`"WATER"` **sans le
+paramètre `intensite`**, donc avec sa valeur par défaut de `0.0` — alors que le seul autre
+appelant transmet bien la sienne.
+
+```
+↑ 'goal' +0.515 (×1037)    ← appris
+↓ 'FOOD' +0.000 (×4004)    ← 4004 repas, valence rigoureusement nulle
+```
+
+Même motif sur les 4 graines mesurées. L'abstraction par récurrence (v36.0) et l'empreinte
+de type (v39.0) **moyennaient des zéros**, des milliers de fois.
+
+> 🎯 **C'est l'explication mécanique du résultat Q2** : l'agent ne pouvait pas apprendre
+> que la nourriture vaut quelque chose — le seul canal qui aurait pu porter cette
+> information ne transportait que des zéros. D'où une consommation indiscernable du hasard
+> après 1000 jours.
+
+**Le correctif** transmet le soulagement réel, déjà calculé quinze lignes plus bas pour
+`r_bio`. Rien de nouveau n'entre dans le système. **Rien n'est déclaré non plus** :
+l'intensité est *mesurée* — manger rassasié écrit une intensité quasi nulle, manger affamé
+une intensité forte.
+
+**Vérifié** : `WATER` passe de `+0.000` figé à `+0.052 → +0.090 → +0.096`.
+
+### v41.8 — la patience dérivée du budget de la carte
+
+```
+patience = max_steps × (0,45 + 0,55 × (1 − maîtrise))
+```
+
+| Maîtrise | `Empty-5x5` (budget 100) | `Empty-8x8` (budget 256) |
+|---|---|---|
+| 0 % | **100** (l'épisode entier) | **256** |
+| 60 % | 67 | 172 |
+| 100 % | 50 | 115 |
+
+Le débutant reçoit tout, l'expert ~45 %. Même doctrine que le sevrage de l'aide (v41.3).
+
+### Contrôle à j11 — les correctifs ne dégradent pas
+
+| Graine | Maîtrise moy. j1-11, **v41.8** | v41.6 (sans correctifs) |
+|---|---|---|
+| g11 | **31 %** | 24 % |
+| g22 | **36 %** | 34 % |
+| g33 | **33 %** | 19 % |
+
+Et **4 abandons lucides** seulement : la patience réduite ne tronque pas d'épisodes utiles.
+
+⚠️ 11 jours ne prouvent rien — c'est un contrôle de non-régression, pas un résultat.
