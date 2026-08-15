@@ -451,3 +451,43 @@ Trois options, aucune neutre :
 **Je penche pour la 2ᵉ** : elle aligne les deux termes sur le même instant sans inventer
 une autonomie non vécue, et son seul coût est un jour de retard. Mais c'est un changement
 du critère de promotion — donc un arbitrage utilisateur, pas une correction de bug.
+
+### 7.5 🎯 PREUVE DIRECTE — g44 promu à 60 %, g11 refusé à 65 %
+
+Les deux runs de 2000 jours fournissent la comparaison qui tranche :
+
+| | Maîtrise | Autonomie utilisée | Maturité | Résultat |
+|---|---|---|---|---|
+| **g44** (jour 477) | **60 %** | **67 %** — cohérente (60/90) | **0,400** | ✅ **PROMU** |
+| **g11** (4 fois) | **65 %** | **61 %** — celle de la veille (55/90) | 0,397 | ❌ refusé |
+
+> 🔴 **g11 avait une MEILLEURE maîtrise que g44 et n'a pas été promu.** La seule
+> différence entre les deux : chez g44 l'autonomie était synchrone avec la maîtrise ce
+> jour-là ; chez g11 elle était en retard d'un jour.
+>
+> Ce n'est plus une hypothèse sur un décalage d'index : c'est deux agents, même code,
+> même seuil, dont **le moins compétent est promu et le plus compétent refusé**.
+
+Et g44 a été promu avec une maturité de **0,400 pile** — l'égalité exacte annoncée au
+§7.3. La marge est bien nulle : la promotion ne passe que si l'autonomie est parfaitement
+synchrone, ce qui n'arrive que par coïncidence (fenêtre stable la veille et le jour même).
+
+**Cela reclasse le « blocage au niveau 1 »** : ce n'était pas, pour g11, un mur de
+compétence. Combien des blocages historiques du projet relèvent de ce décalage plutôt que
+de l'incapacité reste une question ouverte — mais elle doit être posée avant toute
+nouvelle mécanique cognitive.
+
+## 8. Bilan final des 4 runs de 2000 jours
+
+| Graine | Niveau | Promotions | Maturité max | Maîtrise max | Jours frôlant le seuil |
+|---|---|---|---|---|---|
+| g11 | 1/15 | 0 | **0,397** | **65 %** | **4** |
+| g22 | 1/15 | 0 | 0,278 | 55 % | 0 |
+| g33 | 1/15 | 0 | 0,306 | 55 % | 0 |
+| **g44** | **3/15** | **2** (j477, j493) | 0,469 | 65 % | 1 |
+
+Aucun crash, aucune mort métabolique sur 8000 jours cumulés.
+
+**Lecture** : 2 graines sur 4 (g11, g44) atteignent 65 % de maîtrise — au-dessus de
+`TAUX_PROMOTION`. Une seule est promue. g22 et g33 plafonnent réellement à 55 % et leur
+blocage, lui, semble bien être un mur de compétence.
