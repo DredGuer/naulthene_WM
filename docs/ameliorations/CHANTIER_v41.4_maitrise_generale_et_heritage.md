@@ -491,3 +491,54 @@ Aucun crash, aucune mort métabolique sur 8000 jours cumulés.
 **Lecture** : 2 graines sur 4 (g11, g44) atteignent 65 % de maîtrise — au-dessus de
 `TAUX_PROMOTION`. Une seule est promue. g22 et g33 plafonnent réellement à 55 % et leur
 blocage, lui, semble bien être un mur de compétence.
+
+---
+
+## 9. 🔬 La paire g77 — première (et seule) mesure appariée VALIDE
+
+Sur les 10 paires de la campagne 300 jours, **une seule** a produit une promotion :
+g77, au **jour 290**, des deux côtés. C'est donc la seule paire où l'ablation mesure
+réellement quelque chose.
+
+**L'ablation coupe bien** — vérification directe :
+
+| | Lignes d'héritage non nul |
+|---|---|
+| g77 v41.4 | **+29 pt**, +23, +16, +1, +1… |
+| g77 témoin | **aucune** |
+
+La promotion tombe au **même jour (290) des deux côtés**, ce qui est attendu : avant toute
+promotion la parenté vaut 0, donc les deux codes sont strictement identiques. La
+divergence ne peut commencer qu'**après**.
+
+### 9.1 Les 10 jours post-promotion — signal défavorable, mais non concluant
+
+| | Sevrage moyen | Maîtrise max | Maturité max |
+|---|---|---|---|
+| **v41.4** | **63,0 %** | **38 %** | 0,506 |
+| **témoin** | 48,7 % | **47 %** | 0,506 |
+
+> ⚠️ **Contre-intuitif, et je le consigne tel quel** : l'agent avec héritage a reçu
+> **moins d'aide** (sevrage 63 % contre 48,7 %) et atteint une **maîtrise inférieure**
+> (38 % contre 47 %).
+>
+> C'est cohérent avec le mécanisme : l'héritage retire de l'aide *par anticipation*, en
+> pariant que l'agent saura faire. Si le pari est faux, l'agent est sevré trop tôt et
+> apprend **moins bien** — exactement le risque que la §5 du chantier v41.2 avait identifié
+> pour l'option « abaisser le seuil de sevrage » (*« sevrer trop tôt un agent qui n'a rien
+> acquis »*).
+
+**n = 1 paire, 10 jours, une seule graine.** Ce n'est pas un verdict — c'est un signal
+dont le **sens** est défavorable et qui doit être mesuré sérieusement avant toute
+revendication. Il renforce la décision du §6.9 : **conservé, non revendiqué, rien dans les
+README**.
+
+### 9.2 Ce que la campagne établit définitivement
+
+| Question | Réponse |
+|---|---|
+| L'héritage change-t-il le niveau atteint en 300 j ? | **Δ +0,00 sur 10 paires** — mais 9 paires sur 10 sans promotion, donc ablation vide |
+| L'ablation fonctionne-t-elle ? | ✅ oui, vérifié sur g77 |
+| Le sevrage v41.3 fonctionne-t-il en population ? | ✅ **autonomie 26,1 % sur 20 runs** (v41.2 : 0 %) |
+| L'héritage aide-t-il après promotion ? | ❓ **une paire, signal défavorable** (maîtrise 38 % vs 47 %) |
+| Faut-il une campagne plus longue ? | ✅ **≥ 1000 jours** — la promotion médiane arrive vers j290-477 |
