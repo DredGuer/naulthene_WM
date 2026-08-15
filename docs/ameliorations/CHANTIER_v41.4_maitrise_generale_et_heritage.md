@@ -230,3 +230,72 @@ où **4 graines sur 4** plafonnent à 55-65 %.
 > Conséquence : le « verrou de mesure levé » annoncé en v41.3 reste vrai (la maturité
 > peut désormais être non nulle), mais **« deux paliers franchis » n'est pas un résultat
 > de population** et ne doit pas être présenté comme tel.
+
+### 6.5 🧬 PREMIÈRE ACTIVATION RÉELLE — g44, jours 477 et 493
+
+g44 est le premier agent à franchir un palier sur le code v41.4 corrigé. La mécanique
+s'active donc pour la première fois **en conditions réelles**, et se comporte exactement
+comme conçue.
+
+```
+🎓 PROMOTION → Éveil       (maturité 40% = régularité 60% × 20 ép. × autonomie 67%)
+   🧬 parenté avec la carte quittée : 65%
+🎓 PROMOTION → Maternelle  (maturité 47% = régularité 65% × 20 ép. × autonomie 72%)
+   🧬 parenté avec la carte quittée : 55%
+```
+
+**Les parentés mesurées en vol (65 %, 55 %) correspondent à la mesure hors-ligne**
+(0,70 et 0,59 sur `Empty-5x5 → Empty-Random-6x6 → Empty-8x8`) — l'écart tient à la carte
+tirée au moment de la promotion, la mesure hors-ligne moyennant 40 resets.
+
+**L'héritage décroît comme prévu** (extraits consécutifs après la 2ᵉ promotion) :
+
+| Sevrage appliqué | Héritage | Fenêtre |
+|---|---|---|
+| 26 % | **+26 pt** | vide |
+| 22 % | +22 pt | ↓ |
+| 20 % | +20 pt | ↓ |
+| 17 % | +17 pt | ↓ |
+| 13 % | +13 pt | ↓ |
+| 14 % | **+6 pt** | se remplit |
+| … | **+0 pt** | pleine |
+
+> ✅ **Les invariants 2, 3 et 4 tiennent en conditions réelles**, pas seulement en test
+> unitaire : l'héritage est une avance qui s'efface, jamais une rente.
+
+### 6.6 📊 LE CHIFFRE QUI COMPTE — 477 jours, puis 16
+
+| Promotion | Jour | Écart |
+|---|---|---|
+| 1ʳᵉ (Nourrisson → Éveil) | **477** | — |
+| 2ᵉ (Éveil → Maternelle) | **493** | **+16 jours** |
+
+**La deuxième promotion a coûté 30× moins de temps que la première.** C'est précisément
+l'effet recherché : l'agent est arrivé sur `Empty-Random-6x6` avec ~27 pt d'autonomie
+héritée au lieu de 0, et n'a pas eu à reconstruire son sevrage depuis zéro.
+
+⚠️ **Ce chiffre ne prouve encore rien à lui seul** : `Empty-Random-6x6` est aussi un
+niveau plus facile que `Empty-5x5` sur certains tirages, et **n = 1**. Seule la
+comparaison appariée avec le témoin (`--sans-heritage`, même graine) peut trancher — elle
+est en cours.
+
+### 6.7 ❌ Ce que l'héritage ne fait PAS — 355 jours de stagnation au niveau 3
+
+Après la 2ᵉ promotion, g44 stagne sur `Empty-8x8` :
+
+```
+Cursus   : Niveau 3/15 — maîtrise 20% (n=20) | sevrage 83%
+Maturité : 0,033 / 0,40 — régularité 20% × consolidation 100% × autonomie 17%
+```
+
+Maturité **0,469 juste après la promotion** (portée par l'héritage), puis **0,033** —
+355 jours plus tard, toujours au même palier.
+
+> 🔴 **Confirmation du §6.2 : l'héritage accélère, il ne débloque pas.** Il donne une
+> avance au démarrage ; si l'agent ne sait pas résoudre la carte, l'avance s'épuise en
+> ~20 épisodes et le mur reste entier. La maîtrise réelle sur `Empty-8x8` est de **20 %**.
+>
+> Et l'invariant 4 fonctionne : maîtrise tombée à 20 % ⇒ sevrage **83 %**, l'aide est
+> revenue presque au maximum. C'est exactement le comportement demandé
+> (« une baisse de compréhension augmente aussi l'aide proportionnellement ») — mais il
+> ne suffit pas à faire apprendre `Empty-8x8`.
