@@ -683,3 +683,73 @@ mise à jour de la fenêtre**) : elle aligne les deux termes sans inventer une a
 vécue, et le coût mesuré du statu quo est de **2 promotions sur une graine sur quatre**.
 
 Mais cela modifie le **critère de promotion** du projet — donc arbitrage utilisateur.
+
+---
+
+## 12. 🏁 VERDICT FINAL — comparaison appariée complète, 8 × 2000 jours
+
+| Graine | Variante | Niveau | Promotions | Jours promo | Maturité max | Maîtrise max | Héritage moy |
+|---|---|---|---|---|---|---|---|
+| g11 | héritage | 1 | 0 | — | 0,397 | 65 % | **0,0 pt** |
+| g11 | témoin | 1 | 0 | — | 0,397 | 65 % | 0,0 pt |
+| g22 | héritage | 1 | 0 | — | 0,278 | 55 % | **0,0 pt** |
+| g22 | témoin | 1 | 0 | — | 0,278 | 55 % | 0,0 pt |
+| g33 | héritage | 1 | 0 | — | 0,306 | 55 % | **0,0 pt** |
+| g33 | témoin | 1 | 0 | — | 0,306 | 55 % | 0,0 pt |
+| **g44** | **héritage** | **3** | **2** | **477, 493** | **0,469** | 65 % | **0,1 pt** |
+| **g44** | **témoin** | **3** | **2** | **477, 527** | 0,400 | 60 % | 0,0 pt |
+
+**Δ niveau = +0,00 · Δ promotions = +0,00 · aucune paire discordante.**
+
+### 12.1 Trois graines sur quatre sont BIT-IDENTIQUES
+
+g11, g22, g33 : maturité, maîtrise, autonomie et sevrage moyens **rigoureusement égaux**
+des deux côtés, au dixième près. Ce n'est pas une coïncidence — c'est la démonstration
+que **l'héritage n'y a jamais été activé** (`her.moy = 0,0 pt`, aucune promotion, donc
+parenté nulle en permanence).
+
+> ✅ C'est aussi la **validation de l'ablation** : un drapeau qui laisse trois runs
+> strictement inchangés et n'altère que celui où la mécanique s'active fait exactement ce
+> qu'on attend de lui. Aucune fuite.
+
+### 12.2 Le seul effet réel, sur la seule graine où la mécanique existe
+
+| g44 | 1ʳᵉ promo | 2ᵉ promo | **Délai** | Maturité max |
+|---|---|---|---|---|
+| Héritage | j477 | **j493** | **16 j** | **0,469** |
+| Témoin | j477 | j527 | 50 j | 0,400 |
+
+**3,1× plus rapide entre les deux paliers.** Même jour pour la première (attendu :
+parenté nulle avant toute promotion, donc codes identiques).
+
+### 12.3 Le bilan, sans ambiguïté
+
+| Question | Réponse mesurée |
+|---|---|
+| L'héritage change-t-il le **niveau atteint** ? | ❌ **non** — Δ +0,00 sur 4 paires |
+| Change-t-il le **nombre de promotions** ? | ❌ **non** — Δ +0,00 |
+| Change-t-il le **délai** entre deux paliers franchissables ? | ✅ **oui — 3,1×** (n = 1) |
+| Débloque-t-il un agent bloqué ? | ❌ **non** — jamais activé sur 3 graines /4 |
+| L'ablation est-elle propre ? | ✅ **oui** — 3 runs bit-identiques |
+
+### 12.4 📌 DÉCISION FINALE
+
+**L'héritage est CONSERVÉ, INACTIF PAR DÉFAUT n'est PAS retenu — il reste actif.**
+Motifs :
+
+1. Il ne **dégrade rien** : Δ niveau et Δ promotions strictement nuls, et il est
+   littéralement inerte tant qu'aucune promotion n'a lieu.
+2. Son seul effet mesuré est **favorable** (3,1× sur le délai).
+3. Son coût est nul : aucune constante posée, tout est dérivé de grandeurs déjà mesurées.
+
+**Mais il n'est pas revendiqué et n'entre pas dans les README** : l'effet repose sur
+**une graine**, et le dépôt a déjà payé le prix d'une conclusion tirée d'une graine unique
+(loterie natale g22).
+
+⚠️ **Ce chantier n'a pas traité le problème du projet.** Le blocage tient à deux causes
+distinctes, séparées au §11 et dont aucune ne relève de l'héritage :
+
+| Cause | Graines | Piste |
+|---|---|---|
+| **Défaut de mesure** — le critère refuse un agent qui remplit la condition | g11 (1/4) | §7 — correctif en attente d'arbitrage |
+| **Mur d'apprentissage réel** — plafonne à 55 %, sous le seuil | g22, g33 (2/4) | P17 — le cursus comme distribution |
