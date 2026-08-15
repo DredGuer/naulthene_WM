@@ -232,3 +232,95 @@ r_bio cumulé -3,778 — 3 Nourriture(s), 2 Eau(x) consommée(s)
 L'agent **mange et boit** (3 à 5 unités par jour, la boucle corporelle fonctionne), mais
 `r_bio` cumulé reste **négatif** : le déficit structurel identifié en v41.2 (§2.6) n'est pas
 résorbé. C'est cohérent avec le diagnostic d'alors — la trouvabilité, pas le barème.
+
+
+---
+
+## 9. 🏁 BILAN FINAL — 6 graines × 1000 jours
+
+| Graine | Niveau | Promotions | Jours | Maîtrise max | Maturité max |
+|---|---|---|---|---|---|
+| g11 | 1/15 | 0 | — | 50 % | 0,278 |
+| g22 | 1/15 | 0 | — | 55 % | 0,336 |
+| g33 | 1/15 | 0 | — | 50 % | 0,278 |
+| **g44** | **3/15** | **2** | j243, j332 | **70 %** | **0,400** |
+| **g55** | **3/15** | **2** | j300, j361 | 55 % | **0,400** |
+| g66 | 1/15 | 0 | — | 55 % | 0,336 |
+
+6000 jours cumulés, **aucun crash, aucune mort**.
+
+### 9.1 ✅ Le correctif de maturité (v41.5) tient
+
+Rejeu du critère sur les 6 runs : **4 promotions accordées, 0 refusée à tort**.
+
+Comparaison avec le corpus d'avant correctif :
+
+| Corpus | Accordées | Refusées à tort |
+|---|---|---|
+| Avant (28 runs) | 5 | **7** |
+| **Après (6 runs × 1000 j)** | **4** | **0** |
+
+Le décalage est corrigé, et il ne se reforme pas.
+
+### 9.2 ✅ P17 enraye l'effondrement au palier bloquant
+
+| g44 au niveau 3 (`Empty-8x8`) | Sans P17 | **Avec P17** |
+|---|---|---|
+| Maîtrise maximale | **2 %** | **30 %** |
+
+Confirmé sur g55 (graine indépendante) : **30 %** également. Et l'incursion produit
+**524 victoires sur 1649 épisodes hors palier (32 %)** — des épisodes qui n'auraient jamais
+existé sous l'ancien pointeur.
+
+### 9.3 🔴 Les 4 graines bloquées le sont pour une raison RÉELLE
+
+C'est le résultat qui tranche la question ouverte au §2.4bis de l'état des lieux
+(« défaut de mesure ou mur d'apprentissage ? ») :
+
+| Graine | Jours à ≥ 50 % | Jours à **≥ 60 %** (seuil) |
+|---|---|---|
+| g11 | 2 | **0** |
+| g22 | 13 | **0** |
+| g33 | 1 | **0** |
+| g66 | 10 | **0** |
+
+> **Aucune de ces quatre graines n'a atteint le seuil de promotion une seule fois en
+> 1000 jours.** Ce n'est plus un artefact de mesure — le critère est désormais synchrone et
+> ne refuse plus rien à tort. C'est un **mur d'apprentissage réel** sur `Empty-5x5`.
+>
+> La question posée ce matin est donc tranchée : sur 6 graines, **4 relèvent d'un vrai mur**
+> et **2 franchissaient des paliers**. Le défaut de mesure existait (7 refus mesurés), il est
+> corrigé, et il ne suffisait pas à expliquer le blocage.
+
+### 9.4 Verdict sur P17
+
+| Question | Réponse mesurée |
+|---|---|
+| Enraye-t-il l'effondrement après promotion ? | ✅ **oui** — 2 % → 30 %, sur 2 graines |
+| Produit-il des victoires hors palier ? | ✅ **oui** — 32 % de réussite |
+| La distribution est-elle dérivée (pas figée) ? | ✅ **oui** — défi visé 95 % → 33 % selon la maîtrise |
+| Débloque-t-il un agent bloqué au niveau 1 ? | ❌ **non** — 4 graines /6, 0 jour au seuil |
+| Fait-il franchir le mur d'`Empty-8x8` ? | ❌ **non** — 30 % contre 60 % requis |
+
+**P17 est conservé** : il ne dégrade rien, il enraye un effondrement mesuré, et son coût est
+nul. **Mais il ne débloque pas le cursus** — comme l'héritage v41.4, il améliore le
+comportement *autour* du mur sans abattre le mur.
+
+⚠️ **Attribution impossible entre v41.5 et v41.6.** Les deux correctifs ont été introduits
+ensemble ; g44 promu à j243 contre j477 peut relever de l'un, de l'autre, ou des deux. Une
+ablation `--sans-p17` serait nécessaire pour trancher.
+
+### 9.5 Ce que la campagne établit sur les bloquants restants
+
+**La patience n'est plus un bloquant** (§8.3) : 258-273 ticks mesurés contre 120 documentés,
+et **zéro abandon lucide**. L'agent a plus de temps que MiniGrid n'en alloue et n'en utilise
+pas la totalité.
+
+**Le métabolisme reste déficitaire** : `r_bio` cumulé de −2,7 à −3,8 par jour malgré 3 à 5
+unités consommées. La boucle corporelle fonctionne ; c'est la **trouvabilité** qui manque —
+diagnostic v41.2 inchangé.
+
+**Reste donc, pour expliquer le mur d'`Empty-5x5` :** ni le temps, ni le critère de
+promotion, ni le cursus. Les pistes non écartées sont le déficit métabolique permanent
+(un agent en dette d'énergie n'explore pas) et la question, jamais tranchée, de savoir ce
+que l'agent apprend réellement d'une victoire.
