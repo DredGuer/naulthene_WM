@@ -4658,6 +4658,11 @@ FENETRE_MAITRISE_GENERALE = 100   # borne : ~5 fenêtres de niveau, assez long p
                                    # traverser plusieurs cartes, assez court pour qu'un
                                    # décrochage durable finisse par s'y voir
 
+# Interrupteur d'ABLATION (drapeau de campagne, pas un réglage cognitif) : coupé, le
+# sevrage retombe exactement sur v41.3. Il n'existe que pour disposer d'un témoin à
+# graine identique — voir `--sans-heritage`.
+HERITAGE_SEVRAGE_ACTIF = True
+
 # --- v40.2 : LE SEUIL DE MATURITÉ, DÉRIVÉ (voir `_maturite_niveau`) ---
 #
 # Il n'est PAS posé. Il vaut la maturité d'un agent qui réussit `TAUX_PROMOTION` du temps
@@ -4782,8 +4787,9 @@ def facteur_guidage(etat) -> float:
     taux_general = _taux_maitrise_generale(etat)
     parente = max(0.0, min(1.0, getattr(etat, "parente_niveau_precedent", 0.0)))
 
-    if taux_general is None:
-        # Aucun vécu transversal significatif : le débutant reste un débutant.
+    if taux_general is None or not HERITAGE_SEVRAGE_ACTIF:
+        # Aucun vécu transversal significatif (ou ablation de campagne) : le débutant
+        # reste un débutant, et le sevrage retombe exactement sur v41.3.
         taux_pour_sevrage = taux_effectif
     else:
         poids_heritage = (1.0 - fraicheur) * parente
@@ -8052,7 +8058,21 @@ if __name__ == "__main__":
     _p.add_argument("--brain", type=str, default=None,
                     help="chemin du .brain (repris s'il existe, créé sinon)")
     _p.add_argument("--no-wandb", action="store_true", help="désactive Weights & Biases")
+    # v41.4 — interrupteur d'ABLATION du seul héritage de sevrage. Il existe pour que la
+    # campagne dispose d'un témoin à graine IDENTIQUE : comparer 10 graines v41.4 à 10
+    # graines d'un run antérieur ne prouverait rien, les trajectoires natales différant
+    # (leçon de la loterie natale g22, campagne v41). Avec ce flag, `facteur_guidage`
+    # retombe exactement sur le comportement v41.3.
+    _p.add_argument("--sans-heritage", action="store_true",
+                    help="ABLATION : coupe l'héritage de sevrage v41.4 (témoin v41.3)")
     _args = _p.parse_args()
+
+    # Drapeau global lu par `facteur_guidage` — un seul point de lecture, pas de
+    # branchement dispersé dans le chemin cognitif.
+    HERITAGE_SEVRAGE_ACTIF = not _args.sans_heritage
+    globals()["HERITAGE_SEVRAGE_ACTIF"] = HERITAGE_SEVRAGE_ACTIF
+    if not HERITAGE_SEVRAGE_ACTIF:
+        print("🔬 [ABLATION] héritage de sevrage v41.4 COUPÉ — témoin v41.3")
 
     # La graine est réappliquée ICI, après les `manual_seed(42)` du haut de fichier : ce
     # sont eux qui rendaient les runs indiscernables.
