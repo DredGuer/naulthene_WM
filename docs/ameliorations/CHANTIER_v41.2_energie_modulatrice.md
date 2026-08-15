@@ -370,3 +370,56 @@ cherche mieux vit mieux.
 > aurait mesuré un agent confortable qui n'a rien appris. Agir sur le monde est cohérent
 > avec le **fil n°1** du projet — *« ce qui rend possible fait progresser, ce qui facilite
 > ne change rien »* — et c'est le seul levier qui ait jamais fonctionné ici.
+
+### 7.4 ❌ Première version des profils : ÉCHEC mesuré au jour 57
+
+Le run lancé avec les profils + 5 sources a été **arrêté à 57 jours** :
+
+| | témoin (2 sources) | **profils v1** |
+|---|---|---|
+| énergie moyenne | 0,21 | **0,072** |
+| nourriture/jour | 1,94 | **2,48** ✅ |
+| eau/jour | — | **1,04** |
+| % jours énergie saine | 18 % | **4 %** |
+| **victoires** | 130 (à 300 j) | **0** (à 57 j) |
+
+**Le fourrage s'est amélioré et l'énergie s'est effondrée.** Contre-intuitif, donc
+diagnostiqué plutôt que recalibré :
+
+- L'agent buvait **0,97 eau/jour** pour un besoin théorique de **0,94** — il buvait donc
+  *exactement ce qu'il fallait*.
+- Mais son hydratation tombait à **0,00** la plupart des jours.
+
+**La cause : une portion unique partagée entre les deux axes.** `valeur_nutritive()` valait
+0,889, appliquée aussi bien à la satiété qu'à l'hydratation, sur des jauges plafonnées à
+1,0. Mesuré sur une journée : **2,0 unités d'eau perdues par débordement**. Boire tôt
+gaspillait, boire tard laissait la conversion déjà bridée par la soif — la fenêtre utile
+était trop étroite pour être trouvée par apprentissage.
+
+### 7.5 Le correctif : une portion par axe, dérivée de sa propre perte
+
+```
+valeur_nutritive() = besoin_énergie_journalier / REPAS_PAR_JOURNEE          → 0,889
+valeur_hydrique()  = perte_eau_journalière / PRISES_HYDRIQUES_PAR_JOURNEE   → 0,208
+```
+
+**On boit plus souvent qu'on ne mange, et par plus petites gorgées** (4 prises/jour contre
+2,5 repas). C'est ce qui évite le débordement : une prise ne dépasse jamais de beaucoup ce
+qui manque à la jauge. La densité d'eau suit son propre rythme (`NB_SOURCES_WATER = 8`),
+au lieu d'être recopiée de celle de la nourriture.
+
+Effet mesuré :
+
+| | portion partagée | **portions découplées** |
+|---|---|---|
+| eau gaspillée / journée | **2,00** | **0,07** (÷28) |
+| énergie (régime nominal) | — | **0,806** |
+| hydratation | 0,00 la plupart des jours | **0,896** |
+
+Les trois axes restent contraignants : 2,5 food + 1 eau → **mort de déshydratation** au
+tick 787 ; 2 food + 3 eau → **mort de famine** au tick 786. Le régime ne pardonne toujours
+pas la négligence d'un axe.
+
+> **Leçon de méthode.** Le fourrage *s'était amélioré* — un tableau de bord qui n'aurait
+> regardé que « ressources trouvées » aurait conclu au succès. C'est l'écart entre deux
+> métriques (fourrage ↑, énergie ↓) qui a révélé le défaut, pas l'une des deux seule.

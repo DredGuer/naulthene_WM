@@ -2440,7 +2440,7 @@ class BiologicalHomeostasisEngine:
                                                   DERIVE_MAX_ABSOLUE)))
 
     def valeur_nutritive(self) -> float:
-        """v41.2 — la valeur d'UNE ressource, DÉRIVÉE du besoin réel plutôt que posée.
+        """v41.2 — la valeur d'UNE ressource ALIMENTAIRE, DÉRIVÉE du besoin réel.
 
         Avant v41.2 c'était `0.4` en dur, calibré pour un métabolisme qui n'existe plus.
         Mesuré : le stock se vidait de ~1,1 réserve par journée, donc trois repas à 0,4
@@ -2452,6 +2452,25 @@ class BiologicalHomeostasisEngine:
         la nutrition suit — aucun des deux nombres ne peut plus dériver seul."""
         besoin_journalier = DEPENSE_ENERGIE_JOUR / max(RENDEMENT_CONVERSION, 1e-6)
         return besoin_journalier / REPAS_PAR_JOURNEE
+
+    def valeur_hydrique(self) -> float:
+        """v41.2-fix — la portion d'UNE ressource HYDRIQUE, dérivée de la perte d'eau
+        réelle et non de la valeur alimentaire.
+
+        ⚠️ Ce découplage corrige un défaut mesuré : partager la même portion entre les
+        deux axes donnait une eau à 0,889 sur une jauge plafonnée à 1,0. L'agent qui boit
+        tôt **gaspillait** (2,0 unités perdues par débordement sur une journée mesurée), et
+        celui qui boit tard avait déjà subi le bridage de conversion — la fenêtre utile
+        était trop étroite pour être trouvée par apprentissage. Résultat sur 57 jours :
+        hydratation à 0,00 la plupart des jours, énergie effondrée à 0,072 et **zéro
+        victoire**, alors que l'agent buvait pourtant le nombre théorique de fois (0,97/j
+        pour un besoin de 0,94).
+
+        Les deux axes ont des besoins journaliers différents (la soif se renouvelle plus
+        vite que la faim, cf. RATIO_SOIF_SUR_FAIM) : leurs portions doivent donc être
+        dérivées séparément, chacune de SA propre perte."""
+        perte_journaliere = TAUX_HYDRATATION_JOUR
+        return perte_journaliere / PRISES_HYDRIQUES_PAR_JOURNEE
 
     def consommer_ressource(self, type_ressource: str, quantite: float = None):
         """v41.2 — consommation sur PROFIL À TROIS AXES plutôt que « un type remplit sa
@@ -2474,11 +2493,19 @@ class BiologicalHomeostasisEngine:
         profil = PROFILS_NUTRITIONNELS.get(type_ressource)
         if profil is None:
             return
-        portion = self.valeur_nutritive() if quantite is None else quantite
+        # v41.2-fix — CHAQUE AXE A SA PROPRE PORTION, dérivée de SA propre perte
+        # journalière. Une portion unique partagée entre les deux donnait une eau à 0,889
+        # sur une jauge plafonnée à 1,0 : boire tôt gaspillait, boire tard laissait la
+        # conversion déjà bridée (voir `valeur_hydrique`). `quantite` reste surchargeable
+        # et s'applique alors aux deux axes, pour les tests et le calibrage.
+        portion_alim = self.valeur_nutritive() if quantite is None else quantite
+        portion_hydr = self.valeur_hydrique() if quantite is None else quantite
 
-        self.satiete = float(np.clip(self.satiete + profil["satiete"] * portion, 0.0, 1.0))
+        self.satiete = float(np.clip(
+            self.satiete + profil["satiete"] * portion_alim, 0.0, 1.0))
         self.hydratation = float(np.clip(
-            self.hydratation + profil["hydrique"] * portion, 0.0, 1.0))
+            self.hydratation + profil["hydrique"] * portion_hydr, 0.0, 1.0))
+        portion = portion_alim
         self.stimulation = float(np.clip(
             self.stimulation + profil.get("stimulation", 0.0) * portion, 0.0, 1.0))
 
@@ -3983,6 +4010,14 @@ TICKS_JOUR_REFERENCE = 3600.0   # borne : la journée nycthémérale de référe
 #   - 3 repas par journée  ⇒ un repas doit couvrir ~1/3 de journée
 #   - l'eau tue ~10× plus vite que la faim (3 jours contre 30)
 #   - le métabolisme BASAL représente ~60-70 % de la dépense totale
+PRISES_HYDRIQUES_PAR_JOURNEE = 4.0       # borne : on boit PLUS SOUVENT qu'on ne mange, et
+                                         # par plus petites gorgées. C'est ce qui évite le
+                                         # gaspillage par débordement : une prise ne doit
+                                         # jamais dépasser de beaucoup ce qui manque à la
+                                         # jauge. Mesuré avec une portion unique partagée
+                                         # (0,889 par eau sur une jauge à 1,0) : 2,0 unités
+                                         # perdues en une journée, hydratation à 0,00 la
+                                         # plupart des jours, énergie à 0,072, 0 victoire.
 REPAS_PAR_JOURNEE = 2.5                  # borne : le rythme alimentaire d'espèce, dont la
                                          # valeur nutritive d'une ressource est DÉRIVÉE.
                                          # CALIBRÉ PAR MESURE : un agent débutant ne trouve
@@ -4113,7 +4148,9 @@ DERIVE_MAX_ABSOLUE = 1.0               # borne dure de sécurité (exp(1) ≈ 2,
 # suffire à survivre, tout en laissant l'agent qui cherche mieux vivre mieux.
 MARGE_TROUVABILITE = 2.0
 NB_SOURCES_FOOD = max(2, int(round(REPAS_PAR_JOURNEE * MARGE_TROUVABILITE)))
-NB_SOURCES_WATER = NB_SOURCES_FOOD
+# L'eau se prend plus souvent que la nourriture (PRISES_HYDRIQUES_PAR_JOURNEE), donc sa
+# densité est dérivée de SON propre rythme — pas recopiée de celle de la nourriture.
+NB_SOURCES_WATER = max(2, int(round(PRISES_HYDRIQUES_PAR_JOURNEE * MARGE_TROUVABILITE)))
 POIDS_CHOC_RESSOURCE_BIO = 0.25  # ancrage mémoriel à la consommation d'une ressource
 # COUT_ACTION_METABOLIQUE (constante fixe v18.0) supprimé en v19.0 : le coût énergétique
 # est désormais calculé dynamiquement par moteur_bio.calculer_effort_metabolique() à
