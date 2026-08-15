@@ -375,3 +375,79 @@ erroné suggérait qu'il ne mordait pas du tout.
 > **Fil récurrent du projet** : un outil de mesure est du code comme un autre, et il se
 > vérifie avant qu'on lui fasse confiance. C'est la 3ᵉ erreur de lecture consignée sur ce
 > chantier, après les 4 du v41.2.
+
+---
+
+## 7. 🔴 DÉCOUVERTE — la maturité est calculée avec une autonomie en retard d'un jour
+
+Trouvé en analysant pourquoi **g11 n'a jamais été promu en 1750 jours** alors qu'il a
+atteint **65 % de maîtrise** — soit plus que `TAUX_PROMOTION = 60 %`.
+
+### 7.1 Le fait mesuré
+
+Les 4 jours où g11 a frôlé le seuil :
+
+| Maîtrise | Sevrage | Autonomie | Maturité | Seuil |
+|---|---|---|---|---|
+| 50 % | 28 % | 72 % | 0,361 | 0,400 |
+| **65 %** | 39 % | **61 %** | **0,397** | 0,400 |
+| 55 % | 28 % | 72 % | 0,397 | 0,400 |
+| 60 % | 39 % | 61 % | 0,367 | 0,400 |
+
+**Manqué de 3 millièmes, quatre fois, en 1750 jours.**
+
+### 7.2 La cause — un décalage temporel d'une journée
+
+```
+jour J, demarrer_journee (l. 5775) : facteur_guidage(etat)  ← lit la fenêtre de la VEILLE
+jour J, executer_nuit    (l. 7117) : _maturite_niveau(etat) ← lit la maîtrise DU JOUR J
+```
+
+`_maturite_niveau` multiplie donc la **maîtrise d'aujourd'hui** par l'**autonomie
+d'hier**. Tant que la maîtrise est stable, l'écart est nul. Mais **au moment précis où la
+maîtrise monte** — c'est-à-dire au moment où la promotion se joue — l'autonomie
+correspond encore à la maîtrise de la veille, plus basse. La maturité est
+**systématiquement sous-estimée pendant les phases de progression**.
+
+Vérification arithmétique sur la ligne à 65 % :
+
+```
+autonomie cohérente  : 65 % / 90 %  = 72 %  →  maturité = 0,65 × 0,72 = 0,469  ✅ PROMU
+autonomie réellement lue (veille, 55 %) : 61 %  →  0,65 × 0,61 = 0,397  ❌ refusé
+```
+
+**L'agent avait la compétence requise et le calcul le lui a refusé sur un décalage
+d'index.**
+
+### 7.3 Portée
+
+Le tableau théorique dit que **60 % de maîtrise suffit** (maturité 0,400 = seuil exact) :
+
+| Maîtrise | Autonomie | Maturité | Promu ? |
+|---|---|---|---|
+| 55 % | 61 % | 0,336 | non |
+| **60 %** | **67 %** | **0,400** | **OUI — tout juste** |
+| 65 % | 72 % | 0,469 | oui |
+
+Or le seuil est franchi **à l'égalité exacte** à 60 %. Un décalage d'un jour, même petit,
+suffit à faire passer en dessous. La marge est **nulle par construction** —
+`SEUIL_MATURITE` étant dérivé de `TAUX_PROMOTION` via la même formule que l'autonomie, les
+deux se touchent sans se croiser.
+
+> C'est le même motif que le verrou du §10 (v41.2) : deux constantes justes séparément,
+> dont la composition se neutralise. La v41.3 avait corrigé le cas « autonomie nulle » ;
+> il reste le cas « autonomie en retard ».
+
+### 7.4 ⚠️ Correctif NON appliqué — décision utilisateur requise
+
+Trois options, aucune neutre :
+
+| Option | Effet | Risque |
+|---|---|---|
+| Recalculer l'autonomie dans `_maturite_niveau` à partir de la maîtrise courante | supprime le décalage, la maturité redevient cohérente | le guidage *appliqué* de la journée reste celui de la veille — la maturité mesurerait alors une autonomie qui n'a pas été vécue |
+| Évaluer la promotion **avant** la mise à jour de la fenêtre | aligne les deux termes sur la veille | retarde toute promotion d'un jour (inoffensif) |
+| Ne rien changer | statu quo | la promotion exige *de facto* ~65 % là où le projet dit 60 % |
+
+**Je penche pour la 2ᵉ** : elle aligne les deux termes sur le même instant sans inventer
+une autonomie non vécue, et son seul coût est un jour de retard. Mais c'est un changement
+du critère de promotion — donc un arbitrage utilisateur, pas une correction de bug.
