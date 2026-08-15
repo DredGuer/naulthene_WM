@@ -286,3 +286,87 @@ démontrer — c'est exactement le mode d'échec que ce chantier s'était engag�
 tuaient), il gagne (26 victoires en 65 jours), l'énergie **alterne** entre 0,86 et 0,03
 selon les jours au lieu de s'effondrer définitivement, et `okay/danger` a retrouvé de la
 variance (1,00/0,00 → 9,90/0,64) contre 676 saturé et identique sur 9 graines en v41.
+
+---
+
+## 7. Le profil nutritionnel à trois axes (décision utilisateur du 15/08)
+
+> *« Il va falloir fixer plusieurs paramètres sur la nourriture : niveau d'hydratation,
+> niveau de satiété, valeur énergétique. Manger coûte (pomme = hydratation 3 %, mais
+> dépense de digestion). Seule l'eau hydrate à 100 %, mais l'eau a zéro valeur
+> énergétique. »*
+
+### 7.1 Le modèle
+
+Une ressource n'est plus « un type qui remplit sa jauge » : c'est un **profil de trois
+grandeurs indépendantes**, plus le coût de sa propre digestion.
+
+| Ressource | satiété | hydrique | énergie | digestion |
+|---|---|---|---|---|
+| **WATER** | 0,0 | **1,0** | **0,0** | 0,0 |
+| **FOOD** | 1,0 | **0,03** | 1,0 | **0,15** |
+
+Mesuré sur une consommation réelle (portion dérivée = 0,889) :
+
+| | satiété | hydratation | énergie |
+|---|---|---|---|
+| **FOOD** | +0,700 | **+0,027** | **−0,133** ← le coût de digérer |
+| **WATER** | +0,000 | **+0,700** | 0,000 |
+
+**L'eau hydrate totalement, n'apporte aucune calorie et ne coûte rien à digérer. La
+nourriture remplit le stock, hydrate à peine, et se paie à l'ingestion.**
+
+Le coût de digestion est exprimé en **fraction de l'apport énergétique de cette
+ressource** — digérer une pomme coûte une part de la pomme, jamais une constante détachée
+de ce qu'on avale. Un aliment dont `digestion` approcherait 1,0 serait **net-nul** :
+entièrement consommé par l'effort de le digérer.
+
+⚠️ **Rien n'est expliqué au cerveau.** Il n'existe aucune table `pomme = bon`. L'agent ne
+perçoit que les conséquences sur ses jauges ; la valence de chaque type reste **apprise**
+par `empreinte_types` (v39.0). Ce tableau décrit le **monde**, pas la connaissance qu'en a
+l'agent.
+
+### 7.2 Bilan net mesuré (avec coût de digestion)
+
+| nourriture/j | eau/j | Résultat |
+|---|---|---|
+| 2 | 2 | **MORT (famine) au tick 992** |
+| **2,5** | 2 | E_moy 0,716 · min 0,341 · **0 % basse énergie** |
+| 3 | 2 | E_moy 0,925 |
+| 2 | **0** | **MORT (déshydratation) au tick 587** |
+| **0** | 2 | **MORT (famine) au tick 367** |
+
+Les trois axes sont donc réellement contraignants : l'eau seule tue de faim, la nourriture
+seule tue de soif, et il faut **les deux** dans les bonnes proportions.
+
+### 7.3 Le correctif porte sur le MONDE, pas sur le barème
+
+Le témoin de 300 jours complet a confirmé le diagnostic §6.7 :
+
+| Fenêtre | énergie moy. | nourriture/jour |
+|---|---|---|
+| j1–50 | 0,213 | 2,16 |
+| j100–150 | 0,200 | 1,98 |
+| **j250–300** | **0,234** | **1,94** |
+
+**Aucune progression en 300 jours.** 130 victoires, mais seulement 18 % de jours à énergie
+saine. Avec 2 sources par carte pour un besoin de 2,5/jour, il aurait fallu que l'agent
+les trouve **toutes, à chaque épisode, sans jamais échouer**. Le déficit était
+**structurel**, pas comportemental — aucune politique n'aurait pu le combler.
+
+D'où la correction, appliquée à la **trouvabilité** :
+
+```
+NB_SOURCES_FOOD = round(REPAS_PAR_JOURNEE × MARGE_TROUVABILITE)   # 2 → 5
+```
+
+La densité est désormais **dérivée du besoin**, plus posée à 2. La marge de 2,0 couvre
+l'échec de recherche : trouver la moitié des sources suffit à survivre, et l'agent qui
+cherche mieux vit mieux.
+
+> ⚠️ **Pourquoi pas baisser `REPAS_PAR_JOURNEE`** — l'option était plus simple et aurait
+> immédiatement mis la mécanique au vert. Elle aurait calé le barème sur ce que l'agent
+> trouve **déjà**, donc supprimé la pression même qui doit le pousser à chercher : on
+> aurait mesuré un agent confortable qui n'a rien appris. Agir sur le monde est cohérent
+> avec le **fil n°1** du projet — *« ce qui rend possible fait progresser, ce qui facilite
+> ne change rien »* — et c'est le seul levier qui ait jamais fonctionné ici.

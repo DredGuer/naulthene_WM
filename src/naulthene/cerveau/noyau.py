@@ -2454,13 +2454,40 @@ class BiologicalHomeostasisEngine:
         return besoin_journalier / REPAS_PAR_JOURNEE
 
     def consommer_ressource(self, type_ressource: str, quantite: float = None):
-        quantite = self.valeur_nutritive() if quantite is None else quantite
-        if type_ressource == "FOOD":
-            self.satiete = min(1.0, self.satiete + quantite)
-        elif type_ressource == "WATER":
-            self.hydratation = min(1.0, self.hydratation + quantite)
-        elif type_ressource == "STIM":
-            self.stimulation = min(1.0, self.stimulation + quantite)
+        """v41.2 — consommation sur PROFIL À TROIS AXES plutôt que « un type remplit sa
+        jauge ». Chaque ressource porte son niveau d'hydratation, son remplissage de
+        satiété, sa valeur énergétique, et le COÛT DE SA PROPRE DIGESTION.
+
+        C'est ce qui permet à l'eau d'hydrater à 100 % sans apporter la moindre calorie,
+        et à un aliment de coûter en énergie une fraction de ce qu'il rapporte — un
+        aliment dont `digestion` approcherait 1,0 serait net-nul, entièrement consommé par
+        l'effort de le digérer.
+
+        ⚠️ Le coût de digestion est prélevé sur l'énergie DISPONIBLE, immédiatement : il
+        faut de l'énergie pour en fabriquer. Un agent totalement épuisé paie donc ce coût
+        sur une réserve qu'il n'a pas — d'où le `max(0.0, ...)`, qui l'empêche de devenir
+        négatif tout en le laissant à zéro. Manger n'est jamais un piège mortel, mais ce
+        n'est pas gratuit non plus.
+
+        `quantite` reste surchargeable (tests, calibrage) : elle multiplie alors le profil
+        au lieu de le remplacer, pour que les proportions du profil soient préservées."""
+        profil = PROFILS_NUTRITIONNELS.get(type_ressource)
+        if profil is None:
+            return
+        portion = self.valeur_nutritive() if quantite is None else quantite
+
+        self.satiete = float(np.clip(self.satiete + profil["satiete"] * portion, 0.0, 1.0))
+        self.hydratation = float(np.clip(
+            self.hydratation + profil["hydrique"] * portion, 0.0, 1.0))
+        self.stimulation = float(np.clip(
+            self.stimulation + profil.get("stimulation", 0.0) * portion, 0.0, 1.0))
+
+        # Le coût de digérer, prélevé tout de suite sur l'énergie disponible. Exprimé en
+        # fraction de l'apport énergétique de CETTE ressource : digérer une pomme coûte
+        # une part de la pomme, jamais une constante détachée de ce qu'on avale.
+        cout_digestion = profil["digestion"] * profil["energie"] * portion
+        self.energie = float(np.clip(self.energie - cout_digestion,
+                                     ENERGIE_MIN, ENERGIE_MAX))
 
     def evaluer_quetes_biologiques(self):
         """Génère la quête la plus prioritaire : Nourriture > Eau > Stimulation, dans
@@ -4010,6 +4037,30 @@ MARGE_DIGESTIVE = 1.5            # borne : le débit digestif dépasse la dépen
                                  # auquel cas la mécanique ne mesurerait plus rien.
 DEBIT_DIGESTIF_JOUR = DEPENSE_ENERGIE_JOUR * MARGE_DIGESTIVE
 RENDEMENT_CONVERSION = 0.9       # borne : satiété → énergie (jamais 100 %)
+# --- v41.2 : LE PROFIL NUTRITIONNEL À TROIS AXES ---
+# Une ressource n'est plus un type opaque qui remplit « sa » jauge : c'est un profil de
+# TROIS grandeurs indépendantes, plus le coût de sa propre digestion. C'est ce qui rend
+# possible un aliment qui hydrate un peu mais coûte presque autant à digérer qu'il ne
+# rapporte, et une eau qui hydrate à 100 % sans apporter la moindre calorie.
+#
+#   satiete   : ce que ça remplit dans l'estomac (le STOCK)
+#   hydrique  : ce que ça apporte en eau
+#   energie   : la valeur énergétique BRUTE du stock apporté
+#   digestion : ce que digérer cette ressource COÛTE, en fraction de son propre apport
+#               énergétique. Une valeur proche de 1,0 = aliment quasi nul en net.
+#
+# ⚠️ Rien ici n'est « expliqué » au cerveau : il n'existe aucune table `pomme = bon`.
+# L'agent ne perçoit que les conséquences sur ses jauges, et la valence de chaque type est
+# APPRISE par `empreinte_types` (v39.0). Ce tableau décrit le MONDE, pas la connaissance
+# qu'en a l'agent — même discipline que `DetecteurRessourcesBiologiques`.
+PROFILS_NUTRITIONNELS = {
+    # L'eau : hydrate totalement, zéro calorie, digestion gratuite.
+    "WATER": {"satiete": 0.0, "hydrique": 1.0, "energie": 0.0, "digestion": 0.0},
+    # Un fruit : peu d'eau, un apport énergétique réel mais coûteux à digérer.
+    "FOOD":  {"satiete": 1.0, "hydrique": 0.03, "energie": 1.0, "digestion": 0.15},
+    "STIM":  {"satiete": 0.0, "hydrique": 0.0, "energie": 0.0, "digestion": 0.0},
+}
+
 COFACTEUR_HYDRIQUE_MIN = 0.6     # borne : une soif TOTALE laisse encore 60 % du débit
                                  # digestif. Sans ce plancher, le bilan énergétique passe
                                  # négatif sous 50 % d'hydratation quoi que l'agent mange
@@ -4044,8 +4095,25 @@ PLASTICITE_DERIVE_METABOLIQUE = 0.02   # borne : vitesse d'adaptation par nuit
 RAIDEUR_RAPPEL_DERIVE = 0.05           # borne : force du rappel élastique vers la norme
 ELASTICITE_DERIVE = 0.35               # borne : échelle au-delà de laquelle le mur monte
 DERIVE_MAX_ABSOLUE = 1.0               # borne dure de sécurité (exp(1) ≈ 2,7× la norme)
-NB_SOURCES_FOOD = 2
-NB_SOURCES_WATER = 2
+# v41.2 — LA DENSITÉ DE RESSOURCES EST DÉRIVÉE DU BESOIN, plus posée à 2.
+#
+# Mesuré sur 71 jours d'un cerveau neuf : l'agent trouvait 1,92 nourriture/jour pour un
+# besoin de 2,5, et ce taux n'augmentait PAS avec l'apprentissage — l'énergie descendait
+# (0,172 → 0,079). Avec seulement 2 sources par carte, il aurait fallu qu'il les trouve
+# TOUTES, à CHAQUE épisode, sans jamais échouer. Le déficit était structurel, pas
+# comportemental : aucune politique n'aurait pu le combler.
+#
+# ⚠️ Le correctif porte sur le MONDE (la trouvabilité), jamais sur le barème métabolique.
+# Baisser `REPAS_PAR_JOURNEE` jusqu'à ce que l'agent s'en sorte aurait rendu la mécanique
+# « verte » en supprimant la pression même qui doit le pousser à chercher sa nourriture —
+# on aurait mesuré un agent confortable qui n'a rien appris. C'est le seul levier qui ait
+# jamais fonctionné sur ce projet (fil n°1 : « ce qui rend possible fait progresser »).
+#
+# La marge couvre l'échec de recherche : trouver la moitié des sources d'une carte doit
+# suffire à survivre, tout en laissant l'agent qui cherche mieux vivre mieux.
+MARGE_TROUVABILITE = 2.0
+NB_SOURCES_FOOD = max(2, int(round(REPAS_PAR_JOURNEE * MARGE_TROUVABILITE)))
+NB_SOURCES_WATER = NB_SOURCES_FOOD
 POIDS_CHOC_RESSOURCE_BIO = 0.25  # ancrage mémoriel à la consommation d'une ressource
 # COUT_ACTION_METABOLIQUE (constante fixe v18.0) supprimé en v19.0 : le coût énergétique
 # est désormais calculé dynamiquement par moteur_bio.calculer_effort_metabolique() à
