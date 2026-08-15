@@ -4598,36 +4598,39 @@ MIN_EPISODES_PROMOTION = 10  # sous ce nombre, le taux n'est pas encore signific
 # jours : c'est la même doctrine que le rêve adaptatif (le pourcentage rejoué émerge de la
 # plasticité × richesse, jamais d'une constante).
 #
-#     maîtrise <= SEUIL_DEBUT_SEVRAGE (60 %)  →  guidage PLEIN   (facteur 1.0)
+#     maîtrise = 0                            →  guidage PLEIN   (facteur 1.0)
 #     maîtrise >= SEUIL_FIN_SEVRAGE   (90 %)  →  guidage NUL     (facteur 0.0)
 #     entre les deux                          →  décroissance linéaire
 #
 # Pourquoi 90 % et pas 100 % : à 100 %, le guidage ne s'éteindrait jamais tout à fait — or
-# le but est bien l'autonomie complète. Pourquoi 60 % : c'est déjà `TAUX_PROMOTION`, donc
-# le sevrage commence exactement quand l'agent devient promouvable. Les deux valeurs sont
-# des BORNES ; le facteur réel entre elles est dérivé, jamais écrit en dur.
+# le but est bien l'autonomie complète. C'est une BORNE ; le facteur réel est dérivé.
+#
+# ⚠️ v41.3 — LE SEVRAGE COMMENCE AU PREMIER POINT DE MAÎTRISE. Il démarrait auparavant à
+# `SEUIL_DEBUT_SEVRAGE = 0.60`, choisi parce que c'était `TAUX_PROMOTION`. L'intention
+# était juste — « le sevrage commence quand l'agent devient promouvable » — mais l'effet
+# était l'inverse : à 60 % l'autonomie valait encore exactement 0, donc la maturité
+# (un PRODUIT) aussi, donc **la promotion était mathématiquement impossible**. Mesuré sur
+# 300 jours : aide pleine 300 jours sur 300, maîtrise à 60 % deux fois, zéro promotion.
 #
 # ⚠️ INVARIANT : quand la maîtrise n'est pas encore mesurable (< MIN_EPISODES_PROMOTION),
 # le guidage reste PLEIN. Un agent qui débarque sur un niveau neuf est un débutant, pas un
 # expert — lui couper l'aide faute de données serait exactement l'erreur du Mode Libre.
-SEUIL_DEBUT_SEVRAGE = 0.60   # borne basse : en dessous, aide maximale
 SEUIL_FIN_SEVRAGE = 0.90     # borne haute : au-dessus, plus aucune aide
 
 # --- v40.2 : LE SEUIL DE MATURITÉ, DÉRIVÉ (voir `_maturite_niveau`) ---
 #
-# Il n'est PAS posé. Il vaut la maturité d'un agent placé exactement à MI-COURSE du
-# sevrage : il réussit `_TAUX_MI_SEVRAGE` du temps ET on lui a déjà retiré la moitié de son
-# aide, et il continue de réussir sans elle.
+# Il n'est PAS posé. Il vaut la maturité d'un agent qui réussit `TAUX_PROMOTION` du temps
+# ET qui, à ce niveau de compétence, a déjà été sevré à proportion — et continue de
+# réussir sans l'aide retirée.
 #
-# Pourquoi mi-course et pas le taux de promotion (0.60) : à 0.60 le sevrage n'a pas encore
-# commencé (SEUIL_DEBUT_SEVRAGE = 0.60), donc l'autonomie y est nulle par construction et
-# la maturité aussi. Le premier point où les trois facteurs sont simultanément non nuls est
-# le milieu de la rampe — c'est une propriété de la courbe de sevrage, pas un choix.
-_TAUX_MI_SEVRAGE = (SEUIL_DEBUT_SEVRAGE + SEUIL_FIN_SEVRAGE) / 2.0
-_AUTONOMIE_MI_SEVRAGE = ((_TAUX_MI_SEVRAGE - SEUIL_DEBUT_SEVRAGE)
-                         / (SEUIL_FIN_SEVRAGE - SEUIL_DEBUT_SEVRAGE))
-SEUIL_MATURITE = _TAUX_MI_SEVRAGE * _AUTONOMIE_MI_SEVRAGE
-                            # ≈ 0,375 — BORNE, jamais une cible. Elle ne fixe aucun
+# v41.3 — il dérive désormais de `TAUX_PROMOTION` directement, ce que l'ancienne courbe
+# interdisait : à 0,60 le sevrage n'avait pas commencé, l'autonomie y était nulle par
+# construction, et le seuil devait donc être calculé à mi-rampe (0,375) — un point sans
+# signification propre. Avec un sevrage proportionnel dès le premier point, le taux de
+# promotion redevient calculable, et les deux constantes cessent de se neutraliser.
+_AUTONOMIE_A_PROMOTION = min(1.0, TAUX_PROMOTION / SEUIL_FIN_SEVRAGE)
+SEUIL_MATURITE = TAUX_PROMOTION * _AUTONOMIE_A_PROMOTION
+                            # ≈ 0,400 — BORNE, jamais une cible. Elle ne fixe aucun
                             # comportement : elle dit « à ce point, rester est du
                             # surplace ». Les grandeurs dont elle dérive préexistent
                             # toutes.
@@ -4696,10 +4699,32 @@ def facteur_guidage(etat) -> float:
     # deux saturations d'une rampe linéaire : un `clip` les absorbe toutes. Le `None`
     # (« pas encore mesurable ») reste une garde technique, pas un régime cognitif — il
     # distingue « aucune donnée » de « mesuré à zéro », ce qu'aucune formule ne peut faire.
+    # v41.3 — LE SEVRAGE COMMENCE AU PREMIER POINT DE MAÎTRISE, plus à 60 %.
+    #
+    # Défaut mesuré sur un run de 300 jours : la promotion était MATHÉMATIQUEMENT
+    # IMPOSSIBLE. `maturite = régularité × consolidation × autonomie` est un produit, et
+    # `autonomie = 1 − guidage` valait **0 sur les 300 jours** — donc le produit aussi.
+    # Cause : `SEUIL_DEBUT_SEVRAGE = 0.60` était le point où le sevrage *commençait*, et
+    # `TAUX_PROMOTION = 0.60` celui où la promotion était *exigée*. À 60 % de maîtrise,
+    # l'autonomie valait donc encore exactement zéro ; il fallait ~75 % pour qu'elle
+    # décolle, et l'aide est restée « pleine » 300 jours sur 300. L'agent a touché 60 %
+    # deux fois sans jamais pouvoir être promu.
+    #
+    # Le sevrage est désormais **inversement proportionnel à la maîtrise** (formulation
+    # utilisateur) : chaque point gagné retire immédiatement de l'aide, au lieu d'attendre
+    # un palier. `SEUIL_FIN_SEVRAGE` reste la borne où l'aide s'annule.
+    #
+    # ⚠️ Le sens de l'inversion compte. C'est le GUIDAGE qui est inverse de la maîtrise,
+    # donc l'AUTONOMIE qui lui est proportionnelle — l'inverse rendrait l'agent d'autant
+    # plus « autonome » qu'il échoue, et promouvrait les cerveaux les moins compétents.
+    #
+    # Effet sur la maturité (à consolidation pleine) : 0,044 à 20 % de maîtrise, 0,178 à
+    # 40 %, **0,400 à 60 %** — soit le franchissement du seuil de promotion (0,38) à
+    # exactement 60 % de maîtrise, la valeur historique de `TAUX_PROMOTION`. Les deux
+    # constantes redeviennent cohérentes au lieu de se neutraliser.
     taux = _taux_maitrise_niveau(etat)
-    taux_effectif = SEUIL_DEBUT_SEVRAGE if taux is None else taux
-    base = 1.0 - max(0.0, min(1.0, (taux_effectif - SEUIL_DEBUT_SEVRAGE)
-                                   / (SEUIL_FIN_SEVRAGE - SEUIL_DEBUT_SEVRAGE)))
+    taux_effectif = 0.0 if taux is None else taux
+    base = 1.0 - max(0.0, min(1.0, taux_effectif / SEUIL_FIN_SEVRAGE))
 
     # --- Le filet : renfort progressif après une longue stagnation ---
     # `jours_stagnation_niveau` compte les jours consécutifs SANS victoire sur le niveau
