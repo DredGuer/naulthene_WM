@@ -87,6 +87,7 @@ autorité sur l'état courant.**
 | **[AVIS_ET_PROPOSITIONS_aout_2026.md](ameliorations/AVIS_ET_PROPOSITIONS_aout_2026.md)** | **P1 → P17** : les pistes, sous la règle « rien en dur si ça peut émerger » + la grille développementale + **la gaussienne d'apprentissage (P17)** |
 | **[CORRECTIFS_v41_ligne_de_flottaison.md](ameliorations/CORRECTIFS_v41_ligne_de_flottaison.md)** | **LIVRÉ (C1+C2)** — la moyenne sur 400 ticks noyait la victoire sous le coût métabolique. Le vécu se compte désormais en saillances au-dessus du coût d'exister : **C2 passe de mort (2000 nuits/2000) à dominant**. Contient aussi le benchmark « C1 pur » (§8) |
 | **[CHANTIER_v41.2_metabolisme_deux_etages.md](ameliorations/CHANTIER_v41.2_metabolisme_deux_etages.md)** | **PROPOSÉ** — l'agent vit **400 ticks sur 400 en zone critique** : l'échelle temporelle est fausse d'un facteur ~35. Deux étages (satiété *stock* / énergie *flux*), mort par insolvabilité **sans aucun `if`**, et des bornes qu'un métabolisme peut déplacer à coût **exponentiel** |
+| **[CHANTIER_v41.2_energie_modulatrice.md](ameliorations/CHANTIER_v41.2_energie_modulatrice.md)** | **EN COURS** — l'énergie module C1, C2, le déficit et la plasticité via `vigueur = énergie ** κ`. Contient les **4 erreurs de diagnostic** du chantier (dont « la carte était saturée : 13 ressources demandées sur 8 cases libres ») |
 | [CONCEPTION_v34_fatigue_mortalite.md](ameliorations/CONCEPTION_v34_fatigue_mortalite.md) | Fatigue, mortalité, les 4 gestes du parent — **prérequis de lecture du v41.2** |
 
 ### E. Opérationnel

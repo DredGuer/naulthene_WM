@@ -4,6 +4,128 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.2-fix5→fix8-experimental] - 2026-08-15 — Manger devient un acte, et le corps fait des réserves
+
+### « C'est le corps qui pousse à manger pour vivre »
+
+| Type | Details |
+|------|---------|
+| **Commits** | `0609beb`, `9c75d84`, `a149d53`, `32402ea`, `00298dc` |
+| **Catégorie** | feat + fix (expérimental) |
+| **Impact** | Fonctionnel — **`noyau.py` uniquement** |
+| **Branche** | `feat/v41-ligne-flottaison` |
+
+### fix5 — Manger était un effet de bord du déplacement
+
+Marcher sur une case chargée consommait la ressource **automatiquement**. Un agent rassasié
+qui traversait une pomme l'avalait et la gaspillait ; un affamé se nourrissait sans l'avoir
+voulu.
+
+> ⚠️ **Conséquence rétroactive** : la « récolte » mesurée dans tout ce chantier n'était pas
+> un comportement de recherche mais une **conséquence mécanique des déplacements**. La
+> lecture des chiffres de fourrage antérieurs est invalidée.
+
+La consommation passe désormais par `ACTION_CONSOMMER` (le `pickup` de MiniGrid), l'action
+la plus coûteuse du barème (0,8 contre 0,2 pour tourner). Aucun `if faim then manger` : le
+geste reste une sortie de la tête motrice, apprise par le gradient.
+
+### fix5bis — Le rythme métabolique est dérivé, plus posé
+
+`REPAS_PAR_JOURNEE = 2.5` et `PRISES_HYDRIQUES = 4.0` avaient été posés puis recalibrés
+**à la main trois fois**. Désormais :
+
+```
+budget_min   = cases_libres(carte la plus PAUVRE) × FRACTION_CASES_MAX
+opportunités = budget_min × épisodes_par_journée
+besoin/axe   = (opportunités / 2) / MARGE_SUBSISTANCE
+```
+
+⚠️ **Le sens de la dérivation compte.** Faire dépendre le besoin de la carte *courante*
+donnerait un corps qui change de nature en changeant de pièce (`Empty-8x8` : 24 repas/jour).
+Le métabolisme est une propriété de l'**espèce** — c'est donc la carte la plus pauvre qui
+fixe le rythme.
+
+> **Erreur consignée dans le code** : une première dérivation répartissait le besoin selon
+> `RATIO_SOIF_SUR_FAIM`. Résultat : marge food ×2,86 mais **marge eau ×0,95** — le défaut
+> corrigé la veille, reproduit par une *formule* au lieu d'un chiffre posé. **Une dérivation
+> n'est pas une garantie de justesse.**
+
+### fix6 — Le geste visait la mauvaise case
+
+`pickup` agit sur la case **devant** l'agent ; le détecteur testait celle **sous ses pieds**.
+Les deux ne coïncident jamais. Pire : MiniGrid retirait quand même la Ball pour la mettre en
+`carrying`, donc la ressource disparaissait **sans nourrir ni repousser**.
+
+| | avant | après |
+|---|---|---|
+| Efficacité du geste | **2,9 %** | **14,1 %** |
+| Récolte | 2/jour | **10/jour** |
+
+`carrying` est vidé après ingestion : sans quoi la main reste pleine et **tout `pickup`
+suivant échoue** — un agent ayant mangé une fois ne pourrait plus jamais se nourrir.
+
+### fix7 — Le soulagement n'était pas crédité au geste
+
+`r_bio` était calculé (l. 6400) **avant** la consommation (l. 6449) et consommé dans la
+récompense (l. 6551). Le soulagement tombait donc **au tick suivant**, sur une action sans
+rapport : l'agent ne pouvait pas apprendre « ce geste-ci m'a soulagé ».
+
+**La boucle corporelle est vérifiée** — le contraste existait déjà :
+
+| État | Manger rapporte |
+|---|---|
+| **Affamé** (S=0,05 E=0,05) | **+0,7945** |
+| Moyen | +0,1267 |
+| **Rassasié** (S=0,95 E=0,95) | **−0,0227** |
+
+Manger repu est **puni** (gain nul, geste coûteux). Contraste **15×**. Aucune règle
+n'interdit de manger sans faim — le corps s'en charge.
+
+### fix8 — La réserve (la graisse)
+
+Le surplus au-dessus du plafond était **perdu** : un jour faste ne préparait pas un jour
+maigre. Désormais il devient réserve, remobilisée en cas de manque. Deux rendements < 1
+(stockage 0,8, mobilisation 0,9) : la réserve est utile sans être gratuite.
+
+| Prévoyance | Réserve | Survie au jeûne |
+|---|---|---|
+| 0 jour faste | 0,00 | 433 ticks (1,1 j) |
+| 3 jours fastes | 1,19 | 672 ticks (1,7 j) |
+| 6 jours fastes | 2,29 | **806 ticks (2,0 j)** |
+
+**Un agent prévoyant vit presque deux fois plus longtemps**, sans qu'aucune règle ne le
+décrète. C'est aussi ce qui fait que deux agents mangeant autant, à des rythmes différents,
+n'ont pas le même destin.
+
+### ⚠️ Ce qui ne marche pas — l'agent n'apprend pas à viser
+
+Run de 65 jours, cerveau neuf :
+
+| | 20 premiers j | 20 derniers j |
+|---|---|---|
+| Gestes joués | 58/jour (**17 % des ticks**) | 58/jour |
+| Efficacité | 12,4 % | **10,6 %** |
+
+**Parfaitement plat.** Cause arithmétique : l'espérance du geste (**+0,033**) est du même
+ordre que le bruit du tick (curiosité 0,01–0,05, micro-récompenses 0,04). Et **rater ne coûte
+presque rien** → mitrailler est rationnel. Le problème n'est pas que le geste coûte trop peu,
+c'est que **viser ne rapporte pas assez plus que mitrailler**.
+
+> Le coût nominal de 0,8 est **dilué** : `METABOLISME_BASAL_PART = 0,65` fait que l'écart
+> entre l'action la moins chère (0,1) et la plus chère (0,8) ne représente que **24 %** de
+> variation sur la dépense réelle du tick.
+
+### 📈 Signal à confirmer
+
+À jour égal contre le témoin : **83 victoires contre 26** (j61), récolte **7,4/jour** contre
+2,0, et **accord C1/C2 à 80,1 %** au jalon 101 — contre **0,5 %** sur toute la campagne v41
+et **0 %** en v37.
+
+⚠️ **Une seule graine.** La campagne v41 a montré qu'une graine peut réussir seule par
+loterie natale. À confirmer sur ≥ 10 graines avant toute conclusion.
+
+---
+
 ## [v41.2-experimental] - 2026-08-15 — Le métabolisme à deux étages (EN COURS)
 
 ### « L'énergie module tout — et la faim s'indexe sur elle, pas seulement sur le ventre »

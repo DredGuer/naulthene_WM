@@ -275,6 +275,54 @@ The memory works the same way: the brain never learns that "key" or "lava" exist
 **opaque**, derived from the environment API, and a location's value is *learned* from
 accumulated dopamine shocks — never declared.
 
+### A body that gets hungry — the two-stage metabolism (v41.2, experimental)
+
+**Satiety is a *stock*; energy is the *flow*.** Only energy is spent to act; food and water
+merely replenish it, through a digestion whose throughput is capped. This decoupling makes two
+states representable that a single gauge cannot: a full stomach with low energy, and hunger with
+energy still to spare.
+
+Death follows from **insolvency**, never from a threshold test:
+
+```python
+mobilisable_reserve = satiety × conversion_yield
+```
+
+Resting lowers expenditure but **creates no matter**. An empty stomach means nothing to mobilise,
+so energy keeps falling whatever the agent does. There is no `if resting and starving then die`
+anywhere — measured: resting without eating dies at tick 411, full activity at tick 319. **Rest
+delays death without preventing it.**
+
+Energy modulates the whole decision path through one derived quantity, `vigour = energy ** κ` —
+a power, not a threshold, so degradation is continuous but *accelerating*:
+
+| Energy | Vigour | C1's voice | C2's voice |
+|---|---|---|---|
+| 1.00 | 1.000 | 100 % | 100 % |
+| **0.50** | **0.250** | **25 %** | **6 %** |
+| 0.00 | **0.150** (floor) | 15 % | 2 % |
+
+**Deliberation dies before reflex does** — an exhausted organism stops simulating the future long
+before it stops walking. The floor is not decorative: without it, vigour → 0 zeroes *both* voices,
+all logits become null and the action turns **random**. A dying agent must stay coherent.
+
+Eating is an **act**, not a side effect of walking: it costs the most expensive action in the
+budget, and the relief it brings is credited to the gesture that produced it.
+
+| State | Eating yields |
+|---|---|
+| **Starving** | **+0.7945** |
+| Moderate | +0.1267 |
+| **Sated** | **−0.0227** |
+
+Eating when full is *punished* — the gain is nil and the gesture costs. No rule forbids it; the
+body handles it. Surplus above the ceiling becomes **fat**, remobilised in lean times: an agent
+that stocked for 6 good days survives a fast **twice as long** as one living day to day.
+
+⚠️ **Not yet working**: the agent plays the eating gesture 58 times a day (17 % of its ticks) at
+~12 % accuracy, flat over 65 days. Its expected value (**+0.033**) sits at the same order as the
+tick's own noise — and missing costs almost nothing, so spraying the gesture is *rational*.
+
 ### Day/night synaptic plasticity
 
 Each layer holds a frozen `base_weight` and a daytime `annexe_weight`. Every night: consolidate,

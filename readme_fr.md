@@ -296,6 +296,68 @@ Pour un historique complet commit par commit, consultez [docs/fonctionnement/CHA
 > document contient aussi les **formules et constantes de référence** du système, et la trace des
 > erreurs de diagnostic commises puis corrigées.
 
+### 🍎 Nouveautés v41.2 (expérimental) — Le Métabolisme à Deux Étages (2026-08-15)
+
+**Un corps qui a faim.** La satiété devient un *stock*, l'énergie un *flux* — seule l'énergie
+est dépensée pour agir ; nourriture et eau ne font que la ravitailler, à travers une digestion
+au débit borné. Ce découplage rend représentables deux états qu'une jauge unique ne peut pas
+porter : l'estomac plein avec l'énergie basse, et la faim avec de l'énergie encore disponible.
+
+**La mort découle d'une insolvabilité, jamais d'un test de seuil :**
+
+```python
+reserve_mobilisable = satiete × rendement_conversion
+```
+
+Se reposer abaisse la dépense mais **ne crée aucune matière**. Un estomac vide n'a rien à
+mobiliser : l'énergie continue de descendre quoi que fasse l'agent. Il n'existe nulle part de
+`if repos et famine alors mourir` — mesuré : le repos sans manger tue au tick 411, l'activité
+maximale au tick 319. **Le repos retarde la mort sans la prévenir.**
+
+**L'énergie module tout le chemin de décision** via une seule grandeur dérivée,
+`vigueur = énergie ** κ` — une puissance, pas un seuil, donc une dégradation continue mais
+*accélérante* :
+
+| Énergie | Vigueur | Voix de C1 | Voix de C2 |
+|---|---|---|---|
+| 1,00 | 1,000 | 100 % | 100 % |
+| **0,50** | **0,250** | **25 %** | **6 %** |
+| 0,00 | **0,150** (plancher) | 15 % | 2 % |
+
+**La délibération s'éteint avant le réflexe** — un organisme épuisé cesse de simuler l'avenir
+bien avant de cesser de marcher. Le plancher n'est pas décoratif : sans lui, `vigueur → 0`
+annule les **deux** voix, tous les logits deviennent nuls et l'action devient **aléatoire**. Un
+agent mourant doit rester cohérent.
+
+**Manger est un ACTE**, plus un effet de bord du déplacement : le geste coûte l'action la plus
+chère du barème, et le soulagement qu'il procure est crédité au geste qui l'a produit.
+
+| État | Manger rapporte |
+|---|---|
+| **Affamé** | **+0,7945** |
+| Moyen | +0,1267 |
+| **Rassasié** | **−0,0227** |
+
+Manger repu est *puni* — le gain est nul et le geste coûte. Aucune règle ne l'interdit : le
+corps s'en charge. Le surplus au-dessus du plafond devient de la **graisse**, remobilisée en
+cas de manque : un agent ayant stocké 6 jours fastes survit à un jeûne **deux fois plus
+longtemps** qu'un agent au jour le jour.
+
+**Les bornes ne sont pas des limites** : `paramètre = norme × exp(dérive)`, avec un rappel
+élastique en `exp(|dérive|)`. Un métabolisme peut s'optimiser (+24 % de rendement dans un monde
+dur, mesuré sur 1200 nuits) mais s'en écarter coûte exponentiellement cher — la borne est une
+**pente qui devient verticale**, pas une barrière.
+
+⚠️ **Ce qui ne marche pas encore** : l'agent joue le geste de manger 58 fois par jour (17 % de
+ses ticks) avec ~12 % de réussite, **parfaitement plat sur 65 jours**. Son espérance (**+0,033**)
+est du même ordre que le bruit du tick, et rater ne coûte presque rien — *mitrailler est
+rationnel*.
+
+Chantiers complets : [CHANTIER_v41.2_metabolisme_deux_etages.md](docs/ameliorations/CHANTIER_v41.2_metabolisme_deux_etages.md)
+et [CHANTIER_v41.2_energie_modulatrice.md](docs/ameliorations/CHANTIER_v41.2_energie_modulatrice.md).
+
+---
+
 ### 🔧 Nouveautés v37.1-fix1 (expérimental) — Le Cliquet de la Référence (2026-08-08)
 
 Le run de 600 jours de la v37.1 a révélé un bug dans le mécanisme même que la v37.1
