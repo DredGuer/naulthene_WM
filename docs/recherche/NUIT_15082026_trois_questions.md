@@ -444,3 +444,38 @@ mesurée à 90-98 %. Calcul du facteur qui égaliserait les deux signaux :
 > 💡 **La deuxième option est la seule qui ne contredise aucun principe du projet** : elle
 > ne touche ni à l'amplitude du corps ni au monde, seulement à la **fréquence** de versement
 > — qui est la vraie cause du 300:1. Elle n'a jamais été testée.
+
+---
+
+## Campagne `v41.8-fix1` — point à mi-parcours (j478)
+
+### Le fix de patience fonctionne
+
+Distribution des patiences appliquées sur g44 : **366 jours à exactement 100** (le budget
+entier d'`Empty-5x5`), 71 jours à 144 (`Empty-Random-6x6` en incursion P17), et des
+valeurs jusqu'à 306 sur les cartes plus grandes. **La patience suit désormais le budget de
+la carte jouée**, ce qu'elle ne faisait pas avant.
+
+| g44 | v41.6 | v41.8 (bug) | **v41.8-fix1** |
+|---|---|---|---|
+| Abandons lucides (à j478) | — | 161 *(sur 1000 j)* | **40** |
+
+⚠️ *Une moyenne brute des patiences donne 59 ticks, plus basse qu'attendu : elle est tirée
+par les journées sans ligne de patience (485 lignes vides sur g44). Ce n'est pas un
+symptôme — la distribution des valeurs réelles est correcte.*
+
+### 🎯 Un résultat inédit : g22 promue au jour 23
+
+| Graine | v41.6 | v41.7+v41.8 | **fix1 (à j478)** |
+|---|---|---|---|
+| **g22** | jamais | jamais | **j23, j128** → niveau 3 |
+| g55 | j300, j361 | j869, j989 | **j336, j347** |
+| g44 | j243, j332 | j534, j587 | *(pas encore)* |
+
+**g22 n'avait jamais franchi un seul palier dans aucune campagne.** Sa promotion au
+**jour 23** est la plus précoce jamais observée sur ce projet — le précédent record était
+le jour 74 (v41.3, graine 42).
+
+⚠️ **À ne pas surinterpréter** : c'est une graine, à mi-parcours, et le projet a déjà été
+trompé exactement ainsi (g22 v41, niveau 4 en solo, invalidée par la population). Le bilan
+final départagera.
