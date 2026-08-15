@@ -243,3 +243,46 @@ Deux lectures possibles, non tranchées : soit le calibrage reste trop dur, soit
 **normal pour un débutant** et l'apprentissage doit rattraper — ce que le run de 300 jours
 doit dire. **Ne pas recalibrer avant d'avoir cette réponse** : ce serait supprimer la
 pression qui doit précisément pousser l'agent à chercher sa nourriture.
+
+### 6.7 ⚠️ Le run de 300 jours tranche : l'apprentissage ne compense PAS
+
+Mesuré sur les 71 premiers jours d'un cerveau neuf :
+
+| Fenêtre | énergie moy. | vigueur moy. | ticks basse énergie |
+|---|---|---|---|
+| j1–20 | 0,172 | 0,197 | 326/400 |
+| j21–40 | **0,270** | 0,270 | 292/400 |
+| j41–60 | 0,125 | 0,179 | 360/400 |
+| **derniers 20** | **0,079** | **0,155** | **383/400** |
+
+**La tendance est descendante, pas ascendante.** Seulement **10 % des jours** ont une
+énergie saine (> 0,35).
+
+La cause est directe — le taux de fourrage réel :
+
+| Fenêtre | nourriture trouvée / jour |
+|---|---|
+| j1–20 | 1,85 |
+| j21–40 | 2,55 |
+| derniers 20 | **1,35** |
+| **moyenne** | **1,92** (il en faut **2,5**) |
+
+**L'agent ne cherche pas sa nourriture, et ne l'apprend pas en 71 jours.** Le taux
+n'augmente pas ; il fluctue autour de 1,9. La question §6.6 est donc tranchée : ce n'est
+pas un débutant qui rattrape, c'est un déficit structurel.
+
+**Deux corrections possibles — et une seule est honnête :**
+
+| Option | Ce qu'elle fait | Verdict |
+|---|---|---|
+| Baisser `REPAS_PAR_JOURNEE` vers 1,9 | cale le métabolisme sur ce que l'agent trouve **aujourd'hui** | ⚠️ **supprime la pression** qui doit le pousser à chercher. On mesurerait alors un agent confortable qui n'a rien appris |
+| Rendre les ressources plus **trouvables** (densité, odorat utile) | agit sur le **MONDE**, pas sur le barème | ✅ cohérent avec le seul levier qui ait jamais marché sur ce projet |
+
+⚠️ **Ne pas trancher seul.** Baisser le barème rendrait la mécanique « verte » sans rien
+démontrer — c'est exactement le mode d'échec que ce chantier s'était engagé à éviter
+(§5 : *« ce qui ne serait PAS une preuve »*). La décision appartient à l'utilisateur.
+
+**Ce qui est acquis malgré tout** : l'agent ne meurt plus (les trois premières versions le
+tuaient), il gagne (26 victoires en 65 jours), l'énergie **alterne** entre 0,86 et 0,03
+selon les jours au lieu de s'effondrer définitivement, et `okay/danger` a retrouvé de la
+variance (1,00/0,00 → 9,90/0,64) contre 676 saturé et identique sur 9 graines en v41.
