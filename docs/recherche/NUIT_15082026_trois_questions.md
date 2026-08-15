@@ -302,3 +302,47 @@ tranche entre les deux** : si la valence devient positive et que le déficit se 
 seconde lecture est la bonne et aucun réglage d'amplitude n'est nécessaire.
 
 Aucune modification de `r_bio` n'a donc été faite cette nuit — mesurer d'abord.
+
+---
+
+## ⚠️ Contrôle à mi-campagne (j475) — le correctif v41.7 ne suffit pas
+
+Le §Q3-suite laissait deux lectures ouvertes et annonçait que la campagne trancherait.
+**Point d'étape à mi-parcours, et il est défavorable au correctif.**
+
+### Ce qui a changé
+
+| | Avant (v41.6) | **Après (v41.7)** |
+|---|---|---|
+| Valence `WATER` | **+0,000** figé | **+0,052 → +0,134** (elle vit) |
+
+Le canal fonctionne : la valence est apprise, et `rappel marquant` est actif **98 à 100 %
+des ticks** — l'information atteint bien le vecteur bio.
+
+### Ce qui n'a PAS changé
+
+| Mesure | v41.6 | **v41.7** | Marcheur aléatoire |
+|---|---|---|---|
+| Nourriture / jour | 4,0 | **4,0** | 4,4 |
+| Eau / jour | 4,0 | **4,0** | 3,8 |
+| Efficacité du geste | ~10 % | **~10 %** | — |
+| `r_bio` moyen (début → fin) | −2,26 → −2,05 | **−2,07 → −1,99** | — |
+
+> 🔴 **La valence est désormais apprise, et le comportement n'a pas bougé d'un pouce.**
+> L'agent consomme toujours exactement comme un marcheur aléatoire, et le déficit
+> métabolique reste stationnaire.
+
+### Ce que cela apprend
+
+Le correctif v41.7 était **nécessaire** (une valence figée à zéro sur 4004 expériences est
+un bug, quoi qu'il arrive) mais **pas suffisant**. Savoir que la nourriture est bonne ne
+suffit pas à aller la chercher.
+
+Cela **renforce** la lecture « le métabolisme est trop bruyant » plutôt que « il est
+insoluble » : rendre la nourriture apprenable n'a pas résorbé le déficit. À 90-98 % du
+signal, `r_bio` reste vraisemblablement dominant au point que l'information de valence,
+bien que présente, ne pèse rien dans la décision.
+
+⚠️ **Aucune conclusion ferme à ce stade** : c'est un point d'étape à j475 sur 1000, et les
+niveaux atteints ne sont pas encore comparables (g44/g55 étaient au niveau 3 en v41.6, donc
+mesurés sur une carte plus difficile). Le bilan final départagera.
