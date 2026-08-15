@@ -248,3 +248,57 @@ Le débutant reçoit tout, l'expert ~45 %. Même doctrine que le sevrage de l'ai
 Et **4 abandons lucides** seulement : la patience réduite ne tronque pas d'épisodes utiles.
 
 ⚠️ 11 jours ne prouvent rien — c'est un contrôle de non-régression, pas un résultat.
+
+---
+
+## Q3-suite — « Qu'apprend-il à la place ? » : le métabolique noie la victoire
+
+La question laissée ouverte au §Q3 était : *si l'agent apprend massivement (cosinus 0,24)
+mais ne s'améliore pas, qu'apprend-il ?* La récompense somme huit termes ; **personne n'en
+avait jamais mesuré le poids relatif**.
+
+Mesure de l'amplitude cumulée sur 400 ticks (ce qui compte pour le gradient est
+l'amplitude, pas le signe), 20 épisodes par niveau :
+
+| Niveau | `r_bio` (métabolique) | `recompense_env` (**la victoire**) |
+|---|---|---|
+| `Empty-5x5` | 5,36 — **90,0 %** | 0,60 — **10,0 %** |
+| `Empty-Random-6x6` | 5,88 — **87,8 %** | 0,82 — 12,2 % |
+| `Empty-8x8` | 4,92 — **98,5 %** | 0,08 — **1,5 %** |
+
+> 🔴 **Le signal métabolique représente 88 à 98,5 % de ce que l'agent reçoit.** La victoire
+> — le seul objectif du cursus — pèse **1,5 %** sur le palier où deux graines stagnent.
+>
+> La raison est structurelle : `r_bio` est versé **à chaque tick** (400 fois par journée),
+> la victoire **une fois par épisode** (1,4 fois par 400 ticks au mieux, 0,1 sur
+> `Empty-8x8`). Même à amplitude unitaire comparable, le rapport de fréquence est de
+> **~300:1**.
+
+### Ce que cela résout
+
+Les trois mesures de la nuit forment maintenant une chaîne cohérente :
+
+1. L'agent **apprend massivement** (poids déplacés de 100 % de leur norme).
+2. Ce qu'il apprend est **à 90-98 % du métabolisme**, pas la tâche.
+3. Et jusqu'à cette nuit, il ne pouvait **même pas** apprendre le métabolisme utilement,
+   la valence de la nourriture étant figée à zéro (v41.7).
+
+> **Il passait son temps à apprendre un déficit qu'il n'avait aucun moyen de résoudre.**
+
+C'est la formulation mécanique de ce que le §2.6 du chantier v41.2 avait pressenti sans le
+mesurer : *« un agent en famine permanente n'a rien à planifier, il n'a qu'une urgence »*.
+
+### ⚠️ Ce que cela ne dit PAS
+
+Ce n'est **pas** une preuve qu'il faut baisser `r_bio`. Deux lectures restent ouvertes :
+
+| Lecture | Conséquence |
+|---|---|
+| Le métabolisme est **trop bruyant** | il faudrait réduire son amplitude par tick |
+| Le métabolisme est **insoluble** | il faudrait le rendre satisfiable, et il cesserait de crier |
+
+La v41.7 vient précisément de rendre la nourriture apprenable. **La campagne en cours
+tranche entre les deux** : si la valence devient positive et que le déficit se résorbe, la
+seconde lecture est la bonne et aucun réglage d'amplitude n'est nécessaire.
+
+Aucune modification de `r_bio` n'a donc été faite cette nuit — mesurer d'abord.
