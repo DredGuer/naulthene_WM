@@ -6997,26 +6997,59 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
         etat.food_consommes_jour += 1
         etat.chronometre_jalons.signaler_consommation_post_cle()  # v33.0-etape0, conflit viscéral
         poids_ressource_bio = POIDS_CHOC_RESSOURCE_BIO
-        etat.memoire_episodique_spatiale.enregistrer_evenement(
-            tuple(etat.env.unwrapped.agent_pos), "FOOD", etat.tick_absolu
-        )
+        # v41.7 — l'écriture mémoire a été DÉPLACÉE plus bas, après le calcul du
+        # soulagement : elle avait lieu ici avec une intensité nulle par défaut.
     if mange_water:
         etat.moteur_bio.consommer_ressource("WATER")
         etat.bus_sensoriel.signaler_consommation("WATER")  # v29.0, voir FOOD ci-dessus
         etat.water_consommes_jour += 1
         etat.chronometre_jalons.signaler_consommation_post_cle()  # v33.0-etape0, conflit viscéral
         poids_ressource_bio = POIDS_CHOC_RESSOURCE_BIO
-        etat.memoire_episodique_spatiale.enregistrer_evenement(
-            tuple(etat.env.unwrapped.agent_pos), "WATER", etat.tick_absolu
-        )
+        # v41.7 — idem : écriture déplacée après le calcul du soulagement.
 
     # v41.2-fix7 — le soulagement réel, mesuré sur le déficit AVANT/APRÈS l'ingestion, et
     # ajouté au `r_bio` de CE tick — donc crédité à l'action qui l'a produit. Même unité et
     # même échelle que le `r_bio` ordinaire (une différence de déficit), donc rien de
     # nouveau n'entre dans la récompense : c'est le même signal, rendu à son auteur.
     if mange_food or mange_water:
-        r_bio += deficit_avant_repas - etat.moteur_bio.calculer_deficit()
-        etat.soulagement_repas_jour += deficit_avant_repas - etat.moteur_bio.calculer_deficit()
+        soulagement = deficit_avant_repas - etat.moteur_bio.calculer_deficit()
+        r_bio += soulagement
+        etat.soulagement_repas_jour += soulagement
+
+        # ⚠️ v41.7 — LE SOULAGEMENT EST AUSSI ÉCRIT DANS LA MÉMOIRE.
+        #
+        # Défaut mesuré sur 6 runs × 1000 jours : `enregistrer_evenement` était appelé
+        # pour "FOOD"/"WATER" **sans `intensite`**, donc avec sa valeur par défaut de
+        # **0.0** — alors que le seul autre appelant (`_memoriser_si_saillant`, l. 5550)
+        # transmet bien la sienne.
+        #
+        # Conséquence, lue dans le bilan de nuit après 1000 jours :
+        #
+        #     ↑ 'goal' +0.515 (×1037)      ← appris, valence positive
+        #     ↓ 'FOOD' +0.000 (×4004)      ← QUATRE MILLE repas, valence RIGOUREUSEMENT NULLE
+        #
+        # L'agent apprenait la valeur du but et **jamais** celle de la nourriture. Le
+        # mécanisme d'abstraction par récurrence (v36.0) et l'empreinte de type (v39.0)
+        # tournaient à vide sur les ressources : ils moyennaient des zéros. C'est
+        # cohérent avec la mesure du §Q2 — après 1000 jours, l'agent mange **comme un
+        # marcheur aléatoire** (4,0 contre 4,4 unités/jour).
+        #
+        # Le soulagement réel est déjà calculé ici, dans la même unité que toute autre
+        # intensité (une différence de déficit) : rien de nouveau n'entre dans le
+        # système, on cesse seulement de jeter une information qui existait déjà.
+        #
+        # ⚠️ Rien n'est déclaré pour autant : `intensite` est **mesurée**, jamais posée.
+        # Manger rassasié écrit une intensité quasi nulle, manger affamé une intensité
+        # forte — l'agent apprend la valeur de la nourriture *par ce qu'elle lui fait*,
+        # jamais par une table `FOOD = bon`. L'invariant v36.0 (« rien n'est expliqué au
+        # cerveau ») est respecté.
+        pos_repas = tuple(etat.env.unwrapped.agent_pos)
+        if mange_food:
+            etat.memoire_episodique_spatiale.enregistrer_evenement(
+                pos_repas, "FOOD", etat.tick_absolu, intensite=soulagement)
+        if mange_water:
+            etat.memoire_episodique_spatiale.enregistrer_evenement(
+                pos_repas, "WATER", etat.tick_absolu, intensite=soulagement)
 
     # --- Récompense de formants ET perte vocale supervisée (v22.0, corrigé v22.1,
     # score mixte formants+spectral en v27.0) : uniquement quand une leçon vocale est
