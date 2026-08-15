@@ -65,6 +65,29 @@ README**. Toute campagne future visant la promotion doit durer **≥ 1000 jours*
 `git diff`), or **4 graines sur 4** plafonnent à 55-65 % de maîtrise là où g42 atteignait
 70 %. La promotion du jour 74 était **très probablement une loterie natale de plus**.
 
+### 🔴 Découverte majeure — la maturité mélange deux instants (chantier §7)
+
+`facteur_guidage` est calculé en **début** de journée sur la fenêtre de la **veille** ;
+`_maturite_niveau` est évalué la **nuit** avec la maîtrise **du jour**. Le produit
+`régularité × consolidation × autonomie` multiplie donc la **maîtrise d'aujourd'hui** par
+l'**autonomie d'hier** — et sous-estime la maturité **exactement pendant les phases de
+progression**, c'est-à-dire quand la promotion se joue.
+
+**Preuve directe, 2000 jours :**
+
+| | Maîtrise | Autonomie utilisée | Maturité | |
+|---|---|---|---|---|
+| **g44** | 60 % | 67 % *(synchrone)* | **0,400** | ✅ promu |
+| **g11** | **65 %** | 61 % *(de la veille)* | 0,397 | ❌ refusé ×4 |
+
+**Le moins compétent est promu, le plus compétent refusé.** Et g44 passe avec **0,400
+pile** : `SEUIL_MATURITE` étant dérivé de `TAUX_PROMOTION` par la même formule que
+l'autonomie, la marge est **nulle par construction** — un décalage d'un jour suffit.
+
+Même motif que le verrou du §10 (v41.2) : deux constantes justes séparément dont la
+composition se neutralise. **Correctif NON appliqué** — il modifie le critère de
+promotion, donc arbitrage utilisateur (3 options consignées au §7.4).
+
 ---
 
 ## [v41.3-experimental] - 2026-08-15 — Le sevrage proportionnel : deux promotions, puis le mur revient
