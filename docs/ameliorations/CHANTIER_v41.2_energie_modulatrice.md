@@ -626,3 +626,98 @@ redeviennent réelles :
 > ce que le monde peut **physiquement** offrir, carte par carte. Ni la simulation (§7.7) ni
 > la trace de run (§8.4) ne suffisent — il faut mesurer **l'offre du monde**, puis vérifier
 > que le besoin tient dedans avec de la marge.
+
+---
+
+## 9. Manger comme ACTE, et la boucle corporelle
+
+Formulation utilisateur : *« les premiers jours il doit tout mettre à la bouche, mais dès
+qu'il n'a plus faim il se met en pause et doit associer manger/boire = besoin. C'est le
+corps qui pousse à manger pour vivre. »*
+
+### 9.1 Deux défauts trouvés, deux corrections
+
+**a) Manger était un effet de bord du déplacement.** Marcher sur une case chargée
+consommait la ressource automatiquement. Un agent rassasié qui traversait une pomme
+l'avalait et la gaspillait. **La « récolte » de tout ce chantier n'était donc pas un
+comportement de recherche** mais une conséquence mécanique des déplacements — ce qui
+invalide rétrospectivement la lecture des §7 et §8.
+
+Corrigé : la consommation passe par `ACTION_CONSOMMER` (le `pickup` de MiniGrid).
+
+**b) Le geste visait la mauvaise case.** `pickup` agit sur la case **devant** l'agent ;
+le détecteur testait celle **sous ses pieds**. Les deux ne coïncident jamais — efficacité
+mesurée : **2,9 %**. Pire, MiniGrid retirait quand même la Ball pour la mettre en
+`carrying`, donc la ressource disparaissait sans nourrir ni repousser.
+
+| | avant | après |
+|---|---|---|
+| Efficacité du geste | 2,9 % | **14,1 %** |
+| Récolte | 2/jour | **10/jour** |
+
+**c) Le soulagement n'était pas crédité au geste.** `r_bio` était calculé (l. 6400) *avant*
+la consommation (l. 6449), et consommé dans la récompense (l. 6551). Le soulagement tombait
+donc **au tick suivant**, sur une action sans rapport. Corrigé en mesurant le déficit
+avant/après ingestion.
+
+### 9.2 ✅ La formule de l'utilisateur est vérifiée dans le code
+
+| État | Manger rapporte |
+|---|---|
+| **Affamé** (S=0,05 E=0,05) | **+0,7945** |
+| Moyen (S=0,50 E=0,50) | +0,1267 |
+| **Rassasié** (S=0,95 E=0,95) | **−0,0227** |
+
+Manger repu est **puni** : gain nul et geste coûteux. Contraste affamé/rassasié : **15×**.
+Aucune règle n'interdit de manger sans faim — le corps s'en charge, exactement comme
+formulé.
+
+### 9.3 ⚠️ Mais l'agent n'apprend pas à viser — et c'est arithmétique
+
+Run de 65 jours, cerveau neuf :
+
+| | 20 premiers j | 20 derniers j |
+|---|---|---|
+| Gestes joués | 58/jour (**17 % des ticks**) | 58/jour |
+| Efficacité | 12,4 % | **10,6 %** |
+| Soulagement/jour | +2,17 | +2,19 |
+
+**Parfaitement plat.** L'agent mitraille le geste au hasard, 58 fois par jour, sans jamais
+apprendre à le diriger.
+
+La cause est une **espérance noyée dans le bruit** :
+
+```
+geste réussi (12 %)  : +0,323
+geste raté   (88 %)  : −0,0047 (coût énergie)
+espérance            : +0,033
+```
+
+À comparer au bruit ordinaire du tick : `dopamine_curiosite` 0,01–0,05, micro-récompenses
+0,04. **Le signal du geste est du même ordre que le bruit qui l'entoure.**
+
+Et surtout : **rater ne coûte presque rien**. Sur 58 gestes/jour, le gaspillage total
+représente ~14 % de la dépense journalière pour 12 % de réussite. **Mitrailler est
+rationnel** — le problème n'est pas que le geste coûte trop peu, c'est que *viser* ne
+rapporte pas assez plus que *mitrailler*.
+
+> ⚠️ Le coût nominal de 0,8 est **dilué** : `METABOLISME_BASAL_PART = 0,65` fait que
+> l'écart entre l'action la moins chère (0,1) et la plus chère (0,8) ne représente que
+> **24 %** de variation sur la dépense réelle du tick. Le barème d'actions a beaucoup
+> moins d'effet que ses valeurs ne le laissent croire.
+
+### 9.4 Ce qui est acquis, et ce qui reste ouvert
+
+**Acquis** — la récolte passe de 2,0 à **7,4/jour**, et les victoires de 26 (témoin) à
+**47** à jour égal. L'agent va mieux malgré une énergie encore basse.
+
+**Ouvert** — trois voies, aucune prise sans arbitrage :
+
+| Voie | Ce qu'elle fait | Risque |
+|---|---|---|
+| **A.** Augmenter le contraste réussi/raté | rendre le signal lisible au-dessus du bruit | un échec trop puni peut inhiber le geste entièrement |
+| **B.** Réduire `METABOLISME_BASAL_PART` | redonner du poids au barème d'actions | touche un ancrage biologique (~65 % dans le vivant) |
+| **C.** Ne rien faire, laisser le run à 300 j | l'apprentissage est peut-être plus lent que 65 jours | 65 jours parfaitement plats, peu d'espoir |
+
+Ma lecture : **C d'abord** — la mesure est en cours et coûte zéro décision. A et B modifient
+tous deux un ancrage posé, et A risque de produire l'effet inverse de celui recherché.
