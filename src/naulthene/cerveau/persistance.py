@@ -260,6 +260,7 @@ class PersistanceAnatomique:
             # fait partie de l'INDIVIDU (c'est ce que SON vécu a optimisé), au même titre
             # que l'empreinte de type : elle doit survivre à la résurrection.
             'energie': getattr(etat.moteur_bio, 'energie', 1.0),
+            'reserve': getattr(etat.moteur_bio, 'reserve', 0.0),
             'derive_metabolique': getattr(etat.moteur_bio, 'derive_metabolique', 0.0),
             'derive_kappa': getattr(etat.moteur_bio, 'derive_kappa', 0.0),
 
@@ -535,6 +536,7 @@ class PersistanceAnatomique:
         # greffe ni erreur. Même discipline que `empreinte_types` (v39.0) et
         # `flottaison_metabolique` (v41.0).
         etat.moteur_bio.energie = float(checkpoint.get('energie', 1.0))
+        etat.moteur_bio.reserve = float(checkpoint.get('reserve', 0.0))
         etat.moteur_bio.derive_metabolique = float(checkpoint.get('derive_metabolique', 0.0))
         etat.moteur_bio.derive_kappa = float(checkpoint.get('derive_kappa', 0.0))
 

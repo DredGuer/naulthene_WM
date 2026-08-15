@@ -2263,6 +2263,9 @@ class BiologicalHomeostasisEngine:
         # l'estomac plein mais l'énergie basse (le coup de barre), et la faim avec de
         # l'énergie encore disponible (le sursis).
         self.energie = 1.0
+        # v41.2-fix8 — la RÉSERVE (la graisse). Naît à zéro : un nouveau-né n'a pas encore
+        # constitué d'avance, il la construit en mangeant plus que son besoin du moment.
+        self.reserve = 0.0
         # Dérive adaptative du métabolisme (log-écart à la norme d'espèce). 0.0 = norme.
         # Sérialisée dans le `.brain` ; un cerveau antérieur repart à 0.0, donc au
         # métabolisme d'espèce, sans greffe ni erreur.
@@ -2282,12 +2285,15 @@ class BiologicalHomeostasisEngine:
             self.taux_stimulation = TAUX_STIMULATION_JOUR / float(ticks_par_jour)
             self.depense_energie = DEPENSE_ENERGIE_JOUR / float(ticks_par_jour)
             self.debit_digestif = DEBIT_DIGESTIF_JOUR / float(ticks_par_jour)
+            self.debit_reserve = (RESERVE_MAX * FRACTION_RESERVE_MOBILISABLE_JOUR
+                                  / float(ticks_par_jour))
         else:
             self.taux_satiete = taux_satiete
             self.taux_hydratation = taux_hydratation
             self.taux_stimulation = taux_stimulation
             self.depense_energie = DEPENSE_ENERGIE_JOUR / 400.0
             self.debit_digestif = DEBIT_DIGESTIF_JOUR / 400.0
+            self.debit_reserve = RESERVE_MAX * FRACTION_RESERVE_MOBILISABLE_JOUR / 400.0
         self.seuil_critique = seuil_critique
         self.quete_active = None
 
@@ -2396,6 +2402,31 @@ class BiologicalHomeostasisEngine:
         # fonctionnel, il n'est pas éteint.
         cofacteur_hydrique = COFACTEUR_HYDRIQUE_MIN + (1.0 - COFACTEUR_HYDRIQUE_MIN) * self.hydratation
         self.energie += conversion * cofacteur_hydrique - depense
+
+        # --- v41.2-fix8 : LA RÉSERVE (décision utilisateur) ---
+        # « Le déficit rassasié est transformé en graisse pour éventuellement le
+        # retransformer en énergie en cas de manque. »
+        #
+        # Sans réserve, tout surplus était PERDU au clip à 1.0 : manger rassasié ne
+        # rapportait rien (mesuré : −0,0227), donc l'agent n'avait aucune raison de se
+        # constituer une avance, et un jour faste ne préparait pas un jour maigre. C'est ce
+        # qui rendait le métabolisme purement « au jour le jour ».
+        #
+        # Deux flux, tous deux DÉRIVÉS de l'écart à l'énergie nominale — aucun seuil :
+        #   - au-dessus de 1.0, le trop-plein part en réserve (avec perte de stockage) ;
+        #   - en dessous, la réserve remonte à hauteur du manque (avec perte de mobilisation).
+        # Les pertes sont ce qui rend la graisse INTÉRESSANTE MAIS COÛTEUSE : mieux vaut
+        # manger à sa faim que faire des réserves, sans que jeûner devienne fatal.
+        surplus = max(0.0, self.energie - ENERGIE_MAX)
+        manque = max(0.0, ENERGIE_MIN + self.seuil_critique - self.energie)
+        if surplus > 0.0:
+            self.reserve = min(RESERVE_MAX, self.reserve + surplus * RENDEMENT_STOCKAGE)
+        elif manque > 0.0:
+            # La mobilisation est bornée par le débit : on ne brûle pas sa graisse d'un
+            # coup, sinon la réserve serait un simple prolongement de la jauge d'énergie.
+            mobilise = min(self.reserve, manque, self.debit_reserve)
+            self.reserve -= mobilise
+            self.energie += mobilise * RENDEMENT_MOBILISATION
 
         self.satiete = float(np.clip(self.satiete, 0.0, 1.0))
         self.hydratation = float(np.clip(self.hydratation, 0.0, 1.0))
@@ -4250,6 +4281,23 @@ COFACTEUR_HYDRIQUE_MIN = 0.6     # borne : une soif TOTALE laisse encore 60 % du
 RECUPERATION_SOMMEIL = 0.5       # borne : fraction d'énergie rendue par une nuit complète
 
 ENERGIE_MIN, ENERGIE_MAX = 0.0, 1.0
+
+# --- v41.2-fix8 : LA RÉSERVE (la graisse) ---
+# Le surplus d'énergie n'est plus perdu au plafond : il est stocké, et remobilisé quand
+# l'énergie manque. C'est ce qui permet à un jour faste de préparer un jour maigre, et qui
+# fait qu'on ne réagit pas tous pareil au même monde — deux agents qui mangent autant mais
+# à des rythmes différents n'ont pas la même réserve.
+#
+# Les DEUX rendements sont < 1 : stocker coûte, déstocker coûte. C'est ce qui rend la
+# réserve utile sans la rendre gratuite — mieux vaut manger à sa faim que faire des
+# réserves, mais jeûner un jour ne tue plus.
+RESERVE_MAX = 3.0                 # borne : ~3 journées de dépense (DEPENSE_ENERGIE_JOUR),
+                                  # ordre de grandeur du jeûne court chez le vivant
+RENDEMENT_STOCKAGE = 0.8          # borne : constituer une réserve perd 20 %
+RENDEMENT_MOBILISATION = 0.9      # borne : la brûler perd 10 % — déstocker est moins
+                                  # coûteux que stocker, comme dans le vivant
+FRACTION_RESERVE_MOBILISABLE_JOUR = 0.5  # borne : on ne brûle pas sa graisse d'un coup ;
+                                         # au plus la moitié de la réserve par journée
 
 # LE SEUIL NON LINÉAIRE (décision utilisateur du 15/08) : l'énergie module TOUT — C1, C2,
 # le déficit, la plasticité — via une seule grandeur dérivée, `vigueur = énergie ** κ`.
@@ -7297,7 +7345,8 @@ def executer_nuit(etat, plafond_reve=None):
           f"({_n_conso / ticks_du_jour:.1%}) | efficacité "
           f"{(etat.food_consommes_jour + etat.water_consommes_jour) / max(1, _n_conso):.1%} "
           f"| récolté {etat.food_consommes_jour + etat.water_consommes_jour} "
-          f"| soulagement {etat.soulagement_repas_jour:+.2f}")
+          f"| soulagement {etat.soulagement_repas_jour:+.2f} "
+          f"| 🧈 réserve {etat.moteur_bio.reserve:.2f}")
     # v30.1 — la taille seule ne disait pas si la mémoire SERT : on affiche désormais le
     # taux de saturation (200/200 = plafond `capacite_max` atteint) et la qualité du
     # rappel, pour pouvoir juger si une capacité adaptative apporterait quelque chose.
@@ -7423,6 +7472,8 @@ def executer_nuit(etat, plafond_reve=None):
         "Meta_Derive_Metabolique": etat.moteur_bio.derive_metabolique,
         "Meta_Derive_Kappa": etat.moteur_bio.derive_kappa,
         "Meta_Kappa_Effectif": etat.moteur_bio.kappa_effectif(),
+        "Meta_Reserve": etat.moteur_bio.reserve,
+        "Meta_Soulagement_Repas": etat.soulagement_repas_jour,
         # --- v35.0 : la promotion par taux de maîtrise ---
         # `Cursus_Taux_Maitrise_Niveau` est la métrique qui dira si la seconde voie de
         # promotion sert réellement, ou si tout passe encore par la série de victoires.
