@@ -477,6 +477,13 @@ DIM_VOCALE = 8                 # sortie de tete_vocale (la BOUCHE) : f0, F1, F2,
 # v27.6 (aucun plug ⇒ action 7 strictement inexistante, jamais échantillonnée).
 NUM_ACTIONS_BASE = 7
 ACTION_DEMANDER = 7        # index de la 8ème action dans actions_eye
+# v41.2-fix5 — l'action par laquelle l'agent CONSOMME une ressource. C'est le `pickup` de
+# MiniGrid (index 3), réutilisé plutôt qu'une 9ème action ajoutée : le geste « je saisis ce
+# qui est devant moi » existe déjà, et c'est la plus coûteuse du barème corporel
+# (COUT_CORPOREL_PAR_ACTION[3] = 0,8, contre 0,2 pour tourner). Manger a donc un prix, et
+# l'agent doit choisir de le payer — ce qui n'était pas le cas quand marcher sur une case
+# suffisait.
+ACTION_CONSOMMER = 3
 NUM_ACTIONS_AVEC_C3 = 8
 # Routage (Chantier 2b) : DIM_ROUTAGE_C3 = nombre max de plugs simultanés + 1 canal de
 # diffusion ("1_X"). Volontairement petit et fixe — comme DIM_VECTEUR_BIO/DIM_VOCALE,
@@ -2748,10 +2755,30 @@ class DetecteurRessourcesBiologiques:
         except Exception as e:
             self._avertir(e)
 
-    def evaluer_tick(self, env):
+    def evaluer_tick(self, env, action_item=None):
         """Retourne (mange_food: bool, mange_water: bool). Retire la ressource
-        consommée de la grille, puis fait repousser la Nourriture ailleurs (80/20)."""
+        consommée de la grille, puis fait repousser la Nourriture ailleurs (80/20).
+
+        v41.2-fix5 — **MANGER EST UN ACTE, PLUS UN EFFET DE BORD DU DÉPLACEMENT.**
+
+        Avant ce correctif, marcher sur une case chargée consommait la ressource
+        automatiquement : un agent rassasié qui traversait une pomme l'avalait quand même
+        et la gaspillait, et un agent affamé « se nourrissait » sans jamais avoir eu à le
+        vouloir. La « récolte » mesurée n'était donc pas un comportement de recherche mais
+        une conséquence mécanique des déplacements — ce qui invalidait la lecture des
+        chiffres de fourrage de tout ce chantier.
+
+        La consommation est désormais conditionnée à `ACTION_CONSOMMER` (le `pickup` de
+        MiniGrid), l'action la plus coûteuse du barème corporel (0,8 contre 0,2 pour
+        tourner). Manger a donc un prix, et l'agent doit **choisir** de le payer.
+
+        ⚠️ Aucun `if faim then manger` nulle part : le geste reste une sortie de la tête
+        motrice, apprise par le gradient. Le corps signale la faim dans le vecteur bio
+        (jauges + quête + vigueur), la décision reste au réseau. `action_item=None`
+        conserve l'ancien comportement automatique pour les appelants non migrés."""
         if not self.actif:
+            return False, False
+        if action_item is not None and action_item != ACTION_CONSOMMER:
             return False, False
         try:
             agent_pos = tuple(env.unwrapped.agent_pos)
@@ -4063,40 +4090,67 @@ TICKS_JOUR_REFERENCE = 3600.0   # borne : la journée nycthémérale de référe
 #   - 3 repas par journée  ⇒ un repas doit couvrir ~1/3 de journée
 #   - l'eau tue ~10× plus vite que la faim (3 jours contre 30)
 #   - le métabolisme BASAL représente ~60-70 % de la dépense totale
-PRISES_HYDRIQUES_PAR_JOURNEE = 2.0       # borne : on boit PLUS SOUVENT qu'on ne mange, et
-                                         # par plus petites gorgées. C'est ce qui évite le
-                                         # gaspillage par débordement : une prise ne doit
-                                         # jamais dépasser de beaucoup ce qui manque à la
-                                         # jauge. Mesuré avec une portion unique partagée
-                                         # (0,889 par eau sur une jauge à 1,0) : 2,0 unités
-                                         # perdues en une journée, hydratation à 0,00 la
-                                         # plupart des jours, énergie à 0,072, 0 victoire.
-                                         #
-                                         # ⚠️ RAMENÉ DE 4,0 À 2,0 (v41.2-fix4) après
-                                         # confrontation au monde réel : sur `Empty-5x5`
-                                         # (8 cases libres) la carte ne peut offrir qu'une
-                                         # source d'eau par épisode, soit ~4,2 prises/jour
-                                         # pour un besoin de 4,0 — aucune marge d'erreur.
-                                         # Mesuré : hydratation à 0,00 en fin de journée,
-                                         # 1 eau bue pour 4 requises, énergie à 0,023. Un
-                                         # besoin que le monde ne peut satisfaire QUE dans
-                                         # le cas parfait n'est pas une pression, c'est une
-                                         # condamnation. Le ratio soif/faim reste > 1 (on
-                                         # boit plus souvent qu'on ne mange), ce qui était
-                                         # le point de la v41.2-fix.
-REPAS_PAR_JOURNEE = 2.5                  # borne : le rythme alimentaire d'espèce, dont la
-                                         # valeur nutritive d'une ressource est DÉRIVÉE.
-                                         # CALIBRÉ PAR MESURE : un agent débutant ne trouve
-                                         # que ~2 ressources/jour (mesuré sur 5 jours de run
-                                         # réel). À 3.0, chaque repas vaut trop peu et
-                                         # l'énergie s'effondre à 0,005 dès le 3ᵉ jour —
-                                         # l'agent mourait d'une famine qu'aucun apprentissage
-                                         # n'aurait pu éviter. À 2.5 : il SURVIT à 2 repas
-                                         # (énergie 0,51, écart-type 0,28 — donc la vigueur
-                                         # module vraiment) et n'est confortable qu'à partir
-                                         # de 3. Descendre à 2.0 sature déjà (écart-type 0,15).
+# v41.2-fix5 — LE RYTHME EST DÉRIVÉ DE LA CARTE LA PLUS PAUVRE, plus posé à la main.
+#
+# `REPAS_PAR_JOURNEE = 2.5` et `PRISES_HYDRIQUES = 4.0` étaient deux chiffres choisis puis
+# recalibrés trois fois à la main — exactement ce que la règle « rien en dur » interdit.
+#
+# ⚠️ Le sens de la dérivation compte. Faire dépendre le besoin de la carte COURANTE serait
+# un corps qui change de nature en changeant de pièce : sur `Empty-8x8` le calcul donnerait
+# un besoin de 24 repas/jour. Le métabolisme est une propriété de l'ESPÈCE, pas du décor.
+#
+# C'est donc la carte la plus PAUVRE du cursus qui fixe le rythme — un organisme viable
+# doit pouvoir subsister là où son monde offre le moins :
+#
+#   opportunités_min = budget(carte la plus pauvre) × épisodes_par_journée
+#   besoin total     = opportunités_min / MARGE_SUBSISTANCE
+#
+# La marge sépare une pression d'une condamnation : mesurée à ×1,05, l'agent devait saisir
+# CHAQUE occasion sans jamais en rater une. C'est une borne sur un RAPPORT, pas sur une
+# quantité — elle survit donc à tout changement de carte, de densité ou de durée de journée.
+MARGE_SUBSISTANCE = 2.0                  # borne : le monde doit offrir 2× le besoin
+EPISODES_PAR_JOURNEE_REFERENCE = 4.0     # borne : ordre de grandeur mesuré (patience ~95
+                                         # ticks sur 400). Sert d'échelle, pas de vérité —
+                                         # la patience réelle varie d'un jour à l'autre.
+RATIO_SOIF_SUR_FAIM = 10.0 / 30.0        # borne : 3 jours sans eau contre 30 sans
+                                         # nourriture — l'eau se vide 10x plus vite
+# Densité maximale de ressources, en fraction des cases libres. Définie ici parce que le
+# rythme métabolique en dérive (voir _BUDGET_CARTE_MINIMALE plus bas) ; son rôle de garde-
+# fou du monde est documenté au point d'usage, dans le détecteur de ressources.
+FRACTION_CASES_RESSOURCES_MAX = 0.35     # borne : au-delà, la carte devient un garde-manger
+                                         # infranchissable et l'agent n'a plus d'espace pour
+                                         # apprendre à se déplacer. La densité est RELATIVE
+                                         # à la carte, jamais absolue — même discipline que
+                                         # DENSITE_MAX_PAR_CASE (v31.0) pour la mémoire.
+CASES_LIBRES_CARTE_MINIMALE = 8.0        # borne : `Empty-5x5`, la plus petite du cursus.
+                                         # Mesurée, pas supposée (voir §8 du chantier).
+_BUDGET_CARTE_MINIMALE = max(2.0, CASES_LIBRES_CARTE_MINIMALE * FRACTION_CASES_RESSOURCES_MAX)
+_OPPORTUNITES_MIN_JOUR = _BUDGET_CARTE_MINIMALE * EPISODES_PAR_JOURNEE_REFERENCE
+_BESOIN_TOTAL_JOUR = _OPPORTUNITES_MIN_JOUR / MARGE_SUBSISTANCE
+
+# ⚠️ La marge doit tenir sur CHAQUE axe, pas sur leur somme. La carte offre autant d'eau
+# que de nourriture (la densité suit la même fraction de cases) : répartir le besoin total
+# selon un ratio biologique donnerait un axe confortable et l'autre en dessous de la marge.
+# Mesuré sur une première tentative répartissant par RATIO_SOIF_SUR_FAIM : marge food ×2,86
+# mais marge eau ×0,95 — soit exactement le défaut du §8.6 reproduit par une formule au lieu
+# d'un chiffre posé. Une dérivation n'est pas une garantie de justesse.
+#
+# Chaque axe reçoit donc la moitié des opportunités minimales, divisée par la marge. On boit
+# toujours plus souvent qu'on ne mange (la valeur hydrique d'une prise est plus petite, voir
+# `valeur_hydrique`), mais le NOMBRE de prises reste soutenable des deux côtés.
+_BESOIN_PAR_AXE = (_OPPORTUNITES_MIN_JOUR / 2.0) / MARGE_SUBSISTANCE
+PRISES_HYDRIQUES_PAR_JOURNEE = _BESOIN_PAR_AXE
+REPAS_PAR_JOURNEE = _BESOIN_PAR_AXE
+
+# Historique de ces deux nombres, conservé parce qu'il porte la leçon du chantier :
+# `REPAS = 2.5` et `PRISES = 4.0` ont été posés puis recalibrés à la main TROIS fois
+# (§7.3, §7.5, §8.6), chaque fois sans confronter le barème à ce que la carte peut
+# physiquement offrir. À `PRISES = 4.0`, `Empty-5x5` n'offrait que 4,2 prises/jour : une
+# marge de ×1,05, où l'agent devait saisir CHAQUE occasion sans jamais en rater une.
+# Un besoin que le monde ne satisfait que dans le cas parfait n'est pas une pression,
+# c'est une condamnation — et c'est ce que la marge dérivée empêche désormais.
+
 FRACTION_JOURNEE_PAR_REPAS = 1.0 / REPAS_PAR_JOURNEE   # autonomie d'un estomac plein
-RATIO_SOIF_SUR_FAIM = 10.0 / 30.0        # borne : l'eau se vide plus vite en proportion
 
 # Taux exprimés PAR JOURNÉE (divisés par ticks_par_jour au moment de l'usage).
 TAUX_SATIETE_JOUR = 1.0 / FRACTION_JOURNEE_PAR_REPAS   # 1 estomac plein = 1/3 de journée
@@ -4225,12 +4279,6 @@ NB_SOURCES_WATER = max(2, int(round(PRISES_HYDRIQUES_PAR_JOURNEE * MARGE_TROUVAB
 # quasi emmuré, et la récolte plafonnait à ~3,5/jour QUELLE QUE SOIT la densité demandée
 # (mesuré identique sur 3 runs : 3,72 / 3,52 / 3,47). C'est ce qui rendait inopérants les
 # trois calibrages successifs : ils réglaient un paramètre déjà saturé.
-FRACTION_CASES_RESSOURCES_MAX = 0.35  # borne : au-delà, la carte devient un garde-manger
-                                      # infranchissable et l'agent n'a plus d'espace pour
-                                      # apprendre à se déplacer. La densité est donc
-                                      # RELATIVE à la carte, jamais absolue — même
-                                      # discipline que `DENSITE_MAX_PAR_CASE` (v31.0) pour
-                                      # la mémoire spatiale.
 POIDS_CHOC_RESSOURCE_BIO = 0.25  # ancrage mémoriel à la consommation d'une ressource
 # COUT_ACTION_METABOLIQUE (constante fixe v18.0) supprimé en v19.0 : le coût énergétique
 # est désormais calculé dynamiquement par moteur_bio.calculer_effort_metabolique() à
@@ -6372,7 +6420,9 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
     if _energie < SEUIL_CRITIQUE_BIO:
         etat.ticks_energie_basse_jour += 1
 
-    mange_food, mange_water = etat.detecteur_ressources_bio.evaluer_tick(etat.env)
+    # v41.2-fix5 — l'action du tick est transmise : manger n'est plus un effet de bord du
+    # déplacement mais un geste volontaire (voir DetecteurRessourcesBiologiques.evaluer_tick).
+    mange_food, mange_water = etat.detecteur_ressources_bio.evaluer_tick(etat.env, action_item)
     poids_ressource_bio = 0.0
     if mange_food:
         etat.moteur_bio.consommer_ressource("FOOD")
