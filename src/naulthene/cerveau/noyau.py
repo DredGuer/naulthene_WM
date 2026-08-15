@@ -9,6 +9,7 @@ import gymnasium as gym
 import minigrid
 import wandb
 import numpy as np
+import math  # v41.2 — exp() pour la dérive métabolique et le seuil non linéaire
 
 # v27.0 — hemisphere_audio est pur numpy (aucune dépendance PyTorch/réseau), donc
 # importable au chargement du module sans risque de cycle. Remonté ici plutôt que
@@ -1057,7 +1058,7 @@ class AGI_Naulthene(nn.Module):
 
     def penser(self, obs_visuelle, memoire_precedente, contexte_episodique, vecteur_bio,
               force_planification=0.5, horizons_planification=(1, 3, 7), gamma_planif=0.9,
-              obs_auditive=None, plugs_c3_disponibles=None):
+              obs_auditive=None, plugs_c3_disponibles=None, vigueur=1.0):
         """La cascade complète C1 → C2 (→ C3), tick par tick.
 
         v29.0 (expérimental) — le corps de cette méthode est désormais l'ARBITRAGE seul :
@@ -1084,6 +1085,21 @@ class AGI_Naulthene(nn.Module):
             pensee_bio, memoire_actuelle,
             horizons_planification=horizons_planification, gamma_planif=gamma_planif
         )
+
+        # --- v41.2 : LE SEUIL NON LINÉAIRE DE L'ÉNERGIE ---
+        #
+        # `vigueur = énergie ** κ` (voir BiologicalHomeostasisEngine.vigueur). C2 la subit
+        # DEUX FOIS — une fois ici sur sa force, une fois via le gain de C1 qui suit la même
+        # force — donc la délibération s'éteint en `vigueur²` quand le réflexe s'éteint en
+        # `vigueur`. À énergie 0.5 : C1 garde 25 % de sa voix, C2 seulement 6 % (mesuré).
+        # C'est biologiquement juste — un organisme épuisé cesse de simuler l'avenir bien
+        # avant de cesser de marcher — et ça produit gratuitement une hiérarchie de survie.
+        #
+        # ⚠️ Ce n'est PAS le court-circuit C1→C2 refusé en v29.0, ni un déclenchement sur
+        # seuil d'incertitude (refusé trois fois). C2 est TOUJOURS sollicité, à chaque tick,
+        # sans aucune condition — l'appel ci-dessus a déjà eu lieu. Seul son POIDS dans la
+        # fusion varie, continûment. Il n'y a pas de branche : il y a un facteur.
+        force_planification = force_planification * vigueur
 
         # --- v37.0 : LA VOIX DE C1 EST RENDUE AUDIBLE (Mesure 2) ---
         #
@@ -1131,7 +1147,13 @@ class AGI_Naulthene(nn.Module):
         # de la lucidité. Purement observationnel, aucune influence sur ce tick.
         with torch.no_grad():
             self.amplitude_c1_recente = float(amplitude_c1.mean().item())
-        voix_c1 = logits_instinct * gain_c1
+        # v41.2 — la vigueur module le VOLUME de C1, jamais son opinion : c'est un facteur
+        # SCALAIRE de plus, donc les rapports entre les 7 logits restent rigoureusement
+        # intacts (invariant v37.0 n°1). Un agent épuisé n'a pas d'autres préférences — il
+        # a des préférences moins affirmées. Le plancher de `vigueur` garantit qu'il reste
+        # COHÉRENT : sans lui, vigueur→0 annulerait C1 et C2, les logits seraient tous nuls
+        # et l'action deviendrait ALÉATOIRE — un mourant se mettrait à jouer à pile ou face.
+        voix_c1 = logits_instinct * gain_c1 * vigueur
 
         # Télémétrie de l'arbitrage (v37.0) — déposée sur le module plutôt que retournée,
         # pour ne pas élargir un tuple de retour déjà consommé en plusieurs points du
@@ -2224,15 +2246,73 @@ class BiologicalHomeostasisEngine:
     }
 
     def __init__(self, taux_satiete=0.008, taux_hydratation=0.005, taux_stimulation=0.012,
-                 seuil_critique=0.35):
+                 seuil_critique=0.35, ticks_par_jour=None):
         self.satiete = 1.0
         self.hydratation = 1.0
         self.stimulation = 1.0
-        self.taux_satiete = taux_satiete
-        self.taux_hydratation = taux_hydratation
-        self.taux_stimulation = taux_stimulation
+        # v41.2 — LE SECOND ÉTAGE. `energie` est le FLUX réellement dépensé pour agir ;
+        # satiété et hydratation ne sont que le STOCK qui le ravitaille. Ce découplage
+        # produit gratuitement deux états qu'une jauge unique ne peut pas représenter :
+        # l'estomac plein mais l'énergie basse (le coup de barre), et la faim avec de
+        # l'énergie encore disponible (le sursis).
+        self.energie = 1.0
+        # Dérive adaptative du métabolisme (log-écart à la norme d'espèce). 0.0 = norme.
+        # Sérialisée dans le `.brain` ; un cerveau antérieur repart à 0.0, donc au
+        # métabolisme d'espèce, sans greffe ni erreur.
+        self.derive_metabolique = 0.0
+        self.derive_kappa = 0.0
+        self.cause_mort = None
+
+        # v41.2 — L'ÉCHELLE TEMPORELLE. Les taux sont exprimés PAR JOURNÉE et divisés par
+        # la longueur réelle de la journée, pour que le VÉCU (3 repas/journée) soit
+        # invariant : un run de réglage à 400 ticks doit produire le même profil de jauges,
+        # en pourcentage de journée, qu'un run cible à 3600 ticks.
+        # `ticks_par_jour=None` ⇒ on retombe sur les anciens taux par tick (compatibilité).
+        self.ticks_par_jour = ticks_par_jour
+        if ticks_par_jour:
+            self.taux_satiete = TAUX_SATIETE_JOUR / float(ticks_par_jour)
+            self.taux_hydratation = TAUX_HYDRATATION_JOUR / float(ticks_par_jour)
+            self.taux_stimulation = TAUX_STIMULATION_JOUR / float(ticks_par_jour)
+            self.depense_energie = DEPENSE_ENERGIE_JOUR / float(ticks_par_jour)
+            self.debit_digestif = DEBIT_DIGESTIF_JOUR / float(ticks_par_jour)
+        else:
+            self.taux_satiete = taux_satiete
+            self.taux_hydratation = taux_hydratation
+            self.taux_stimulation = taux_stimulation
+            self.depense_energie = DEPENSE_ENERGIE_JOUR / 400.0
+            self.debit_digestif = DEBIT_DIGESTIF_JOUR / 400.0
         self.seuil_critique = seuil_critique
         self.quete_active = None
+
+    # --- v41.2 : les grandeurs DÉRIVÉES (aucune n'est une constante de fonctionnement) ---
+
+    def kappa_effectif(self) -> float:
+        """L'exposant de non-linéarité, dérivé de la norme d'espèce et de la dérive
+        individuelle. Borné : un métabolisme peut s'optimiser, jamais s'affranchir."""
+        return float(np.clip(KAPPA_VIGUEUR * math.exp(self.derive_kappa),
+                             KAPPA_VIGUEUR_MIN, KAPPA_VIGUEUR_MAX))
+
+    def vigueur(self) -> float:
+        """LE SEUIL NON LINÉAIRE — `énergie ** κ`, borné par le bas.
+
+        Ce n'est PAS un seuil : aucun `if énergie < X` n'existe nulle part. C'est une
+        puissance, donc une dégradation continue mais ACCÉLÉRANTE (κ=2 : énergie 0.5 →
+        vigueur 0.25). Tous les consommateurs — C1, C2, le déficit, la plasticité — lisent
+        cette seule grandeur, plutôt que d'être couplés un par un à l'énergie.
+
+        Le plancher est indispensable : sans lui, vigueur→0 annulerait C1 ET C2, donc
+        produirait des logits tous nuls, donc une action ALÉATOIRE. Un agent mourant doit
+        rester cohérent — diminué, jamais aléatoire."""
+        return float(np.clip(self.energie ** self.kappa_effectif(),
+                             VIGUEUR_PLANCHER, 1.0))
+
+    def reserve_mobilisable(self) -> float:
+        """Ce que le stock peut encore rendre en énergie. C'est la CONDITION DE
+        SOLVABILITÉ qui porte la règle « se reposer sans manger = mourir » : se reposer
+        abaisse la dépense, mais ne crée aucune matière. Satiété vide ⇒ réserve nulle ⇒
+        l'énergie descend quoi que fasse l'agent. Aucun `if` n'exprime cette règle : elle
+        est arithmétique."""
+        return self.satiete * RENDEMENT_CONVERSION * math.exp(self.derive_metabolique)
 
     def reinitialiser_episode(self):
         """Les jauges ne se réinitialisent PAS à chaque épisode (contrairement aux
@@ -2242,8 +2322,15 @@ class BiologicalHomeostasisEngine:
         pass
 
     def calculer_deficit(self) -> float:
+        """v41.2 — l'énergie entre dans le déficit comme ÉTAT (le carré de son manque),
+        au même titre que les autres jauges, et JAMAIS comme flux.
+
+        ⚠️ Le double comptage était le risque n°3 du chantier (et le §7.2 de
+        CONCEPTION_v34) : l'effort est déjà facturé en dépense d'énergie. Il l'est donc
+        UNE SEULE FOIS — dépenser fait baisser `energie`, ce qui creuse le déficit, ce qui
+        rend `r_bio` négatif. L'effort n'est pas soustrait une seconde fois ailleurs."""
         return ((1.0 - self.satiete) ** 2 + (1.0 - self.hydratation) ** 2
-                + (1.0 - self.stimulation) ** 2)
+                + (1.0 - self.stimulation) ** 2 + (1.0 - self.energie) ** 2)
 
     def calculer_effort_metabolique(self, action_item: int, force_planification: float,
                                      horizons_planification=(1, 3, 7)) -> float:
@@ -2260,22 +2347,114 @@ class BiologicalHomeostasisEngine:
         constante fixe comme en v18.0."""
         deficit_avant = self.calculer_deficit()
 
-        self.satiete -= self.taux_satiete * (1.0 + cout_action)
+        # v41.2 — LA SATIÉTÉ NE SE VIDE PLUS TOUTE SEULE. Dans un modèle à deux étages, le
+        # STOCK ne baisse que parce qu'il est DIGÉRÉ (voir plus bas) : lui appliquer en
+        # plus une décroissance propre le ferait disparaître deux fois, et un repas ne
+        # financerait alors que 59 ticks là où il doit en couvrir 133 (mesuré). C'est le
+        # même double comptage que celui écarté dans `calculer_deficit`, côté stock.
+        # L'hydratation, elle, se perd bien en continu (transpiration, respiration) : elle
+        # n'est pas un carburant mais un COFACTEUR de la conversion.
         self.hydratation -= self.taux_hydratation
 
         bonus_nouveaute = (0.05 if nouvelle_case_visitee else 0.0) + erreur_jepa * 2.0
         self.stimulation += bonus_nouveaute - self.taux_stimulation
 
+        # --- v41.2 : LE SECOND ÉTAGE ---
+        # La dépense a une part BASALE incompressible (~65 % dans le vivant) et une part
+        # d'effort. Avant v41.2 le basal ne pesait que 12 %, ce qui punissait massivement
+        # le mouvement — cohérent avec les 5,5 % de `forward` mesurés. Le coût pénalise
+        # donc désormais l'effort SUPPLÉMENTAIRE, sur un fond incompressible : c'est la
+        # ligne de flottaison de la v41, posée dans le CORPS au lieu d'être dérivée après.
+        depense = self.depense_energie * (METABOLISME_BASAL_PART
+                                          + (1.0 - METABOLISME_BASAL_PART) * cout_action)
+        # La conversion est bornée par le DÉBIT DIGESTIF : on ne transforme pas un estomac
+        # plein en énergie instantanément. C'est ce qui crée le « coup de barre » (estomac
+        # plein, énergie basse) sans qu'aucune règle ne le décrive.
+        conversion = min(self.debit_digestif, self.reserve_mobilisable())
+        # La digestion consomme le stock qu'elle convertit — sinon l'énergie serait
+        # gratuite et la satiété purement décorative.
+        self.satiete -= conversion / max(RENDEMENT_CONVERSION, 1e-6)
+        # L'hydratation est un COFACTEUR : déshydraté, on convertit mal. C'est le « lien
+        # direct entre nourriture, eau et sommeil » demandé — la soif tue plus vite que la
+        # faim non pas en vidant l'énergie, mais en empêchant de la FABRIQUER.
+        #
+        # ⚠️ Le cofacteur est BORNÉ PAR LE BAS, et ce n'est pas un détail : en version
+        # linéaire pure (`× hydratation`), le bilan énergétique devenait négatif dès que
+        # l'hydratation passait sous 0,50 — quelle que soit la nourriture ingérée. Mesuré
+        # sur un run réel de 10 jours : l'énergie s'effondrait à 0,005 au 3ᵉ jour et n'en
+        # remontait jamais, alors que l'agent mangeait. Une soif modérée doit RALENTIR la
+        # digestion, pas l'ANNULER — sinon la mort par déshydratation devient inévitable
+        # bien avant que la jauge d'eau n'atteigne zéro, et aucun apprentissage ne peut la
+        # prévenir. Même raisonnement que VIGUEUR_PLANCHER : un organisme diminué reste
+        # fonctionnel, il n'est pas éteint.
+        cofacteur_hydrique = COFACTEUR_HYDRIQUE_MIN + (1.0 - COFACTEUR_HYDRIQUE_MIN) * self.hydratation
+        self.energie += conversion * cofacteur_hydrique - depense
+
         self.satiete = float(np.clip(self.satiete, 0.0, 1.0))
         self.hydratation = float(np.clip(self.hydratation, 0.0, 1.0))
         self.stimulation = float(np.clip(self.stimulation, 0.0, 1.0))
+        self.energie = float(np.clip(self.energie, ENERGIE_MIN, ENERGIE_MAX))
 
         deficit_apres = self.calculer_deficit()
         r_bio = deficit_avant - deficit_apres
 
         return r_bio, self.evaluer_quetes_biologiques()
 
-    def consommer_ressource(self, type_ressource: str, quantite: float = 0.4):
+    def est_mort(self) -> bool:
+        """v41.2 — la mort par INSOLVABILITÉ, jamais par test de seuil arbitraire.
+
+        L'agent meurt quand son énergie est épuisée ET que son stock ne peut plus rien
+        rendre. Se reposer abaisse la dépense mais ne crée pas de matière : un agent qui
+        se repose sans manger arrive donc ici mécaniquement. C'est la règle utilisateur
+        « se reposer sans manger = mourir » exprimée sans aucune branche conditionnelle
+        dédiée — ce test ne fait que CONSTATER l'insolvabilité, il ne la provoque pas."""
+        if self.energie > ENERGIE_MIN or self.reserve_mobilisable() > 0.0:
+            return False
+        self.cause_mort = ("deshydratation" if self.hydratation <= 0.0
+                           else "famine" if self.satiete <= 0.0 else "epuisement")
+        return True
+
+    def reviser_derive_metabolique(self, pression: float):
+        """v41.2 — LES BORNES NE SONT PAS DES LIMITES (formulation utilisateur).
+
+        Un métabolisme peut s'optimiser et déplacer sa propre norme, mais s'en écarter
+        coûte EXPONENTIELLEMENT cher :
+
+            Δdérive = pression × plasticité − raideur × dérive × exp(|dérive| / élasticité)
+
+        Près de la norme le rappel est négligeable (adaptation facile) ; loin, il explose
+        en `exp` et fait mur. La borne est une PENTE QUI DEVIENT VERTICALE, pas une
+        barrière. Appelée une fois par NUIT, jamais par tick.
+
+        `pression` > 0 = le monde a été dur (l'agent a manqué) ⇒ le métabolisme apprend à
+        tirer davantage de son stock."""
+        for attribut in ("derive_metabolique", "derive_kappa"):
+            derive = getattr(self, attribut)
+            rappel = (RAIDEUR_RAPPEL_DERIVE * derive
+                      * math.exp(abs(derive) / ELASTICITE_DERIVE))
+            # κ dérive en sens INVERSE de la pression : un monde dur pousse vers une
+            # dégradation plus douce (κ↓), pour que l'agent reste fonctionnel plus bas.
+            signe = 1.0 if attribut == "derive_metabolique" else -1.0
+            derive += signe * pression * PLASTICITE_DERIVE_METABOLIQUE - rappel
+            setattr(self, attribut, float(np.clip(derive, -DERIVE_MAX_ABSOLUE,
+                                                  DERIVE_MAX_ABSOLUE)))
+
+    def valeur_nutritive(self) -> float:
+        """v41.2 — la valeur d'UNE ressource, DÉRIVÉE du besoin réel plutôt que posée.
+
+        Avant v41.2 c'était `0.4` en dur, calibré pour un métabolisme qui n'existe plus.
+        Mesuré : le stock se vidait de ~1,1 réserve par journée, donc trois repas à 0,4
+        ne pouvaient structurellement pas suivre — l'agent mourait *le ventre à moitié
+        plein*, avec une satiété bloquée à 0,392 pendant que l'énergie s'effondrait.
+
+        La valeur est donc ce qu'il faut manger pour couvrir une journée en
+        REPAS_PAR_JOURNEE prises, pertes de conversion comprises. Si la dépense change,
+        la nutrition suit — aucun des deux nombres ne peut plus dériver seul."""
+        besoin_journalier = DEPENSE_ENERGIE_JOUR / max(RENDEMENT_CONVERSION, 1e-6)
+        return besoin_journalier / REPAS_PAR_JOURNEE
+
+    def consommer_ressource(self, type_ressource: str, quantite: float = None):
+        quantite = self.valeur_nutritive() if quantite is None else quantite
         if type_ressource == "FOOD":
             self.satiete = min(1.0, self.satiete + quantite)
         elif type_ressource == "WATER":
@@ -3759,10 +3938,112 @@ EXTENSION_PATIENCE_SURSAUT = 50     # ticks supplémentaires accordés, plafonn�
 BOOST_PATIENCE_MIN_PAR_RECURRENCE = 10  # gain permanent de patience_min après une victoire par sursaut
 
 # --- MOTEUR HOMÉOSTATIQUE BIOLOGIQUE (v18.0, générique, actif partout) ---
+# v41.2 — L'ÉCHELLE TEMPORELLE. Les taux ci-dessous étaient calibrés sur une journée de
+# 400 ticks, alors que le code lui-même définit ailleurs une journée comme
+# TICKS_PAR_JOUR_BEBE = 3600 (« cycle nycthéméral complet »). Mesuré sur la campagne des
+# 10 graines : l'agent passait 400 ticks sur 400 en zone critique, satiété et hydratation
+# à 0.00, TOUS les jours. Ce n'était pas une difficulté mais une erreur d'échelle d'un
+# facteur ~35 (il aurait fallu manger 104 fois par journée de 3600 ticks).
+#
+# Les taux sont désormais exprimés PAR JOURNÉE, pas par tick, et divisés par la longueur
+# réelle de la journée. L'invariant préservé est le VÉCU BIOLOGIQUE (« 3 repas par
+# journée »), jamais le nombre de ticks : un run de réglage à 400 ticks et un run cible à
+# 3600 ticks doivent produire le même profil de jauges en POURCENTAGE de journée.
+# C'est le test de non-régression à conserver.
+TICKS_JOUR_REFERENCE = 3600.0   # borne : la journée nycthémérale de référence
+
+# Proportions ancrées sur le vivant, pas choisies (voir CHANTIER_v41.2 §6) :
+#   - 3 repas par journée  ⇒ un repas doit couvrir ~1/3 de journée
+#   - l'eau tue ~10× plus vite que la faim (3 jours contre 30)
+#   - le métabolisme BASAL représente ~60-70 % de la dépense totale
+REPAS_PAR_JOURNEE = 2.5                  # borne : le rythme alimentaire d'espèce, dont la
+                                         # valeur nutritive d'une ressource est DÉRIVÉE.
+                                         # CALIBRÉ PAR MESURE : un agent débutant ne trouve
+                                         # que ~2 ressources/jour (mesuré sur 5 jours de run
+                                         # réel). À 3.0, chaque repas vaut trop peu et
+                                         # l'énergie s'effondre à 0,005 dès le 3ᵉ jour —
+                                         # l'agent mourait d'une famine qu'aucun apprentissage
+                                         # n'aurait pu éviter. À 2.5 : il SURVIT à 2 repas
+                                         # (énergie 0,51, écart-type 0,28 — donc la vigueur
+                                         # module vraiment) et n'est confortable qu'à partir
+                                         # de 3. Descendre à 2.0 sature déjà (écart-type 0,15).
+FRACTION_JOURNEE_PAR_REPAS = 1.0 / REPAS_PAR_JOURNEE   # autonomie d'un estomac plein
+RATIO_SOIF_SUR_FAIM = 10.0 / 30.0        # borne : l'eau se vide plus vite en proportion
+
+# Taux exprimés PAR JOURNÉE (divisés par ticks_par_jour au moment de l'usage).
+TAUX_SATIETE_JOUR = 1.0 / FRACTION_JOURNEE_PAR_REPAS   # 1 estomac plein = 1/3 de journée
+TAUX_HYDRATATION_JOUR = TAUX_SATIETE_JOUR * RATIO_SOIF_SUR_FAIM
+TAUX_STIMULATION_JOUR = 4.0    # la stimulation se vide vite, mais se recharge par la nouveauté
+
+# ⚠️ Conservés pour compatibilité de signature/résurrection : les anciens taux PAR TICK.
+# Ils ne sont plus la source de vérité dès que `ticks_par_jour` est connu.
 TAUX_SATIETE = 0.008
 TAUX_HYDRATATION = 0.005
 TAUX_STIMULATION = 0.012
 SEUIL_CRITIQUE_BIO = 0.35
+
+# --- v41.2 — LE MÉTABOLISME À DEUX ÉTAGES & L'ÉNERGIE MODULATRICE ---
+# La satiété est un STOCK (le réservoir digestif), l'énergie est le FLUX réellement
+# dépensé pour agir. Se reposer réduit la dépense mais NE CRÉE PAS DE MATIÈRE : si la
+# satiété est vide, la réserve mobilisable est nulle, l'énergie continue de descendre et
+# l'agent meurt. C'est une condition de SOLVABILITÉ, pas un `if` — il n'existe nulle part
+# de règle « si repos et faim alors mourir ».
+METABOLISME_BASAL_PART = 0.65   # borne : part incompressible de la dépense (~65 % dans le
+                                 # vivant). Avant v41.2 le basal valait 12 % (`done`=0.1
+                                 # contre `pickup`=0.8), ce qui punissait massivement le
+                                 # mouvement — cohérent avec les 5,5 % de `forward` mesurés.
+DEPENSE_ENERGIE_JOUR = 2.0       # borne : une journée pleine d'activité consomme 2 réserves.
+                                 # CALIBRÉ PAR MESURE, pas choisi (méthode v30.1) : balayage
+                                 # 1.0→3.0 à 3 repas/jour. À 1.0 l'énergie sature à 1.000
+                                 # (écart-type 0.000 : variable morte, fil n°2 du projet) ;
+                                 # à 3.0 l'agent est en zone critique 37 % du temps même en
+                                 # mangeant correctement. À 2.0 : jamais critique avec
+                                 # 3 repas (E_min 0.458, écart-type 0.163 — donc la vigueur
+                                 # module réellement), 11 % de critique à 2 repas, et la
+                                 # MORT PAR FAMINE au tick 367 si l'agent ne mange pas.
+                                 # Le régime récompense l'alimentation et punit la
+                                 # négligence, sans jamais rendre la mort inévitable.
+MARGE_DIGESTIVE = 1.5            # borne : le débit digestif dépasse la dépense de 50 %.
+                                 # DÉRIVÉ de la dépense, jamais posé indépendamment — si
+                                 # le débit était fixé à part, il pourrait passer sous la
+                                 # dépense et rendre la mort certaine par construction,
+                                 # auquel cas la mécanique ne mesurerait plus rien.
+DEBIT_DIGESTIF_JOUR = DEPENSE_ENERGIE_JOUR * MARGE_DIGESTIVE
+RENDEMENT_CONVERSION = 0.9       # borne : satiété → énergie (jamais 100 %)
+COFACTEUR_HYDRIQUE_MIN = 0.6     # borne : une soif TOTALE laisse encore 60 % du débit
+                                 # digestif. Sans ce plancher, le bilan énergétique passe
+                                 # négatif sous 50 % d'hydratation quoi que l'agent mange
+                                 # (mesuré : énergie effondrée à 0,005 au 3ᵉ jour d'un run
+                                 # réel). La soif doit RALENTIR la digestion, jamais
+                                 # l'annuler — sinon la mort devient inévitable avant même
+                                 # que la jauge d'eau n'atteigne zéro.
+RECUPERATION_SOMMEIL = 0.5       # borne : fraction d'énergie rendue par une nuit complète
+
+ENERGIE_MIN, ENERGIE_MAX = 0.0, 1.0
+
+# LE SEUIL NON LINÉAIRE (décision utilisateur du 15/08) : l'énergie module TOUT — C1, C2,
+# le déficit, la plasticité — via une seule grandeur dérivée, `vigueur = énergie ** κ`.
+# Ce n'est PAS un seuil : il n'existe aucun `if énergie < X`. C'est une puissance, donc
+# une chute continue mais ACCÉLÉRANTE. À κ=2 : énergie 0.5 → vigueur 0.25.
+# Conséquence voulue : C2 (qui subit la vigueur en plus de sa force) s'éteint AVANT C1 —
+# un organisme épuisé cesse de simuler l'avenir bien avant de cesser de marcher.
+KAPPA_VIGUEUR = 2.0              # norme d'espèce ; dérivable (voir DERIVE_* ci-dessous)
+KAPPA_VIGUEUR_MIN, KAPPA_VIGUEUR_MAX = 1.0, 4.0
+VIGUEUR_PLANCHER = 0.15          # ⚠️ INDISPENSABLE : sans lui, vigueur→0 annule C1 ET C2,
+                                 # donc logits tous nuls, donc action ALÉATOIRE. Un agent
+                                 # mourant doit rester COHÉRENT, jamais aléatoire. Même
+                                 # raisonnement que PLANCHER_POIDS_VITAL (v34.0-fix1).
+
+# LES BORNES NE SONT PAS DES LIMITES (formulation utilisateur) : un métabolisme peut
+# s'optimiser et déplacer sa propre norme, mais s'en écarter coûte EXPONENTIELLEMENT cher.
+#   paramètre_effectif = norme * exp(dérive)
+#   Δdérive = pression * plasticité − raideur * dérive * exp(|dérive| / élasticité)
+# Près de la norme le rappel est négligeable (adaptation facile) ; loin, il explose en
+# exp (mur asymptotique). La borne est une PENTE QUI DEVIENT VERTICALE, pas une barrière.
+PLASTICITE_DERIVE_METABOLIQUE = 0.02   # borne : vitesse d'adaptation par nuit
+RAIDEUR_RAPPEL_DERIVE = 0.05           # borne : force du rappel élastique vers la norme
+ELASTICITE_DERIVE = 0.35               # borne : échelle au-delà de laquelle le mur monte
+DERIVE_MAX_ABSOLUE = 1.0               # borne dure de sécurité (exp(1) ≈ 2,7× la norme)
 NB_SOURCES_FOOD = 2
 NB_SOURCES_WATER = 2
 POIDS_CHOC_RESSOURCE_BIO = 0.25  # ancrage mémoriel à la consommation d'une ressource
@@ -4389,6 +4670,10 @@ class EtatCognitif:
         self.moteur_bio = BiologicalHomeostasisEngine(
             taux_satiete=TAUX_SATIETE, taux_hydratation=TAUX_HYDRATATION,
             taux_stimulation=TAUX_STIMULATION, seuil_critique=SEUIL_CRITIQUE_BIO,
+            # v41.2 — passe la longueur RÉELLE de la journée : les taux sont exprimés par
+            # journée puis divisés ici, pour que le vécu (≈3 repas/journée) soit invariant
+            # entre un run de réglage à 400 ticks et un run cible à 3600.
+            ticks_par_jour=ticks_par_jour,
         )  # générique, actif partout — jauges persistantes entre épisodes
         self.memoire_episodique_spatiale = MemoireEpisodiqueSpatiale(
             capacite_max=CAPACITE_MEMOIRE_EPISODIQUE, fenetre_fraicheur=FENETRE_FRAICHEUR_SOUVENIR,
@@ -4554,7 +4839,47 @@ class EtatCognitif:
         # --- Buffers de gradient / accumulateurs de la journée subjective ---
         self._reinitialiser_buffers_journee()
 
+    def _reinitialiser_buffers_calibrage(self):
+        """v41.2-fix — les compteurs de calibrage v34, remis à zéro CHAQUE NUIT.
+
+        ⚠️ Bug corrigé ici : ces champs portaient le suffixe `_jour` et leur commentaire
+        d'origine invoquait explicitement « le piège du bug `score_vocal_jour` v27.0 » —
+        mais ils n'étaient initialisés qu'une fois, dans `__init__`, et jamais réarmés.
+        `jauge_min_satiete_jour` était donc le minimum **depuis la naissance**, et
+        `ticks_deficit_critique_jour` un cumul monotone : d'où les « 400/400 ticks en zone
+        critique » lus sur les runs, qui surestimaient la détresse réelle du jour.
+        Le commentaire décrivait le piège, le code le contenait — troisième occurrence du
+        fil n°3 de l'INDEX (« un invariant en commentaire finit par être violé »).
+        """
+        # 1. Distribution de l'effort réel par tick — l'échelle du futur taux de fatigue.
+        self.effort_min_jour = None
+        self.effort_max_jour = 0.0
+        self.effort_par_action_jour = {a: [0, 0.0] for a in range(7)}  # [n_ticks, somme]
+        # 2. Déficit homéostatique : combien de temps l'agent passe en zone critique.
+        self.deficit_cumul_jour = 0.0
+        self.deficit_max_jour = 0.0
+        self.ticks_deficit_critique_jour = 0
+        # 3. Autonomie des jauges — LE critère de sevrage du soin parental (§3.3) :
+        #    un agent qui maintient ses jauges seul n'a plus besoin qu'on le nourrisse.
+        self.ticks_jauges_saines_jour = 0
+        self.jauge_min_satiete_jour = 1.0
+        self.jauge_min_hydratation_jour = 1.0
+        self.jauge_min_stimulation_jour = 1.0
+        # v41.2 — télémétrie du second étage. Une mécanique non instrumentée est
+        # indémontrable sur un run long (leçon v29.1) : l'énergie module désormais TOUTE
+        # la décision, elle doit donc être lisible nuit par nuit.
+        self.energie_cumul_jour = 0.0
+        self.energie_min_jour = 1.0
+        self.vigueur_cumul_jour = 0.0
+        self.vigueur_min_jour = 1.0
+        self.ticks_energie_basse_jour = 0
+        # 4. Ressources réellement disponibles — §7.4, BLOQUANT pour l'Étape 3 : rendre
+        #    l'agent mortel sur une carte sans nourriture serait le condamner d'office.
+        self.ressources_vues_jour = 0
+        self.ticks_avec_odeur_jour = 0
+
     def _reinitialiser_buffers_journee(self):
+        self._reinitialiser_buffers_calibrage()
         self.memoire_moyen_terme = []
         self.jepa_losses, self.log_probs_journee, self.entropies_journee = [], [], []
         self.valeurs_journee, self.recompenses_journee, self.dones_journee = [], [], []
@@ -4604,24 +4929,7 @@ class EtatCognitif:
         # getattr(etat, "...", 0) sans remise à zéro cumulerait depuis la naissance
         # (piège du bug `score_vocal_jour` v27.0).
         #
-        # 1. Distribution de l'effort réel par tick — l'échelle du futur taux de fatigue.
-        self.effort_min_jour = None
-        self.effort_max_jour = 0.0
-        self.effort_par_action_jour = {a: [0, 0.0] for a in range(7)}  # [n_ticks, somme]
-        # 2. Déficit homéostatique : combien de temps l'agent passe en zone critique.
-        self.deficit_cumul_jour = 0.0
-        self.deficit_max_jour = 0.0
-        self.ticks_deficit_critique_jour = 0
-        # 3. Autonomie des jauges — LE critère de sevrage du soin parental (§3.3) :
-        #    un agent qui maintient ses jauges seul n'a plus besoin qu'on le nourrisse.
-        self.ticks_jauges_saines_jour = 0
-        self.jauge_min_satiete_jour = 1.0
-        self.jauge_min_hydratation_jour = 1.0
-        self.jauge_min_stimulation_jour = 1.0
-        # 4. Ressources réellement disponibles — §7.4, BLOQUANT pour l'Étape 3 : rendre
-        #    l'agent mortel sur une carte sans nourriture serait le condamner d'office.
-        self.ressources_vues_jour = 0
-        self.ticks_avec_odeur_jour = 0
+        self._reinitialiser_buffers_calibrage()
 
         # --- v36.0 : flux enrichi & abstraction par récurrence ---
         # `ecritures` compte les repères créés OU confirmés — c'est la mesure du flux
@@ -5580,6 +5888,9 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
         gamma_planif=GAMMA_PLANIFICATION,
         obs_auditive=obs_auditive,
         plugs_c3_disponibles=plugs_c3_disponibles,
+        # v41.2 — l'état du CORPS module la décision : `vigueur = énergie ** κ`, lue au
+        # tick courant. C'est le point où le métabolisme entre dans le chemin cognitif.
+        vigueur=etat.moteur_bio.vigueur(),
     )
 
     # --- v37.0 : accumulation de la télémétrie d'arbitrage ---
@@ -5865,6 +6176,16 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
     etat.jauge_min_satiete_jour = min(etat.jauge_min_satiete_jour, jauges[0])
     etat.jauge_min_hydratation_jour = min(etat.jauge_min_hydratation_jour, jauges[1])
     etat.jauge_min_stimulation_jour = min(etat.jauge_min_stimulation_jour, jauges[2])
+    # v41.2 — le second étage : l'énergie réellement disponible et la vigueur qu'elle
+    # produit (`énergie ** κ`), qui module C1, C2, le déficit et la plasticité.
+    _energie = etat.moteur_bio.energie
+    _vigueur = etat.moteur_bio.vigueur()
+    etat.energie_cumul_jour += _energie
+    etat.energie_min_jour = min(etat.energie_min_jour, _energie)
+    etat.vigueur_cumul_jour += _vigueur
+    etat.vigueur_min_jour = min(etat.vigueur_min_jour, _vigueur)
+    if _energie < SEUIL_CRITIQUE_BIO:
+        etat.ticks_energie_basse_jour += 1
 
     mange_food, mange_water = etat.detecteur_ressources_bio.evaluer_tick(etat.env)
     poids_ressource_bio = 0.0
@@ -6676,6 +6997,12 @@ def executer_nuit(etat, plafond_reve=None):
           f"hydratation {etat.jauge_min_hydratation_jour:.2f} | "
           f"stimulation {etat.jauge_min_stimulation_jour:.2f} | "
           f"ticks en zone critique : {etat.ticks_deficit_critique_jour}/{ticks_du_jour}")
+    # v41.2 — le second étage. `vigueur` est la grandeur qui module TOUTE la décision :
+    # si elle reste plate à 1.000, le couplage est décoratif et la mécanique ne sert à rien.
+    print(f"  ├─ Énergie v41.2  : ⚡ moy {etat.energie_cumul_jour / ticks_du_jour:.3f} "
+          f"(min {etat.energie_min_jour:.3f}) | 💪 vigueur moy "
+          f"{etat.vigueur_cumul_jour / ticks_du_jour:.3f} (min {etat.vigueur_min_jour:.3f}) | "
+          f"🪫 {etat.ticks_energie_basse_jour}/{ticks_du_jour} ticks en basse énergie")
     # v30.1 — la taille seule ne disait pas si la mémoire SERT : on affiche désormais le
     # taux de saturation (200/200 = plafond `capacite_max` atteint) et la qualité du
     # rappel, pour pouvoir juger si une capacité adaptative apporterait quelque chose.
@@ -6726,6 +7053,19 @@ def executer_nuit(etat, plafond_reve=None):
 
     print(f"  └─ Erreur JEPA moy: {erreur_moyenne:.4f} | Réc. moyenne: {rec_moy:.3f} | "
           f"Thermostat: {etat_thermostat}")
+
+    # v41.2 — LA DÉRIVE MÉTABOLIQUE, une fois par NUIT (jamais par tick : une norme qui
+    # bougerait à chaque pas serait illisible et rendrait le diagnostic impossible, même
+    # discipline que `MemoireEpisodiqueSpatiale.ajuster_capacite` en v31.0).
+    #
+    # La pression est ce que le monde a réellement imposé : la fraction de la journée
+    # passée en basse énergie. Elle est DÉRIVÉE du vécu, jamais posée — un monde clément
+    # ne fait dériver personne, un monde dur pousse le métabolisme à s'optimiser, et le
+    # rappel élastique en exp() rend cette optimisation exponentiellement plus coûteuse à
+    # mesure qu'elle s'éloigne de la norme d'espèce.
+    etat.moteur_bio.reviser_derive_metabolique(
+        etat.ticks_energie_basse_jour / max(ticks_du_jour, 1)
+    )
 
     log_wandb = {
         "Jour": etat.jour,
@@ -6779,6 +7119,15 @@ def executer_nuit(etat, plafond_reve=None):
         # Mesure BLOQUANTE (§7.4) : rendre l'agent mortel sur une carte sans ressource
         # serait le condamner d'office. Zéro ici ⇒ l'Étape 3 est interdite sur ce niveau.
         "Calibrage_Ressources_Cartes_Jour": etat.ressources_vues_jour,
+        # v41.2 — le métabolisme à deux étages
+        "Meta_Energie_Moy": etat.energie_cumul_jour / ticks_du_jour,
+        "Meta_Energie_Min": etat.energie_min_jour,
+        "Meta_Vigueur_Moy": etat.vigueur_cumul_jour / ticks_du_jour,
+        "Meta_Vigueur_Min": etat.vigueur_min_jour,
+        "Meta_Ticks_Energie_Basse_Ratio": etat.ticks_energie_basse_jour / ticks_du_jour,
+        "Meta_Derive_Metabolique": etat.moteur_bio.derive_metabolique,
+        "Meta_Derive_Kappa": etat.moteur_bio.derive_kappa,
+        "Meta_Kappa_Effectif": etat.moteur_bio.kappa_effectif(),
         # --- v35.0 : la promotion par taux de maîtrise ---
         # `Cursus_Taux_Maitrise_Niveau` est la métrique qui dira si la seconde voie de
         # promotion sert réellement, ou si tout passe encore par la série de victoires.

@@ -256,6 +256,12 @@ class PersistanceAnatomique:
             'hydratation': etat.moteur_bio.hydratation,
             'stimulation': etat.moteur_bio.stimulation,
             'quete_active': etat.moteur_bio.quete_active,
+            # v41.2 — le second étage et la dérive adaptative du métabolisme. La dérive
+            # fait partie de l'INDIVIDU (c'est ce que SON vécu a optimisé), au même titre
+            # que l'empreinte de type : elle doit survivre à la résurrection.
+            'energie': getattr(etat.moteur_bio, 'energie', 1.0),
+            'derive_metabolique': getattr(etat.moteur_bio, 'derive_metabolique', 0.0),
+            'derive_kappa': getattr(etat.moteur_bio, 'derive_kappa', 0.0),
 
             # --- 4. Souvenirs persistants (mémoire épisodique spatiale, v20.0) ---
             'souvenirs_spatiaux': etat.memoire_episodique_spatiale.souvenirs,
@@ -524,6 +530,13 @@ class PersistanceAnatomique:
         etat.moteur_bio.hydratation = checkpoint['hydratation']
         etat.moteur_bio.stimulation = checkpoint['stimulation']
         etat.moteur_bio.quete_active = checkpoint['quete_active']
+        # v41.2 — `.get` avec défaut neutre : un `.brain` antérieur à cette version repart
+        # avec une énergie pleine et une dérive nulle (donc au métabolisme d'espèce), sans
+        # greffe ni erreur. Même discipline que `empreinte_types` (v39.0) et
+        # `flottaison_metabolique` (v41.0).
+        etat.moteur_bio.energie = float(checkpoint.get('energie', 1.0))
+        etat.moteur_bio.derive_metabolique = float(checkpoint.get('derive_metabolique', 0.0))
+        etat.moteur_bio.derive_kappa = float(checkpoint.get('derive_kappa', 0.0))
 
         # --- Souvenirs ---
         etat.memoire_episodique_spatiale.souvenirs = checkpoint['souvenirs_spatiaux']
