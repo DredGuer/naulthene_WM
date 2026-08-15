@@ -3,7 +3,7 @@
 > **Point d'entrée unique.** Ce fichier dit *où* chercher et *dans quel ordre* lire.
 > Il ne contient aucune connaissance propre : uniquement des pointeurs.
 >
-> Dernière mise à jour : **14 août 2026**
+> Dernière mise à jour : **15 août 2026**
 
 ---
 
@@ -66,6 +66,7 @@ autorité sur l'état courant.**
 | [dia_Aout_2026.md](recherche/dia_Aout_2026.md) | Pourquoi bloqué au niveau 2/15 ? | 3 causes, **aucune cognitive** |
 | **[DISSECTION_g22_aout_2026.md](recherche/DISSECTION_g22_aout_2026.md)** | Que contient le cerveau le plus avancé (248 victoires) ? | **Le but vaut 16× le reste — appris, jamais déclaré** |
 | **[CAMPAGNE_P17_ABLATION_aout_2026.md](recherche/CAMPAGNE_P17_ABLATION_aout_2026.md)** | Le cursus gaussien aide-t-il ? À quoi servent les organes ? | **C2 change de signe selon le niveau** · accord C1/C2 toujours à 0 % |
+| **[CAMPAGNE_v41_population_et_ablation_aout_2026.md](recherche/CAMPAGNE_v41_population_et_ablation_aout_2026.md)** | Le déblocage v41 est-il reproductible ? À quoi servent les organes, témoin non nul ? | **0 promotion sur 10 graines** · **C2 débranchable à +0,0 sur 6 niveaux** · 6 lésions sur 13 sans effet |
 | **[CHANTIER_v40_planification_emergente.md](ameliorations_appliquees/CHANTIER_v40_planification_emergente.md)** | Peut-on supprimer les constantes de l'arbitrage ? | **3 supprimées** · l'envie de vivre peut tuer l'agent |
 | [CHANTIER_v37_equilibre_c1_c2.md](ameliorations_appliquees/CHANTIER_v37_equilibre_c1_c2.md) | C2 écrase-t-il C1 ? | Équilibre atteint, blocage persiste |
 | [CHANTIER_v38_monde_continu.md](ameliorations_appliquees/CHANTIER_v38_monde_continu.md) | Un monde continu débloque-t-il ? | **1 brique validée sur 6** |
@@ -116,15 +117,20 @@ une docstring, jamais transformées en test.
 
 ---
 
-## 📌 État au 14 août 2026 — l'essentiel en 6 lignes
+## 📌 État au 15 août 2026 — l'essentiel en 9 lignes
 
-1. **Le cerveau est sain** : 0 synapse morte (contre 13 769 avant les correctifs v37).
-2. **Aucune mécanique cognitive n'a démontré son apport** — 8 testées, 8 échecs.
-3. **Les deux seuls leviers qui marchent sont des propriétés du MONDE.**
-4. **Le banc d'essai était biaisé** : jusqu'à 1 carte sur 2 gagnable sans clé ([R5](recherche/REVUE_CODE_v39_aout_2026.md)).
-5. **Corrigé — mais le test est devenu 50× trop dur** ([R6](recherche/REVUE_CODE_v39_aout_2026.md)). À recalibrer.
-6. **Le prior d'empreinte (P12) a échoué** — 2/5 graines positives, p = 1,000. 8ᵉ mécanique, 8ᵉ échec.
-7. **Priorité : la gaussienne d'apprentissage** ([P17](ameliorations/AVIS_ET_PROPOSITIONS_aout_2026.md)) —
+1. **La v41 ne débloque pas le cursus** — 0 promotion sur 10 graines × 2000 jours. Le
+   niveau 4 atteint par g22 était une **loterie natale**, pas un effet du correctif
+   ([campagne v41](recherche/CAMPAGNE_v41_population_et_ablation_aout_2026.md)).
+2. **C2 est débranchable sans effet** : `c2_coupe` = **+0,0 sur les 6 niveaux**. Quatre
+   sens sur six sont inertes ; les trois mémoires sont plutôt **nuisibles**.
+3. **Le cerveau est sain** : 0 synapse morte (contre 13 769 avant les correctifs v37).
+4. **Aucune mécanique cognitive n'a démontré son apport** — **9 testées, 9 échecs**.
+5. **Les deux seuls leviers qui marchent sont des propriétés du MONDE.**
+6. **Le banc d'essai était biaisé** : jusqu'à 1 carte sur 2 gagnable sans clé ([R5](recherche/REVUE_CODE_v39_aout_2026.md)).
+7. **Corrigé — mais le test est devenu 50× trop dur** ([R6](recherche/REVUE_CODE_v39_aout_2026.md)). À recalibrer.
+8. **Le prior d'empreinte (P12) a échoué** — 2/5 graines positives, p = 1,000. 8ᵉ mécanique, 8ᵉ échec.
+9. **Priorité : la gaussienne d'apprentissage** ([P17](ameliorations/AVIS_ET_PROPOSITIONS_aout_2026.md)) —
    le palier joué est *tiré au sort* autour du niveau courant, au lieu d'être un pointeur qui
    ne recule jamais. Retours en arrière et « pas au-delà tant que ce n'est pas acquis »
    **émergent** de la distribution, sans un seul seuil.

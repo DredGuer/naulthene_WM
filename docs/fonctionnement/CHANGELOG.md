@@ -4,6 +4,94 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.0-campagne] - 2026-08-15 — La campagne qui infirme le résultat v41
+
+### « 0 promotion sur 10 graines — et C2 est débranchable sans effet »
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | docs (campagne de mesure, **aucune ligne de `src/` modifiée**) |
+| **Impact** | Critique — infirme le résultat mis en avant en v41.0 |
+| **Branche** | `feat/v41-ligne-flottaison` |
+| **Carnet** | [CAMPAGNE_v41_population_et_ablation_aout_2026.md](../recherche/CAMPAGNE_v41_population_et_ablation_aout_2026.md) |
+
+**20 000 jours simulés (10 graines × 2000 j) + 78 cellules d'ablation.**
+
+### Le déblocage de g22 n'est pas reproductible
+
+L'entrée v41.0 ci-dessous annonce « le premier franchissement de palier du projet »
+(g22 → niveau 4/15) sur **3 graines**. La campagne de 10 graines fraîches, même code,
+tranche :
+
+| | v41 (3 graines) | **Campagne (10 graines)** |
+|---|---|---|
+| Niveau max atteint | **4/15** | **1/15** |
+| Promotions | 1 graine | **0** |
+| Maîtrise max (seuil : 60 %) | — | **40 %** |
+| Victoires cumulées | — | **7 602** |
+
+Le taux de déblocage n'est donc pas « 1 sur 3 » mais au plus **1 sur 13**. Le succès de
+g22 était un tirage favorable de la **loterie natale** — l'ambiguïté flaguée en §10.3 du
+chantier est levée, dans le mauvais sens. Face à l'étalon V40 : **match nul**.
+
+### Le réveil de C2 est décoratif — deux mesures indépendantes
+
+**Ablation** : `c2_coupe` et `c2_horizon_court` donnent **+0,0 sur les 6 niveaux**, deux
+cerveaux, 300 épisodes/cellule. Douze mesures, douze zéros exacts.
+
+**Population** : l'accord C1/C2 s'éteint sur la durée.
+
+| Jalon | 500 | 1000 | 1500 | **2000** |
+|---|---|---|---|---|
+| Accord médian | **37 %** | 21 % | 4 % | **0,5 %** |
+
+Le gain le plus visible de la v41 (37 % contre **0 % historique**, cf. chantier v37) est
+un **transitoire de 500 jours** qui retourne au niveau d'avant-correctif. C2 revit dans
+les métriques — amplitude, ratio, non-extinction — **sans peser sur les actes**.
+
+### Six lésions sur treize ne changent rien
+
+`ouie_coupee`, `gout_coupe`, `exo_coupe`, `c2_coupe`, `c2_horizon_court` : **+0,0 × 6**.
+`odorat_coupe` : +0,0 × 5. Quatre des six sens sont coupables sans conséquence.
+
+Portent réellement quelque chose : le **toucher** et le **vecteur bio**, dont l'effet
+grandit avec la difficulté (bio : −4,4 sur `Empty-5x5` → **−8,0** sur `Longue distance`).
+La **vue est instable** (aide sur 3 niveaux, nuit sur 3).
+
+⚠️ **Les trois mémoires sont plutôt nuisibles** : `hippocampe_fige` et
+`episodique_coupe` **améliorent** le score sur 4 niveaux sur 6 (jusqu'à **+4,7**). Seule
+exception nette : `spatiale_coupee` coûte **−7,4** sur `Primaire 3 (Ramasser)`.
+
+### Le découplage victoires / progression
+
+g111 : **1346 victoires → 15 %** de maîtrise. g909 : **409 victoires → 30 %**. Le nombre
+de succès ne prédit ni la maîtrise ni le vécu — le mur du cursus est la **régularité**
+sur la fenêtre de 20 épisodes, pas le volume.
+
+Trois variables sont mortes au terme du run : `envie` (**1,0000 sur 10/10** depuis j263),
+`danger` (**676 sur 9/10** à l'unité près), accord C1/C2 (0 % sur 7/10). Septième
+rencontre du **fil n°2** de l'INDEX.
+
+### ⚠️ Une affirmation des README est fausse
+
+Les deux README affirment que **« couper C2 double le taux de succès »**. Mesure :
+**0,0 point d'écart sur 6 niveaux**. À corriger des deux côtés dans le même commit
+(règle de miroir) — **non fait dans ce commit**, en attente d'arbitrage utilisateur.
+
+### Note de méthode — trois lectures révisées en cours de campagne
+
+Consignées dans le carnet : g606 lu comme « seconde solution stable » (c'était un
+décrochage), `danger` lu comme « saturé à 541 » (le plafond monte : 541 → 631 → 676), et
+g111 lu comme « seule trajectoire ascendante » à 50 % (fluctuation — redescend à 15 %).
+
+> **Sur une métrique à fenêtre glissante, un jalon isolé ne porte pas de tendance.**
+> Même défaut que la projection d'envie démentie en v41.
+
+**9ᵉ mécanique cognitive testée, 9ᵉ sans apport démontré.**
+
+---
+
 ## [v41.0-experimental] - 2026-08-14 — La ligne de flottaison métabolique
 
 ### « Le zéro n'est pas 0.0, c'est le coût incompressible d'un organisme vivant »

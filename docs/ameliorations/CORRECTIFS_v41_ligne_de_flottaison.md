@@ -10,6 +10,13 @@
 > (ratio 1,41×) ; la force de planification de **0,000 à 0,462**.
 >
 > ⚠️ La v41 rend C2 **audible**. Elle n'a **pas** démontré qu'il *sert* — voir §9.
+>
+> 🛑 **INFIRMÉ SUR LE FOND (15/08).** La campagne de 10 graines a tranché : **0 promotion
+> sur 10 × 2000 jours**, et l'ablation donne **`c2_coupe` = +0,0 sur les 6 niveaux**. Le
+> niveau 4 de g22 (§10) était une **loterie natale**, pas un effet du correctif ; le
+> réveil de C2 est un **transitoire de 500 jours**. La correction d'échelle reste acquise,
+> son effet sur les actes n'existe pas.
+> → [CAMPAGNE_v41_population_et_ablation_aout_2026.md](../recherche/CAMPAGNE_v41_population_et_ablation_aout_2026.md)
 
 ---
 
@@ -483,12 +490,18 @@ jour 50 met 500 jours à s'effacer de moitié. L'écart de 38× ne se rattrape p
 
 | # | Sujet | État |
 |---|---|---|
-| **Population** | 1/3 est-il le taux réel ? | **10 graines en cours** (101→111) |
-| **Ablation** | Que porte réellement g22 ? | **en cours** — g22 sur niv. 3/4/5, g11 sur niv. 0/1/2 |
+| **Population** | 1/3 est-il le taux réel ? | ✅ **TRANCHÉ — non.** 0/10 graines. Au plus 1/13 |
+| **Ablation** | Que porte réellement g22 ? | ✅ **TRANCHÉ** — C2 à +0,0 × 6 ; 6 lésions sur 13 sans effet |
 | **C3** | Renaissance nocturne | proposé, non implémenté (§2) |
 | **P-lucidité** | Rapport `POIDS_LUCIDITE`/`POIDS_FOI` | jamais confronté à une mesure |
-| **`PRUDENCE_NAISSANCE`** | Amortir la loterie natale | candidat, après la campagne |
+| **`PRUDENCE_NAISSANCE`** | Amortir la loterie natale | candidat — **en réserve** (arbitrage utilisateur) |
 | **Le mur du niveau 4** | 1223 jours sans bouger | diagnostic à part entière |
+| **Les 3 variables mortes** | `envie` 1,0000 · `danger` 676 · accord 0 % | **nouveau** — issu de la campagne |
+| **Les mémoires nuisibles** | couper l'hippocampe **améliore** sur 4/6 niveaux | **nouveau** — issu de l'ablation |
+| **README faux** | « couper C2 double le taux de succès » → **0,0 pt** | à corriger des deux côtés |
+
+> Les pistes de correctif issues de la campagne sont **tenues en réserve** à la demande
+> explicite de l'utilisateur (15/08) — ne rien implémenter sans arbitrage.
 
 ---
 
