@@ -5671,10 +5671,15 @@ def _patience_budget(etat, patience_courante: int) -> int:
 
     part = PATIENCE_PLANCHER_BUDGET + PATIENCE_MARGE_BUDGET * (1.0 - maitrise)
     cible = int(round(budget * part))
-    # La cible REMPLACE la valeur du thermostat plutôt que de la borner : c'est elle qui
-    # porte l'inversion voulue. Bornée au budget (au-delà, inopérante) et au plancher
-    # vital d'un épisode jouable.
-    return max(PATIENCE_MIN, min(budget, cible))
+
+    # v41.8-fix1 — la cible est un PLANCHER, pas une substitution.
+    #
+    # En remplaçant la valeur, on effaçait la modulation par l'envie et par le thermostat.
+    # En la bornant par le bas, on garantit ce qui compte — « le débutant a droit à
+    # l'épisode entier » — tout en laissant les autres mécaniques accorder DAVANTAGE si
+    # elles le jugent utile. Le plafond reste le budget natif : au-delà, toute patience
+    # est inopérante puisque `max_steps` coupe l'épisode.
+    return max(PATIENCE_MIN, min(budget, max(cible, int(patience_courante))))
 
 
 def _distribution_cursus(etat):
@@ -6149,10 +6154,21 @@ def demarrer_journee(etat):
     # Bornée par PATIENCE_MIN pour rester un épisode jouable, jamais un abandon immédiat.
     # v41.8 — LA PATIENCE EST BORNÉE PAR LE BUDGET RÉEL DE LA CARTE, et le débutant en
     # reçoit la totalité. Voir le bloc de constantes `PATIENCE_PLANCHER_BUDGET`.
-    etat.patience_jour = _patience_budget(etat, etat.patience_jour)
-
     etat.patience_jour = max(PATIENCE_MIN,
                              int(round(etat.patience_jour * (0.5 + 0.5 * envie))))
+
+    # v41.8-fix1 — LE BUDGET S'APPLIQUE EN DERNIER, APRÈS la modulation par l'envie.
+    #
+    # Défaut mesuré sur la campagne de nuit : appliqué AVANT, le budget était ensuite
+    # multiplié par `(0.5 + 0.5 × envie)`, soit jusqu'à ÷2. Un débutant censé recevoir
+    # l'épisode entier (100 ticks sur `Empty-5x5`) n'en recevait que 50 à 70 — patience
+    # moyenne mesurée à **70 ticks contre 117** pour la version sans correctif, et
+    # **161 abandons lucides contre 107**. La v41.8 retirait donc du temps là où elle
+    # devait en donner, exactement le défaut qu'elle prétendait corriger.
+    #
+    # L'envie continue de moduler (un agent qui n'y croit plus abandonne tôt), mais elle
+    # module DANS le budget au lieu de mordre dessous.
+    etat.patience_jour = _patience_budget(etat, etat.patience_jour)
     etat.patience_base_jour = etat.patience_jour  # capturée avant tout étirement par Sursaut (v17.0), pour le log
     etat.ticks_episode_courant = 0
     etat.a_utilise_sursaut_episode = False
