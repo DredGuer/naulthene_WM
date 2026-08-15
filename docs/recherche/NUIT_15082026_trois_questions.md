@@ -121,3 +121,74 @@ aléatoire :
 **Réponse à la question : c'est l'agent, pas la nourriture.** Et ce n'est pas un problème
 de motivation mal câblée : c'est un problème d'apprentissage — ce qui renvoie directement
 à la question Q3.
+
+---
+
+## Q3 — Que change une victoire ? → **RIEN DE MESURABLE**
+
+### A. La maîtrise ne progresse pas, sur la même carte, en 1000 jours
+
+Les quatre graines jamais promues restent **toute leur vie sur `Empty-5x5`** : leur
+maîtrise est donc directement comparable d'un bout à l'autre du run, sans biais de
+changement de carte.
+
+| Graine | Premier 10 % du run | Milieu | Dernier 10 % | Évolution |
+|---|---|---|---|---|
+| g11 | 21,6 % | 23,3 % | 23,4 % | +1,8 % |
+| g22 | 28,5 % | 24,3 % | 24,3 % | −4,2 % |
+| g33 | 23,2 % | 18,2 % | 21,5 % | −1,7 % |
+| g66 | 25,6 % | 26,2 % | 22,5 % | −3,1 % |
+| **Moyenne** | **24,7 %** | — | **22,9 %** | **−1,8 %** |
+
+> 🔴 **Sur ~1000 jours et plusieurs milliers d'épisodes joués sur LA MÊME CARTE, la
+> maîtrise ne progresse pas — elle baisse légèrement.**
+
+### B. Une bonne journée n'annonce pas la suivante
+
+Autocorrélation à 1 pas de la maîtrise différenciée, moyenne sur les 6 runs : **−0,019**.
+
+Sur une série où l'apprentissage s'accumule, une bonne journée en annonce une autre
+(corrélation positive). Ici, la valeur est **indistinguable de zéro** : chaque journée est
+tirée indépendamment de la précédente.
+
+### C. ⚠️ Mais le cerveau APPREND PHYSIQUEMENT — et beaucoup
+
+C'est ce qui rend le résultat intéressant plutôt que trivial. Comparaison des poids de deux
+cerveaux issus de la **même graine** (g11) sur deux runs distincts :
+
+| Couche | Cosinus | Déplacement / norme |
+|---|---|---|
+| `tete_motrice` | **0,238** | **112 %** |
+| `porte_visuelle` | 0,388 | 103 % |
+| `analyseur` | 0,497 | 109 % |
+| `hippocampe` | 0,541 | 95 % |
+| `integrateur_bio` | 0,787 | 63 % |
+| `cortex_prefrontal` | 0,882 | 48 % |
+
+> Un cosinus de **0,24** sur la tête motrice signifie que les deux cerveaux ont des
+> politiques **presque orthogonales**. Le gradient agit, massivement.
+
+### 🎯 La conclusion des trois mesures
+
+| Hypothèse | Statut |
+|---|---|
+| « Le cerveau n'apprend pas » (plasticité morte) | ❌ **réfutée** — les poids se déplacent de 100 % de leur norme |
+| « L'agent n'est pas motivé » (récompense mal câblée) | ❌ **réfutée** — contraste affamé/repu de 15×, soulagement crédité |
+| « Le monde est trop pauvre » | ❌ **réfutée** — un marcheur aléatoire survit 400/400 |
+| **« L'agent apprend beaucoup, mais rien d'UTILE »** | ✅ **c'est ce que les mesures décrivent** |
+
+**L'agent modifie massivement ses poids, sans que son comportement s'améliore.** Il
+consomme comme le hasard (Q2), sa maîtrise stagne à ~23 % sur mille jours (Q3-A), et ses
+journées sont indépendantes les unes des autres (Q3-B).
+
+### Ce que cela oriente
+
+La question n'est plus *« pourquoi n'apprend-il pas ? »* mais **« qu'apprend-il à la
+place ? »**. Deux pistes, non testées à cette heure :
+
+1. **Le signal d'apprentissage est dominé par le métabolique.** `r_bio` est versé à chaque
+   tick (négatif en permanence, −2,7 à −3,8 par jour), la victoire une fois par épisode.
+   Si le gradient est saturé par la survie, la victoire ne pèse rien — et l'agent apprend
+   effectivement quelque chose : à gérer un déficit qu'il ne peut pas résoudre.
+2. **Le crédit temporel ne remonte pas jusqu'à la cause.** Une victoire sur `Empty-5x5`
+   demande ~10 pas ; si l'avantage n'est pas propagé, seul le dernier pas est renforcé.
