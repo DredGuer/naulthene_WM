@@ -4,6 +4,69 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.4-experimental] - 2026-08-15 — Deux maîtrises, un héritage proportionnel à la parenté
+
+### La mécanique marche ; elle n'a pas pu être prouvée — et elle ne débloque rien
+
+| Type | Details |
+|------|---------|
+| **Commits** | `d12359a`, `c5e91bf`, `80e844c`, `35bb93b`, `4768b26`, `96a8c20`, `52b5834` |
+| **Catégorie** | feat + fix (expérimental) |
+| **Impact** | Fonctionnel — **`noyau.py` uniquement** |
+| **Chantier** | [`CHANTIER_v41.4_maitrise_generale_et_heritage.md`](../ameliorations/CHANTIER_v41.4_maitrise_generale_et_heritage.md) |
+
+Décision utilisateur : *« tu as une maîtrise générale des cartes et une maîtrise carte par
+carte »*, et *« reporter une proportion du niveau précédent de maîtrise sur le suivant »*.
+
+**Le défaut visé** (mesuré en v41.3) : à chaque promotion `historique_episodes_niveau`
+est vidé, donc la maturité retombe à **0,000** et l'aide à **100 %** — l'agent redevient
+un nouveau-né sur chaque carte.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `historique_episodes_general` — maîtrise **transversale**, jamais vidée, pilote le **sevrage** seul |
+| `src/naulthene/cerveau/noyau.py` | `_profil_carte` / `_parente_cartes` — parenté **lue sur la grille**, forme × vocabulaire (opaque), jamais tabulée |
+| `src/naulthene/cerveau/noyau.py` | `facteur_guidage` — `poids = (1 − fraîcheur) × parenté` ; l'héritage **s'efface** quand la fenêtre se remplit |
+| `src/naulthene/cerveau/noyau.py` | `--sans-heritage` : ablation pour témoin apparié |
+| `src/naulthene/cerveau/persistance.py` | les deux grandeurs persistées (mesures de **vie**), lecture défensive |
+
+**Mesure préalable** (15 niveaux × 40 resets) : la parenté entre voisins va de **0,85** à
+**0,00**, **6 transitions sur 14** sont des ruptures — un report uniforme aurait été faux
+six fois. En vol, g44 mesure **65 %** puis **55 %**, cohérent avec la mesure hors-ligne.
+
+### Deux bugs corrigés (`35bb93b`)
+
+- **L'ablation n'atteignait pas le module.** `python -m` charge le fichier sous deux noms ;
+  `globals()` écrivait dans `__main__`, `facteur_guidage` lisait `naulthene.cerveau.noyau`.
+  Témoin et variante étaient **le même run**. 2ᵉ occurrence du défaut que ce bloc dénonce.
+  Assertion d'exécution ajoutée. **Campagne de 20 runs jetée.**
+- **Télémétrie décalée** : héritage comparé entre début et fin de journée → jusqu'à
+  **−33 pt** affichés sous ablation.
+
+### Résultats
+
+| Mesure | Valeur |
+|---|---|
+| Campagne appariée 300 j, 5 paires | **Δ +0,00** — mais héritage **0,0 pt des deux côtés** |
+| Autonomie moyenne, 10 runs | **28,5 %** *(v41.2 : 0 % sur 300 j)* |
+| g44 — 1ʳᵉ / 2ᵉ promotion | jour **477** puis jour **493** (**+16 j**) |
+| g44 après promotion | maturité 0,469 → **0,033**, **355 j** de stagnation |
+| Blocage niveau 1 | **3 graines /4** à 1300 j · **10 runs /10** à 300 j |
+
+⚠️ **L'ablation est VIDE, pas négative** : sans promotion, la parenté n'est jamais
+calculée, donc les deux branches exécutent le même code. Distinction déjà posée par
+`CAMPAGNE_P17_ABLATION` — *« une ablation dont le témoin est à zéro ne mesure rien »*.
+
+⚠️ **L'héritage ACCÉLÈRE, il ne DÉBLOQUE pas** — établi par conception et par mesure.
+**Conservé, non revendiqué** : n = 1 favorable, zéro mesure appariée, **rien dans les
+README**. Toute campagne future visant la promotion doit durer **≥ 1000 jours**.
+
+⚠️ **Relecture de la v41.3** : à héritage nul le calcul est identique à v41.3 (vérifié par
+`git diff`), or **4 graines sur 4** plafonnent à 55-65 % de maîtrise là où g42 atteignait
+70 %. La promotion du jour 74 était **très probablement une loterie natale de plus**.
+
+---
+
 ## [v41.3-experimental] - 2026-08-15 — Le sevrage proportionnel : deux promotions, puis le mur revient
 
 ### Le premier franchissement de palier du projet — et ce qu'il ne prouve pas

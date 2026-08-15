@@ -915,3 +915,29 @@ neuf.
 Rejouer les **10 graines de la campagne v41** avec le sevrage proportionnel, sur 2000 jours,
 et comparer les distributions de niveau atteint. C'est la seule mesure qui distingue un
 correctif réel d'une seconde loterie natale.
+
+### 11.7 ⚠️ CORRECTION (15/08, même jour) — la promotion du jour 74 était une loterie
+
+Le §11.5 avertissait qu'une graine ne prouve rien. **Quatre graines fraîches l'ont
+confirmé le jour même**, sur le code v41.4 (dont le calcul de sevrage est *identique* à
+v41.3 quand l'héritage est nul — vérifié par `git diff`) :
+
+| Graine | Jours | Niveau | Promotions | Maîtrise max |
+|---|---|---|---|---|
+| g11 | 1300 | 1/15 | **0** | 65 % |
+| g22 | 1310 | 1/15 | **0** | 55 % |
+| g33 | 1310 | 1/15 | **0** | 55 % |
+| g44 | 1290 | **3/15** | 2 (j477, j493) | — |
+| *g42 (v41.3)* | *300* | *3/15* | *2 (j74)* | *70 %* |
+
+**Trois graines sur quatre ne franchissent aucun palier en 1300 jours.** La quatrième en
+franchit deux, mais **six fois plus tard** (jour 477 contre 74).
+
+> 🔴 **Ce que je dois corriger de ma propre lecture** : j'ai qualifié la promotion du jour
+> 74 de *« premier franchissement de palier reproductible du projet »*. L'avertissement
+> était posé deux paragraphes plus bas, et je l'ai quand même écrit. **Le mot était faux.**
+> C'était un franchissement — pas un franchissement *reproductible*.
+>
+> Ce qui reste vrai et démontré sur population (10 runs) : le **verrou de mesure** est levé
+> — l'autonomie moyenne passe de **0 %** (v41.2, 300 jours) à **28,5 %**. La maturité peut
+> désormais être non nulle. C'est un résultat réel, et il est suffisant sans être enjolivé.
