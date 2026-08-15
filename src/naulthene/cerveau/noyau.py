@@ -2722,9 +2722,24 @@ class DetecteurRessourcesBiologiques:
                 self.nid_position = cases_vides[0]  # nid dérivé de la carte, jamais fixe
 
             np.random.shuffle(cases_vides)
-            total_sources = self.nb_sources_food + self.nb_sources_water
+            # v41.2-fix3 — LA DENSITÉ EST RELATIVE À LA CARTE, jamais absolue.
+            #
+            # `nb_sources_*` sont des SOUHAITS dérivés du besoin métabolique ; la carte a
+            # le dernier mot. Sans ce plafond, `Empty-5x5` (8 cases libres) recevait les 13
+            # sources demandées : 7 étaient placées et il ne restait **1 case libre**.
+            # L'agent était quasi emmuré dans un garde-manger, et sa récolte plafonnait à
+            # ~3,5/jour quelle que soit la densité demandée — d'où trois calibrages
+            # successifs restés sans le moindre effet (3,72 / 3,52 / 3,47).
+            #
+            # Le plafond préserve la proportion food/eau voulue plutôt que de tronquer la
+            # liste, ce qui aurait supprimé l'eau en premier (elle est placée en second).
+            budget = max(2, int(len(cases_vides) * FRACTION_CASES_RESSOURCES_MAX))
+            total_souhaite = self.nb_sources_food + self.nb_sources_water
+            total_sources = min(total_souhaite, budget)
+            part_food = self.nb_sources_food / max(total_souhaite, 1)
+            n_food = max(1, int(round(total_sources * part_food))) if total_sources else 0
             for i, (x, y) in enumerate(cases_vides[:total_sources]):
-                if i < self.nb_sources_food:
+                if i < n_food:
                     grille.set(x, y, Ball(color=self.COULEUR_FOOD))
                     self.positions_food.add((x, y))
                 else:
@@ -4189,6 +4204,20 @@ NB_SOURCES_FOOD = max(2, int(round(REPAS_PAR_JOURNEE * MARGE_TROUVABILITE)))
 # L'eau se prend plus souvent que la nourriture (PRISES_HYDRIQUES_PAR_JOURNEE), donc sa
 # densité est dérivée de SON propre rythme — pas recopiée de celle de la nourriture.
 NB_SOURCES_WATER = max(2, int(round(PRISES_HYDRIQUES_PAR_JOURNEE * MARGE_TROUVABILITE)))
+
+# ⚠️ v41.2-fix3 — CES NOMBRES SONT DES SOUHAITS, PAS DES GARANTIES : ils sont plafonnés
+# par la place réellement disponible sur la carte (voir `_budget_ressources`). Mesuré sur
+# `Empty-5x5` : l'intérieur ne compte que **8 cases libres**, alors que 5 food + 8 eau = 13
+# étaient demandées. Le monde en plaçait 7 et il ne restait **1 case libre** — l'agent était
+# quasi emmuré, et la récolte plafonnait à ~3,5/jour QUELLE QUE SOIT la densité demandée
+# (mesuré identique sur 3 runs : 3,72 / 3,52 / 3,47). C'est ce qui rendait inopérants les
+# trois calibrages successifs : ils réglaient un paramètre déjà saturé.
+FRACTION_CASES_RESSOURCES_MAX = 0.35  # borne : au-delà, la carte devient un garde-manger
+                                      # infranchissable et l'agent n'a plus d'espace pour
+                                      # apprendre à se déplacer. La densité est donc
+                                      # RELATIVE à la carte, jamais absolue — même
+                                      # discipline que `DENSITE_MAX_PAR_CASE` (v31.0) pour
+                                      # la mémoire spatiale.
 POIDS_CHOC_RESSOURCE_BIO = 0.25  # ancrage mémoriel à la consommation d'une ressource
 # COUT_ACTION_METABOLIQUE (constante fixe v18.0) supprimé en v19.0 : le coût énergétique
 # est désormais calculé dynamiquement par moteur_bio.calculer_effort_metabolique() à

@@ -504,3 +504,75 @@ sait pas. Tant que la récolte plafonne à 3,5/jour, **tout métabolisme exigean
 Ma recommandation : **A d'abord** (pour débloquer la mesure du reste), **B ensuite** comme
 chantier séparé. Faire B seul reviendrait à parier sur un mécanisme qui n'a jamais rien
 donné en 9 tentatives.
+
+---
+
+## 8. 🎯 LA CAUSE RÉELLE — la carte était saturée
+
+> Les trois voies du §7.8 sont **caduques**. Aucune n'était nécessaire : le défaut n'était
+> ni le barème, ni l'odorat, ni le comportement de l'agent.
+
+### 8.1 La mesure
+
+Sur `Empty-5x5` — le niveau où l'agent est bloqué :
+
+| | |
+|---|---|
+| Cases libres à l'intérieur | **8** |
+| Ressources demandées (5 food + 8 eau) | **13** |
+| Ressources réellement placées | **7** |
+| **Cases libres restantes** | **1** |
+
+**L'agent était emmuré dans un garde-manger.** Une seule case libre pour se déplacer sur
+toute la carte.
+
+### 8.2 Pourquoi les trois calibrages n'ont rien changé
+
+Parce qu'ils réglaient un paramètre **déjà saturé**. La récolte était identique dans tous
+les runs — 3,72 / 3,52 / 3,47 / 3,56 — non pas parce que l'agent « ne cherchait pas », mais
+parce que **le monde ne pouvait pas contenir ce que je lui demandais**.
+
+C'est aussi ce qui explique le paradoxe du §7.6 : passer de 20 à 35 sources n'augmentait pas
+la récolte, puisque la carte plafonnait bien avant.
+
+### 8.3 Le correctif : la densité est RELATIVE à la carte
+
+```
+budget = max(2, cases_libres × FRACTION_CASES_RESSOURCES_MAX)   # 35 %
+total  = min(souhait_métabolique, budget)
+```
+
+`nb_sources_*` redevient un **souhait** dérivé du besoin ; la carte a le dernier mot. Le
+plafond préserve la proportion food/eau plutôt que de tronquer la liste — sans quoi l'eau,
+placée en second, aurait disparu la première.
+
+| Carte | cases libres | food | eau | **restant** |
+|---|---|---|---|---|
+| `Empty-5x5` | 8 | 1 | 1 | **6** |
+| `Empty-6x6` | 15 | 2 | 2 | **11** |
+| `Empty-8x8` | 35 | 4 | 7 | **24** |
+| `DoorKey-5x5` | 4 | 1 | 1 | **2** |
+
+Sur le niveau bloquant : **2 ressources/épisode × 4,2 épisodes = 8,4 opportunités/jour**
+pour un besoin de 6,5, plus le respawn 80/20 après consommation. Tendu, mais faisable —
+là où 13 sources sur 8 cases rendaient la carte impraticable.
+
+> **Même discipline que `DENSITE_MAX_PAR_CASE` (v31.0)** pour la mémoire spatiale : une
+> quantité qui dépend du monde doit être bornée **par le monde**, jamais posée en absolu.
+
+### 8.4 Troisième erreur de diagnostic — et la plus coûteuse
+
+| # | Ce que j'ai affirmé | Réalité |
+|---|---|---|
+| 1 | « déficit structurel, le monde est trop pauvre » | le monde était **trop plein** |
+| 2 | « il ne cherche pas sa nourriture » | il n'avait **pas la place** de la chercher |
+| 3 | « c'est un problème de comportement, pas de monde » | c'était **exactement** un problème de monde |
+
+**J'ai conclu trois fois sur le comportement de l'agent sans jamais avoir regardé la carte
+qu'il habitait.** Le §7.7 posait la règle « ne calibrer qu'avec une trace de run réel » —
+elle était juste mais insuffisante : *il faut aussi vérifier que le monde peut physiquement
+accueillir ce que le calibrage suppose.*
+
+Une seule commande — compter les cases libres — aurait invalidé les trois hypothèses avant
+d'écrire la moindre ligne. C'est le coût de raisonner sur un modèle du monde plutôt que sur
+le monde.
