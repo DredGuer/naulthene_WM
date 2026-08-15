@@ -2781,7 +2781,24 @@ class DetecteurRessourcesBiologiques:
         if action_item is not None and action_item != ACTION_CONSOMMER:
             return False, False
         try:
+            # v41.2-fix6 — LA CASE VISÉE EST CELLE QUE `pickup` ATTEINT : celle DEVANT
+            # l'agent, jamais celle sous ses pieds.
+            #
+            # Défaut mesuré : le geste était joué 70 fois par jour pour une efficacité de
+            # **2,9 %**. `pickup` agit sur la case frontale (`agent_pos + dir_vec`) alors
+            # que le détecteur testait `agent_pos` — les deux ne coïncident jamais, donc
+            # l'agent « mangeait » systématiquement dans le vide. Pire : MiniGrid retirait
+            # bien la Ball de la grille pour la mettre en `carrying`, donc la ressource
+            # disparaissait sans nourrir personne et sans repousser.
+            #
+            # L'agent est donc rendu au geste naturel : se tourner vers ce qu'on veut
+            # manger. `carrying` est vidé juste après, sinon la main reste pleine et tout
+            # `pickup` suivant échoue — un agent qui aurait mangé une fois ne pourrait plus
+            # jamais se nourrir.
             agent_pos = tuple(env.unwrapped.agent_pos)
+            if action_item is not None:
+                agent_pos = tuple(np.array(env.unwrapped.agent_pos)
+                                  + env.unwrapped.dir_vec)
             mange_food, mange_water = False, False
 
             if agent_pos in self.positions_food:
@@ -2794,6 +2811,13 @@ class DetecteurRessourcesBiologiques:
                 self.positions_water.discard(agent_pos)
                 mange_water = True
                 self._faire_repousser_ressource(env, self.COULEUR_WATER, self.positions_water)
+
+            # v41.2-fix6 — la main est vidée après ingestion. MiniGrid vient de placer la
+            # Ball dans `carrying` en exécutant `pickup` ; sans ce nettoyage, la main reste
+            # pleine et TOUT `pickup` suivant échoue silencieusement — un agent qui aurait
+            # mangé une seule fois ne pourrait plus jamais se nourrir de sa vie.
+            if mange_food or mange_water:
+                env.unwrapped.carrying = None
 
             return mange_food, mange_water
         except Exception as e:
@@ -7238,6 +7262,14 @@ def executer_nuit(etat, plafond_reve=None):
           f"(min {etat.energie_min_jour:.3f}) | 💪 vigueur moy "
           f"{etat.vigueur_cumul_jour / ticks_du_jour:.3f} (min {etat.vigueur_min_jour:.3f}) | "
           f"🪫 {etat.ticks_energie_basse_jour}/{ticks_du_jour} ticks en basse énergie")
+    # v41.2-fix5 — le geste de manger. `part` dit s'il le joue, `efficacité` s'il le joue
+    # au bon endroit : un geste fréquent mais inefficace est une politique qui dépense sans
+    # se nourrir, indistinguable d'un geste rare si l'on ne regarde que la récolte.
+    _n_conso = etat.effort_par_action_jour[ACTION_CONSOMMER][0]
+    print(f"  ├─ Geste manger   : 🍽️ {_n_conso}/{ticks_du_jour} ticks "
+          f"({_n_conso / ticks_du_jour:.1%}) | efficacité "
+          f"{(etat.food_consommes_jour + etat.water_consommes_jour) / max(1, _n_conso):.1%} "
+          f"| récolté {etat.food_consommes_jour + etat.water_consommes_jour}")
     # v30.1 — la taille seule ne disait pas si la mémoire SERT : on affiche désormais le
     # taux de saturation (200/200 = plafond `capacite_max` atteint) et la qualité du
     # rappel, pour pouvoir juger si une capacité adaptative apporterait quelque chose.
@@ -7407,6 +7439,17 @@ def executer_nuit(etat, plafond_reve=None):
             / max(1, etat.effort_par_action_jour[0][0] + etat.effort_par_action_jour[1][0])),
         "Calibrage_Part_Avancer": (
             etat.effort_par_action_jour[2][0] / ticks_du_jour),
+        # v41.2-fix5 — LE GESTE DE MANGER, mesuré. Depuis que la consommation est un acte
+        # volontaire, « l'agent apprend-il à manger ? » se décompose en deux questions que
+        # seul ce couple de métriques sépare : joue-t-il le geste (`Part_Consommer`), et le
+        # joue-t-il AU BON ENDROIT (`Efficacite_Consommer`) ? Un geste fréquent mais
+        # inefficace signale une politique qui dépense sans se nourrir — indistinguable
+        # d'un geste rare si l'on ne regarde que la récolte.
+        "Calibrage_Part_Consommer": (
+            etat.effort_par_action_jour[ACTION_CONSOMMER][0] / ticks_du_jour),
+        "Calibrage_Efficacite_Consommer": (
+            (etat.food_consommes_jour + etat.water_consommes_jour)
+            / max(1, etat.effort_par_action_jour[ACTION_CONSOMMER][0])),
         "Sursauts_Volonte_Jour": etat.sursauts_jour,
         "Patience_Min_Actuelle": etat.module_acceptation.patience_min,
         "Bio_Satiete": etat.moteur_bio.satiete,
