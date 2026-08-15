@@ -633,3 +633,53 @@ franchir `Empty-8x8`.
 
 **Le niveau atteint est identique des deux côtés sur les 4 graines.** Seul le *délai*
 diffère (g44 : 2ᵉ promotion 3,1× plus rapide).
+
+---
+
+## 11. 💰 Le coût du décalage, chiffré — g11 a perdu ses deux promotions
+
+Le §7 établissait que la maturité multiplie la maîtrise du jour par l'autonomie de la
+veille. Reste à savoir **ce que ça a coûté**. Rejeu du critère sur les logs, en
+remplaçant l'autonomie lue par celle qui serait cohérente avec la maîtrise du jour même
+(script `docs/recherche/scripts/cout_decalage_maturite.py`) :
+
+| Run | Jours | Promotions réelles | Si synchrone | **Manquées** |
+|---|---|---|---|---|
+| **g11** (héritage) | 2000 | **0** | **2** | **2** |
+| g22 (héritage) | 2000 | 0 | 0 | 0 |
+| g33 (héritage) | 2000 | 0 | 0 | 0 |
+| g44 (héritage) | 2000 | 2 | 3 | **1** |
+| **g11** (témoin) | 1528 | **0** | **2** | **2** |
+| g22 (témoin) | 1531 | 0 | 0 | 0 |
+| g33 (témoin) | 1542 | 0 | 0 | 0 |
+| g44 (témoin) | 1531 | 2 | 2 | 0 |
+
+> ⚠️ **Borne SUPÉRIEURE** : une promotion plus tôt vide la fenêtre et change toute la
+> suite du run. Le chiffre dit « combien de fois le critère a refusé un agent qui
+> remplissait la condition », pas « combien de niveaux il aurait atteint ».
+
+### 11.1 Ce que ça sépare
+
+**g11 n'était pas bloqué par un mur de compétence.** Il a rempli la condition de promotion
+**deux fois**, des deux côtés de l'ablation, et a été refusé les deux fois. Son « blocage
+au niveau 1 sur 2000 jours » est un artefact du critère.
+
+**g22 et g33 le sont réellement** : zéro promotion même avec le critère corrigé, des deux
+côtés. Ils plafonnent à 55 % de maîtrise, sous le seuil, et aucune correction d'index n'y
+changera rien.
+
+> 🎯 **Le « mur du niveau 1 » recouvrait donc DEUX phénomènes distincts** que rien ne
+> distinguait jusqu'ici : un défaut de mesure (g11) et une vraie limite d'apprentissage
+> (g22, g33). Sur 4 graines, **1 sur 4** relevait du premier.
+>
+> Cela ne dit rien encore des 10 graines de la campagne v41 ni des 2000 jours × 10 du
+> blocage historique — mais cela impose de **rejouer cette mesure dessus avant** d'attribuer
+> le blocage à la cognition.
+
+### 11.2 Le correctif reste NON appliqué
+
+Le §7.4 posait trois options. Ce chiffrage renforce la 2ᵉ (**évaluer la promotion avant la
+mise à jour de la fenêtre**) : elle aligne les deux termes sans inventer une autonomie non
+vécue, et le coût mesuré du statu quo est de **2 promotions sur une graine sur quatre**.
+
+Mais cela modifie le **critère de promotion** du projet — donc arbitrage utilisateur.
