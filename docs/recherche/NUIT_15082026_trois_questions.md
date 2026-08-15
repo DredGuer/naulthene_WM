@@ -346,3 +346,55 @@ bien que présente, ne pèse rien dans la décision.
 ⚠️ **Aucune conclusion ferme à ce stade** : c'est un point d'étape à j475 sur 1000, et les
 niveaux atteints ne sont pas encore comparables (g44/g55 étaient au niveau 3 en v41.6, donc
 mesurés sur une carte plus difficile). Le bilan final départagera.
+
+---
+
+## 🏁 Bilan de la campagne de nuit (v41.7 + v41.8) — et le défaut qu'elle a révélé
+
+| Graine | v41.6 (P17 seul) | **v41.7 + v41.8** |
+|---|---|---|
+| g11 | niveau 1 | niveau 1 |
+| g22 | niveau 1 | niveau 1 |
+| g33 | niveau 1 | niveau 1 |
+| **g44** | niveau 3 — **j243, j332** | niveau 3 — **j534, j587** ⚠️ |
+| **g55** | niveau 3 — j300, j361 | niveau 2 — j869 ⚠️ |
+| **g66** | niveau 1 | **niveau 3 — j305, j388** ✅ |
+
+**2 graines dégradées, 1 améliorée.** Verdict défavorable — et la cause est un défaut de
+**ma** v41.8, pas des correctifs eux-mêmes.
+
+### La cause, mesurée sur g44
+
+| | v41.6 | **v41.8** |
+|---|---|---|
+| Patience moyenne | 117 ticks | **70** ⚠️ |
+| Abandons lucides | 107 | **161** ⚠️ |
+
+> 🔴 **La v41.8 retirait du temps là où elle devait en donner** — exactement le défaut
+> qu'elle prétendait corriger.
+
+**Deux erreurs cumulées dans mon implémentation :**
+
+1. **Mauvais ordre.** `_patience_budget` était appelé **avant** la modulation par l'envie,
+   dont le facteur `(0,5 + 0,5 × envie)` divise ensuite jusqu'à 2. Un débutant censé
+   recevoir l'épisode entier (100 ticks) n'en recevait que 50 à 70.
+2. **Substitution au lieu de borne.** La cible *remplaçait* la valeur, effaçant la
+   modulation par l'envie et par le thermostat.
+
+**Correctif `v41.8-fix1`** : le budget s'applique **en dernier** et agit comme **plancher**.
+Vérifié — à 0 % de maîtrise, une patience entrante de 50, 100 ou 140 donne toujours **100**
+(le budget) ; à 100 % de maîtrise elle retombe à 50.
+
+### ⚠️ Leçon de méthode
+
+C'est la **deuxième fois en deux jours** qu'un correctif de ma main produit l'inverse de
+son intention et n'est rattrapé que par la mesure appariée :
+
+| Correctif | Intention | Effet réel avant correction |
+|---|---|---|
+| P17 (v41.6) | sortir l'agent de la révision | l'y **enfermait** (défi à 2 %) — rattrapé avant run |
+| Patience (v41.8) | donner du temps au débutant | lui en **retirait** (70 vs 117 ticks) — rattrapé après run |
+
+La différence entre les deux : P17 a été testé **avant** lancement, la patience seulement
+**après**. Une distribution se teste en trois lignes ; un effet de composition entre deux
+modulations ne se voit qu'en conditions réelles — ou en lisant l'ordre des opérations.
