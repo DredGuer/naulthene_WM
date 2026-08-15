@@ -5130,6 +5130,10 @@ class EtatCognitif:
         self.vigueur_cumul_jour = 0.0
         self.vigueur_min_jour = 1.0
         self.ticks_energie_basse_jour = 0
+        # v41.2-fix7 — le soulagement réellement obtenu en mangeant, crédité au geste.
+        # C'est la mesure de la boucle corporelle : si ce total reste proche de zéro alors
+        # que l'agent mange, c'est qu'il mange sans en avoir besoin.
+        self.soulagement_repas_jour = 0.0
         # 4. Ressources réellement disponibles — §7.4, BLOQUANT pour l'Étape 3 : rendre
         #    l'agent mortel sur une carte sans nourriture serait le condamner d'office.
         self.ressources_vues_jour = 0
@@ -6447,6 +6451,21 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
     # v41.2-fix5 — l'action du tick est transmise : manger n'est plus un effet de bord du
     # déplacement mais un geste volontaire (voir DetecteurRessourcesBiologiques.evaluer_tick).
     mange_food, mange_water = etat.detecteur_ressources_bio.evaluer_tick(etat.env, action_item)
+    # v41.2-fix7 — LE SOULAGEMENT EST CRÉDITÉ AU GESTE QUI L'A PRODUIT.
+    #
+    # `r_bio` a été calculé plus haut (avant la consommation) et sera additionné à
+    # `recompense_interne` plus bas. Sans le rattrapage qui suit, le soulagement d'avoir
+    # mangé tombait donc au tick SUIVANT, sur une action sans rapport — et l'agent ne
+    # pouvait pas apprendre l'association « ce geste-ci m'a soulagé ».
+    #
+    # C'est la boucle corporelle de base : le nourrisson porte tout à la bouche, la plupart
+    # du temps sans effet ; quand il a faim, le geste soulage. Le corps renforce alors le
+    # geste — et quand il n'a plus faim, manger ne soulage plus rien, donc ne renforce plus.
+    # Aucune règle n'interdit de manger repu : mesuré, manger rassasié rapporte **−0,0227**
+    # (le gain est nul et le geste coûte 0,8 d'effort), contre **+0,7945** affamé, soit un
+    # contraste de 15×. L'association « manger = besoin » est donc apprenable par le seul
+    # gradient, sans qu'aucun `if` ne la déclare.
+    deficit_avant_repas = etat.moteur_bio.calculer_deficit()
     poids_ressource_bio = 0.0
     if mange_food:
         etat.moteur_bio.consommer_ressource("FOOD")
@@ -6469,6 +6488,14 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
         etat.memoire_episodique_spatiale.enregistrer_evenement(
             tuple(etat.env.unwrapped.agent_pos), "WATER", etat.tick_absolu
         )
+
+    # v41.2-fix7 — le soulagement réel, mesuré sur le déficit AVANT/APRÈS l'ingestion, et
+    # ajouté au `r_bio` de CE tick — donc crédité à l'action qui l'a produit. Même unité et
+    # même échelle que le `r_bio` ordinaire (une différence de déficit), donc rien de
+    # nouveau n'entre dans la récompense : c'est le même signal, rendu à son auteur.
+    if mange_food or mange_water:
+        r_bio += deficit_avant_repas - etat.moteur_bio.calculer_deficit()
+        etat.soulagement_repas_jour += deficit_avant_repas - etat.moteur_bio.calculer_deficit()
 
     # --- Récompense de formants ET perte vocale supervisée (v22.0, corrigé v22.1,
     # score mixte formants+spectral en v27.0) : uniquement quand une leçon vocale est
@@ -7269,7 +7296,8 @@ def executer_nuit(etat, plafond_reve=None):
     print(f"  ├─ Geste manger   : 🍽️ {_n_conso}/{ticks_du_jour} ticks "
           f"({_n_conso / ticks_du_jour:.1%}) | efficacité "
           f"{(etat.food_consommes_jour + etat.water_consommes_jour) / max(1, _n_conso):.1%} "
-          f"| récolté {etat.food_consommes_jour + etat.water_consommes_jour}")
+          f"| récolté {etat.food_consommes_jour + etat.water_consommes_jour} "
+          f"| soulagement {etat.soulagement_repas_jour:+.2f}")
     # v30.1 — la taille seule ne disait pas si la mémoire SERT : on affiche désormais le
     # taux de saturation (200/200 = plafond `capacite_max` atteint) et la qualité du
     # rappel, pour pouvoir juger si une capacité adaptative apporterait quelque chose.
