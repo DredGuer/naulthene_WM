@@ -1602,6 +1602,39 @@ l'odorat.
 - **Aucune interaction testée.** Couper deux sens ensemble pourrait révéler une redondance
   (l'agent compense l'odorat par la vue, mais peut-être pas s'il perd les deux).
 
+### ✅ Réponse définitive — campagne v41, 78 cellules (15/08)
+
+→ [CAMPAGNE_v41_population_et_ablation_aout_2026.md](CAMPAGNE_v41_population_et_ablation_aout_2026.md)
+
+Les trois réserves ci-dessus sont levées sur le volume : **78 cellules** (13 lésions × 3
+niveaux × 2 cerveaux), 300 épisodes chacune, sur deux cerveaux v41 à 2000 jours, avec un
+**témoin non nul** (8,7 % à 46,7 %) — le défaut qui avait invalidé le banc du 14/08.
+
+**La réponse à H15 est : non, quatre sens sur six ne sont pas utilisés.**
+
+| Lésion | Effet sur les 6 niveaux |
+|---|---|
+| Ouïe, Goût, Exo-Sens | **+0,0 × 6** |
+| Odorat | +0,0 × 5, −0,7 × 1 |
+| **C2 coupé** et **C2 myope** | **+0,0 × 6** ← le résultat qui domine la campagne |
+| Toucher | **−4,4 / −5,4 / −6,7** (g11) — le seul sens qui coûte partout |
+| Vecteur bio | −4,4 / −3,4 / **−8,0** — coût croissant avec la difficulté |
+| Vue | instable : aide sur 3 niveaux, nuit sur 3 |
+
+Cela **confirme et généralise** le constat de H15 (« les sens sont branchés, mais inertes
+dans la décision ») : l'inertie ne concerne pas que la chimie, elle touche aussi **le
+système délibératif entier**. Un C2 qu'on débranche sans que le score bouge d'un dixième de
+point sur 6 niveaux ne participe pas à la décision.
+
+Et un résultat que H15 n'anticipait pas : **les trois mémoires sont plutôt nuisibles** —
+figer la mémoire de travail *améliore* le score sur 4 niveaux sur 6 (jusqu'à **+4,7**).
+
+> **La conséquence de conception reste celle de H15, renforcée.** « Rendre un sens
+> obligatoire ne se décrète pas dans le capteur — cela se construit dans le monde, en
+> retirant à la vue ce qu'on veut confier à l'odorat. » Neuf mécaniques cognitives testées,
+> neuf sans apport démontré ; les deux seuls leviers qui ont marché sont des propriétés du
+> **monde**.
+
 ---
 
 ## H9 — Le seuil de promotion *(non testée)*

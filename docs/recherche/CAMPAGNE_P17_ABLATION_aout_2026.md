@@ -268,5 +268,46 @@ n'améliore rien (2 graines positives sur 5, p = 1,000).
 
 ---
 
+## 🔁 Suite donnée — la campagne v41 (15/08) répond aux points 2 et 3
+
+→ Carnet complet : [CAMPAGNE_v41_population_et_ablation_aout_2026.md](CAMPAGNE_v41_population_et_ablation_aout_2026.md)
+
+**Point 3 — l'ablation sur témoin non nul est faite.** Le défaut de protocole de cette
+campagne-ci (témoin à 0 %, donc aucune lésion mesurable) est corrigé en ablatant **chaque
+cerveau sur ses propres niveaux** : g11 sur 0/1/2, g22 sur 3/4/5. **78 cellules**, témoins
+entre 8,7 % et 46,7 %.
+
+**Le verdict sur C2 s'est durci — et il contredit la « Lecture 2 » ci-dessus.** Cette
+campagne concluait que « C2 change de signe selon la taille de la carte ». Sur 78 cellules
+avec témoin non nul, la mesure est plus simple et plus dure :
+
+| | P17 (14/08) | **Campagne v41 (15/08)** |
+|---|---|---|
+| `c2_coupe` | change de signe selon le niveau | **+0,0 sur les 6 niveaux** |
+| `c2_horizon_court` | — | **+0,0 sur les 6 niveaux** |
+| Témoin | **0 %** sur plusieurs cellules | 8,7 % à 46,7 % |
+
+Douze mesures, douze zéros exacts, deux cerveaux indépendants. **C2 n'est ni nuisible ni
+utile : il est causalement déconnecté du comportement.** L'inversion de signe observée le
+14/08 était très probablement du bruit sur des témoins au plancher.
+
+**Point 2 — l'accord C1/C2 a une réponse partielle.** Il n'est plus figé à 0 % : la v41 le
+fait monter à **37 % (jour 500)**, puis il redescend — 21 % (j1000), 4 % (j1500),
+**0,5 % (j2000)**. Ce n'est donc pas un plancher structurel mais un **transitoire**. La
+question « pourquoi retombe-t-il ? » remplace « pourquoi reste-t-il à zéro ? ».
+
+**Ce que la campagne v41 ajoute et que celle-ci ne voyait pas :**
+
+- **Six lésions sur treize sans aucun effet** — ouïe, goût, Exo-Sens, odorat, et les deux
+  lésions de C2. La « Lecture 4 » (cinq canaux identiques au témoin à la 7ᵉ décimale) est
+  confirmée sur témoin non nul, et étendue.
+- **Les trois mémoires sont plutôt nuisibles** : figer la mémoire de travail **améliore** le
+  score sur 4 niveaux sur 6 (jusqu'à +4,7). Seule exception : la mémoire spatiale sur
+  `Primaire 3 (Ramasser)`, où la vider coûte **−7,4**.
+- **Le toucher et le vecteur bio sont les seuls organes qui portent**, et leur coût grandit
+  avec la difficulté (bio : −4,4 → **−8,0**).
+
+---
+
 *Campagne du 14 août 2026. Logs et `.brain` archivés dans `brains/old_V39/`.
 Résultats bruts : `brains/ablations/g22_doorkey.json`.*

@@ -4,6 +4,53 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.0-docs] - 2026-08-15 — Les README disent enfin ce que les mesures disent
+
+### « Couper C2 double le taux de succès » → **0,0 point sur 6 niveaux**
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | docs (**aucune ligne de `src/` modifiée**) |
+| **Impact** | Documentation — corrige une affirmation fausse de la vitrine publique |
+| **Branche** | `feat/v41-ligne-flottaison` |
+| **Carnet** | [CAMPAGNE_v41_population_et_ablation_aout_2026.md](../recherche/CAMPAGNE_v41_population_et_ablation_aout_2026.md) |
+
+Application de la **règle de miroir** (CLAUDE.md §2bis) : `readme.md` (EN) et `readme_fr.md`
+(FR) modifiés **dans le même commit**, mêmes chiffres des deux côtés.
+
+### Ce qui était faux
+
+| Affirmation publiée | Mesure réelle (78 cellules) |
+|---|---|
+| « Couper C2 **double** le taux de succès » (4,50 % → 10,67 %) | **0,0 point sur les 6 niveaux** |
+| « Le système délibératif est *activement nuisible* » | ni nuisible ni utile — **causalement déconnecté** |
+| Table d'ablation : 13 lésions × 5 niveaux, **témoin 4,50 %** | 13 × 3 × 2 cerveaux, témoins **8,7 % à 46,7 %** |
+| Bloqué au **niveau 2/15**, 678 jours sans victoire | **niveau 1/15**, 10 graines × 2000 j, **0 promotion** |
+| « 0 sur **8** mécaniques testées » | **0 sur 9** |
+
+L'ancien chiffre venait d'un banc dont le témoin était à 4,50 % — et dont plusieurs cellules
+avaient un **témoin à 0 %**, ce qui ne mesure rien : aucune lésion ne peut faire baisser un
+score déjà au plancher. L'effet « ×2 » était porté presque entièrement par `Empty-8x8`
+(1,7 % → 22,5 %), donc par du bruit sur un plancher.
+
+### Ce qui est publié maintenant
+
+| Fichier | Changement |
+|---|---|
+| `readme.md` | table d'ablation **78 cellules** (Δ par niveau, 2 cerveaux) + note de protocole sur le témoin non nul + état du blocage réécrit + ligne baseline `Empty-8x8` → `Empty-5x5` 44,7 % |
+| `readme_fr.md` | **miroir strict** des mêmes blocs |
+| `docs/recherche/recherche_bug_or_not_bug.md` | **H15 tranchée** — « les sens sont-ils utilisés ? » → non, 4 sur 6 sont inertes |
+| `docs/recherche/CAMPAGNE_P17_ABLATION_aout_2026.md` | §« suite donnée » — la **Lecture 2** (« C2 change de signe selon la carte ») est **contredite** : c'était du bruit sur témoin au plancher |
+| `docs/INDEX.md` | pointeurs mis à jour |
+
+⚠️ **Une lecture antérieure est explicitement contredite.** La campagne P17 concluait que
+« C2 change de signe selon la taille de la carte ». Sur témoin non nul, C2 ne change rien du
+tout, sur aucun niveau. La contradiction est consignée dans les deux carnets plutôt que
+corrigée en silence.
+
+---
+
 ## [v41.0-campagne] - 2026-08-15 — La campagne qui infirme le résultat v41
 
 ### « 0 promotion sur 10 graines — et C2 est débranchable sans effet »

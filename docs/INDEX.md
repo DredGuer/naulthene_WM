@@ -62,10 +62,10 @@ autorité sur l'état courant.**
 
 | Document | La question posée | Verdict |
 |---|---|---|
-| [recherche_bug_or_not_bug.md](recherche/recherche_bug_or_not_bug.md) | **H1 → H18** : bug ou erreur de conception ? | 15 erreurs de diagnostic consignées |
+| [recherche_bug_or_not_bug.md](recherche/recherche_bug_or_not_bug.md) | **H1 → H18** : bug ou erreur de conception ? | 15 erreurs de diagnostic consignées · **H15 tranchée** : 4 sens sur 6 sont inertes |
 | [dia_Aout_2026.md](recherche/dia_Aout_2026.md) | Pourquoi bloqué au niveau 2/15 ? | 3 causes, **aucune cognitive** |
 | **[DISSECTION_g22_aout_2026.md](recherche/DISSECTION_g22_aout_2026.md)** | Que contient le cerveau le plus avancé (248 victoires) ? | **Le but vaut 16× le reste — appris, jamais déclaré** |
-| **[CAMPAGNE_P17_ABLATION_aout_2026.md](recherche/CAMPAGNE_P17_ABLATION_aout_2026.md)** | Le cursus gaussien aide-t-il ? À quoi servent les organes ? | **C2 change de signe selon le niveau** · accord C1/C2 toujours à 0 % |
+| [CAMPAGNE_P17_ABLATION_aout_2026.md](recherche/CAMPAGNE_P17_ABLATION_aout_2026.md) | Le cursus gaussien aide-t-il ? À quoi servent les organes ? | ⚠️ **verdict C2 contredit** par la campagne v41 (témoin au plancher) |
 | **[CAMPAGNE_v41_population_et_ablation_aout_2026.md](recherche/CAMPAGNE_v41_population_et_ablation_aout_2026.md)** | Le déblocage v41 est-il reproductible ? À quoi servent les organes, témoin non nul ? | **0 promotion sur 10 graines** · **C2 débranchable à +0,0 sur 6 niveaux** · 6 lésions sur 13 sans effet |
 | **[CHANTIER_v40_planification_emergente.md](ameliorations_appliquees/CHANTIER_v40_planification_emergente.md)** | Peut-on supprimer les constantes de l'arbitrage ? | **3 supprimées** · l'envie de vivre peut tuer l'agent |
 | [CHANTIER_v37_equilibre_c1_c2.md](ameliorations_appliquees/CHANTIER_v37_equilibre_c1_c2.md) | C2 écrase-t-il C1 ? | Équilibre atteint, blocage persiste |

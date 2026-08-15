@@ -122,15 +122,19 @@ Two caveats, both measurable rather than rhetorical:
 
 | Metric | Value |
 |---|---|
-| Curriculum levels cleared | **1 to 5 out of 6**, depending on seed |
-| Variance between identical runs | **×69** (1 to 69 wins) |
-| Cognitive mechanisms that improved anything | **0 out of 8 tested** |
+| Level reached | **1 out of 15** — 10 seeds × 2000 days, **zero promotions** |
+| Peak mastery (promotion threshold: 60 %) | **40 %**, on 7,602 cumulative wins |
+| Effect of severing C2 on the score | **0.0 points across all 6 levels** (78 cells) |
+| C1/C2 agreement at day 2000 | **0.5 %** (down from 37 % at day 500) |
+| Cognitive mechanisms that improved anything | **0 out of 9 tested** |
 | Levers that did work | **2 — both properties of the world** |
 
 A standard PPO solves `Empty-8x8` in a few thousand episodes. **Naulthène currently does not.**
 
-⚠️ Figures obtained *before* the benchmark bias was found (see the warning above). They are
-kept for the record, not as a baseline.
+One earlier seed (g22) reached level 4 and held it for 1,223 days — but **10 fresh seeds on the
+same code never left level 1**. That was a **natal lottery**, not a reproducible property of the
+fix: divergence between identical seeds is visible from **night 1**, with a **38×** spread in
+`danger` by day 50.
 
 The [diagnostic](docs/recherche/dia_Aout_2026.md) isolates why, and none of the five blockers is cognitive:
 patience capped at 120 ticks against MiniGrid's own 256 (reachable success rate 4.7 % vs 21.0 %),
@@ -145,42 +149,57 @@ inert on empty rooms, and a curriculum era that doubles losing episodes.
 
 The central prediction of a unified vector space: removing a sense should degrade performance
 *gracefully*, with **no code path change and no fallback logic**. Measured with
-[`banc_ablation.py`](src/naulthene/instruments/banc_ablation.py) — 13 lesions × 5 levels
-(`Empty-8x8`, `DoorKey-6x6`, `Unlock`, `MemoryS7`, `MultiRoom-N4-S5`), 600 episodes per lesion,
-fixed seed 1789, on a **5000-day pre-v37 brain** — the bench predates the C1/C2 rebalancing and
-should be re-run on a v37 brain. 95 % margin of error: **±2.3 pts** per level (120 episodes).
+[`banc_ablation.py`](src/naulthene/instruments/banc_ablation.py) — **78 cells** (13 lesions × 3
+levels × 2 brains), 300 episodes per cell, on two v41 brains at 2000 days.
 
-| Lesion | Success | Δ vs intact |
-|---|---|---|
-| **C2 severed** (`planning_force = 0`) | **10.67 %** | **+6.17 pts** |
-| *Intact (control)* | *4.50 %* | *—* |
-| Hearing removed | 4.50 % | ±0.00 |
-| Smell removed (+ klinotaxis) | 4.50 % | ±0.00 |
-| Taste removed | 4.50 % | ±0.00 |
-| Exo-sense removed (8 dims) | 4.50 % | ±0.00 |
-| C2 myopic (horizon 1 only) | 4.50 % | ±0.00 |
-| **Vision removed** (obs zeroed) | **4.00 %** | −0.50 |
-| Working memory frozen | 4.00 % | −0.50 |
-| Entire bio vector zeroed | 3.83 % | −0.67 |
-| Spatial memory cleared each episode | 3.67 % | −0.83 |
-| Episodic context zeroed | 3.50 % | −1.00 |
-| Touch removed | 3.17 % | −1.33 |
+> **Protocol note.** Each brain is ablated **on its own levels** — g11 on levels 0/1/2, g22 on
+> 3/4/5. An earlier bench measured a **0 % control**, which measures nothing: no lesion can lower
+> a score already at the floor. Controls here: 44.7 / 46.7 / 27.0 % (g11) and 8.7 / 8.7 / 45.7 %
+> (g22). On the two g22 levels sitting at 8.7 %, differences of ±1–2 pts are noise; **exact zeros
+> remain readable**.
 
-**What this supports.** Graceful degradation is real: **blinding the agent costs 0.50 points**,
-and no lesion causes a crash or a collapse. Every sense can be removed and the agent keeps
-running through the same code path — that is the unification claim, and it holds.
+Δ per level, in points vs the control of that level:
 
-**What this contradicts.** Two results cut against the architecture as it stands:
+| Lesion | g11: L0 / L1 / L2 | g22: L3 / L4 / L5 | Verdict |
+|---|---|---|---|
+| **C2 severed** (`planning_force = 0`) | **0.0 / 0.0 / 0.0** | **0.0 / 0.0 / 0.0** | **no effect** |
+| **C2 myopic** (horizon 1) | **0.0 / 0.0 / 0.0** | **0.0 / 0.0 / 0.0** | **no effect** |
+| Hearing removed | 0.0 / 0.0 / 0.0 | 0.0 / 0.0 / 0.0 | no effect |
+| Taste removed | 0.0 / 0.0 / 0.0 | 0.0 / 0.0 / 0.0 | no effect |
+| Exo-sense removed | 0.0 / 0.0 / 0.0 | 0.0 / 0.0 / 0.0 | no effect |
+| Smell removed (+ klinotaxis) | 0.0 / 0.0 / 0.0 | 0.0 / 0.0 / −0.7 | no effect |
+| Touch removed | −4.4 / −5.4 / **−6.7** | −5.0 / −1.7 / +3.3 | **costs** |
+| Bio vector zeroed | −4.4 / −3.4 / **−8.0** | −3.4 / −0.7 / +1.0 | **costs** |
+| Vision removed | −3.4 / **+3.0** / −3.3 | −2.7 / +1.0 / +1.6 | unstable |
+| Spatial memory cleared | **+3.6** / −2.0 / −1.3 | −1.4 / +1.0 / **−7.4** | mixed |
+| Episodic context zeroed | +1.3 / +1.6 / +0.3 | −2.4 / **+2.3** / +2.0 | **helps** |
+| Working memory frozen | +2.0 / +1.6 / **+4.7** | −3.0 / **+2.6** / −2.7 | **helps** |
 
-- **Severing C2 more than doubles the success rate** (4.50 % → 10.67 %). The deliberative system
-  is not merely idle — it is *actively harmful* at this stage. The effect is driven almost
-  entirely by `Empty-8x8` (**1.7 % → 22.5 %**, +20.8 pts, far beyond the ±2.3 pt margin) and is
-  positive but small on the other four levels.
-- **Removing vision costs less than removing touch** (−0.50 vs −1.33). On a visual navigation
-  task, that is not a sign of robust multimodality; it is a sign that vision is under-exploited.
+**What this supports.** Graceful degradation is real: no lesion causes a crash or a collapse.
+Every sense can be removed and the agent keeps running through the same code path — that is the
+unification claim, and it holds.
 
-Both are consistent with the [diagnostic](docs/recherche/dia_Aout_2026.md): the agent has not yet learned a
-policy worth planning over.
+**What this contradicts.** Three results cut against the architecture as it stands:
+
+- **Severing C2 changes nothing — 0.0 points across all six levels.** Twelve measurements
+  (severed + myopic × 6 levels), two independent brains, 300 episodes per cell, twelve exact
+  zeros. This supersedes an earlier claim on this page that severing C2 *doubled* the success
+  rate: that figure came from a bench whose control sat at 4.50 %. The deliberative system is not
+  harmful and not helpful — it is **causally disconnected from behaviour**. Corroborated
+  independently by C1/C2 agreement decaying from 37 % (day 500) to **0.5 %** (day 2000) across
+  10 seeds.
+- **Six lesions out of thirteen have no measurable effect.** Hearing, taste, smell and the
+  exo-sense — four of the six senses — can be severed without consequence. Only **touch** and the
+  **bio vector** carry weight, and their cost grows with difficulty (bio: −4.4 on `Empty-5x5` →
+  **−8.0** on long-distance navigation).
+- **The three memory systems are mostly harmful.** Freezing working memory *improves* the score
+  on 4 levels out of 6 (up to **+4.7**); zeroing episodic context improves it on 4 of 6. One
+  clear exception: spatial memory earns its keep on `Primaire 3 (Pick up)`, where clearing it
+  costs **−7.4**.
+
+All three are consistent with the [diagnostic](docs/recherche/dia_Aout_2026.md): the agent has not yet learned a
+policy worth planning over. Full protocol and matrix:
+[campaign notebook](docs/recherche/CAMPAGNE_v41_population_et_ablation_aout_2026.md).
 
 ### 2. Memory footprint — ✅ **measured for Naulthène**, baseline pending
 
@@ -205,11 +224,15 @@ the price of the day/night cycle, and a real target for optimization.
 This is the table that would decide whether the architecture is *efficient* or merely
 *different*. It requires training PPO baselines on the same levels — not yet done.
 
-| Agent | Params | `Empty-8x8` success | `DoorKey-5x5` success | Episodes to 80 % |
+| Agent | Params | `Empty-5x5` success | `DoorKey-5x5` success | Episodes to 80 % |
 |---|---|---|---|---|
 | PPO CNN (`rl-starter-files`) | 19,384 | — | — | — |
 | PPO + LSTM | 52,664 | — | — | — |
-| **Naulthène** | **55,232** | **4.50 %** (ablation bench) / **1.69 %** (lifetime) | — | never reached |
+| **Naulthène** | **55,232** | **44.7 %** (v41 bench, 300 ep.) | — | **never reached** |
+
+Across **10 seeds × 2000 simulated days**, no agent ever left level 1 of the 15-level curriculum:
+peak mastery **40 %** against a 60 % promotion threshold, on 7,602 cumulative wins. `Empty-8x8`
+and everything beyond remain unsolved.
 
 > Naulthène's own numbers are filled in. Until the baseline row is too, the comparison proves
 > nothing — a reader still cannot tell an elegant architecture from an underperforming one.
@@ -368,7 +391,13 @@ validation is by W&B curves, console logs and read-only probes.
 
 What that means concretely:
 
-- The agent is **blocked at level 2 of 15**, and has not won in 678 simulated days.
+- The agent is **blocked at level 1 of 15**: 10 seeds × 2000 simulated days, **zero promotions**,
+  peak mastery 40 % against a 60 % threshold. A single earlier seed reached level 4 — a natal
+  lottery, not a reproducible property.
+- **C2, the deliberative system, is causally disconnected**: severing it changes the score by
+  **0.0 points on all six levels** (78-cell ablation), and C1/C2 agreement decays to 0.5 %.
+- **Nine cognitive mechanics tested, nine without demonstrated benefit.** The only two levers that
+  ever worked were properties of the *world*, not of the brain.
 - The **v34–v39 mechanics are now in this repository** (`noyau.py` was versioned on 14 Aug 2026,
   closing the project's #1 structural risk).
 - Two of three benchmark tables are filled; the one that matters most (equal-budget comparison

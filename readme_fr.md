@@ -92,15 +92,19 @@ Deux nuances, mesurées et non rhétoriques :
 
 | Métrique | Valeur |
 |---|---|
-| Paliers franchis | **1 à 5 sur 6**, selon la graine |
-| Variance entre runs identiques | **×69** (1 à 69 victoires) |
-| Mécaniques cognitives ayant amélioré quoi que ce soit | **0 sur 8 testées** |
+| Niveau atteint | **1 sur 15** — 10 graines × 2000 jours, **0 promotion** |
+| Maîtrise maximale (seuil de promotion : 60 %) | **40 %**, sur 7 602 victoires cumulées |
+| Effet de couper C2 sur le score | **0,0 point sur les 6 niveaux** (78 cellules) |
+| Accord C1/C2 à 2000 jours | **0,5 %** (contre 37 % au jour 500) |
+| Mécaniques cognitives ayant amélioré quoi que ce soit | **0 sur 9 testées** |
 | Leviers qui ont marché | **2 — tous deux des propriétés du monde** |
 
 Un PPO standard résout `Empty-8x8` en quelques milliers d'épisodes. **Naulthène, non.**
 
-⚠️ Chiffres obtenus **avant** la découverte du biais du banc d'essai (voir l'avertissement en
-tête). Ils sont conservés pour mémoire, pas comme référence.
+Une graine antérieure (g22) a atteint le niveau 4 et s'y est tenue 1223 jours — mais **10 graines
+fraîches sur le même code n'ont pas quitté le niveau 1**. C'était une **loterie natale**, pas une
+propriété reproductible du correctif : la divergence entre graines identiques est visible dès la
+**nuit 1**, avec un écart de `danger` de **38×** au jour 50.
 
 Le [diagnostic](docs/recherche/dia_Aout_2026.md) isole pourquoi, et **aucun des cinq bloquants n'est
 cognitif** : patience plafonnée à 120 ticks contre 256 pour MiniGrid lui-même (taux de réussite
@@ -110,35 +114,56 @@ atteignable 4,7 % contre 21,0 %), saut de difficulté ×10 au niveau 2, espéran
 
 ### Ablation sensorielle — le test de l'unification ✅ **mesuré**
 
-13 lésions × 5 niveaux, 600 épisodes par lésion, graine fixée 1789, sur un cerveau **pré-v37** de
-5000 jours (marge à 95 % : ±2,3 pts par niveau).
+**78 cellules** (13 lésions × 3 niveaux × 2 cerveaux), 300 épisodes par cellule, sur deux
+cerveaux v41 à 2000 jours.
 
-| Lésion | Succès | Δ vs témoin |
-|---|---|---|
-| **C2 coupé** (`force_planification = 0`) | **10,67 %** | **+6,17 pts** |
-| *Témoin (intact)* | *4,50 %* | *—* |
-| Ouïe neutralisée | 4,50 % | ±0,00 |
-| Odorat neutralisé (+ clinotaxie) | 4,50 % | ±0,00 |
-| Goût neutralisé | 4,50 % | ±0,00 |
-| Exo-Sens neutralisé | 4,50 % | ±0,00 |
-| **Vue neutralisée** | **4,00 %** | −0,50 |
-| Mémoire de travail figée | 4,00 % | −0,50 |
-| Vecteur bio entièrement neutralisé | 3,83 % | −0,67 |
-| Mémoire spatiale vidée par épisode | 3,67 % | −0,83 |
-| Mémoire épisodique à zéro | 3,50 % | −1,00 |
-| Toucher neutralisé | 3,17 % | −1,33 |
+> **Note de protocole.** Chaque cerveau est ablaté **sur ses propres niveaux** — g11 sur les
+> niveaux 0/1/2, g22 sur 3/4/5. Un banc antérieur mesurait un **témoin à 0 %**, ce qui ne mesure
+> rien : aucune lésion ne peut faire baisser un score déjà au plancher. Témoins ici : 44,7 / 46,7
+> / 27,0 % (g11) et 8,7 / 8,7 / 45,7 % (g22). Sur les deux niveaux de g22 à 8,7 %, les écarts de
+> ±1 à 2 pts sont du bruit ; **les zéros exacts restent lisibles**.
 
-**Ce que cela confirme.** La dégradation est gracieuse : **aveugler l'agent ne coûte que 0,50
-point**, aucune lésion ne provoque de plantage. Chaque sens peut être retiré et l'agent continue
-de tourner par le **même chemin de code** — c'est la thèse de l'unification, et elle tient.
+Δ par niveau, en points face au témoin de ce niveau :
 
-**Ce que cela contredit.** Deux résultats vont contre l'architecture actuelle :
+| Lésion | g11 : N0 / N1 / N2 | g22 : N3 / N4 / N5 | Verdict |
+|---|---|---|---|
+| **C2 coupé** (`force_planification = 0`) | **0,0 / 0,0 / 0,0** | **0,0 / 0,0 / 0,0** | **aucun effet** |
+| **C2 myope** (horizon 1) | **0,0 / 0,0 / 0,0** | **0,0 / 0,0 / 0,0** | **aucun effet** |
+| Ouïe neutralisée | 0,0 / 0,0 / 0,0 | 0,0 / 0,0 / 0,0 | aucun effet |
+| Goût neutralisé | 0,0 / 0,0 / 0,0 | 0,0 / 0,0 / 0,0 | aucun effet |
+| Exo-Sens neutralisé | 0,0 / 0,0 / 0,0 | 0,0 / 0,0 / 0,0 | aucun effet |
+| Odorat neutralisé (+ clinotaxie) | 0,0 / 0,0 / 0,0 | 0,0 / 0,0 / −0,7 | aucun effet |
+| Toucher neutralisé | −4,4 / −5,4 / **−6,7** | −5,0 / −1,7 / +3,3 | **coûte** |
+| Vecteur bio neutralisé | −4,4 / −3,4 / **−8,0** | −3,4 / −0,7 / +1,0 | **coûte** |
+| Vue neutralisée | −3,4 / **+3,0** / −3,3 | −2,7 / +1,0 / +1,6 | instable |
+| Mémoire spatiale vidée | **+3,6** / −2,0 / −1,3 | −1,4 / +1,0 / **−7,4** | mitigé |
+| Mémoire épisodique à zéro | +1,3 / +1,6 / +0,3 | −2,4 / **+2,3** / +2,0 | **aide** |
+| Mémoire de travail figée | +2,0 / +1,6 / **+4,7** | −3,0 / **+2,6** / −2,7 | **aide** |
 
-- **Couper C2 double le taux de succès** (4,50 % → 10,67 %). Le système délibératif n'est pas
-  seulement inutile : il est *activement nuisible* à ce stade. L'effet vient presque entièrement
-  d'`Empty-8x8` (**1,7 % → 22,5 %**, +20,8 pts).
-- **Retirer la vue coûte moins que retirer le toucher** (−0,50 contre −1,33), sur une tâche de
-  navigation visuelle. Ce n'est pas de la multimodalité robuste, c'est une vue sous-exploitée.
+**Ce que cela confirme.** La dégradation est gracieuse : aucune lésion ne provoque de plantage.
+Chaque sens peut être retiré et l'agent continue de tourner par le **même chemin de code** —
+c'est la thèse de l'unification, et elle tient.
+
+**Ce que cela contredit.** Trois résultats vont contre l'architecture actuelle :
+
+- **Couper C2 ne change rien — 0,0 point sur les six niveaux.** Douze mesures (coupé + myope × 6
+  niveaux), deux cerveaux indépendants, 300 épisodes par cellule, douze zéros exacts. Cela
+  **remplace** une affirmation antérieure de cette page selon laquelle couper C2 *doublait* le
+  taux de succès : ce chiffre venait d'un banc dont le témoin était à 4,50 %. Le système
+  délibératif n'est ni nuisible ni utile — il est **causalement déconnecté du comportement**.
+  Corroboré indépendamment par l'accord C1/C2 qui décroît de 37 % (jour 500) à **0,5 %** (jour
+  2000) sur 10 graines.
+- **Six lésions sur treize n'ont aucun effet mesurable.** Ouïe, goût, odorat et Exo-Sens — quatre
+  des six sens — sont coupables sans conséquence. Seuls le **toucher** et le **vecteur bio**
+  portent quelque chose, et leur coût grandit avec la difficulté (bio : −4,4 sur `Empty-5x5` →
+  **−8,0** en navigation longue distance).
+- **Les trois mémoires sont plutôt nuisibles.** Figer la mémoire de travail *améliore* le score
+  sur 4 niveaux sur 6 (jusqu'à **+4,7**) ; neutraliser le contexte épisodique l'améliore sur 4
+  sur 6. Une exception nette : la mémoire spatiale gagne son existence sur `Primaire 3
+  (Ramasser)`, où la vider coûte **−7,4**.
+
+Protocole complet et matrice :
+[carnet de campagne](docs/recherche/CAMPAGNE_v41_population_et_ablation_aout_2026.md).
 
 ### Empreinte mémoire — ✅ **mesurée**
 
