@@ -299,3 +299,79 @@ Maturité **0,469 juste après la promotion** (portée par l'héritage), puis **
 > revenue presque au maximum. C'est exactement le comportement demandé
 > (« une baisse de compréhension augmente aussi l'aide proportionnellement ») — mais il
 > ne suffit pas à faire apprendre `Empty-8x8`.
+
+### 6.8 🏁 VERDICT DE LA CAMPAGNE APPARIÉE — 300 jours, 5 paires
+
+Comparaison appariée, même graine des deux côtés, seul l'héritage diffère :
+
+| Graine | v41.4 | témoin | Δ niveau | Δ promotions |
+|---|---|---|---|---|
+| g11 | 1/15 | 1/15 | **0** | 0 vs 0 |
+| g22 | 1/15 | 1/15 | **0** | 0 vs 0 |
+| g33 | 1/15 | 1/15 | **0** | 0 vs 0 |
+| g44 | 1/15 | 1/15 | **0** | 0 vs 0 |
+| g55 | 1/15 | 1/15 | **0** | 0 vs 0 |
+
+| Agrégat | v41.4 | témoin |
+|---|---|---|
+| Niveau max moyen | 1,00 | 1,00 |
+| Promotions totales | **0** | **0** |
+| Maturité max moyenne | **0,295** | **0,295** |
+| Autonomie moyenne | **28,5 %** | **28,6 %** |
+| Héritage moyen | **0,0 pt** | 0,0 pt |
+
+**Test des signes : aucune paire discordante. Δ = +0,00 sur 5 paires.**
+
+> ⚠️ **Ce n'est PAS un verdict « la mécanique ne sert à rien » — c'est un verdict
+> « la mécanique n'a pas pu être testée ».** L'héritage moyen mesuré vaut **0,0 pt** des
+> deux côtés : avec 0 promotion en 300 jours, `parente_niveau_precedent` n'est jamais
+> calculée, donc le poids d'héritage reste nul par construction (§6.2). Le témoin et la
+> variante exécutent littéralement le même code.
+>
+> C'est la différence entre une ablation **négative** (mesurée à 0, comme C2) et une
+> ablation **vide** (jamais activée). Confondre les deux serait exactement l'erreur
+> dénoncée dans `CAMPAGNE_P17_ABLATION` : *« une ablation dont le témoin est à zéro ne
+> mesure rien »*.
+
+**Ce que la campagne mesure quand même**, et qui est solide : le sevrage v41.3 fonctionne
+en population — **autonomie moyenne 28,5 % sur 10 runs**, contre **0 % sur 300 jours** en
+v41.2. Le verrou de mesure est bien levé, sur population cette fois et non sur une graine.
+
+**Ce qu'elle confirme aussi** : 300 jours ne suffisent pas à produire une promotion sur
+ces graines. La seule promotion observée sur code v41.4 (g44) est survenue au jour **477**.
+Toute campagne future visant la promotion doit donc durer **≥ 1000 jours**, sans quoi elle
+mesure le vide.
+
+### 6.9 📌 Décision
+
+| Élément | Statut | Motif |
+|---|---|---|
+| Maîtrise générale (`historique_episodes_general`) | **CONSERVÉ** | grandeur mesurée, coût nul, instrumentée |
+| Parenté lue sur la grille (`_parente_cartes`) | **CONSERVÉ** | mesure vérifiée en vol (65 %/55 %), utile en soi |
+| Héritage de sevrage | **CONSERVÉ, NON PROUVÉ** | n = 1 favorable (477 j → 16 j), 0 mesure appariée |
+| `--sans-heritage` | **CONSERVÉ** | l'ablation devra être rejouée sur ≥ 1000 jours |
+
+**L'héritage n'est pas retiré, mais il n'est pas non plus revendiqué.** Il ne peut pas
+entrer dans les README : la seule mesure favorable est n = 1, et la campagne appariée n'a
+rien pu mesurer.
+
+⚠️ **Ce que la mécanique ne fait pas, et qui est désormais établi sur deux sources**
+(§6.2 par conception, §6.7 par mesure sur g44) : elle **accélère** un agent qui franchit
+déjà des paliers, elle ne **débloque** pas un agent bloqué. Le blocage au niveau 1 —
+**3 graines sur 4 à 1300 jours, 10 runs sur 10 à 300 jours** — reste entier et n'est pas
+de son ressort.
+
+### 6.10 ⚠️ Troisième erreur d'analyse du chantier, consignée
+
+L'analyseur a d'abord affiché **« autonomie 0,0 % »** sur des runs où elle valait
+réellement 28 %. Cause : le regex exigeait `autonomie (\d+)%\)` — avec parenthèse
+fermante, présente sur la ligne de *promotion* mais absente de la ligne de *bilan*. Seules
+les promotions étaient captées ; sans promotion, la moyenne tombait à 0.
+
+J'ai reporté ce chiffre faux avant de le vérifier. Corrigé, il vaut **28,5 %** — et il
+change la conclusion : le sevrage v41.3 **fonctionne en population**, là où le chiffre
+erroné suggérait qu'il ne mordait pas du tout.
+
+> **Fil récurrent du projet** : un outil de mesure est du code comme un autre, et il se
+> vérifie avant qu'on lui fasse confiance. C'est la 3ᵉ erreur de lecture consignée sur ce
+> chantier, après les 4 du v41.2.

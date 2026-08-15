@@ -11,7 +11,10 @@ RE_NIVEAU = re.compile(r"Niveau (\d+)/(\d+)")
 RE_PROMO  = re.compile(r"\[PROMOTION\]")
 RE_MAT    = re.compile(r"Maturité v40\.2 : 🌡️ ([\d.]+)")
 RE_MAITR  = re.compile(r"maîtrise (\d+)% \(n=")
-RE_AUTO   = re.compile(r"autonomie (\d+)%\)")
+# NB : la ligne de bilan finit par « autonomie 28% » SANS parenthèse fermante ; la ligne
+# de promotion, elle, en a une. Exiger `%\)` ne captait donc que les promotions — et
+# affichait « autonomie 0,0 % » sur des runs où elle valait 28 %.
+RE_AUTO   = re.compile(r"autonomie (\d+)%")
 RE_SEV    = re.compile(r"sevrage sur (\d+)%")
 RE_HERIT  = re.compile(r"héritage ([+-]\d+)%")
 RE_PARENT = re.compile(r"parenté carte (\d+)%")
