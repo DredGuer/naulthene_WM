@@ -4796,7 +4796,13 @@ def facteur_guidage(etat) -> float:
         taux_pour_sevrage = (taux_effectif * (1.0 - poids_heritage)
                              + taux_general * poids_heritage)
 
-    etat.taux_sevrage_jour = taux_pour_sevrage   # télémétrie (bilan de nuit + W&B)
+    # Télémétrie (bilan de nuit + W&B). ⚠️ v41.5 — cette fonction est désormais appelée
+    # DEUX FOIS par journée : au matin par `demarrer_journee` (c'est cette valeur-là qui
+    # est APPLIQUÉE à la journée) et au soir par `_maturite_niveau` (lecture synchrone du
+    # critère). La télémétrie porte donc la valeur du SOIR, celle qui a décidé de la
+    # promotion — c'est l'information utile pour comprendre un franchissement, et elle est
+    # cohérente avec l'autonomie affichée juste à côté dans le bilan.
+    etat.taux_sevrage_jour = taux_pour_sevrage
     # v41.4-fix1 — mémoriser AUSSI le taux du niveau tel qu'il était À CET INSTANT.
     # Le guidage est calculé en début de journée (`demarrer_journee`) et le bilan
     # s'affiche en fin de journée : entre les deux, la fenêtre glissante a bougé de
@@ -5693,7 +5699,36 @@ def _maturite_niveau(etat):
     #    (sevrage v35.1), donc l'autonomie monte d'elle-même quand la compétence s'installe.
     #    `min(guidage, 1)` neutralise le filet (> 1), qui n'est pas une aide « en plus »
     #    mais une compensation de stagnation : la compter comme telle punirait deux fois.
-    autonomie = 1.0 - max(0.0, min(1.0, getattr(etat, "facteur_guidage_jour", 1.0)))
+    #
+    # ⚠️ v41.5 — L'AUTONOMIE EST LUE AU MÊME INSTANT QUE LA RÉGULARITÉ.
+    #
+    # `facteur_guidage_jour` est calculé dans `demarrer_journee`, donc sur la fenêtre de la
+    # VEILLE ; cette fonction est évaluée dans `executer_nuit`, avec la maîtrise DU JOUR.
+    # Le produit mélangeait deux instants et sous-estimait la maturité **exactement pendant
+    # les phases de progression** — c'est-à-dire au moment où la promotion se joue.
+    #
+    # Mesuré sur 28 runs (8 × 2000 j + 20 × 300 j) : **7 promotions refusées** à des agents
+    # qui remplissaient la condition, contre **5 accordées**. Le critère refusait plus qu'il
+    # n'accordait. Cas d'école : g11 refusé QUATRE FOIS à 65 % de maîtrise (maturité 0,397)
+    # quand g44 était promu à 60 % (0,400 pile) — le moins compétent promu, le plus
+    # compétent refusé, sur un décalage d'index.
+    #
+    # La marge est nulle par construction : `SEUIL_MATURITE` dérive de `TAUX_PROMOTION` par
+    # la MÊME formule que l'autonomie, donc le seuil est franchi à l'égalité stricte à
+    # `TAUX_PROMOTION`. Un décalage d'un jour suffit à passer dessous.
+    #
+    # Le guidage est RECALCULÉ ici plutôt que relu : `facteur_guidage` porte déjà tout le
+    # sevrage (v41.3) et l'héritage (v41.4), et le dupliquer les ferait diverger au premier
+    # changement. L'appel est pur — il ne fait qu'écrire de la télémétrie sur `etat`.
+    #
+    # ⚠️ Ce qui est appliqué dans la JOURNÉE reste le guidage du matin : on ne réécrit pas
+    # le passé. Seule la LECTURE du critère est réalignée sur l'instant qu'elle prétend
+    # mesurer.
+    autonomie = 1.0 - max(0.0, min(1.0, facteur_guidage(etat)))
+    # Mémorisée pour que le bilan de nuit affiche l'autonomie qui a RÉELLEMENT décidé de la
+    # promotion, et non celle du matin — sans quoi la ligne « maturité = a × b × c »
+    # afficherait un produit qui ne tombe pas juste.
+    etat.autonomie_au_critere = autonomie
 
     return regularite * consolidation * autonomie
 
@@ -7123,7 +7158,7 @@ def executer_nuit(etat, plafond_reve=None):
             motif = (f"maturité {maturite:.0%} "
                      f"(régularité {(sum(etat.historique_episodes_niveau) / max(len(etat.historique_episodes_niveau), 1)):.0%}"
                      f" × {len(etat.historique_episodes_niveau)} épisodes"
-                     f" × autonomie {(1.0 - min(1.0, getattr(etat, 'facteur_guidage_jour', 1.0))):.0%})")
+                     f" × autonomie {getattr(etat, 'autonomie_au_critere', 1.0 - min(1.0, getattr(etat, 'facteur_guidage_jour', 1.0))):.0%})")
             etat.niveau_actuel += 1
             etat.victoires_consecutives = 0
             # Vider l'historique est OBLIGATOIRE : un taux hérité d'un niveau plus facile
@@ -7526,7 +7561,11 @@ def executer_nuit(etat, plafond_reve=None):
     _mat = getattr(etat, "maturite_niveau_jour", 0.0)
     _reg = sum(_h) / max(len(_h), 1)
     _cons = min(1.0, len(_h) / FENETRE_PROMOTION)
-    _auto = 1.0 - max(0.0, min(1.0, etat.facteur_guidage_jour))
+    # v41.5 — l'autonomie du CRITÈRE (lue le soir, synchrone avec la régularité), pas celle
+    # du matin : c'est elle qui a décidé de la promotion, et c'est elle qui rend le produit
+    # affiché cohérent avec la maturité affichée.
+    _auto = getattr(etat, "autonomie_au_critere",
+                    1.0 - max(0.0, min(1.0, etat.facteur_guidage_jour)))
     print(f"  ├─ Cursus         : 🎓 Niveau {etat.niveau_actuel + 1}/{len(PROGRAMME)} — "
           f"maîtrise {_txt} | {_aide}")
     print(f"  ├─ Maturité v40.2 : 🌡️ {_mat:.3f} / {SEUIL_MATURITE:.2f} — "
