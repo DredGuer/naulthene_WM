@@ -1,0 +1,315 @@
+{
+ "profils": {
+  "MiniGrid-Empty-5x5-v0": {
+   "taille": 25.0,
+   "libres": 8.0,
+   "murs": 16.0,
+   "objets": 1.0,
+   "densite_obstacle": 0.64,
+   "dist_but": 4.0,
+   "types": [
+    "goal"
+   ],
+   "n_actions_utiles": 1
+  },
+  "MiniGrid-Empty-Random-6x6-v0": {
+   "taille": 36.0,
+   "libres": 15.0,
+   "murs": 20.0,
+   "objets": 1.0,
+   "densite_obstacle": 0.5555555555555556,
+   "dist_but": 3.325,
+   "types": [
+    "goal"
+   ],
+   "n_actions_utiles": 1
+  },
+  "MiniGrid-Empty-8x8-v0": {
+   "taille": 64.0,
+   "libres": 35.0,
+   "murs": 28.0,
+   "objets": 1.0,
+   "densite_obstacle": 0.4375,
+   "dist_but": 10.0,
+   "types": [
+    "goal"
+   ],
+   "n_actions_utiles": 1
+  },
+  "MiniGrid-SimpleCrossingS9N1-v0": {
+   "taille": 81.0,
+   "libres": 42.0,
+   "murs": 38.0,
+   "objets": 1.0,
+   "densite_obstacle": 0.4691358024691358,
+   "dist_but": 12.0,
+   "types": [
+    "goal"
+   ],
+   "n_actions_utiles": 1
+  },
+  "MiniGrid-LavaGapS5-v0": {
+   "taille": 25.0,
+   "libres": 6.0,
+   "murs": 16.0,
+   "objets": 3.0,
+   "densite_obstacle": 0.64,
+   "dist_but": 4.0,
+   "types": [
+    "goal",
+    "lava"
+   ],
+   "n_actions_utiles": 2
+  },
+  "MiniGrid-Fetch-5x5-N2-v0": {
+   "taille": 25.0,
+   "libres": 7.0,
+   "murs": 16.0,
+   "objets": 2.0,
+   "densite_obstacle": 0.64,
+   "dist_but": -1.0,
+   "types": [
+    "ball",
+    "key"
+   ],
+   "n_actions_utiles": 2
+  },
+  "MiniGrid-GoToDoor-6x6-v0": {
+   "taille": 36.0,
+   "libres": 17.75,
+   "murs": 14.25,
+   "objets": 4.0,
+   "densite_obstacle": 0.3958333333333333,
+   "dist_but": -1.0,
+   "types": [
+    "door"
+   ],
+   "n_actions_utiles": 1
+  },
+  "MiniGrid-DoorKey-5x5-v0": {
+   "taille": 25.0,
+   "libres": 4.0,
+   "murs": 18.0,
+   "objets": 3.0,
+   "densite_obstacle": 0.72,
+   "dist_but": 3.15,
+   "types": [
+    "door",
+    "goal",
+    "key"
+   ],
+   "n_actions_utiles": 3
+  },
+  "MiniGrid-DoorKey-6x6-v0": {
+   "taille": 36.0,
+   "libres": 10.0,
+   "murs": 23.0,
+   "objets": 3.0,
+   "densite_obstacle": 0.6388888888888888,
+   "dist_but": 4.45,
+   "types": [
+    "door",
+    "goal",
+    "key"
+   ],
+   "n_actions_utiles": 3
+  },
+  "MiniGrid-DoorKey-8x8-v0": {
+   "taille": 64.0,
+   "libres": 28.0,
+   "murs": 33.0,
+   "objets": 3.0,
+   "densite_obstacle": 0.515625,
+   "dist_but": 7.15,
+   "types": [
+    "door",
+    "goal",
+    "key"
+   ],
+   "n_actions_utiles": 3
+  },
+  "MiniGrid-Unlock-v0": {
+   "taille": 66.0,
+   "libres": 31.0,
+   "murs": 33.0,
+   "objets": 2.0,
+   "densite_obstacle": 0.5,
+   "dist_but": -1.0,
+   "types": [
+    "door",
+    "key"
+   ],
+   "n_actions_utiles": 2
+  },
+  "MiniGrid-UnlockPickup-v0": {
+   "taille": 66.0,
+   "libres": 30.0,
+   "murs": 33.0,
+   "objets": 3.0,
+   "densite_obstacle": 0.5,
+   "dist_but": -1.0,
+   "types": [
+    "box",
+    "door",
+    "key"
+   ],
+   "n_actions_utiles": 3
+  },
+  "MiniGrid-MemoryS7-v0": {
+   "taille": 49.0,
+   "libres": 12.0,
+   "murs": 34.0,
+   "objets": 3.0,
+   "densite_obstacle": 0.6938775510204082,
+   "dist_but": -1.0,
+   "types": [
+    "ball",
+    "key"
+   ],
+   "n_actions_utiles": 2
+  },
+  "MiniGrid-MultiRoom-N2-S4-v0": {
+   "taille": 625.0,
+   "libres": 603.55,
+   "murs": 19.45,
+   "objets": 2.0,
+   "densite_obstacle": 0.03112,
+   "dist_but": 3.75,
+   "types": [
+    "door",
+    "goal"
+   ],
+   "n_actions_utiles": 2
+  },
+  "MiniGrid-MultiRoom-N4-S5-v0": {
+   "taille": 625.0,
+   "libres": 558.35,
+   "murs": 60.65,
+   "objets": 6.0,
+   "densite_obstacle": 0.09704,
+   "dist_but": 17.775,
+   "types": [
+    "door",
+    "goal"
+   ],
+   "n_actions_utiles": 2
+  }
+ },
+ "parente": [
+  {
+   "de": "Nourrisson",
+   "vers": "Eveil",
+   "similarite": 0.7317708333333334,
+   "d_struct": 0.26822916666666663,
+   "nouveaux_types": []
+  },
+  {
+   "de": "Eveil",
+   "vers": "Maternelle",
+   "similarite": 0.5277678571428571,
+   "d_struct": 0.4722321428571429,
+   "nouveaux_types": []
+  },
+  {
+   "de": "Maternelle",
+   "vers": "Primaire 1",
+   "similarite": 0.8473389782326186,
+   "d_struct": 0.1526610217673814,
+   "nouveaux_types": []
+  },
+  {
+   "de": "Primaire 1",
+   "vers": "Primaire 2",
+   "similarite": 0.18973214285714285,
+   "d_struct": 0.6205357142857143,
+   "nouveaux_types": [
+    "lava"
+   ]
+  },
+  {
+   "de": "Primaire 2",
+   "vers": "Primaire 3",
+   "similarite": 0.0,
+   "d_struct": 0.2857142857142857,
+   "nouveaux_types": [
+    "ball",
+    "key"
+   ]
+  },
+  {
+   "de": "Primaire 3",
+   "vers": "College 1",
+   "similarite": 0.0,
+   "d_struct": 0.4308999250130412,
+   "nouveaux_types": [
+    "door"
+   ]
+  },
+  {
+   "de": "College 1",
+   "vers": "College 2",
+   "similarite": 0.12246375630325163,
+   "d_struct": 0.6326087310902452,
+   "nouveaux_types": [
+    "goal",
+    "key"
+   ]
+  },
+  {
+   "de": "College 2",
+   "vers": "College 3",
+   "similarite": 0.672413822999029,
+   "d_struct": 0.32758617700097103,
+   "nouveaux_types": []
+  },
+  {
+   "de": "College 3",
+   "vers": "Lycee 1",
+   "similarite": 0.587271424227946,
+   "d_struct": 0.412728575772054,
+   "nouveaux_types": []
+  },
+  {
+   "de": "Lycee 1",
+   "vers": "Lycee 2",
+   "similarite": 0.7106549364613881,
+   "d_struct": 0.28934506353861195,
+   "nouveaux_types": []
+  },
+  {
+   "de": "Lycee 2",
+   "vers": "Lycee 3",
+   "similarite": 0.6594982078853048,
+   "d_struct": 0.01075268817204301,
+   "nouveaux_types": [
+    "box"
+   ]
+  },
+  {
+   "de": "Lycee 3",
+   "vers": "Universite",
+   "similarite": 0.31050207961972665,
+   "d_struct": 0.37899584076054665,
+   "nouveaux_types": [
+    "ball"
+   ]
+  },
+  {
+   "de": "Universite",
+   "vers": "Doctorat 1",
+   "similarite": 0.0,
+   "d_struct": 0.9642170563869653,
+   "nouveaux_types": [
+    "door",
+    "goal"
+   ]
+  },
+  {
+   "de": "Doctorat 1",
+   "vers": "Doctorat 2",
+   "similarite": 0.6141931823211714,
+   "d_struct": 0.38580681767882863,
+   "nouveaux_types": []
+  }
+ ]
+}
