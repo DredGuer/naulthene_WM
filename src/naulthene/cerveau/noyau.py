@@ -4797,6 +4797,14 @@ def facteur_guidage(etat) -> float:
                              + taux_general * poids_heritage)
 
     etat.taux_sevrage_jour = taux_pour_sevrage   # télémétrie (bilan de nuit + W&B)
+    # v41.4-fix1 — mémoriser AUSSI le taux du niveau tel qu'il était À CET INSTANT.
+    # Le guidage est calculé en début de journée (`demarrer_journee`) et le bilan
+    # s'affiche en fin de journée : entre les deux, la fenêtre glissante a bougé de
+    # plusieurs épisodes. Comparer `taux_sevrage_jour` au taux de FIN de journée mesurait
+    # ce décalage temporel et l'étiquetait « héritage » — jusqu'à −33 pt affichés sur un
+    # run où l'héritage était pourtant coupé. L'écart n'est un héritage que si les deux
+    # termes sont lus au même instant.
+    etat.taux_niveau_au_sevrage = taux_effectif
     base = 1.0 - max(0.0, min(1.0, taux_pour_sevrage / SEUIL_FIN_SEVRAGE))
 
     # --- Le filet : renfort progressif après une longue stagnation ---
@@ -7531,7 +7539,9 @@ def executer_nuit(etat, plafond_reve=None):
                     f"/{MIN_EPISODES_PROMOTION})")
     _tsev = getattr(etat, "taux_sevrage_jour", 0.0)
     _par = getattr(etat, "parente_niveau_precedent", 0.0)
-    _herit = _tsev - (_t if _t is not None else 0.0)
+    # v41.4-fix1 — les deux termes sont lus AU MÊME INSTANT (début de journée), sinon
+    # l'écart mesure la dérive de la fenêtre glissante et non l'héritage.
+    _herit = _tsev - getattr(etat, "taux_niveau_au_sevrage", _tsev)
     print(f"  ├─ Maîtrise v41.4 : 🌍 générale {_tg_txt} | sevrage sur {_tsev:.0%} "
           f"(héritage {_herit:+.0%}, parenté carte {_par:.0%})")
 
@@ -8069,10 +8079,32 @@ if __name__ == "__main__":
 
     # Drapeau global lu par `facteur_guidage` — un seul point de lecture, pas de
     # branchement dispersé dans le chemin cognitif.
-    HERITAGE_SEVRAGE_ACTIF = not _args.sans_heritage
-    globals()["HERITAGE_SEVRAGE_ACTIF"] = HERITAGE_SEVRAGE_ACTIF
-    if not HERITAGE_SEVRAGE_ACTIF:
+    #
+    # ⚠️ v41.4-fix1 — ÉCRIRE DANS LE MODULE NOMMÉ, JAMAIS DANS `globals()`.
+    # `python -m naulthene.cerveau.noyau` charge ce fichier DEUX FOIS, sous deux noms :
+    # `__main__` (ce bloc) et `naulthene.cerveau.noyau` (celui que voient les fonctions
+    # définies plus haut, et que les autres modules importent). `globals()` ici désigne
+    # `__main__` — donc l'affectation n'était **jamais vue par `facteur_guidage`**, et
+    # l'ablation ne coupait rien.
+    #
+    # Mesuré : sur 135 jours, le témoin et la variante ont produit des logs
+    # **rigoureusement identiques** (maturité 0,361 des deux côtés, héritage +5 pt affiché
+    # alors même que le message « ABLATION » était imprimé). C'est la deuxième occurrence
+    # du défaut que ce bloc dénonce quelques lignes plus haut : des runs qu'on croit
+    # différents et qui sont le même run. Un témoin qui ne diffère pas ne mesure rien.
+    import sys as _sys
+    _module_reel = _sys.modules.get("naulthene.cerveau.noyau")
+    _actif = not _args.sans_heritage
+    globals()["HERITAGE_SEVRAGE_ACTIF"] = _actif
+    if _module_reel is not None:
+        _module_reel.HERITAGE_SEVRAGE_ACTIF = _actif
+    if not _actif:
         print("🔬 [ABLATION] héritage de sevrage v41.4 COUPÉ — témoin v41.3")
+        # Vérification à l'exécution : sans elle, une ablation muette produirait une
+        # campagne entière de résultats faux (c'est ce qui vient d'arriver).
+        from naulthene.cerveau.noyau import HERITAGE_SEVRAGE_ACTIF as _verif
+        assert _verif is False, ("l'ablation n'a pas atteint le module lu par "
+                                 "facteur_guidage — campagne invalide")
 
     # La graine est réappliquée ICI, après les `manual_seed(42)` du haut de fichier : ce
     # sont eux qui rendaient les runs indiscernables.
