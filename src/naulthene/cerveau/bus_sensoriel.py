@@ -83,6 +83,61 @@ DIM_EXO = 8       # v30.0 — le 6ème sens, l'Exo-Sens (vecteur perceptif exog�
 # variation olfactive nourrit C1 (`integrateur_bio`), jamais le modèle du monde de C2.
 DIM_ODORAT_DELTA = 2
 
+# --- v41.11 : LA THERMOCEPTION — le danger comme CHAMP CONTINU, jamais comme étiquette ---
+#
+# Idée de l'utilisateur (16/08) : *« peut-être que MiniGrid manque de gradation
+# (2 cases de lave = chaud / 1 case = brûlant / sur la case = mort). Et quand on est
+# mort = 0 XP = mort ! »*
+#
+# 🔴 CE QUE ÇA CORRIGE (mesuré le 16/08) :
+#
+#   (a) MiniGrid punit la mort par EXACTEMENT 0.0 — 206 morts sur 300 épisodes, toutes à
+#       récompense nulle. Toucher un mur coûte MALUS_DOULEUR = -0.01 ; mourir coûte ZÉRO.
+#       Toucher un mur coûte donc infiniment plus cher que mourir.
+#
+#   (b) Le vecteur bio est RIGOUREUSEMENT IDENTIQUE sur la case adjacente à la lave et à
+#       trois cases de distance :
+#
+#           juste à côté de la lave : [0. 0. 1. 0. ... 0.5 0.5]
+#           à trois cases           : [1. 0. 1. 0. ... 0.5 0.5]   (le 1.0 est un MUR)
+#
+#   (c) La lave était traitée UNIQUEMENT comme un obstacle : elle figure dans
+#       `TYPES_BLOQUANTS_ODORAT` au même titre qu'un mur, donc elle arrête l'odeur — mais
+#       n'en émet AUCUNE. Elle était une cloison, jamais une source.
+#
+#   (d) La vue la voit (indice 9 dans le canal des types) mais comme un SYMBOLE parmi
+#       d'autres : `9` ne se distingue de `1` (sol) ou `8` (but) par rien de continu.
+#
+# Bilan : l'agent ne pouvait apprendre le danger ni par l'expérience (il meurt, donc
+# n'apprend rien — le tick suivant appartient à un autre épisode), ni par les sens (aucun
+# gradient ne monte quand il s'approche). D'où la valence POSITIVE mesurée sur `lava`
+# (+0,069) : l'agent enregistre « ici j'allais bien », puis l'épisode s'arrête sans que
+# rien ne lui dise pourquoi.
+#
+# LA FORME — pourquoi un champ et pas un malus. Un `if mort: récompense -= X` serait un
+# seuil en dur sur un type nommé, exactement ce que le projet refuse (invariant v36.0 :
+# aucune table `lava = danger`). Un CHAMP continu, lui, est un sens de plus : il monte à
+# mesure qu'on approche, exactement comme l'odorat de la nourriture monte — et l'agent en
+# apprend la signification par ce qui lui arrive ensuite, jamais par déclaration.
+#
+# La chaleur réutilise DONC la machinerie olfactive à l'identique (BFS topologique,
+# même atténuation) : le danger est « une odeur de plus », dont la seule particularité est
+# d'être émise par les cases qui bloquent le passage. Rien de neuf n'est inventé.
+#
+# ⚠️ RIEN N'EST NOMMÉ DANS LE CERVEAU. `noyau.py` ne teste jamais « est-ce de la lave » :
+# il reçoit deux scalaires de plus dans son vecteur bio et doit découvrir seul ce qu'ils
+# valent. Le nom `lava` n'apparaît QUE dans ce fichier de traduction sensorielle, au même
+# titre que `red`/`blue` désignent déjà nourriture et eau depuis la v29.0 — c'est
+# l'équivalent d'un récepteur thermique, pas d'une connaissance.
+#
+# Ajoutées EN QUEUE (contrat append-only, invariant v29.0), donc hors cible JEPA.
+DIM_THERMOCEPTION = 2   # chaleur perçue (proximité du danger) + sa variation (clinotaxie)
+
+# Types qui ÉMETTENT de la chaleur. Distinct de TYPES_BLOQUANTS_ODORAT : un mur bloque
+# sans brûler, la lave fait les deux. La liste reste ouverte — tout type ajouté ici
+# devient une source de chaleur sans qu'aucune autre ligne ne change.
+TYPES_BRULANTS = ("lava",)
+
 # --- ODORAT : atténuation exponentielle de proximité (v30.0) ---
 #
 # En v29.x, l'odorat décroissait LINÉAIREMENT sur une portée fixe de 4 cases
@@ -202,6 +257,9 @@ class BusSensoriel:
         # v32.0 — mémoire d'un tick pour la clinotaxie (ΔS). `None` = pas de tick
         # précédent comparable (début d'épisode) ⇒ ΔS neutre, voir lire_chimie.
         self._odeurs_precedentes = None
+        # v41.11 — même rôle pour la chaleur (voir lire_thermoception). `None` = premier
+        # tick de l'épisode ⇒ variation neutre à 0.5, jamais un faux refroidissement.
+        self._chaleur_precedente = None
 
     def _avertir(self, exception):
         if not self._avertissement_donne:
@@ -223,6 +281,9 @@ class BusSensoriel:
         donc pas de variation — il n'a rien à quoi se comparer."""
         self._gout_courant[:] = 0.0
         self._odeurs_precedentes = None
+        # v41.11 — idem pour la chaleur : au reset l'agent est téléporté, comparer à la
+        # dernière chaleur de l'épisode précédent produirait un Δ fictif et violent.
+        self._chaleur_precedente = None
 
     # --- 1. LE TOUCHER (gourmandise moyenne) ---
 
@@ -316,6 +377,76 @@ class BusSensoriel:
         deltas = self._calculer_deltas_odorat(odeurs)
         return (odeurs + [float(self._gout_courant[0]), float(self._gout_courant[1])]
                 + deltas)
+
+    def lire_thermoception(self, env) -> list:
+        """v41.11 — LA CHALEUR : le danger perçu comme un champ continu (DIM_THERMOCEPTION=2).
+
+        - `chaleur` : intensité dans [0, 1] de la source brûlante la plus proche, par la
+          MÊME loi que l'odorat (`exp(-LAMBDA_ODORAT * d)` sur la distance de cheminement).
+          C'est la gradation demandée : loin = 0, à quelques cases = tiède, adjacent =
+          brûlant, dessus = maximum.
+        - `delta_chaleur` : sa variation depuis le tick précédent, normalisée dans [0, 1]
+          avec un neutre à **0.5** — même contrat que la clinotaxie olfactive (v32.0), et
+          même piège évité : 0.0 signifierait « refroidissement maximal », ce qui ferait
+          croire à l'agent qu'il fuit un danger inexistant à chaque premier tick.
+
+        ⚠️ LA DIFFÉRENCE AVEC L'ODORAT, ET POURQUOI ELLE EST NÉCESSAIRE. Une source
+        brûlante est aussi un obstacle (`lava` est dans `TYPES_BLOQUANTS_ODORAT`) : si on
+        la traitait comme une source olfactive ordinaire, le BFS partirait d'une case
+        marquée infranchissable et ne propagerait rien du tout. La chaleur se propage donc
+        sur une topologie où les cases brûlantes sont FRANCHISSABLES en tant que points de
+        départ — ce qui est physiquement juste : la chaleur rayonne depuis le feu, elle
+        n'est pas arrêtée par lui.
+
+        Les murs, eux, arrêtent bien la chaleur — un agent séparé de la lave par une
+        cloison n'est pas en danger, et lui envoyer un signal serait exactement le défaut
+        que la v32.0 a corrigé pour l'odorat (un gradient qui traverse un mur est PIRE que
+        pas de gradient, car il est faux une partie du temps seulement).
+
+        ⚠️ Le cerveau ne reçoit que deux nombres. Il n'apprendra ce qu'ils signifient que
+        par ce qui lui arrive quand ils montent — jamais par une déclaration.
+        """
+        chaleur = 0.0
+        if self.actif:
+            try:
+                noyau_env = env.unwrapped
+                grille = noyau_env.grid
+                pos_agent = tuple(int(v) for v in noyau_env.agent_pos)
+                largeur, hauteur = grille.width, grille.height
+
+                # Topologie propre à la chaleur : les murs arrêtent, les cases brûlantes
+                # rayonnent (donc franchissables ici, contrairement au calcul olfactif).
+                cout = [[1] * hauteur for _ in range(largeur)]
+                sources = []
+                for x in range(largeur):
+                    for y in range(hauteur):
+                        objet = grille.get(x, y)
+                        if objet is None:
+                            continue
+                        type_objet = getattr(objet, "type", None)
+                        if type_objet in TYPES_BRULANTS:
+                            sources.append((x, y))
+                        elif type_objet in TYPES_BLOQUANTS_ODORAT:
+                            cout[x][y] = None      # un mur fait de l'ombre thermique
+                        elif type_objet == "door" and not getattr(objet, "is_open", True):
+                            cout[x][y] = 1 + SURCOUT_PORTE_FERMEE
+
+                if sources:
+                    d = self._bfs_vers_agent(cout, sources, pos_agent, largeur, hauteur)
+                    if d is not None:
+                        intensite = float(np.exp(-LAMBDA_ODORAT * d))
+                        chaleur = intensite if intensite >= SEUIL_COUPURE_ODORAT else 0.0
+            except Exception as e:
+                self._avertir(e)
+                chaleur = 0.0
+
+        # Même neutre à 0.5 et même normalisation que la clinotaxie olfactive.
+        if self._chaleur_precedente is None:
+            delta = 0.5
+        else:
+            delta = float(np.clip((chaleur - self._chaleur_precedente + 1.0) / 2.0, 0.0, 1.0))
+        self._chaleur_precedente = chaleur
+        return [float(np.clip(chaleur, 0.0, 1.0)), delta]
 
     def _calculer_deltas_odorat(self, odeurs) -> list:
         """v32.0 — la clinotaxie : ΔS = S_t − S_{t−1} par type de ressource, normalisé
@@ -513,14 +644,15 @@ class BusSensoriel:
 
     def interpreter(self, env, action_item=None, reponse_c3=None) -> list:
         """Point d'entrée unique : renvoie les DIM_TOUCHER + DIM_CHIMIE + DIM_EXO +
-        DIM_ODORAT_DELTA = 18 dims des sens faibles à moyens ET du 6ème sens, dans
-        l'ordre exact attendu par la queue du `vecteur_bio` (voir
+        DIM_ODORAT_DELTA + DIM_THERMOCEPTION = 20 dims des sens faibles à moyens ET du
+        6ème sens, dans l'ordre exact attendu par la queue du `vecteur_bio` (voir
         `BiologicalHomeostasisEngine.obtenir_vecteur_bio`) :
 
             [contact, objet_en_main, orient_cos, orient_sin,        ← toucher (v29.0)
              odeur_food, odeur_water, gout_food, gout_water,        ← chimie  (v29.0)
              exo_0 .. exo_7,                                        ← Exo-Sens (v30.0)
-             delta_odeur_food, delta_odeur_water]                   ← clinotaxie (v32.0)
+             delta_odeur_food, delta_odeur_water,                   ← clinotaxie (v32.0)
+             chaleur, delta_chaleur]                                ← thermoception (v41.11)
 
         ⚠️ Les 2 dims de clinotaxie sont en QUEUE, donc APRÈS l'Exo-Sens — et non
         accolées à l'odorat dont elles dérivent, ce qui serait plus lisible mais
@@ -546,7 +678,12 @@ class BusSensoriel:
         return (self.lire_toucher(env, action_item)
                 + chimie
                 + self.percevoir_exogene(reponse_c3)
-                + deltas_odorat)
+                + deltas_odorat
+                # v41.11 — la thermoception ferme la queue : ajoutée APRÈS la clinotaxie,
+                # jamais accolée à l'odorat dont elle réutilise la machinerie. Même
+                # arbitrage qu'en v32.0 : le contrat append-only prime sur la lisibilité
+                # du regroupement, sans quoi tous les `.brain` v32→v41 se décaleraient.
+                + self.lire_thermoception(env))
 
     @staticmethod
     def hierarchie_sensorielle() -> dict:

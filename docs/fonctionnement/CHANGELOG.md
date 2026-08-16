@@ -4,6 +4,113 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.11-experimental] - 2026-08-16 — La thermoception : le danger comme champ continu
+
+### L'agent ne pouvait apprendre le danger ni par les sens, ni par l'expérience
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | feat (expérimental) |
+| **Impact** | **Fonctionnel** |
+| **Carnet** | [`CORRECTIF_v4110_memoire_par_carte.md`](../recherche/CORRECTIF_v4110_memoire_par_carte.md) §3 |
+
+**L'idée (utilisateur, 16/08).** *« Peut-être que MiniGrid manque de gradation (2 cases de
+lave = chaud / 1 case = brûlant / sur la case = mort). Et quand on est mort = 0 XP = mort ! »*
+
+**Les quatre mesures qui la valident.**
+
+1. MiniGrid punit la mort par **exactement `0.0`** — 206 morts sur 300 épisodes, toutes à
+   récompense nulle. Toucher un mur coûte `MALUS_DOULEUR = -0,01` : **toucher un mur coûte
+   infiniment plus cher que mourir.**
+2. Le vecteur bio était **rigoureusement identique** sur la case adjacente à la lave et à
+   trois cases de distance.
+3. La lave figurait dans `TYPES_BLOQUANTS_ODORAT` : elle **arrêtait** l'odeur sans jamais
+   en **émettre**. Une cloison, jamais une source.
+4. La vue la voit (indice `9`) mais comme un symbole parmi d'autres — `9` ne se distingue
+   de `1` (sol) par rien de continu.
+
+**Le correctif.** Deux dimensions **en queue** du vecteur bio (37 → 39) : `chaleur` et
+`delta_chaleur`, calculées par la **même machinerie que l'odorat** (BFS topologique, même
+loi `exp(-λd)`). Le danger devient « une odeur de plus ». Les murs font de l'ombre
+thermique ; les cases brûlantes rayonnent (donc franchissables comme points de départ du
+BFS, contrairement au calcul olfactif).
+
+Champ mesuré sur `LavaGapS5` — exactement la gradation demandée :
+
+| Distance | Chaleur |
+|---|---|
+| sur la lave | **1,000** |
+| adjacent | **0,449** |
+| 2 cases | **0,202** |
+
+**Pourquoi un champ et pas un malus.** `si mort → récompense −= X` serait un seuil en dur
+sur un type nommé, ce que l'invariant v36.0 interdit. Un champ est un **sens de plus** :
+l'agent en découvre le sens par ce qui lui arrive quand il monte, jamais par déclaration.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/bus_sensoriel.py` | `DIM_THERMOCEPTION`, `TYPES_BRULANTS`, `lire_thermoception()`, `_chaleur_precedente` (remis à `None` au reset), branchement en queue d'`interpreter()` |
+| `src/naulthene/cerveau/noyau.py` | `DIM_VECTEUR_BIO` 37 → 39 ; borne HAUTE sur la tranche `deltas_odorat` (sans quoi la thermoception aurait été comptée comme clinotaxie) ; 5 compteurs journaliers ; ligne de bilan + 4 clés W&B conditionnelles |
+
+**Vérifié** : gradient cohérent sur toute la grille ; clinotaxie thermique correcte dans
+les deux sens (approche 0,624 / recul 0,376) ; **non-régression exacte** `(0.0, 0.5)` sur
+Empty-5x5, DoorKey-6x6 et Empty-8x8 ; greffe `.brain` **101 → 103 dims sans exclusion**,
+validée sur deux nuits complètes.
+
+**Première mesure** : l'agent **approche du danger 69–80 % des ticks de variation**. C'est
+la ligne de base contre laquelle l'apprentissage se mesurera (`Thermo_Taux_Approche` doit
+décroître).
+
+---
+
+## [v41.10-experimental] - 2026-08-16 — La mémoire par carte
+
+### P17 effaçait la mémoire spatiale ~3750 fois par run
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | fix (expérimental) |
+| **Impact** | **Fonctionnel** |
+| **Carnet** | [`CORRECTIF_v4110_memoire_par_carte.md`](../recherche/CORRECTIF_v4110_memoire_par_carte.md) |
+
+**Le défaut.** P17 (v41.6) tire le niveau de chaque épisode au sort : l'agent change de
+carte ~1,5 fois par jour. Chaque bascule appelait `reinitialiser_niveau()`, soit un
+**effacement complet** de la mémoire spatiale — ~3750 fois sur un run de 2500 jours.
+
+Mesuré sur la campagne des 20 graines du 16/08 :
+
+```
+🗺️ 5/200 souvenir(s) spatial(aux) — 51 715 doublon(s) évité(s)
+```
+
+La mémoire tournait à **1 % de sa capacité**. L'abstraction par récurrence (v36.0), dont
+tout le principe est que `confirmations` monte avec la répétition, ne pouvait
+**structurellement** jamais accumuler.
+
+**L'erreur de raisonnement.** L'effacement confondait « changer de carte » (les
+coordonnées courantes ne s'appliquent plus) et « ne plus jamais y aller » (elles ne valent
+plus rien). Avant P17 les deux coïncidaient en pratique ; P17 a invalidé cette hypothèse
+sans que l'effacement soit revu.
+
+**Le correctif.** Une **archive par carte** : `souvenirs` reste la vue de la carte
+courante, les autres dorment dans `archives_cartes`. L'invariant v39.0 (une coordonnée
+n'est jamais lue hors de sa carte) est **renforcé**, pas affaibli.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `basculer_carte()`, `total_souvenirs()`, `archives_cartes` ; `dedupliquer()` compacte aussi les archives ; drapeau d'ablation `--sans-memoire-cartes` ; ligne de bilan `Cartes v41.10` + 3 clés W&B |
+| `src/naulthene/cerveau/persistance.py` | `archives_cartes` et `carte_courante` sérialisées, lecture défensive `.get()` |
+
+**Vérifié** : 9 invariants en test unitaire (dont le test de fuite v39.0) ; A/A
+bit-identique sur graine 7 ; ablation confirmée coupante (1 carte vs 4) ; rétrocompatibilité
+d'un `.brain` v41.9 sur une **nuit complète**.
+
+Effet immédiat sur 3 jours : 4 cartes en mémoire et 33 repères contre 1 et 16.
+
+---
+
 ## [v41.9-experimental] - 2026-08-16 — Le banc d'essai devient reproductible
 
 ### `env.reset()` n'était jamais seedé — le projet ne pouvait mesurer aucun effet

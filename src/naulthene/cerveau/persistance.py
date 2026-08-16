@@ -266,6 +266,15 @@ class PersistanceAnatomique:
 
             # --- 4. Souvenirs persistants (mémoire épisodique spatiale, v20.0) ---
             'souvenirs_spatiaux': etat.memoire_episodique_spatiale.souvenirs,
+            # v41.10 — les cartes QUITTÉES. Sans ces deux clés, une reprise de run ferait
+            # redécouvrir de zéro toutes les cartes autres que celle du moment — soit
+            # exactement le défaut que la v41.10 corrige, réintroduit par la porte de la
+            # résurrection. `carte_courante` est indispensable pour que la première
+            # bascule archive sous la bonne clé.
+            'archives_cartes': getattr(etat.memoire_episodique_spatiale,
+                                       'archives_cartes', {}),
+            'carte_courante': getattr(etat.memoire_episodique_spatiale,
+                                      'carte_courante', None),
             # v39.0 — L'EMPREINTE DE TYPE (le QUOI). Contrairement aux souvenirs, elle
             # n'est pas spatiale : elle survit aux changements de carte ET aux
             # résurrections. Sans cette ligne, l'abstraction accumulée sur toute une vie
@@ -552,6 +561,17 @@ class PersistanceAnatomique:
 
         # --- Souvenirs ---
         etat.memoire_episodique_spatiale.souvenirs = checkpoint['souvenirs_spatiaux']
+        # v41.10 — les cartes archivées. `.get` avec défaut vide : un `.brain` antérieur
+        # à la v41.10 n'a pas ces clés et repart avec une seule carte connue (celle où il
+        # se trouve), sans greffe ni erreur — même discipline que `empreinte_types`
+        # (v39.0). Aucune perte : seulement un réapprentissage des autres cartes.
+        etat.memoire_episodique_spatiale.archives_cartes = dict(
+            checkpoint.get('archives_cartes', {}) or {})
+        # Si la clé est absente (ancien `.brain`), on amorce sur l'`env_id` du checkpoint
+        # plutôt que de laisser None : les souvenirs rechargés ont bien été vécus sur
+        # CETTE carte, et les étiqueter None les rendrait inaccessibles au retour.
+        etat.memoire_episodique_spatiale.carte_courante = (
+            checkpoint.get('carte_courante') or env_id)
         # v39.0 — l'empreinte de type. `.get` avec défaut vide : un `.brain` antérieur à
         # la v39 n'a pas cette clé, et doit se recharger sans broncher (règle du projet :
         # greffe par recopie, jamais par exclusion). L'agent repart alors avec une

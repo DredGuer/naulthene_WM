@@ -35,6 +35,7 @@ from naulthene.exocortex.port_c3 import PortC3, RequeteC3
 # synaptique dédiée dans AGI_Naulthene — voir bus_sensoriel.BusSensoriel.hierarchie_sensorielle.
 from naulthene.cerveau.bus_sensoriel import (BusSensoriel, DIM_TOUCHER, DIM_CHIMIE,
                                              DIM_EXO, DIM_ODORAT_DELTA,
+                                             DIM_THERMOCEPTION,
                                              COULEUR_NOURRITURE, COULEUR_EAU)
 
 if torch.cuda.is_available():
@@ -392,8 +393,8 @@ DIM_RAPPEL_MARQUANT = 2
 DIM_PRESENCE_AUDITIVE = 1
 
 DIM_VECTEUR_BIO = (16 + DIM_TOUCHER + DIM_CHIMIE + DIM_EXO
-                   + DIM_ODORAT_DELTA + DIM_RAPPEL_MARQUANT
-                   + DIM_PRESENCE_AUDITIVE)  # = 37 depuis la v39.2
+                   + DIM_ODORAT_DELTA + DIM_THERMOCEPTION + DIM_RAPPEL_MARQUANT
+                   + DIM_PRESENCE_AUDITIVE)  # = 39 depuis la v41.11
                        # 3 jauges (satiete, hydratation, stimulation) + 3 quête (target_vector one-hot)
                        # + 2 rappel spatial (v20.0 : distance normalisée + fraîcheur du souvenir)
                        # + 8 quête vocale (v22.1 : formants cibles de la leçon en cours, ou [0]*8
@@ -408,6 +409,12 @@ DIM_VECTEUR_BIO = (16 + DIM_TOUCHER + DIM_CHIMIE + DIM_EXO
                        #   n'avait aucun état interne lui permettant de dériver S_t : il était
                        #   AVEUGLE AU MOUVEMENT, incapable de savoir si son dernier pas l'avait
                        #   rapproché d'une ressource. Voir bus_sensoriel.DIM_ODORAT_DELTA.)
+                       # + 2 thermoception (v41.11 : chaleur perçue du danger + sa variation,
+                       #   même loi de diffusion que l'odorat. Mesuré avant l'ajout : le
+                       #   vecteur bio était RIGOUREUSEMENT IDENTIQUE sur la case adjacente à
+                       #   la lave et à trois cases de là, et MiniGrid punit la mort par
+                       #   exactement 0.0 — l'agent ne pouvait apprendre le danger ni par les
+                       #   sens ni par l'expérience. Voir bus_sensoriel.DIM_THERMOCEPTION.)
                        #
                        # v29.0 — les 3 sens faibles à moyens (toucher, odorat, goût) entrent par la
                        # QUEUE de ce vecteur, jamais par une porte sommée dans le bus latent : ils
@@ -2655,9 +2662,14 @@ class BiologicalHomeostasisEngine:
         # éloignement »), PAS 0.0 qui signifierait un éloignement maximal. Hors MiniGrid
         # (leçon vocale isolée, rêve), l'agent ne se déplace pas : lui injecter une fuite
         # olfactive permanente biaiserait `integrateur_bio` vers un signal qui n'existe pas.
+        # v41.11 — le neutre thermique est ASYMÉTRIQUE, et c'est voulu : la chaleur vaut
+        # 0.0 (hors MiniGrid il n'y a aucun danger — c'est une absence, pas une inconnue),
+        # mais sa VARIATION vaut 0.5 comme toute clinotaxie (0.0 signifierait un
+        # refroidissement maximal, donc une fuite permanente devant un feu inexistant).
         vecteur_sensoriel = (list(signaux_sensoriels) if signaux_sensoriels is not None
                              else [0.0] * (DIM_TOUCHER + DIM_CHIMIE + DIM_EXO)
-                                  + [0.5] * DIM_ODORAT_DELTA)
+                                  + [0.5] * DIM_ODORAT_DELTA
+                                  + [0.0, 0.5])
         # v36.0 — LE RAPPEL MARQUANT, en QUEUE (contrat append-only). `rappel_marquant`
         # est le couple (valence ∈ [−1,1], confiance ∈ [0,1]) renvoyé par
         # `MemoireEpisodiqueSpatiale.rappel_le_plus_marquant`, ou None hors MiniGrid.
@@ -2996,6 +3008,49 @@ class MemoireEpisodiqueSpatiale:
         self.capacite_plancher = capacite_max
         self.fenetre_fraicheur = fenetre_fraicheur
         self.souvenirs = []  # liste de {'pos': (x,y), 'type': str, 'tick': int}
+
+        # --- v41.10 : LES CARTES SONT DES LIEUX, PAS DES INSTANTS ---
+        #
+        # `souvenirs` est la vue de la carte COURANTE. Les autres cartes ne sont pas
+        # oubliées : elles dorment ici, indexées par leur identifiant de carte.
+        #
+        # 🔴 CE QUE ÇA CORRIGE (mesuré, campagne 20 graines du 16/08) :
+        #
+        #     🗺️ 5/200 souvenir(s) spatial(aux) — 51 715 doublon(s) évité(s)
+        #
+        # La mémoire tournait à **1 % de sa capacité** pendant que 51 715 expériences
+        # étaient jetées. Cause : P17 (v41.6) change de carte ~1,5 fois par jour, et
+        # chaque bascule appelait `reinitialiser_niveau()` — soit ~3750 effacements
+        # complets par run de 2500 jours.
+        #
+        # L'erreur de raisonnement était de confondre deux choses :
+        #
+        #     changer de carte      -> les coordonnées courantes ne s'appliquent plus
+        #     ne plus jamais y aller -> les coordonnées ne valent plus rien
+        #
+        # Le premier cas n'implique pas le second. Sous P17, l'agent REVIENT sans cesse
+        # sur les mêmes cartes (révision, incursion, défi) : effacer à chaque bascule lui
+        # faisait redécouvrir de zéro un monde qu'il connaissait déjà. C'est le mécanisme
+        # d'abstraction par récurrence (v36.0) tournant sur une ardoise essuyée deux fois
+        # par jour — `confirmations` ne pouvait structurellement jamais monter.
+        #
+        # ⚠️ L'INVARIANT v39.0 EST INTACT, et même renforcé : une position (1,2) n'est
+        # JAMAIS lue sur une autre carte que celle où elle a été vécue. On ne mélange
+        # rien ; on cesse simplement de détruire ce qu'on quitte. Le OÙ reste local à sa
+        # carte, le QUOI (`empreinte_types`) reste transversal comme en v39.0.
+        #
+        # ⚠️ Rien n'est nommé : la clé d'archive est l'identifiant de carte que
+        # l'appelant fournit, une étiquette opaque de plus. Cette classe ne sait toujours
+        # pas ce qu'est un niveau, une porte ou une grille.
+        #
+        # {cle_carte: [souvenirs]} — la carte courante n'y figure pas (elle est `souvenirs`)
+        self.archives_cartes = {}
+        self.carte_courante = None
+        # Télémétrie : combien de bascules ont RETROUVÉ une carte déjà connue, contre
+        # combien ont découvert une carte inédite. Un ratio élevé de retrouvailles est la
+        # preuve directe que l'effacement d'avant détruisait du vécu réutilisable.
+        self.cartes_retrouvees = 0
+        self.cartes_decouvertes = 0
         # v31.1 — télémétrie : combien de fois un repère existant a été rafraîchi plutôt
         # que dupliqué. Un compteur élevé prouve que la déduplication travaille.
         self.doublons_evites = 0
@@ -3098,17 +3153,27 @@ class MemoireEpisodiqueSpatiale:
         systématiquement le tick le PLUS RÉCENT de chaque repère et préserve l'ordre
         d'ancienneté de dernière visite — la FIFO d'éviction garde donc le même sens
         après compactage qu'avant.
+
+        v41.10 — compacte AUSSI les cartes archivées : elles portent exactement les mêmes
+        doublons historiques que la carte courante, et les ignorer laisserait la
+        redondance dormir dans l'archive jusqu'au premier retour sur cette carte.
         """
-        if not self.souvenirs:
-            return 0
-        avant = len(self.souvenirs)
-        plus_recent = {}
-        for souvenir in self.souvenirs:  # ordre chronologique : le dernier écrase
-            plus_recent[(souvenir['pos'], souvenir['type'])] = souvenir
-        # Retrié par tick pour que la FIFO continue d'évincer les repères les plus
-        # anciennement confirmés en premier.
-        self.souvenirs = sorted(plus_recent.values(), key=lambda s: s['tick'])
-        return avant - len(self.souvenirs)
+        def _compacter(liste):
+            if not liste:
+                return liste, 0
+            plus_recent = {}
+            for souvenir in liste:  # ordre chronologique : le dernier écrase
+                plus_recent[(souvenir['pos'], souvenir['type'])] = souvenir
+            # Retrié par tick pour que la FIFO continue d'évincer les repères les plus
+            # anciennement confirmés en premier.
+            compacte = sorted(plus_recent.values(), key=lambda s: s['tick'])
+            return compacte, len(liste) - len(compacte)
+
+        self.souvenirs, supprimes = _compacter(self.souvenirs)
+        for cle, liste in list(self.archives_cartes.items()):
+            self.archives_cartes[cle], n = _compacter(liste)
+            supprimes += n
+        return supprimes
 
     def _nourrir_empreinte(self, type_evenement: str, intensite: float) -> None:
         """v39.0 — accumule la statistique par TYPE, indépendamment du lieu.
@@ -3163,6 +3228,49 @@ class MemoireEpisodiqueSpatiale:
         """
         self.souvenirs = []          # le OÙ : périmé, il part
         # le QUOI : `empreinte_types` survit intentionnellement.
+
+    def basculer_carte(self, cle_carte) -> bool:
+        """v41.10 — change de carte SANS rien détruire. Retourne True si carte déjà connue.
+
+        Remplace `reinitialiser_niveau()` sur le chemin des bascules fréquentes (P17).
+        Les souvenirs de la carte quittée sont ARCHIVÉS, ceux de la carte rejointe sont
+        restaurés si elle a déjà été visitée.
+
+        La distinction avec `reinitialiser_niveau` est celle entre **quitter un lieu** et
+        **le perdre**. L'agent qui rentre chez lui ne redécouvre pas sa cuisine ; celui
+        qui déménage, si. P17 fait revenir l'agent sur les mêmes cartes en permanence :
+        c'est un va-et-vient, pas un déménagement.
+
+        ⚠️ Aucun souvenir n'est jamais LU hors de sa carte d'origine — l'invariant v39.0
+        (une coordonnée n'a de sens que sur sa grille) est strictement préservé, puisque
+        seule la liste de la carte courante est exposée sous `self.souvenirs`.
+
+        ⚠️ `cle_carte` est opaque : cette classe ne l'interprète jamais.
+        """
+        if cle_carte == self.carte_courante:
+            return True
+        # On quitte : la carte courante est mise de côté, pas jetée.
+        if self.carte_courante is not None:
+            self.archives_cartes[self.carte_courante] = self.souvenirs
+        connue = cle_carte in self.archives_cartes
+        # `pop` et non `get` : la carte rejointe sort de l'archive pour devenir la vue
+        # courante — sans quoi la même liste existerait à deux endroits et l'archive
+        # dériverait silencieusement de la réalité.
+        self.souvenirs = self.archives_cartes.pop(cle_carte, [])
+        self.carte_courante = cle_carte
+        if connue:
+            self.cartes_retrouvees += 1
+        else:
+            self.cartes_decouvertes += 1
+        return connue
+
+    def total_souvenirs(self) -> int:
+        """Le vécu spatial COMPLET, toutes cartes confondues (v41.10).
+
+        `len(self.souvenirs)` ne compte plus que la carte courante : la télémétrie
+        historique sous-estimerait donc massivement la mémoire réelle sous P17.
+        """
+        return len(self.souvenirs) + sum(len(v) for v in self.archives_cartes.values())
 
     # --- v36.0 : LE FLUX ENRICHI & L'ABSTRACTION PAR RÉCURRENCE ---
     #
@@ -4700,6 +4808,11 @@ FENETRE_MAITRISE_GENERALE = 100   # borne : ~5 fenêtres de niveau, assez long p
 # graine identique — voir `--sans-heritage`.
 HERITAGE_SEVRAGE_ACTIF = True
 
+# v41.10 — interrupteur d'ablation de la mémoire par carte (`--sans-memoire-cartes`).
+# False = la bascule EFFACE, comportement v41.9 exact. Un seul point de lecture
+# (`_appliquer_niveau_episode`), jamais un branchement dispersé dans le chemin cognitif.
+MEMOIRE_PAR_CARTE_ACTIVE = True
+
 # --- v40.2 : LE SEUIL DE MATURITÉ, DÉRIVÉ (voir `_maturite_niveau`) ---
 #
 # Il n'est PAS posé. Il vaut la maturité d'un agent qui réussit `TAUX_PROMOTION` du temps
@@ -5198,6 +5311,11 @@ class EtatCognitif:
         # --- Curriculum & environnement ---
         self.env = env
         self.env_id = env_id
+        # v41.10 — la mémoire spatiale doit savoir SUR QUELLE carte elle écrit dès le
+        # premier tick. Sans cet amorçage, `carte_courante` resterait None et la première
+        # bascule archiverait les repères de naissance sous la clé None — ils seraient
+        # alors inaccessibles au retour sur la carte de départ.
+        self.memoire_episodique_spatiale.carte_courante = env_id
         self.nom_classe = nom_classe
         self.niveau_actuel = 0
         self.victoires_consecutives = 0
@@ -5485,6 +5603,14 @@ class EtatCognitif:
         self.odorat_delta_cumul_jour = 0.0    # somme des |ΔS| (amplitude des variations)
         self.odorat_ticks_approche_jour = 0   # ticks où ΔS > 0 sur au moins un type
         self.odorat_ticks_variation_jour = 0  # dénominateur : ticks avec ΔS non nul
+        # v41.11 — THERMOCEPTION. Réarmés ici comme tout compteur journalier : les laisser
+        # cumuler depuis la naissance ferait passer « la chaleur moyenne du jour » pour la
+        # chaleur moyenne d'une vie (piège `score_vocal_jour` v27.0).
+        self.chaleur_cumul_jour = 0.0         # somme des intensités thermiques du jour
+        self.chaleur_max_jour = 0.0           # pic de chaleur ressenti
+        self.chaleur_ticks_actifs_jour = 0    # ticks où un danger est perceptible
+        self.chaleur_ticks_approche_jour = 0  # ticks où la chaleur MONTE (l'agent approche)
+        self.chaleur_ticks_variation_jour = 0 # dénominateur : ticks avec Δ non nul
         self.odorat_sources_inodores_jour = 0 # ticks où une source existe mais est
                                               # inatteignable (BFS) : mesure ce que la
                                               # topologie v32.0 a cessé de faire traverser
@@ -5871,9 +5997,19 @@ def _appliquer_niveau_episode(etat, niveau: int) -> None:
     etat.env.close()
     etat.env_id = env_id_voulu
     etat.env = creer_env(env_id_voulu, DIM_VISUELLE)
-    # La mémoire spatiale est indexée par coordonnées : elles n'ont aucun sens d'une carte
-    # à l'autre (même discipline qu'à la promotion, v39.0 — on efface le OÙ, pas le QUOI).
-    etat.memoire_episodique_spatiale.reinitialiser_niveau()
+    # v41.10 — la mémoire spatiale BASCULE au lieu d'être effacée. Les coordonnées n'ont
+    # toujours aucun sens d'une carte à l'autre (invariant v39.0, intact : chaque carte
+    # garde ses propres repères et n'en lit jamais d'autres), mais sous P17 l'agent
+    # REVIENT sans cesse sur les mêmes cartes — effacer ici lui faisait redécouvrir de
+    # zéro un monde déjà connu, ~1,5 fois par jour. Mesuré : 5/200 souvenirs utilisés
+    # pour 51 715 doublons jetés.
+    if MEMOIRE_PAR_CARTE_ACTIVE:
+        etat.memoire_episodique_spatiale.basculer_carte(env_id_voulu)
+    else:
+        # Témoin v41.9 : la bascule efface. Conservé UNIQUEMENT pour l'ablation — c'est
+        # le comportement dont on veut mesurer le coût, jamais un mode d'usage.
+        etat.memoire_episodique_spatiale.carte_courante = env_id_voulu
+        etat.memoire_episodique_spatiale.reinitialiser_niveau()
 
     # ⚠️ `doorkey_actif` était jusqu'ici fixé UNE FOIS par journée (`demarrer_journee`) —
     # ce qui était juste tant qu'une journée ne voyait qu'une seule carte. P17 change de
@@ -6756,7 +6892,12 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
     etat.gout_ticks_actifs_jour += int((signaux_sensoriels[6] + signaux_sensoriels[7]) > 0.0)
     # v32.0 — CLINOTAXIE : dims [16:18], les 2 DERNIÈRES du vecteur (contrat append-only).
     # Neutre = 0.5 ; > 0.5 ⇒ l'odeur monte, l'agent se rapproche d'une ressource.
-    deltas_odorat = signaux_sensoriels[DIM_TOUCHER + DIM_CHIMIE + DIM_EXO:]
+    # ⚠️ Borne HAUTE explicite depuis la v41.11 : la thermoception est ajoutée en queue
+    # APRÈS la clinotaxie, et sans cette borne ses 2 dims seraient comptées comme de la
+    # variation olfactive — exactement le défaut dont la v32.0 avertit trois lignes plus
+    # bas pour l'Exo-Sens. Une tranche ouverte n'est jamais sûre sur un contrat append-only.
+    _debut_deltas = DIM_TOUCHER + DIM_CHIMIE + DIM_EXO
+    deltas_odorat = signaux_sensoriels[_debut_deltas:_debut_deltas + DIM_ODORAT_DELTA]
     ecarts = [d - 0.5 for d in deltas_odorat]
     if any(abs(e) > 1e-6 for e in ecarts):
         etat.odorat_ticks_variation_jour += 1
@@ -6777,6 +6918,28 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
     etat.exo_cumul_jour += intensite_exo
     etat.exo_max_jour = max(etat.exo_max_jour, intensite_exo)
     etat.exo_ticks_actifs_jour += int(intensite_exo > 0.0)
+
+    # --- v41.11 : THERMOCEPTION — les 2 DERNIÈRES dims du vecteur sensoriel ---
+    # Instrumentée dans le même commit que la mécanique (règle v29.1). Sans ces compteurs,
+    # impossible de répondre à la seule question qui vaille : le champ de chaleur monte-t-il
+    # réellement quand l'agent approche du danger, et l'agent finit-il par l'éviter ?
+    # Clés CONDITIONNELLES à la nuit : sur une carte sans source brûlante, le signal est
+    # nul partout et logger des zéros ferait croire à un capteur mort.
+    _thermo = signaux_sensoriels[_debut_deltas + DIM_ODORAT_DELTA:]
+    if _thermo:
+        _chaleur, _delta_chaleur = float(_thermo[0]), float(_thermo[1])
+        etat.chaleur_cumul_jour = getattr(etat, "chaleur_cumul_jour", 0.0) + _chaleur
+        etat.chaleur_max_jour = max(getattr(etat, "chaleur_max_jour", 0.0), _chaleur)
+        etat.chaleur_ticks_actifs_jour = (
+            getattr(etat, "chaleur_ticks_actifs_jour", 0) + int(_chaleur > 0.0))
+        # Approche = la chaleur monte (> 0.5). C'est la mesure qui dira si l'agent
+        # apprend à FUIR : ce taux doit baisser avec l'âge sur les cartes à danger.
+        if abs(_delta_chaleur - 0.5) > 1e-6:
+            etat.chaleur_ticks_variation_jour = (
+                getattr(etat, "chaleur_ticks_variation_jour", 0) + 1)
+            etat.chaleur_ticks_approche_jour = (
+                getattr(etat, "chaleur_ticks_approche_jour", 0)
+                + int(_delta_chaleur > 0.5))
 
     # --- v36.0 : LE RAPPEL MARQUANT (lecture agnostique) ---
     # Contrairement à `rappel_spatial` plus haut, qui exige une quête active ET un type
@@ -7612,7 +7775,11 @@ def executer_nuit(etat, plafond_reve=None):
             # prochain épisode serait compté « hors référence » alors qu'il est joué sur
             # la nouvelle carte, et n'alimenterait pas la fenêtre de promotion.
             etat.niveau_episode = etat.niveau_actuel
-            etat.memoire_episodique_spatiale.reinitialiser_niveau()
+            # v41.10 — bascule, pas effacement : une promotion n'est plus un adieu depuis
+            # P17 (l'agent révise ses anciens paliers en permanence). Le repère du `goal`
+            # naît au tick même de la victoire qui déclenche cette promotion — l'effacer
+            # ici revenait à faire oublier à l'agent ce qu'il venait juste de démontrer.
+            etat.memoire_episodique_spatiale.basculer_carte(etat.env_id)
             print(f"\n🎓 [PROMOTION] L'Agent passe en {etat.nom_classe} ! 🚀  ({motif})")
             print(f"   🧬 parenté avec la carte quittée : {parente:.0%} "
                   f"→ sevrage hérité à proportion (v41.4)")
@@ -8029,6 +8196,32 @@ def executer_nuit(etat, plafond_reve=None):
           f"🔁 {_conf:.1f} confirmation(s)/repère | 🏷️ {_typ} type(s) distinct(s) | "
           f"💭 rappel marquant {100.0 * etat.memoire_rappels_marquants_jour / ticks_du_jour:.1f}% des ticks")
 
+    # v41.11 — THERMOCEPTION. Ligne CONDITIONNELLE : sur une carte sans source brûlante le
+    # capteur est silencieux par construction (0.0 partout, vérifié sur Empty-5x5,
+    # DoorKey-6x6 et Empty-8x8), et afficher des zéros ferait croire à un sens mort.
+    # `Approche` est LA mesure qui compte : si l'agent apprend le danger, ce taux doit
+    # BAISSER avec l'âge — c'est ce qui distinguera un sens utile d'un sens décoratif.
+    _ticks_chaud = getattr(etat, "chaleur_ticks_actifs_jour", 0)
+    if _ticks_chaud:
+        _var_chaud = getattr(etat, "chaleur_ticks_variation_jour", 0)
+        _appr_chaud = getattr(etat, "chaleur_ticks_approche_jour", 0)
+        print(f"  ├─ Thermocep.v41.11: 🔥 {_ticks_chaud}/{ticks_du_jour} tick(s) au contact d'un danger | "
+              f"chaleur moy {getattr(etat, 'chaleur_cumul_jour', 0.0) / ticks_du_jour:.3f} "
+              f"(max {getattr(etat, 'chaleur_max_jour', 0.0):.3f}) | "
+              f"🧭 approche {100.0 * _appr_chaud / max(1, _var_chaud):.1f}% des ticks de variation")
+
+    # v41.10 — LES CARTES CONNUES. `len(souvenirs)` ne compte que la carte du moment :
+    # sans cette ligne, la télémétrie sous-estimerait massivement le vécu spatial réel
+    # sous P17 et donnerait exactement la fausse alerte « mémoire à 1 % » qui a motivé le
+    # correctif. `retrouvée(s)` est la mesure directe de ce que l'effacement détruisait :
+    # chaque retrouvaille est une carte que l'agent aurait redécouverte de zéro.
+    _mem = etat.memoire_episodique_spatiale
+    _total_souv = _mem.total_souvenirs()
+    _nb_cartes = len(_mem.archives_cartes) + 1
+    print(f"  ├─ Cartes v41.10  : 🗺️ {_nb_cartes} carte(s) en mémoire | "
+          f"📍 {_total_souv} repère(s) au total ({len(_mem.souvenirs)} sur la carte courante) | "
+          f"🔙 {_mem.cartes_retrouvees} retrouvée(s) / {_mem.cartes_decouvertes} découverte(s)")
+
     # v39.0 — L'EMPREINTE DE TYPE : ce que l'agent sait du QUOI, indépendamment du OÙ.
     # Instrumentée dans le même commit que la mécanique (règle v29.1) : sans cette ligne,
     # impossible de vérifier sur un run long que l'abstraction survit bien aux promotions
@@ -8430,6 +8623,26 @@ def executer_nuit(etat, plafond_reve=None):
     # qu'elle suit bien dim_bus et le déficit, et de relire a posteriori un taux de
     # saturation (dont le dénominateur bouge désormais d'une nuit à l'autre).
     log_wandb["Memoire_Capacite_Courante"] = cap_mem
+    # v41.10 — LE VÉCU SPATIAL COMPLET. `Memoire_Taux_Saturation` ci-dessus ne porte que
+    # sur la carte COURANTE : sous P17 il sous-estime le vécu d'un facteur égal au nombre
+    # de cartes fréquentées. Ces trois clés sont ce qui permet de vérifier que le
+    # correctif fait ce qu'on attend :
+    #   - `Cartes_Souvenirs_Total` doit CROÎTRE bien au-delà de la capacité d'une carte ;
+    #   - `Cartes_Connues` doit se stabiliser sur le nombre de niveaux fréquentés ;
+    #   - `Cartes_Retrouvees` doit exploser (chaque unité = une redécouverte évitée).
+    log_wandb["Cartes_Connues"] = len(etat.memoire_episodique_spatiale.archives_cartes) + 1
+    log_wandb["Cartes_Souvenirs_Total"] = etat.memoire_episodique_spatiale.total_souvenirs()
+    log_wandb["Cartes_Retrouvees"] = etat.memoire_episodique_spatiale.cartes_retrouvees
+    # v41.11 — THERMOCEPTION. Clés CONDITIONNELLES (règle v29.1) : rien à logger sur une
+    # carte sans danger. `Thermo_Taux_Approche` est la courbe à surveiller — elle doit
+    # DÉCROÎTRE si l'agent apprend à fuir ; stable, le sens est perçu mais inexploité.
+    if getattr(etat, "chaleur_ticks_actifs_jour", 0):
+        log_wandb["Thermo_Ticks_Actifs"] = etat.chaleur_ticks_actifs_jour
+        log_wandb["Thermo_Chaleur_Moyenne"] = etat.chaleur_cumul_jour / ticks_du_jour
+        log_wandb["Thermo_Chaleur_Max"] = etat.chaleur_max_jour
+        _var = getattr(etat, "chaleur_ticks_variation_jour", 0)
+        if _var:
+            log_wandb["Thermo_Taux_Approche"] = etat.chaleur_ticks_approche_jour / _var
     # v39.0 — L'EMPREINTE DE TYPE. Clés CONDITIONNELLES (règle v29.1) : tant qu'aucune
     # expérience n'a été vécue, ne rien logger plutôt que des zéros trompeurs.
     #
@@ -8565,6 +8778,11 @@ if __name__ == "__main__":
     # retombe exactement sur le comportement v41.3.
     _p.add_argument("--sans-heritage", action="store_true",
                     help="ABLATION : coupe l'héritage de sevrage v41.4 (témoin v41.3)")
+    # v41.10 — ABLATION de la mémoire par carte. Avec ce flag, la bascule redevient un
+    # EFFACEMENT (comportement v41.9) : c'est le témoin exact du correctif, sur les mêmes
+    # graines et donc les mêmes mondes (v41.9).
+    _p.add_argument("--sans-memoire-cartes", action="store_true",
+                    help="ABLATION : la bascule de carte efface la mémoire (témoin v41.9)")
     _args = _p.parse_args()
 
     # Drapeau global lu par `facteur_guidage` — un seul point de lecture, pas de
@@ -8595,6 +8813,16 @@ if __name__ == "__main__":
         from naulthene.cerveau.noyau import HERITAGE_SEVRAGE_ACTIF as _verif
         assert _verif is False, ("l'ablation n'a pas atteint le module lu par "
                                  "facteur_guidage — campagne invalide")
+
+    # v41.10 — même discipline exactement : écriture dans le module NOMMÉ + assertion.
+    _mem_actif = not _args.sans_memoire_cartes
+    globals()["MEMOIRE_PAR_CARTE_ACTIVE"] = _mem_actif
+    if _module_reel is not None:
+        _module_reel.MEMOIRE_PAR_CARTE_ACTIVE = _mem_actif
+    if not _mem_actif:
+        print("🔬 [ABLATION] mémoire par carte v41.10 COUPÉE — la bascule efface (témoin v41.9)")
+        from naulthene.cerveau.noyau import MEMOIRE_PAR_CARTE_ACTIVE as _verif_mem
+        assert _verif_mem is False, ("l'ablation n'a pas atteint le module — campagne invalide")
 
     # La graine est réappliquée ICI, après les `manual_seed(42)` du haut de fichier : ce
     # sont eux qui rendaient les runs indiscernables.
