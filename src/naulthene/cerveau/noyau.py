@@ -35,7 +35,7 @@ from naulthene.exocortex.port_c3 import PortC3, RequeteC3
 # synaptique dédiée dans AGI_Naulthene — voir bus_sensoriel.BusSensoriel.hierarchie_sensorielle.
 from naulthene.cerveau.bus_sensoriel import (BusSensoriel, DIM_TOUCHER, DIM_CHIMIE,
                                              DIM_EXO, DIM_ODORAT_DELTA,
-                                             DIM_THERMOCEPTION,
+                                             DIM_THERMOCEPTION, DIM_PRESSION,
                                              COULEUR_NOURRITURE, COULEUR_EAU)
 
 if torch.cuda.is_available():
@@ -393,8 +393,9 @@ DIM_RAPPEL_MARQUANT = 2
 DIM_PRESENCE_AUDITIVE = 1
 
 DIM_VECTEUR_BIO = (16 + DIM_TOUCHER + DIM_CHIMIE + DIM_EXO
-                   + DIM_ODORAT_DELTA + DIM_THERMOCEPTION + DIM_RAPPEL_MARQUANT
-                   + DIM_PRESENCE_AUDITIVE)  # = 39 depuis la v41.11
+                   + DIM_ODORAT_DELTA + DIM_THERMOCEPTION + DIM_PRESSION
+                   + DIM_RAPPEL_MARQUANT
+                   + DIM_PRESENCE_AUDITIVE)  # = 41 depuis la v41.12
                        # 3 jauges (satiete, hydratation, stimulation) + 3 quête (target_vector one-hot)
                        # + 2 rappel spatial (v20.0 : distance normalisée + fraîcheur du souvenir)
                        # + 8 quête vocale (v22.1 : formants cibles de la leçon en cours, ou [0]*8
@@ -2669,7 +2670,9 @@ class BiologicalHomeostasisEngine:
         vecteur_sensoriel = (list(signaux_sensoriels) if signaux_sensoriels is not None
                              else [0.0] * (DIM_TOUCHER + DIM_CHIMIE + DIM_EXO)
                                   + [0.5] * DIM_ODORAT_DELTA
-                                  + [0.0, 0.5])
+                                  + [0.0, 0.5]     # thermoception (v41.11)
+                                  + [0.0, 0.5])    # pression (v41.12) : hors monde,
+                                  # aucun obstacle autour, et aucune asymétrie
         # v36.0 — LE RAPPEL MARQUANT, en QUEUE (contrat append-only). `rappel_marquant`
         # est le couple (valence ∈ [−1,1], confiance ∈ [0,1]) renvoyé par
         # `MemoireEpisodiqueSpatiale.rappel_le_plus_marquant`, ou None hors MiniGrid.
@@ -5611,6 +5614,10 @@ class EtatCognitif:
         self.chaleur_ticks_actifs_jour = 0    # ticks où un danger est perceptible
         self.chaleur_ticks_approche_jour = 0  # ticks où la chaleur MONTE (l'agent approche)
         self.chaleur_ticks_variation_jour = 0 # dénominateur : ticks avec Δ non nul
+        # v41.12 — TOUCHER À DISTANCE (pression + asymétrie). Actifs sur toute carte.
+        self.pression_cumul_jour = 0.0        # encombrement moyen vécu dans la journée
+        self.pression_max_jour = 0.0          # pic (cul-de-sac)
+        self.asymetrie_ecart_cumul_jour = 0.0 # |asym - 0.5| : le signal latéral porte-t-il ?
         self.odorat_sources_inodores_jour = 0 # ticks où une source existe mais est
                                               # inatteignable (BFS) : mesure ce que la
                                               # topologie v32.0 a cessé de faire traverser
@@ -6925,7 +6932,11 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
     # réellement quand l'agent approche du danger, et l'agent finit-il par l'éviter ?
     # Clés CONDITIONNELLES à la nuit : sur une carte sans source brûlante, le signal est
     # nul partout et logger des zéros ferait croire à un capteur mort.
-    _thermo = signaux_sensoriels[_debut_deltas + DIM_ODORAT_DELTA:]
+    # ⚠️ Bornée en HAUT depuis la v41.12, pour la même raison qu'au-dessus : la pression a
+    # été ajoutée en queue et une tranche ouverte l'aurait comptée comme de la chaleur.
+    # Le défaut se reproduit à CHAQUE ajout — c'est le prix du contrat append-only.
+    _debut_thermo = _debut_deltas + DIM_ODORAT_DELTA
+    _thermo = signaux_sensoriels[_debut_thermo:_debut_thermo + DIM_THERMOCEPTION]
     if _thermo:
         _chaleur, _delta_chaleur = float(_thermo[0]), float(_thermo[1])
         etat.chaleur_cumul_jour = getattr(etat, "chaleur_cumul_jour", 0.0) + _chaleur
@@ -6940,6 +6951,19 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
             etat.chaleur_ticks_approche_jour = (
                 getattr(etat, "chaleur_ticks_approche_jour", 0)
                 + int(_delta_chaleur > 0.5))
+
+    # --- v41.12 : LE TOUCHER À DISTANCE — les 2 DERNIÈRES dims du vecteur sensoriel ---
+    # Contrairement à la thermoception, ce sens est actif sur TOUTE carte (il y a toujours
+    # des murs) : les clés sont donc inconditionnelles. `Pression_Moyenne` mesure
+    # l'encombrement vécu, `Asymetrie_Ecart` mesure si le signal latéral porte vraiment de
+    # l'information — plat à 0.5, il ne servirait à rien.
+    _pression = signaux_sensoriels[_debut_thermo + DIM_THERMOCEPTION:]
+    if _pression:
+        _p, _asym = float(_pression[0]), float(_pression[1])
+        etat.pression_cumul_jour = getattr(etat, "pression_cumul_jour", 0.0) + _p
+        etat.pression_max_jour = max(getattr(etat, "pression_max_jour", 0.0), _p)
+        etat.asymetrie_ecart_cumul_jour = (
+            getattr(etat, "asymetrie_ecart_cumul_jour", 0.0) + abs(_asym - 0.5))
 
     # --- v36.0 : LE RAPPEL MARQUANT (lecture agnostique) ---
     # Contrairement à `rappel_spatial` plus haut, qui exige une quête active ET un type
@@ -8210,6 +8234,11 @@ def executer_nuit(etat, plafond_reve=None):
               f"(max {getattr(etat, 'chaleur_max_jour', 0.0):.3f}) | "
               f"🧭 approche {100.0 * _appr_chaud / max(1, _var_chaud):.1f}% des ticks de variation")
 
+    print(f"  ├─ Toucher v41.12 : 🖐️ pression moy {getattr(etat, 'pression_cumul_jour', 0.0) / ticks_du_jour:.3f} "
+          f"(max {getattr(etat, 'pression_max_jour', 0.0):.3f}) | "
+          f"↔️ asymétrie moy {getattr(etat, 'asymetrie_ecart_cumul_jour', 0.0) / ticks_du_jour:.3f} "
+          f"(0 = aucun signal latéral)")
+
     # v41.10 — LES CARTES CONNUES. `len(souvenirs)` ne compte que la carte du moment :
     # sans cette ligne, la télémétrie sous-estimerait massivement le vécu spatial réel
     # sous P17 et donnerait exactement la fausse alerte « mémoire à 1 % » qui a motivé le
@@ -8643,6 +8672,12 @@ def executer_nuit(etat, plafond_reve=None):
         _var = getattr(etat, "chaleur_ticks_variation_jour", 0)
         if _var:
             log_wandb["Thermo_Taux_Approche"] = etat.chaleur_ticks_approche_jour / _var
+    # v41.12 — TOUCHER À DISTANCE. Inconditionnel : il y a toujours des murs.
+    # `Toucher_Asymetrie_Ecart` est la clé de diagnostic — plate à 0, le capteur latéral
+    # ne porte aucune information et le sens serait décoratif.
+    log_wandb["Toucher_Pression_Moyenne"] = getattr(etat, "pression_cumul_jour", 0.0) / ticks_du_jour
+    log_wandb["Toucher_Pression_Max"] = getattr(etat, "pression_max_jour", 0.0)
+    log_wandb["Toucher_Asymetrie_Ecart"] = getattr(etat, "asymetrie_ecart_cumul_jour", 0.0) / ticks_du_jour
     # v39.0 — L'EMPREINTE DE TYPE. Clés CONDITIONNELLES (règle v29.1) : tant qu'aucune
     # expérience n'a été vécue, ne rien logger plutôt que des zéros trompeurs.
     #

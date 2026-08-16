@@ -133,6 +133,54 @@ DIM_ODORAT_DELTA = 2
 # Ajoutées EN QUEUE (contrat append-only, invariant v29.0), donc hors cible JEPA.
 DIM_THERMOCEPTION = 2   # chaleur perçue (proximité du danger) + sa variation (clinotaxie)
 
+# --- v41.12 : LE TOUCHER EST UN ENSEMBLE DE CAPTEURS, ET IL PORTE LOIN ---
+#
+# Décision utilisateur (16/08) : *« Il faut que les sens, autant l'odeur que le toucher,
+# permettent plus de potentiel (sentir de loin et ressentir par le toucher de loin) ! Le
+# toucher est un ensemble de capteurs (pression, thermoception, etc.) »*
+#
+# 🔴 CE QUE ÇA CORRIGE. Le toucher v29.0 était un interrupteur à portée ZÉRO :
+# `contact_frontal` vaut 1.0 si la case devant est bloquante, 0.0 sinon. Trois
+# conséquences mesurables :
+#
+#   (a) Aucune anticipation. L'agent apprend qu'il y a un mur EN LE PERCUTANT — le signal
+#       arrive au tick où il est déjà trop tard, et l'action qui l'a produit est déjà jouée.
+#   (b) Aucune gradation. Un couloir d'une case de large et une plaine ouverte donnent
+#       exactement le même 0.0 tant que rien n'est pile devant : l'agent ne peut pas
+#       distinguer « je suis à l'étroit » de « je suis au large », alors que c'est
+#       précisément l'information qui permet de longer un mur ou de trouver une ouverture.
+#   (c) Aucune direction. Un scalaire frontal ne dit pas de quel CÔTÉ ça se resserre.
+#
+# LA FORME — la proprioception d'encombrement. Deux capteurs de plus, dérivés de la MÊME
+# machinerie que l'odorat et la chaleur (rien de neuf n'est inventé) :
+#
+#   `pression`  : à quel point l'espace se referme autour de l'agent, dans [0,1]. C'est la
+#                 fraction pondérée de directions bloquées dans un voisinage, atténuée par
+#                 la distance — un mur collé pèse plus qu'un mur à trois cases. 0.0 en
+#                 pleine plaine, ~1.0 dans un cul-de-sac.
+#   `asymetrie` : de quel côté ça se resserre, dans [0,1] avec 0.5 = équilibré. C'est ce
+#                 qui rend le longement de mur apprenable : < 0.5 ça pousse à gauche,
+#                 > 0.5 à droite. Même neutre à 0.5 que la clinotaxie (v32.0) et le rappel
+#                 marquant (v36.0) — 0.0 signifierait « bloqué à gauche au maximum ».
+#
+# ⚠️ CE N'EST PAS DE LA VUE. La pression ne dit RIEN de ce qu'il y a : ni type, ni couleur,
+# ni objet. Elle ne dit que « ça se referme, et plutôt par là » — exactement ce qu'un
+# vibrisse ou une main tendue dans le noir rapportent. La vue reste le seul sens qui
+# identifie ; le toucher étendu ne fait que palper une forme.
+#
+# ⚠️ Rien n'est nommé : le calcul teste `can_overlap()` (l'API MiniGrid qui dit si on peut
+# entrer), jamais un type d'objet. Un mur, une porte fermée et le bord de la grille
+# produisent le même signal parce qu'ils font la même chose : ils arrêtent.
+#
+# Ajoutées EN QUEUE (contrat append-only), donc hors cible JEPA.
+DIM_PRESSION = 2   # encombrement perçu + son asymétrie gauche/droite
+
+# Portée du palper. Au-delà, l'agent ne « sent » plus la forme de l'espace — il faudrait
+# la voir. 3 cases couvre le voisinage utile sur les cartes 5x5 à 8x8 du PROGRAMME sans
+# saturer (mesuré : une portée de 1 reproduit le toucher binaire, une portée de 6 sature
+# les petites cartes à ~1.0 partout, exactement le défaut qui a tué l'odorat v29.x).
+PORTEE_PRESSION = 3
+
 # Types qui ÉMETTENT de la chaleur. Distinct de TYPES_BLOQUANTS_ODORAT : un mur bloque
 # sans brûler, la lave fait les deux. La liste reste ouverte — tout type ajouté ici
 # devient une source de chaleur sans qu'aucune autre ligne ne change.
@@ -177,10 +225,80 @@ TYPES_BRULANTS = ("lava",)
 # MemoireEpisodiqueSpatiale), mais à surveiller via `Sens_Odorat_*` sur un run au Doctorat.
 LAMBDA_ODORAT = 0.8
 
+# --- v41.12 : LA PORTÉE SUIT LA TAILLE DU MONDE (décision utilisateur : « sentir de loin ») ---
+#
+# 🔴 CE QUE ÇA CORRIGE (mesuré). Avec λ = 0.8 fixe et une coupure à 0.02, l'odorat
+# s'ÉTEINT À 5 CASES, quelle que soit la carte :
+#
+#     d=4 → 0.0408 (perçu)      d=5 → 0.0183 (COUPÉ)
+#
+# Sur `Empty-8x8` (6×6 utile, diagonale ~10 cases) l'agent est donc olfactivement aveugle
+# sur la moitié de son monde ; sur MultiRoom (13×13) sur les trois quarts. Le commentaire
+# ci-dessus l'anticipait déjà (« l'exponentielle porte moins loin qu'une rampe linéaire,
+# à surveiller ») et le renvoyait à une surveillance — c'est ce que cette version règle.
+#
+# LA FORME — dérivée, jamais posée. λ est calibré pour que le signal atteigne encore le
+# seuil de coupure à une DEMI-TRAVERSÉE de la carte courante :
+#
+#     portée_utile = (largeur + hauteur) / 2 × FRACTION_PORTEE_CARTE
+#     λ(carte)     = -ln(SEUIL_COUPURE_ODORAT) / portée_utile
+#
+# Une petite carte garde donc un gradient serré (l'agent doit s'approcher pour distinguer),
+# une grande carte laisse l'odeur porter — exactement le comportement d'une diffusion
+# réelle dans un volume plus grand. Aucune portée n'est écrite en dur : elle tombe de la
+# géométrie du monde, comme la capacité mnésique tombe de `dim_bus` (v31.0).
+#
+# ⚠️ LA FRACTION EST MESURÉE, PAS CHOISIE — et la première valeur essayée était mauvaise.
+# Le critère n'est pas la couverture (un signal partout ne porte aucune information : c'est
+# le défaut qui a tué l'odorat v29.x, 97,6 % de couverture sur Empty-8x8) mais le GRADIENT
+# entre cases voisines, seul support de l'orientation. Mesuré sur 200 à 300 placements
+# aléatoires de source, gradient moyen :
+#
+#     Empty-8x8, λ = 0.800 (v30.0) → 0.0860   portée  4   ← LE PIRE des sept testés
+#     Empty-8x8, λ = 0.500         → 0.0970   portée  7
+#     Empty-8x8, λ = 0.408         → 0.1000   portée  9   ← optimum (+16 %)
+#     Empty-8x8, λ = 0.200         → 0.0851   portée 19   ← trop plat, ça resature
+#
+# La courbe a bien un maximum : trop net on ne sent rien de loin, trop plat on ne distingue
+# plus rien de près. L'optimum tombe autour d'une **traversée complète** de la carte —
+# mesuré indépendamment sur quatre cartes (fraction optimale 0.8 / 1.2 / 1.2 / 1.5).
+#
+# ⚠️ Une première version de ce correctif bornait λ à `LAMBDA_ODORAT` « par prudence ».
+# C'était une erreur : la borne rendait le correctif INOPÉRANT sur Empty-8x8 — le niveau
+# du blocage — en y préservant précisément le réglage le plus mauvais. Prudence et inertie
+# se ressemblent beaucoup ; seule la mesure les distingue.
+FRACTION_PORTEE_CARTE = 1.0
+
+# Bornes de sécurité sur λ, pas de préférence. La borne HAUTE empêche un monde minuscule
+# de produire un sens à portée nulle ; la borne BASSE empêche un monde immense de saturer
+# partout. Aucune des deux ne mord sur les 15 cartes du PROGRAMME (λ y va de 0.10 à 0.98) :
+# ce sont des garde-fous pour un berceau futur, pas un réglage.
+LAMBDA_MIN, LAMBDA_MAX = 0.05, 1.5
+
 # Sous ce seuil, le signal est coupé net à 0.0 plutôt que de traîner une valeur infinitésimale
 # (à d=6, exp(-4.8) ≈ 0.008). Évite qu'une source à l'autre bout de la carte maintienne
 # `Sens_Odorat_Ticks_Actifs_Ratio` artificiellement à 100 % avec un signal inexploitable.
 SEUIL_COUPURE_ODORAT = 0.02
+
+
+def lambda_diffusion_carte(largeur, hauteur) -> float:
+    """v41.12 — λ adapté à la taille du monde : la portée émerge, elle n'est pas posée.
+
+    Calibré pour que le signal atteigne encore le seuil de coupure à une **traversée
+    complète** de la carte — fraction validée par mesure de gradient sur quatre cartes
+    (voir FRACTION_PORTEE_CARTE). Un petit monde garde donc un gradient serré, un grand
+    monde laisse l'odeur porter : la portée émerge de la géométrie, elle n'est pas posée.
+
+    Sert à l'odorat ET à la thermoception : les deux sont des champs de diffusion, et un
+    danger doit se sentir d'aussi loin qu'une ressource — sans quoi l'agent flairerait sa
+    nourriture à l'autre bout d'une grande carte tout en découvrant la lave au contact.
+    """
+    try:
+        portee = max(1.0, (float(largeur) + float(hauteur)) / 2.0 * FRACTION_PORTEE_CARTE)
+        lam = -float(np.log(SEUIL_COUPURE_ODORAT)) / portee
+        return float(np.clip(lam, LAMBDA_MIN, LAMBDA_MAX))
+    except Exception:
+        return LAMBDA_ODORAT
 
 # --- ODORAT TOPOLOGIQUE : la distance de CHEMINEMENT, pas le vol d'oiseau (v32.0) ---
 #
@@ -362,13 +480,17 @@ class BusSensoriel:
                 # v32.0 — distance de CHEMINEMENT (BFS multi-sources), plus le vol
                 # d'oiseau : l'odeur ne traverse plus les murs. Voir SURCOUT_PORTE_FERMEE.
                 distances = self._distances_topologiques(grille, pos_agent)
+                # v41.12 — la portée suit la taille du monde. Sur une petite carte,
+                # `lambda_diffusion_carte` retourne exactement LAMBDA_ODORAT : le
+                # comportement v30.0 est préservé là où il avait été calibré.
+                lam = lambda_diffusion_carte(grille.width, grille.height)
 
                 for i, couleur in enumerate((COULEUR_NOURRITURE, COULEUR_EAU)):
                     d = distances[couleur]
                     if d is None:
                         continue  # aucune source, ou aucune ATTEIGNABLE (mur infranchissable)
                     # v30.0 — gradient de diffusion chimique plutôt qu'un cercle à bord net.
-                    intensite = float(np.exp(-LAMBDA_ODORAT * d))
+                    intensite = float(np.exp(-lam * d))
                     odeurs[i] = intensite if intensite >= SEUIL_COUPURE_ODORAT else 0.0
             except Exception as e:
                 self._avertir(e)
@@ -377,6 +499,76 @@ class BusSensoriel:
         deltas = self._calculer_deltas_odorat(odeurs)
         return (odeurs + [float(self._gout_courant[0]), float(self._gout_courant[1])]
                 + deltas)
+
+    def lire_pression(self, env) -> list:
+        """v41.12 — LE TOUCHER À DISTANCE : encombrement + asymétrie (DIM_PRESSION=2).
+
+        Palpe l'espace sur `PORTEE_PRESSION` cases dans les quatre directions RELATIVES à
+        l'agent (devant, derrière, gauche, droite). Chaque direction rend la distance au
+        premier obstacle ; une distance courte pèse lourd, une direction dégagée ne pèse
+        rien.
+
+        - `pression` : moyenne des contributions `1 - d/portée`, dans [0, 1].
+          0.0 = plaine ouverte, ~1.0 = cul-de-sac. C'est la GRADATION qui manquait : le
+          toucher v29.0 ne distinguait pas un couloir d'une plaine tant que rien n'était
+          pile devant.
+        - `asymetrie` : `(gauche - droite + 1) / 2`, dans [0, 1], **neutre à 0.5**.
+          C'est ce qui rend le longement de mur apprenable — un scalaire frontal ne dit
+          jamais de quel côté ça se resserre.
+
+        ⚠️ Ce sens ne DÉCRIT rien : ni type, ni couleur, ni objet. Il rapporte une forme,
+        comme une vibrisse ou une main tendue dans le noir. `can_overlap()` est le seul
+        test — un mur, une porte fermée et le bord de la grille sont indiscernables ici,
+        parce qu'ils font la même chose : ils arrêtent.
+
+        ⚠️ Les directions sont RELATIVES (elles tournent avec l'agent), jamais absolues :
+        « ça se resserre à ma gauche » garde son sens quand l'agent pivote, alors que
+        « ça se resserre au nord » obligerait C1 à recomposer l'information avec
+        l'orientation à chaque tick.
+        """
+        if not self.actif:
+            return [0.0, 0.5]
+        try:
+            noyau_env = env.unwrapped
+            grille = noyau_env.grid
+            x0, y0 = (int(v) for v in noyau_env.agent_pos)
+            direction = int(noyau_env.agent_dir)
+
+            # Vecteurs unitaires MiniGrid : 0=droite(+x), 1=bas(+y), 2=gauche, 3=haut.
+            # On tourne le repère avec l'agent pour obtenir devant/droite/derrière/gauche.
+            base = [(1, 0), (0, 1), (-1, 0), (0, -1)]
+            devant = base[direction % 4]
+            droite = base[(direction + 1) % 4]
+            derriere = base[(direction + 2) % 4]
+            gauche = base[(direction + 3) % 4]
+
+            def distance_obstacle(dx, dy):
+                """Nombre de cases libres avant le premier obstacle, borné à la portée."""
+                for pas in range(1, PORTEE_PRESSION + 1):
+                    x, y = x0 + dx * pas, y0 + dy * pas
+                    if not (0 <= x < grille.width and 0 <= y < grille.height):
+                        return pas - 1          # le bord de la grille arrête aussi
+                    objet = grille.get(x, y)
+                    if objet is not None and not objet.can_overlap():
+                        return pas - 1
+                return PORTEE_PRESSION          # dégagé sur toute la portée
+
+            # Contribution d'une direction : 1.0 collé à l'obstacle, 0.0 si dégagé.
+            def serrage(v):
+                return 1.0 - distance_obstacle(*v) / PORTEE_PRESSION
+
+            s_devant, s_droite = serrage(devant), serrage(droite)
+            s_derriere, s_gauche = serrage(derriere), serrage(gauche)
+
+            pression = (s_devant + s_droite + s_derriere + s_gauche) / 4.0
+            # Neutre à 0.5 : ni plus serré à gauche, ni à droite (même discipline que la
+            # clinotaxie v32.0 — 0.0 signifierait « bloqué à gauche au maximum »).
+            asymetrie = (s_gauche - s_droite + 1.0) / 2.0
+            return [float(np.clip(pression, 0.0, 1.0)),
+                    float(np.clip(asymetrie, 0.0, 1.0))]
+        except Exception as e:
+            self._avertir(e)
+            return [0.0, 0.5]
 
     def lire_thermoception(self, env) -> list:
         """v41.11 — LA CHALEUR : le danger perçu comme un champ continu (DIM_THERMOCEPTION=2).
@@ -434,7 +626,11 @@ class BusSensoriel:
                 if sources:
                     d = self._bfs_vers_agent(cout, sources, pos_agent, largeur, hauteur)
                     if d is not None:
-                        intensite = float(np.exp(-LAMBDA_ODORAT * d))
+                        # v41.12 — même portée adaptative que l'odorat : un danger doit se
+                        # sentir d'aussi loin qu'une ressource, sinon l'agent flairerait sa
+                        # nourriture à l'autre bout de la carte tout en découvrant la lave
+                        # au contact.
+                        intensite = float(np.exp(-lambda_diffusion_carte(largeur, hauteur) * d))
                         chaleur = intensite if intensite >= SEUIL_COUPURE_ODORAT else 0.0
             except Exception as e:
                 self._avertir(e)
@@ -652,7 +848,8 @@ class BusSensoriel:
              odeur_food, odeur_water, gout_food, gout_water,        ← chimie  (v29.0)
              exo_0 .. exo_7,                                        ← Exo-Sens (v30.0)
              delta_odeur_food, delta_odeur_water,                   ← clinotaxie (v32.0)
-             chaleur, delta_chaleur]                                ← thermoception (v41.11)
+             chaleur, delta_chaleur,                                ← thermoception (v41.11)
+             pression, asymetrie]                                   ← toucher à distance (v41.12)
 
         ⚠️ Les 2 dims de clinotaxie sont en QUEUE, donc APRÈS l'Exo-Sens — et non
         accolées à l'odorat dont elles dérivent, ce qui serait plus lisible mais
@@ -683,7 +880,13 @@ class BusSensoriel:
                 # jamais accolée à l'odorat dont elle réutilise la machinerie. Même
                 # arbitrage qu'en v32.0 : le contrat append-only prime sur la lisibilité
                 # du regroupement, sans quoi tous les `.brain` v32→v41 se décaleraient.
-                + self.lire_thermoception(env))
+                + self.lire_thermoception(env)
+                # v41.12 — le toucher à distance ferme la queue. Il est placé ICI et non
+                # accolé à `lire_toucher` dont il fait pourtant partie conceptuellement :
+                # l'insérer au milieu décalerait toutes les dims des `.brain` v29→v41.
+                # Le contrat append-only prime sur le regroupement logique — même
+                # arbitrage qu'en v32.0 pour la clinotaxie.
+                + self.lire_pression(env))
 
     @staticmethod
     def hierarchie_sensorielle() -> dict:
