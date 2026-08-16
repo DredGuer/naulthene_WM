@@ -272,3 +272,44 @@ mécanique testée.
 >
 > Cela ne prouve pas que les 9 mécaniques fonctionnaient — mais cela signifie que
 > **le test qui les a écartées ne pouvait pas les départager**.
+
+---
+
+## 7. 📊 Le taux de référence — première mesure du projet sur un échantillon suffisant
+
+**18 graines × 600 jours**, code `v41.8-fix1` (2 runs encore en cours à la rédaction).
+
+| Résultat | Graines | Taux | IC 95 % |
+|---|---|---|---|
+| Au moins 1 promotion | 7/18 | **39 %** | [20 % ; 61 %] |
+| 2 promotions (niveau 3) | 4/18 | **22 %** | [9 % ; 45 %] |
+| Aucune promotion | 11/18 | 61 % | — |
+
+### La conclusion qui clôt la nuit
+
+Les trois campagnes de la nuit donnaient **2/6, 3/6, 2/6** — soit **33 %, 50 %, 33 %**.
+
+> 🔴 **Les trois tombent dans l'intervalle de confiance du taux de base [20 % ; 61 %].**
+> Aucune d'elles ne mesurait autre chose que ce taux. Les écarts que j'ai passé la nuit à
+> interpréter — « une graine de plus », « fix1 restaure la vitesse », « g22 promue au
+> jour 23 » — sont **entièrement contenus dans le bruit**.
+
+### Ce que cela établit pour la suite
+
+| Constat | Conséquence pratique |
+|---|---|
+| Le taux de base est **39 %** [20-61] | un correctif doit dépasser ~60 % pour être détectable à n=18 |
+| L'intervalle reste **large même à 18 graines** | conséquence directe des cartes non seedées (§6.1) |
+| 6 graines ⇒ IC de ±30 points | **aucune campagne à 6 graines n'a jamais rien pu prouver sur ce projet** |
+
+> **L'ordre des priorités est donc inversé par rapport à ce que je croyais en début de
+> nuit** : rendre le banc reproductible (§6.2) n'est pas une amélioration de confort,
+> c'est le **préalable** à toute mesure d'effet. Tant qu'il n'est pas fait, chaque
+> campagne coûte des heures pour produire un chiffre indistinguable de 39 %.
+
+### Note positive
+
+Le taux de base **n'est pas nul** : 39 % des graines franchissent un palier, 22 % en
+franchissent deux, en 600 jours. Le cursus n'est donc pas totalement bloqué — il l'était
+dans la lecture historique parce que les campagnes précédentes tournaient sur des codes
+antérieurs aux correctifs de promotion (v41.3, v41.5) et sur des échantillons trop petits.
