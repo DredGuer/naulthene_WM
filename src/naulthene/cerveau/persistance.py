@@ -285,6 +285,10 @@ class PersistanceAnatomique:
             # absolu sur le plan du sevrage, exactement le défaut que la v41.4 corrige.
             'historique_episodes_general': list(getattr(etat, 'historique_episodes_general', [])),
             'parente_niveau_precedent': getattr(etat, 'parente_niveau_precedent', 0.0),
+            # v41.9 — compteur d'épisodes depuis la naissance. Il dérive la graine de
+            # chaque carte : sans lui, un `.brain` repris rejouerait EXACTEMENT les mêmes
+            # mondes qu'à sa naissance, et l'agent réviserait au lieu de découvrir.
+            'episodes_vecus': getattr(etat, 'episodes_vecus', 0),
             'victoires_consecutives': etat.victoires_consecutives,
             # v33.0-etape0.6 — chronologie des victoires. DOIT être persistée : c'est une
             # mesure de VIE (intervalles entre victoires sur des centaines de jours), pas
@@ -609,6 +613,10 @@ class PersistanceAnatomique:
         # sur le comportement v41.3 — jamais sur une aide erronée.
         etat.historique_episodes_general = checkpoint.get('historique_episodes_general', [])
         etat.parente_niveau_precedent = checkpoint.get('parente_niveau_precedent', 0.0)
+        # v41.9 — lecture défensive : un `.brain` antérieur repart de 0, donc revoit la
+        # suite de mondes du début. Sans danger (les cartes restent variées), et sans
+        # alternative — l'information n'existe pas dans les anciens fichiers.
+        etat.episodes_vecus = checkpoint.get('episodes_vecus', 0)
         # v33.0-etape0.6 — lecture DÉFENSIVE (`.get`) : les `.brain` antérieurs à cette
         # version n'ont aucune de ces clés. Un cerveau ancien repart donc d'une
         # chronologie vierge (aucune victoire connue) plutôt que de faire planter le

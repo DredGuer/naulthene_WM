@@ -5209,6 +5209,12 @@ class EtatCognitif:
         # `niveau_actuel`, qui reste le niveau de RÉFÉRENCE (celui que la promotion
         # déplace). À la naissance les deux coïncident : aucun tirage n'a encore eu lieu.
         self.niveau_episode = 0
+        # v41.9 — compteur d'épisodes DEPUIS LA NAISSANCE, persisté. Il sert à dériver la
+        # graine de chaque carte (voir `_graine_episode`) : c'est lui qui garantit qu'un
+        # run rejoué voit la MÊME suite de mondes, tout en en voyant une NOUVELLE à
+        # chaque épisode. Doit être monotone et jamais remis à zéro — un reset ferait
+        # revoir les mêmes cartes qu'à la naissance.
+        self.episodes_vecus = 0
         self.p17_episodes_hors_reference_jour = 0
         self.p17_victoires_hors_reference_jour = 0
         self.p17_revisions_jour = 0
@@ -5635,6 +5641,59 @@ def _memoriser_si_saillant(etat, intensite: float) -> bool:
 POIDS_REVISION_REFERENCE = 0.15    # point de passage à TAUX_PROMOTION (formulation P17)
 POIDS_INCURSION_REFERENCE = 0.20   # idem — le défi occupe le reste
 ETALEMENT_MAX_CURSUS = 2.5         # borne : au pire, la révision porte ~2-3 paliers en arrière
+
+
+# --- v41.9 : LE BANC D'ESSAI DEVIENT REPRODUCTIBLE ---
+#
+# 🔴 LE DÉFAUT. `env.reset()` était appelé **sans graine** aux trois points du fichier
+# (0 occurrence de `reset(seed=` avant cette version). Or MiniGrid possède son PROPRE
+# générateur, initialisé sur l'entropie système : `torch.manual_seed`, `np.random.seed` et
+# `random.seed` n'ont **aucun effet** dessus.
+#
+# Mesuré, même processus, les trois générateurs Python semés à 11 avant chaque essai :
+#
+#     reset()          → agent en (1,2), puis (2,4), puis (2,2)   ← 3 mondes différents
+#     reset(seed=11)   → agent en (4,2), (4,2), (4,2)             ← identique
+#
+# Conséquence : **deux runs de même `--graine` voyaient des cartes différentes**, et
+# divergeaient dès le jour 1 (maîtrise 45 % contre 50 % sur un run de 3 jours). Toute
+# comparaison « même graine, seul le correctif change » était donc caduque — les deux
+# branches différaient aussi par le monde. Le « bruit natal » attribué aux graines depuis
+# des semaines était, au moins en partie, un bruit de BANC D'ESSAI.
+#
+# ⚠️ CE QUE CE CORRECTIF CHANGE POUR LE PROJET. Les cartes tirées ne sont plus les mêmes
+# qu'avant la v41.9 : **les chiffres antérieurs ne sont pas comparables aux suivants**.
+# C'est un coût accepté une fois, en échange de la seule chose qui manquait — la capacité
+# de savoir si une modification a un effet.
+#
+# LA FORME. La graine de chaque carte est dérivée de deux grandeurs déjà existantes :
+# la graine du run et le numéro d'épisode depuis la naissance. Elle est donc REPRODUCTIBLE
+# (même run → même suite de mondes) et VARIÉE (chaque épisode → un monde neuf).
+#
+# Le multiplicateur écarte les suites de deux graines voisines : sans lui, la graine 11 à
+# l'épisode 1 et la graine 12 à l'épisode 0 tireraient la même carte, et deux « individus »
+# de la population partageraient une partie de leur vécu.
+GRAINE_ECART_ENTRE_RUNS = 1_000_003   # premier : évite tout recouvrement entre graines
+
+
+def _graine_episode(etat) -> int:
+    """v41.9 — Graine de la carte du prochain épisode. Reproductible et variée.
+
+    Bornée à 2**31-1 : gymnasium refuse les graines plus grandes.
+    """
+    base = getattr(etat, "graine_run", 0) * GRAINE_ECART_ENTRE_RUNS
+    return int((base + getattr(etat, "episodes_vecus", 0)) % (2**31 - 1))
+
+
+def _reset_seede(etat):
+    """v41.9 — `env.reset()` avec la graine dérivée, et incrément du compteur.
+
+    UNIQUE point de reset d'épisode du fichier : centraliser évite qu'un futur appel
+    oublie la graine et rétablisse silencieusement le défaut corrigé ici.
+    """
+    graine = _graine_episode(etat)
+    etat.episodes_vecus = getattr(etat, "episodes_vecus", 0) + 1
+    return etat.env.reset(seed=graine)
 
 
 def _budget_natif_carte(env, defaut: int = PATIENCE_MAX) -> int:
@@ -6173,7 +6232,7 @@ def demarrer_journee(etat):
     etat.ticks_episode_courant = 0
     etat.a_utilise_sursaut_episode = False
 
-    obs, info = etat.env.reset()
+    obs, info = _reset_seede(etat)
     etat.etat_courant = encoder(obs)
     etat.memoire_tampon = torch.zeros(1, etat.agent.dim_bus, device=DEVICE)
     etat.vecteurs_episodiques = []
@@ -7367,7 +7426,7 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
         # v41.6 (P17) — le niveau du prochain épisode est TIRÉ, pas imposé. Le tirage doit
         # précéder le `reset()` : c'est lui qui décide de quelle carte on parle.
         _appliquer_niveau_episode(etat, _tirer_niveau_episode(etat))
-        obs, info = etat.env.reset()
+        obs, info = _reset_seede(etat)
         etat.etat_courant = encoder(obs)
         etat.memoire_tampon = torch.zeros(1, etat.agent.dim_bus, device=DEVICE)
         etat.vecteurs_episodiques.clear()
@@ -7539,7 +7598,11 @@ def executer_nuit(etat, plafond_reve=None):
             # La parenté exige une carte instanciée : le reset a lieu au prochain épisode,
             # mais la grille existe déjà après `creer_env` sur MiniGrid.
             try:
-                etat.env.reset()
+                # v41.9 — seedé comme tout reset, mais SANS incrémenter `episodes_vecus` :
+                # ce reset ne joue aucun épisode, il n'existe que pour lire la forme de la
+                # nouvelle carte. L'incrémenter décalerait la suite des mondes à chaque
+                # promotion et casserait la reproductibilité.
+                etat.env.reset(seed=_graine_episode(etat))
                 parente = (_parente_cartes(profil_ancien, _profil_carte(etat.env))
                            if profil_ancien is not None else 0.0)
             except Exception:
@@ -8550,6 +8613,12 @@ if __name__ == "__main__":
         etat = _persist.charger_ou_naitre()
     else:
         _persist, etat = None, initialiser_etat_cognitif()
+
+    # v41.9 — la graine du run est portée par l'état : c'est elle qui dérive la graine de
+    # chaque carte (voir `_graine_episode`). Posée APRÈS le chargement pour qu'un `.brain`
+    # repris continue avec la graine du lancement courant, et non celle de sa naissance —
+    # sans quoi deux reprises d'un même cerveau seraient indiscernables.
+    etat.graine_run = int(_args.graine)
 
     for _ in range(1, _args.jours + 1):
         demarrer_journee(etat)
