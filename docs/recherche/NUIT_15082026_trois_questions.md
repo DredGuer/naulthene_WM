@@ -539,3 +539,43 @@ Cela vaut rétroactivement pour les lectures de cette nuit :
 Le seul résultat de la nuit qui ne dépende pas de la population reste **les trois bugs
 trouvés et corrigés** (valence nulle, patience inversée, patience écrasée), chacun établi
 par une mesure directe et non par une comparaison de graines.
+
+---
+
+## Bilan `v41.8-fix1` complet (1000 jours) et décision de protocole
+
+| Graine | v41.6 (P17) | v41.7+v41.8 | **v41.8-fix1** |
+|---|---|---|---|
+| g11 | niveau 1 | niveau 1 | niveau 1 |
+| g22 | niveau 1 | niveau 1 | **niveau 3 — j23, j128** |
+| g33 | niveau 1 | niveau 1 | niveau 1 |
+| g44 | niveau 3 — j243, j332 | niveau 3 — j534, j587 | **niveau 1** |
+| g55 | niveau 3 — j300, j361 | niveau 3 — j869, j989 | niveau 3 — **j336, j347** |
+| g66 | niveau 1 | niveau 3 — j305, j388 | niveau 1 |
+| **Population niveau 3** | **2/6** | **3/6** | **2/6** |
+
+| g44 — abandons lucides | v41.6 | v41.7+v41.8 | **fix1** |
+|---|---|---|---|
+| | 107 | **176** | **61** |
+
+Le fix de patience fait ce qu'il devait : les abandons passent de 176 à **61**, soit
+**moins qu'avant l'introduction de la patience dérivée** (107). Le défaut d'ordre est
+corrigé.
+
+**Mais la population reste à 2/6**, et g44 — qui réussissait dans les deux campagnes
+précédentes — échoue ici. Ce qui, au vu du §« accord 4,0/6 », **n'est pas interprétable** :
+c'est du bruit, dans un sens comme dans l'autre.
+
+### 📐 Décision de protocole prise cette nuit
+
+Toutes les campagnes de cette nuit tournaient sur **6 graines**, et la mesure d'accord
+entre elles (4,0/6, contre 3,6 attendus au hasard pur) établit que **ce format ne peut
+départager aucune version**.
+
+Une **campagne de population** a donc été lancée : **20 graines × 600 jours**, code courant
+(`v41.8-fix1`). C'est le seul protocole capable d'établir un **taux de franchissement** au
+lieu d'une anecdote — et de servir de référence stable aux comparaisons futures.
+
+> ⚠️ Ce n'est pas une comparaison A/B : c'est une mesure de **référence**. Elle dira
+> « avec ce code, X graines sur 20 franchissent le palier », ce qu'aucune campagne du
+> projet n'a jamais établi avec une taille d'échantillon suffisante.
