@@ -916,7 +916,8 @@ class AGI_Naulthene(nn.Module):
         return self.generateur_attente_audio(torch.cat([actions_onehot, pensee], dim=-1))
 
     @torch.no_grad()
-    def simuler_futur_et_planifier(self, pensee, memoire_actuelle, horizons=(1, 3, 7), gamma_planif=0.9):
+    def simuler_futur_et_planifier(self, pensee, memoire_actuelle, horizons=(1, 3, 7),
+                                    gamma_planif=0.9, vecteur_bio=None):
         """Rollout imaginé NON-LINÉAIRE, à sauts temporels exponentiels (ex: t+1, t+3, t+7)
         plutôt qu'une chaîne pas-à-pas stricte t+1 → t+2 → t+3.
 
@@ -962,6 +963,49 @@ class AGI_Naulthene(nn.Module):
                 futur_bus = F.relu(self._predire_bus(pensee_branche, actions_pas))
                 futur_mem = F.relu(self.hippocampe(torch.cat([futur_bus, mem_branche], dim=-1)))
                 futur_pensee = F.relu(self.analyseur(futur_mem))
+
+                # --- v41.13 : LE CORPS SURVIT DANS LE FUTUR IMAGINÉ ---
+                #
+                # 🔴 CE QUE ÇA CORRIGE (mesuré le 16/08). `integrateur_bio` n'apparaissait
+                # NULLE PART dans cette boucle : les 41 dims du vecteur bio (toucher,
+                # odorat, goût, thermoception, pression, faim, soif) entraient UNE FOIS via
+                # C1, puis C2 simulait 7 futurs × 7 sauts **sans jamais reprojeter un seul
+                # sens**. Autrement dit : **C2 imaginait un monde sans corps.**
+                #
+                # Conséquence directe : C2 ne pouvait pas simuler « si j'avance je serai
+                # collé au mur », « si je tourne l'odeur baissera », « si je continue la
+                # chaleur montera ». Il ne délibérait que sur une projection visuelle.
+                #
+                # Cela unifie trois mesures qu'on lisait jusqu'ici séparément :
+                #   - couper C2 change le score de 0,0 pt sur 6 niveaux (78 cellules) ;
+                #   - C2 est 36 % PLUS GROS chez les agents qui échouent (scan 20 cerveaux) ;
+                #   - 4 sens sur 6 sont ablatables sans aucun effet (H15).
+                # Ce ne sont pas trois échecs indépendants : c'est le même câblage manquant
+                # vu des deux bouts — les sens n'atteignent pas le modèle du monde, et le
+                # modèle du monde simule un agent désincarné.
+                #
+                # LE GESTE EST MINIMAL, et c'est délibéré : on réutilise `integrateur_bio`,
+                # la couche qui fait DÉJÀ exactement ce travail dans C1. Aucune tête
+                # nouvelle, aucun paramètre ajouté, aucune constante. L'alternative
+                # proposée (cinq têtes JEPA + cinq portes dédiées) ferait grossir de ~30 %
+                # un cœur déjà 2,85× plus lourd qu'un PPO qui le bat — à mesurer seulement
+                # SI ce câblage-ci produit un effet.
+                #
+                # ⚠️ LE VECTEUR BIO EST TENU CONSTANT sur tout le rollout. C'est une
+                # approximation assumée et bornée : l'agent imagine « mon corps tel qu'il
+                # est maintenant » projeté dans les futurs possibles. Prédire l'évolution
+                # des sens exigerait précisément les têtes JEPA de l'étape 3 — c'est la
+                # question suivante, pas celle-ci. Un corps figé reste infiniment plus
+                # informatif qu'un corps absent.
+                #
+                # ⚠️ `vecteur_bio=None` ⇒ comportement **bit-identique** à la v41.12 : le
+                # rêve (`rever()`) et tout appelant qui n'a pas de corps sous la main
+                # retombent exactement sur l'ancien chemin, sans branche coûteuse.
+                if vecteur_bio is not None:
+                    futur_pensee = F.relu(self.integrateur_bio(
+                        torch.cat([futur_pensee,
+                                   vecteur_bio.expand(futur_pensee.shape[0], -1)], dim=-1)))
+
                 pensee_branche, mem_branche = futur_pensee, futur_mem
 
             valeur_horizon = self.cortex_prefrontal(pensee_branche).view(1, A)
@@ -1055,7 +1099,8 @@ class AGI_Naulthene(nn.Module):
         return bus_latent, memoire_actuelle, pensee_enrichie, pensee_bio, logits_instinct
 
     def _solliciter_c2_neocortex(self, pensee_bio, memoire_actuelle,
-                                  horizons_planification=(1, 3, 7), gamma_planif=0.9):
+                                  horizons_planification=(1, 3, 7), gamma_planif=0.9,
+                                  vecteur_bio=None):
         """C2 — LE NÉO-CORTEX (v29.0, restructuration explicite).
 
         Le moteur analytique lourd : déroule la simulation mentale multi-horizons via le
@@ -1068,7 +1113,8 @@ class AGI_Naulthene(nn.Module):
         cette méthode existe pour NOMMER la frontière C1/C2, pas pour la conditionner."""
         return self.simuler_futur_et_planifier(
             pensee_bio, memoire_actuelle.detach(),
-            horizons=horizons_planification, gamma_planif=gamma_planif
+            horizons=horizons_planification, gamma_planif=gamma_planif,
+            vecteur_bio=vecteur_bio
         )
 
     def penser(self, obs_visuelle, memoire_precedente, contexte_episodique, vecteur_bio,
@@ -1096,9 +1142,15 @@ class AGI_Naulthene(nn.Module):
         )
 
         # --- C2 : la délibération lourde, sur l'état déjà compressé par C1 ---
+        # v41.13 — le corps accompagne C2 dans sa simulation. `.detach()` : le rollout ne
+        # doit jamais renvoyer de gradient dans la perception du tick courant — même
+        # discipline que `memoire_actuelle.detach()` juste à côté.
+        _corps_c2 = (vecteur_bio.detach() if (CORPS_DANS_ROLLOUT_ACTIF
+                                              and vecteur_bio is not None) else None)
         valeurs_simulees, indecision_c2 = self._solliciter_c2_neocortex(
             pensee_bio, memoire_actuelle,
-            horizons_planification=horizons_planification, gamma_planif=gamma_planif
+            horizons_planification=horizons_planification, gamma_planif=gamma_planif,
+            vecteur_bio=_corps_c2
         )
 
         # --- v41.2 : LE SEUIL NON LINÉAIRE DE L'ÉNERGIE ---
@@ -1312,6 +1364,41 @@ class AGI_Naulthene(nn.Module):
         with torch.no_grad():
             bus_reel_vision = F.relu(self.porte_visuelle(obs_suivante))
         perte = F.mse_loss(attente, bus_reel_vision)
+
+        # --- v41.13 : VENTILATION DE L'ERREUR (télémétrie PURE, aucun effet) ---
+        #
+        # ÉTAPE 1 de la confrontation du 16/08 (voir
+        # docs/ameliorations/CONFRONTATION_16082026_jepa_multimodal.md) : avant d'ajouter
+        # des têtes JEPA par sens, vérifier qu'il reste quelque chose à prédire.
+        #
+        # La question posée : le modèle du monde de C2 est-il déjà saturé ? Si l'erreur
+        # visuelle est quasi nulle et sans structure, ajouter trois têtes ne ferait que
+        # densifier un gradient déjà éteint — et la proposition tombe SANS avoir coûté un
+        # seul run long. Si au contraire l'erreur reste forte et concentrée sur quelques
+        # dimensions, c'est le signe qu'un modèle plus riche a de quoi mordre.
+        #
+        # ⚠️ Aucune de ces valeurs n'est consommée par la décision, le gradient ou la
+        # dopamine. `.detach()` partout, sous `no_grad` — c'est ce qui garantit l'invariance
+        # d'empreinte à graine fixée (le run reste bit-identique à la v41.12).
+        with torch.no_grad():
+            _err = (attente.detach() - bus_reel_vision).pow(2)
+            # Erreur par dimension du bus : une erreur CONCENTRÉE sur peu de dims signale
+            # un modèle qui échoue sur un aspect précis du monde ; une erreur ÉTALÉE
+            # signale un modèle uniformément mauvais (ou un monde imprévisible).
+            _par_dim = _err.mean(dim=0)
+            self.jepa_diag_erreur_moyenne = float(_par_dim.mean().item())
+            self.jepa_diag_erreur_max_dim = float(_par_dim.max().item())
+            # Concentration = part de l'erreur portée par le quart le plus fautif des dims.
+            # 0.25 = parfaitement étalé, 1.0 = tout dans un coin.
+            _k = max(1, _par_dim.numel() // 4)
+            _top = torch.topk(_par_dim, _k).values.sum()
+            _tot = _par_dim.sum() + 1e-12
+            self.jepa_diag_concentration = float((_top / _tot).item())
+            # Amplitude du signal à prédire : une cible plate rend la prédiction triviale.
+            # C'est le témoin qui distingue « C2 prédit bien » de « il n'y a rien à prédire »
+            # — exactement la distinction ablation NÉGATIVE / ablation VIDE de la règle de
+            # mesure. Sans lui, une erreur nulle serait ininterprétable.
+            self.jepa_diag_amplitude_cible = float(bus_reel_vision.std().item())
 
         if obs_auditive_suivante is not None and attente_audio is not None and coeff_jepa_audio > 0.0:
             with torch.no_grad():
@@ -4816,6 +4903,10 @@ HERITAGE_SEVRAGE_ACTIF = True
 # (`_appliquer_niveau_episode`), jamais un branchement dispersé dans le chemin cognitif.
 MEMOIRE_PAR_CARTE_ACTIVE = True
 
+# v41.13 — interrupteur d'ablation du CORPS DANS LE ROLLOUT (`--sans-corps-rollout`).
+# False = C2 simule sans reprojeter le vecteur bio, comportement v41.12 bit-identique.
+CORPS_DANS_ROLLOUT_ACTIF = True
+
 # --- v40.2 : LE SEUIL DE MATURITÉ, DÉRIVÉ (voir `_maturite_niveau`) ---
 #
 # Il n'est PAS posé. Il vaut la maturité d'un agent qui réussit `TAUX_PROMOTION` du temps
@@ -5615,6 +5706,10 @@ class EtatCognitif:
         self.chaleur_ticks_approche_jour = 0  # ticks où la chaleur MONTE (l'agent approche)
         self.chaleur_ticks_variation_jour = 0 # dénominateur : ticks avec Δ non nul
         # v41.12 — TOUCHER À DISTANCE (pression + asymétrie). Actifs sur toute carte.
+        # v41.13 — ventilation JEPA (étape 1 de la confrontation multimodale).
+        self.jepa_concentration_cumul_jour = 0.0
+        self.jepa_amplitude_cumul_jour = 0.0
+        self.jepa_err_max_dim_jour = 0.0
         self.pression_cumul_jour = 0.0        # encombrement moyen vécu dans la journée
         self.pression_max_jour = 0.0          # pic (cul-de-sac)
         self.asymetrie_ecart_cumul_jour = 0.0 # |asym - 0.5| : le signal latéral porte-t-il ?
@@ -6734,6 +6829,15 @@ def _traiter_tick_vocal_isole(etat, obs_auditive, formants_cibles, parent_actif=
     etat.jepa_losses.append(perte_tick)
     valeur_erreur = float(perte_tick.item())
     etat.erreur_journee += valeur_erreur
+    # v41.13 — ventilation JEPA (télémétrie pure, voir perte_jepa). `getattr` car un
+    # cerveau n'ayant encore jamais calculé de perte n'a pas ces attributs.
+    _ag = etat.agent
+    etat.jepa_concentration_cumul_jour = (getattr(etat, "jepa_concentration_cumul_jour", 0.0)
+                                          + getattr(_ag, "jepa_diag_concentration", 0.0))
+    etat.jepa_amplitude_cumul_jour = (getattr(etat, "jepa_amplitude_cumul_jour", 0.0)
+                                      + getattr(_ag, "jepa_diag_amplitude_cible", 0.0))
+    etat.jepa_err_max_dim_jour = max(getattr(etat, "jepa_err_max_dim_jour", 0.0),
+                                     getattr(_ag, "jepa_diag_erreur_max_dim", 0.0))
 
     # Perte vocale supervisée + dopamine (même mécanique que traiter_tick, voir le
     # correctif v22.1 défaut 1 : c'est cette perte MSE, pas le score, qui donne le vrai
@@ -7238,6 +7342,15 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
     etat.jepa_losses.append(perte_tick)
     valeur_erreur = float(perte_tick.item())
     etat.erreur_journee += valeur_erreur
+    # v41.13 — ventilation JEPA (télémétrie pure, voir perte_jepa). `getattr` car un
+    # cerveau n'ayant encore jamais calculé de perte n'a pas ces attributs.
+    _ag = etat.agent
+    etat.jepa_concentration_cumul_jour = (getattr(etat, "jepa_concentration_cumul_jour", 0.0)
+                                          + getattr(_ag, "jepa_diag_concentration", 0.0))
+    etat.jepa_amplitude_cumul_jour = (getattr(etat, "jepa_amplitude_cumul_jour", 0.0)
+                                      + getattr(_ag, "jepa_diag_amplitude_cible", 0.0))
+    etat.jepa_err_max_dim_jour = max(getattr(etat, "jepa_err_max_dim_jour", 0.0),
+                                     getattr(_ag, "jepa_diag_erreur_max_dim", 0.0))
     etat.derniere_erreur_jepa = valeur_erreur  # v28.0 : contexte neutre pour la prochaine RequeteC3
 
     # --- Sous-quête intrinsèque par curiosité JEPA (générique, v17.0 ; continue v40.1-fix4) ---
@@ -8234,6 +8347,11 @@ def executer_nuit(etat, plafond_reve=None):
               f"(max {getattr(etat, 'chaleur_max_jour', 0.0):.3f}) | "
               f"🧭 approche {100.0 * _appr_chaud / max(1, _var_chaud):.1f}% des ticks de variation")
 
+    _amp = getattr(etat, "jepa_amplitude_cumul_jour", 0.0) / ticks_du_jour
+    _conc = getattr(etat, "jepa_concentration_cumul_jour", 0.0) / ticks_du_jour
+    print(f"  ├─ JEPA v41.13    : 🎯 amplitude cible {_amp:.4f} | "
+          f"📍 concentration {_conc:.3f} (0.25 = étalé, 1.0 = un seul coin) | "
+          f"pire dim {getattr(etat, 'jepa_err_max_dim_jour', 0.0):.5f}")
     print(f"  ├─ Toucher v41.12 : 🖐️ pression moy {getattr(etat, 'pression_cumul_jour', 0.0) / ticks_du_jour:.3f} "
           f"(max {getattr(etat, 'pression_max_jour', 0.0):.3f}) | "
           f"↔️ asymétrie moy {getattr(etat, 'asymetrie_ecart_cumul_jour', 0.0) / ticks_du_jour:.3f} "
@@ -8675,6 +8793,13 @@ def executer_nuit(etat, plafond_reve=None):
     # v41.12 — TOUCHER À DISTANCE. Inconditionnel : il y a toujours des murs.
     # `Toucher_Asymetrie_Ecart` est la clé de diagnostic — plate à 0, le capteur latéral
     # ne porte aucune information et le sens serait décoratif.
+    # v41.13 — VENTILATION JEPA. Répond à « reste-t-il quelque chose à prédire ? » AVANT
+    # d'ajouter des têtes par sens. `Amplitude_Cible` est le témoin décisif : une erreur
+    # faible sur une cible plate ne prouve pas un bon modèle, elle prouve un monde
+    # trivial (distinction ablation négative / ablation vide, règle de mesure §4).
+    log_wandb["JEPA_Concentration"] = getattr(etat, "jepa_concentration_cumul_jour", 0.0) / ticks_du_jour
+    log_wandb["JEPA_Amplitude_Cible"] = getattr(etat, "jepa_amplitude_cumul_jour", 0.0) / ticks_du_jour
+    log_wandb["JEPA_Erreur_Max_Dim"] = getattr(etat, "jepa_err_max_dim_jour", 0.0)
     log_wandb["Toucher_Pression_Moyenne"] = getattr(etat, "pression_cumul_jour", 0.0) / ticks_du_jour
     log_wandb["Toucher_Pression_Max"] = getattr(etat, "pression_max_jour", 0.0)
     log_wandb["Toucher_Asymetrie_Ecart"] = getattr(etat, "asymetrie_ecart_cumul_jour", 0.0) / ticks_du_jour
@@ -8818,6 +8943,10 @@ if __name__ == "__main__":
     # graines et donc les mêmes mondes (v41.9).
     _p.add_argument("--sans-memoire-cartes", action="store_true",
                     help="ABLATION : la bascule de carte efface la mémoire (témoin v41.9)")
+    # v41.13 — ABLATION du corps dans le rollout de C2. C'est LE témoin de l'hypothèse
+    # « C2 est inerte parce qu'il simule un monde sans corps ».
+    _p.add_argument("--sans-corps-rollout", action="store_true",
+                    help="ABLATION : C2 simule sans reprojeter le vecteur bio (témoin v41.12)")
     _args = _p.parse_args()
 
     # Drapeau global lu par `facteur_guidage` — un seul point de lecture, pas de
@@ -8858,6 +8987,16 @@ if __name__ == "__main__":
         print("🔬 [ABLATION] mémoire par carte v41.10 COUPÉE — la bascule efface (témoin v41.9)")
         from naulthene.cerveau.noyau import MEMOIRE_PAR_CARTE_ACTIVE as _verif_mem
         assert _verif_mem is False, ("l'ablation n'a pas atteint le module — campagne invalide")
+
+    # v41.13 — même discipline : écriture dans le module NOMMÉ + assertion runtime.
+    _corps_actif = not _args.sans_corps_rollout
+    globals()["CORPS_DANS_ROLLOUT_ACTIF"] = _corps_actif
+    if _module_reel is not None:
+        _module_reel.CORPS_DANS_ROLLOUT_ACTIF = _corps_actif
+    if not _corps_actif:
+        print("🔬 [ABLATION] corps dans le rollout v41.13 COUPÉ — C2 simule sans corps (témoin v41.12)")
+        from naulthene.cerveau.noyau import CORPS_DANS_ROLLOUT_ACTIF as _verif_corps
+        assert _verif_corps is False, ("l'ablation n'a pas atteint le module — campagne invalide")
 
     # La graine est réappliquée ICI, après les `manual_seed(42)` du haut de fichier : ce
     # sont eux qui rendaient les runs indiscernables.

@@ -4,6 +4,102 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.13-experimental] - 2026-08-16 — C2 imaginait un monde sans corps
+
+### Le vecteur bio n'entrait jamais dans le rollout mental
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | feat (expérimental) |
+| **Impact** | **Critique — architectural** |
+| **Carnet** | [`CORRECTIF_v4113_corps_dans_le_rollout.md`](../recherche/CORRECTIF_v4113_corps_dans_le_rollout.md) |
+
+**Le défaut.** `integrateur_bio` n'apparaissait **nulle part** dans
+`simuler_futur_et_planifier`. Les **41 dims** du vecteur bio entraient une seule fois via
+C1, puis C2 simulait 7 futurs × 7 sauts **sans jamais reprojeter un seul sens**. C2 ne
+pouvait donc pas simuler « si j'avance je serai collé au mur » ni « si je continue la
+chaleur montera ».
+
+**Ce que ça unifie.** Trois mesures lues séparément jusqu'ici — couper C2 = 0,0 pt sur 6
+niveaux ; C2 36 % plus gros chez ceux qui échouent ; 4 sens sur 6 ablatables sans effet —
+admettent une cause commune : **les sens n'atteignent pas le modèle du monde, et le modèle
+du monde simule un agent désincarné**. Hypothèse *confortable*, donc soumise à campagne
+A/B plutôt qu'affirmée.
+
+**Étape 1 — mesurer d'abord (coût nul).** Ventilation de l'erreur JEPA existante, sans
+ajouter une tête. Résultat : l'erreur **se concentre** (0,625 → 0,888 sur 3 jours, où 0,25
+serait un étalement parfait), l'amplitude de la cible reste **non nulle** (0,21–0,30), et
+la pire dimension est à **8×** l'erreur moyenne. Le modèle du monde n'est **pas** saturé —
+l'étape 2 est justifiée.
+
+**Étape 2 — le correctif, en une ligne.** Réutilisation d'`integrateur_bio` dans la boucle
+de rollout : aucune tête nouvelle, aucun paramètre, aucune constante. L'alternative
+(5 têtes JEPA + 5 portes) ferait grossir de ~30 % un cœur déjà 2,85× plus lourd qu'un PPO
+qui le bat.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `simuler_futur_et_planifier(vecteur_bio=...)`, transmis par `_solliciter_c2_neocortex` et `penser` ; ventilation JEPA (4 diagnostics, `no_grad`) ; drapeau `--sans-corps-rollout` ; ligne de bilan + 3 clés W&B |
+
+**Vérifié** : A/A **bit-identique** sur les deux bras (graine 33) ; témoin ≠ variante ;
+ablation confirmée par assertion runtime ; `vecteur_bio=None` ⇒ chemin v41.12 exact (le
+rêve est inchangé).
+
+⚠️ **Assumé** : le vecteur bio est tenu **constant** sur le rollout — l'agent imagine son
+corps *actuel* projeté dans les futurs. Prédire l'évolution des sens exigerait les têtes
+JEPA par sens (étape 3), à n'envisager que si cette campagne montre un effet.
+
+**Campagne 20 graines × 2 bras × 3000 jours en cours.**
+
+---
+
+## [v41.12-experimental] - 2026-08-16 — Le toucher à distance & la portée qui suit le monde
+
+### Les sens étaient des interrupteurs, pas des gradations
+
+| Type | Details |
+|------|---------|
+| **Commit** | `907f391` |
+| **Catégorie** | feat (expérimental) |
+| **Impact** | **Fonctionnel** |
+
+**Le défaut (utilisateur, 16/08)** : *« les sens sont des éléments de gradation, pas 0 ça
+marche pas et 1 ça marche »*. Deux mesures le confirment.
+
+1. **Le toucher était un interrupteur à portée ZÉRO.** `contact_frontal` vaut 1 ou 0 sur
+   la seule case devant : aucune anticipation (l'agent apprend le mur **en le
+   percutant**), aucune gradation (un couloir et une plaine donnent le même `0.0`),
+   aucune direction.
+2. **L'odorat s'éteignait à 5 cases** quelle que soit la carte. Sur `Empty-8x8` l'agent
+   était olfactivement aveugle sur la moitié de son monde ; sur MultiRoom, sur les trois
+   quarts.
+
+**Les correctifs.** `DIM_PRESSION = 2` — encombrement gradué + asymétrie gauche/droite, en
+directions **relatives au corps**. Et λ **dérivé de la géométrie** de la carte, avec une
+fraction **mesurée** (critère : le gradient entre cases voisines, jamais la couverture).
+
+| Carte | Portée | Gradient |
+|---|---|---|
+| Empty-5x5 | 4 → 5 | −0 % *(aucune régression)* |
+| **Empty-8x8** | 4 → **8** | **+12 %** |
+| **SimpleCrossing** | 4 → **9** | **+20 %** |
+| MultiRoom | 4 → **25** | **+195 %** |
+
+⚠️ **Erreur corrigée en cours de route** : la première version bornait λ à `LAMBDA_ODORAT`
+« par prudence ». Cette borne rendait le correctif **inopérant sur Empty-8x8** — le niveau
+du blocage — en y préservant le pire réglage des sept testés.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/bus_sensoriel.py` | `DIM_PRESSION`, `PORTEE_PRESSION`, `lire_pression()`, `lambda_diffusion_carte()`, `FRACTION_PORTEE_CARTE` |
+| `src/naulthene/cerveau/noyau.py` | `DIM_VECTEUR_BIO` 39 → 41 ; borne haute sur la tranche `_thermo` ; 3 compteurs + ligne de bilan + 3 clés W&B |
+
+**Vérifié** : greffe `.brain` **101 → 105 dims sans exclusion** ; asymétrie mesurée à
+0,170–0,224 (le signal latéral porte de l'information, il n'est pas plat).
+
+---
+
 ## [v41.11-experimental] - 2026-08-16 — La thermoception : le danger comme champ continu
 
 ### L'agent ne pouvait apprendre le danger ni par les sens, ni par l'expérience
