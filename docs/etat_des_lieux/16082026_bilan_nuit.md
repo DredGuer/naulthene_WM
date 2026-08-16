@@ -159,3 +159,63 @@ et vérifié (contraste 15× entre manger affamé et manger repu).
 Elle dira si le code courant franchit des paliers à un taux stable ; si oui, le
 déséquilibre 300:1 n'est peut-être pas le bloquant principal, et le corriger serait
 optimiser la mauvaise chose.
+
+---
+
+## 6. 🔴 DÉCOUVERTE FINALE — les runs ne sont PAS reproductibles à graine fixée
+
+En cherchant pourquoi les mêmes graines donnaient des résultats opposés entre deux
+campagnes, j'ai testé le cas le plus simple possible : **deux runs lancés l'un après
+l'autre, même graine, même code, même machine, 3 jours.**
+
+```
+run 1 : JEPA 0.0841 → maîtrise 45 %  |  JEPA 0.0825 → 43 %  |  JEPA 0.0420
+run 2 : JEPA 0.0841 → maîtrise 50 %  |  JEPA 0.0884 → 42 %  |  JEPA 0.0418
+        ↑ identique                    ↑ DIVERGENCE dès le jour 1
+```
+
+**Le jour 1 commence identique (JEPA 0,0841) et se termine différemment (45 % contre
+50 %).** La divergence naît à l'intérieur de la première journée.
+
+### Ce que ce n'est pas
+
+| Hypothèse testée | Résultat |
+|---|---|
+| `mps` non déterministe | ❌ **réfutée** — 3 essais identiques au 10ᵉ chiffre, sur `cpu` comme sur `mps` |
+| `--jours` influence un calcul | ❌ **réfutée** — il n'entre dans aucune formule |
+| Code différent entre campagnes | ❌ **réfutée** — `git diff` vide |
+
+La cause reste à isoler (ordre d'appels au générateur dépendant du timing, opérations
+asynchrones GPU, ou état partagé non réamorcé).
+
+### ⚠️ Ce que cela invalide
+
+> **Toute comparaison de ce projet reposant sur « même graine, donc même trajectoire » est
+> caduque.** Cela inclut :
+>
+> - les comparaisons appariées de la nuit (v41.6 vs v41.7+v41.8 vs fix1)
+> - la comparaison appariée v41.4 « héritage ON vs OFF » du 15/08, dont la conclusion
+>   « 3 graines bit-identiques » ne peut plus s'expliquer par la seule ablation
+> - toute conclusion du type « cette graine réussit, celle-là non »
+>
+> Cela **explique aussi** l'accord de 4,0/6 mesuré entre campagnes : ce n'était pas une
+> propriété des graines, c'était **du bruit d'exécution**.
+
+### Ce que cela n'invalide pas
+
+Les résultats obtenus par **mesure directe**, qui ne dépendent d'aucune comparaison entre
+runs :
+
+| Résultat | Méthode |
+|---|---|
+| `'FOOD' +0.000` sur 4004 repas | lecture d'un `.brain` |
+| Le monde est vivable (marcheur aléatoire) | 25 épisodes, statistique interne |
+| `r_bio` = 90-98 % du signal | amplitudes cumulées, 20 épisodes |
+| La maîtrise ne progresse pas (24,7 → 22,9 %) | série temporelle **intra**-run |
+| Patience inversée / hors budget | lecture du code + `max_steps` |
+
+### 📌 Priorité n°1 pour la suite
+
+**Rendre les runs reproductibles** avant toute nouvelle campagne comparative. Sans cela,
+le projet ne peut mesurer aucun effet plus petit que son bruit d'exécution — ce qui est
+précisément ce qui s'est passé cette nuit, et vraisemblablement depuis longtemps.
