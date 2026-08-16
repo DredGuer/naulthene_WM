@@ -92,19 +92,21 @@ Deux nuances, mesurées et non rhétoriques :
 
 | Métrique | Valeur |
 |---|---|
-| Niveau atteint | **1 sur 15** — 10 graines × 2000 jours, **0 promotion** |
-| Maîtrise maximale (seuil de promotion : 60 %) | **40 %**, sur 7 602 victoires cumulées |
+| Niveau atteint | **3 sur 15** — 85 % des graines, IC 95 % **[64–95]** (n = 20 × 2500 jours) |
+| Niveau 4 | **0 graine sur 20** — le mur n'a jamais été franchi |
 | Effet de couper C2 sur le score | **0,0 point sur les 6 niveaux** (78 cellules) |
 | Accord C1/C2 à 2000 jours | **0,5 %** (contre 37 % au jour 500) |
-| Mécaniques cognitives ayant amélioré quoi que ce soit | **0 sur 9 testées** |
+| Mécaniques cognitives ayant amélioré quoi que ce soit | **0 sur 9 testées** — voir l'avertissement |
 | Leviers qui ont marché | **2 — tous deux des propriétés du monde** |
 
 Un PPO standard résout `Empty-8x8` en quelques milliers d'épisodes. **Naulthène, non.**
 
-Une graine antérieure (g22) a atteint le niveau 4 et s'y est tenue 1223 jours — mais **10 graines
-fraîches sur le même code n'ont pas quitté le niveau 1**. C'était une **loterie natale**, pas une
-propriété reproductible du correctif : la divergence entre graines identiques est visible dès la
-**nuit 1**, avec un écart de `danger` de **38×** au jour 50.
+> ⚠️ **Toute comparaison appariée antérieure à la v41.9 est non concluante — y compris la
+> ligne « 0 sur 9 » ci-dessus.** `env.reset()` n'était jamais seedé : MiniGrid tire ses cartes
+> sur son propre générateur, que `torch.manual_seed` n'atteint pas. Deux runs de même
+> `--graine` voyaient donc des **mondes différents**. Ces résultats ne sont pas faux : ils
+> n'établissent rien. Les deux premières lignes sont les premières mesurées sur un **banc
+> reproductible**, vérifié par un test A/A.
 
 Le [diagnostic](docs/recherche/dia_Aout_2026.md) isole pourquoi, et **aucun des cinq bloquants n'est
 cognitif** : patience plafonnée à 120 ticks contre 256 pour MiniGrid lui-même (taux de réussite
@@ -152,7 +154,9 @@ c'est la thèse de l'unification, et elle tient.
   taux de succès : ce chiffre venait d'un banc dont le témoin était à 4,50 %. Le système
   délibératif n'est ni nuisible ni utile — il est **causalement déconnecté du comportement**.
   Corroboré indépendamment par l'accord C1/C2 qui décroît de 37 % (jour 500) à **0,5 %** (jour
-  2000) sur 10 graines.
+  2000) sur 10 graines. Le scan de 20 cerveaux (16/08) va plus loin : **C2 est 36 % PLUS GROS
+  chez les agents qui échouent** (norme 1,33 contre 0,98 chez ceux qui progressent). Lui donner
+  du poids est corrélé à l'échec, pas au succès.
 - **Six lésions sur treize n'ont aucun effet mesurable.** Ouïe, goût, odorat et Exo-Sens — quatre
   des six sens — sont coupables sans conséquence. Seuls le **toucher** et le **vecteur bio**
   portent quelque chose, et leur coût grandit avec la difficulté (bio : −4,4 sur `Empty-5x5` →

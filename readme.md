@@ -122,19 +122,20 @@ Two caveats, both measurable rather than rhetorical:
 
 | Metric | Value |
 |---|---|
-| Level reached | **1 out of 15** — 10 seeds × 2000 days, **zero promotions** |
-| Peak mastery (promotion threshold: 60 %) | **40 %**, on 7,602 cumulative wins |
+| Level reached | **3 out of 15** — 85 % of seeds, 95 % CI **[64–95]** (n = 20 × 2,500 days) |
+| Level 4 | **0 out of 20 seeds** — the wall has never been crossed |
 | Effect of severing C2 on the score | **0.0 points across all 6 levels** (78 cells) |
 | C1/C2 agreement at day 2000 | **0.5 %** (down from 37 % at day 500) |
-| Cognitive mechanisms that improved anything | **0 out of 9 tested** |
+| Cognitive mechanisms that improved anything | **0 out of 9 tested** — see the caveat below |
 | Levers that did work | **2 — both properties of the world** |
 
 A standard PPO solves `Empty-8x8` in a few thousand episodes. **Naulthène currently does not.**
 
-One earlier seed (g22) reached level 4 and held it for 1,223 days — but **10 fresh seeds on the
-same code never left level 1**. That was a **natal lottery**, not a reproducible property of the
-fix: divergence between identical seeds is visible from **night 1**, with a **38×** spread in
-`danger` by day 50.
+> ⚠️ **Every paired comparison predating v41.9 is inconclusive — including the "0 out of 9"
+> line above.** `env.reset()` was never seeded: MiniGrid draws its layouts from its own RNG,
+> which `torch.manual_seed` does not reach. Two runs of the same `--graine` therefore saw
+> **different worlds**. Those results are not wrong; they establish nothing. The figures in the
+> first two rows are the first measured on a **reproducible bench**, verified by an A/A test.
 
 The [diagnostic](docs/recherche/dia_Aout_2026.md) isolates why, and none of the five blockers is cognitive:
 patience capped at 120 ticks against MiniGrid's own 256 (reachable success rate 4.7 % vs 21.0 %),
@@ -230,8 +231,8 @@ This is the table that would decide whether the architecture is *efficient* or m
 | PPO + LSTM | 52,664 | — | — | — |
 | **Naulthène** | **55,232** | **44.7 %** (v41 bench, 300 ep.) | — | **never reached** |
 
-Across **10 seeds × 2000 simulated days**, no agent ever left level 1 of the 15-level curriculum:
-peak mastery **40 %** against a 60 % promotion threshold, on 7,602 cumulative wins. `Empty-8x8`
+Across **20 seeds × 2,500 simulated days** on a reproducible bench, **85 % [64–95]** of agents
+reach level 3 of the 15-level curriculum — and **0 out of 20** reach level 4. `SimpleCrossing`
 and everything beyond remain unsolved.
 
 > Naulthène's own numbers are filled in. Until the baseline row is too, the comparison proves
@@ -439,13 +440,18 @@ validation is by W&B curves, console logs and read-only probes.
 
 What that means concretely:
 
-- The agent is **blocked at level 1 of 15**: 10 seeds × 2000 simulated days, **zero promotions**,
-  peak mastery 40 % against a 60 % threshold. A single earlier seed reached level 4 — a natal
-  lottery, not a reproducible property.
+- The agent is **blocked at level 3 of 15**: 20 seeds × 2,500 simulated days, **85 % [64–95]**
+  reach level 3, **0 out of 20** reach level 4.
+- **The bench itself was broken until v41.9.** `env.reset()` was never seeded, so two runs of
+  the same seed saw different worlds. **Every paired comparison in this project's history is
+  therefore inconclusive** — they are not wrong, they establish nothing. Fixed and verified by
+  an A/A test (bit-identical runs).
 - **C2, the deliberative system, is causally disconnected**: severing it changes the score by
   **0.0 points on all six levels** (78-cell ablation), and C1/C2 agreement decays to 0.5 %.
-- **Nine cognitive mechanics tested, nine without demonstrated benefit.** The only two levers that
-  ever worked were properties of the *world*, not of the brain.
+  A scan of 20 brains found C2 is **36 % larger in the agents that fail**.
+- **Nine cognitive mechanics tested, nine without demonstrated benefit** — but see the bench
+  caveat above. The only two levers that ever worked were properties of the *world*, not of
+  the brain.
 - The **v34–v39 mechanics are now in this repository** (`noyau.py` was versioned on 14 Aug 2026,
   closing the project's #1 structural risk).
 - Two of three benchmark tables are filled; the one that matters most (equal-budget comparison
