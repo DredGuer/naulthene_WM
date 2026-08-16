@@ -219,3 +219,56 @@ runs :
 **Rendre les runs reproductibles** avant toute nouvelle campagne comparative. Sans cela,
 le projet ne peut mesurer aucun effet plus petit que son bruit d'exécution — ce qui est
 précisément ce qui s'est passé cette nuit, et vraisemblablement depuis longtemps.
+
+### 6.1 ✅ CAUSE ISOLÉE — `env.reset()` n'est jamais appelé avec une graine
+
+```bash
+grep -c "env.reset()"    →  3    # tous les resets du projet
+grep -c "reset(seed="    →  0    # aucun n'est seedé
+```
+
+**Preuve directe** — même processus, `torch.manual_seed(11)` + `np.random.seed(11)` +
+`random.seed(11)` appliqués avant chaque essai :
+
+| | Position de l'agent au reset |
+|---|---|
+| `reset()` — **comme le projet** | (1,2) dir 0 · (2,4) dir 3 · (2,2) dir 2 → **3 cartes différentes** |
+| `reset(seed=11)` | (4,2) dir 2 · (4,2) dir 2 · (4,2) dir 2 → **identique** |
+
+> 🎯 **MiniGrid possède son propre générateur, initialisé sur l'entropie système.**
+> `torch.manual_seed` et `np.random.seed` n'ont **aucun effet** dessus. Chaque run tire
+> donc une suite de cartes différente, quelle que soit la graine passée en `--graine`.
+>
+> C'est la cause exacte de la divergence observée au jour 1 : les deux runs voient des
+> mondes différents dès le premier épisode.
+
+### 6.2 ⚠️ Le correctif n'est PAS trivial — ne pas l'appliquer à la légère
+
+Ajouter `seed=` à `reset()` est une ligne, mais le choix de la graine est un **arbitrage de
+conception**, pas un détail :
+
+| Option | Effet | Risque |
+|---|---|---|
+| `reset(seed=graine)` fixe | toujours **la même carte** | l'agent apprendrait **une** carte par cœur, plus la tâche — désastreux |
+| `reset(seed=graine + n_episode)` | suite reproductible **et** variée | ✅ la bonne forme, mais change la distribution des cartes vues |
+| Ne rien faire | statu quo | aucune comparaison n'est fiable |
+
+> La deuxième option est la seule viable, mais **elle modifie ce que l'agent voit** : les
+> cartes ne seront plus les mêmes qu'aujourd'hui. Tous les chiffres du projet
+> deviendraient non comparables aux précédents — ce qui est acceptable **une fois**, à
+> condition d'être annoncé.
+
+**Je ne l'ai pas appliqué** : c'est un changement de nature du banc d'essai, il te revient.
+
+### 6.3 Ce que cette découverte réhabilite
+
+Le dépôt documente que **« 9 mécaniques cognitives sur 9 testées n'ont produit aucun
+effet »**. Cette conclusion supposait que deux runs comparés ne différaient que par la
+mécanique testée.
+
+> **Ils différaient aussi par les cartes tirées.** Le « bruit natal » que le projet
+> attribue depuis des semaines aux graines est, au moins en partie, un **bruit de banc
+> d'essai**.
+>
+> Cela ne prouve pas que les 9 mécaniques fonctionnaient — mais cela signifie que
+> **le test qui les a écartées ne pouvait pas les départager**.
