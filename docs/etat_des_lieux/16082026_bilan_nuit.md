@@ -120,3 +120,42 @@ volontairement, car les trois options se contredisent :
 
 > 💡 **La deuxième est la seule qui ne contredise aucun principe du projet** : elle ne
 > touche ni à l'amplitude du corps, ni au monde. Elle attend ton arbitrage.
+
+---
+
+## 5. ⚠️ J'ai simulé ma propre recommandation — elle est plus faible que je ne l'ai dit
+
+Avant de te la proposer, j'ai calculé ce que donnerait « `r_bio` versé par épisode » à
+partir des amplitudes déjà mesurées. **Aucune modification du code.**
+
+| Niveau | `r_bio` avant | **après** | Victoire avant | **après** |
+|---|---|---|---|---|
+| `Empty-5x5` | 89,9 % | **75,8 %** | 10,1 % | **24,2 %** |
+| `Empty-Random-6x6` | 87,8 % | **71,5 %** | 12,2 % | **28,5 %** |
+| `Empty-8x8` | 98,4 % | **95,6 %** | 1,6 % | **4,4 %** |
+
+L'amplitude **totale** de `r_bio` ne change pas — le corps pousse autant. Ce qui change est
+le nombre d'**événements** : de 400 par jour à ~1,5-4.
+
+### Ce que la simulation corrige dans mon propos
+
+> Je t'ai présenté cette option comme « la seule qui ne contredise aucun principe ».
+> C'est toujours vrai, **mais son effet est modeste là où le problème est le pire** :
+> sur `Empty-8x8` — le palier bloquant — la victoire passerait de 1,6 % à **4,4 %**.
+> Elle resterait noyée.
+
+### Et un risque que je n'avais pas vu
+
+Un `r_bio` versé en fin d'épisode **n'indique plus quel tick a soulagé**. L'agent perdrait
+l'association « ce geste-ci m'a nourri » — exactement ce que la **v41.2-fix7** avait établi
+et vérifié (contraste 15× entre manger affamé et manger repu).
+
+> **La piste demande donc un crédit rétrograde, pas un simple déplacement du versement.**
+> C'est un chantier, pas un réglage — et il faut le dire avant de s'y engager.
+
+### Ce que je recommande à la place, pour le point de 7h30
+
+**Ne rien décider sur le déséquilibre tant que la campagne de population n'a pas parlé.**
+Elle dira si le code courant franchit des paliers à un taux stable ; si oui, le
+déséquilibre 300:1 n'est peut-être pas le bloquant principal, et le corriger serait
+optimiser la mauvaise chose.
