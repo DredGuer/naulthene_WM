@@ -4,6 +4,59 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.9-experimental] - 2026-08-16 — Le banc d'essai devient reproductible
+
+### `env.reset()` n'était jamais seedé — le projet ne pouvait mesurer aucun effet
+
+| Type | Details |
+|------|---------|
+| **Commit** | `3e2304d` |
+| **Catégorie** | fix (expérimental) |
+| **Impact** | **Critique — méthodologique** |
+| **Carnet** | [`NUIT_15082026_trois_questions.md`](../recherche/NUIT_15082026_trois_questions.md) §6 |
+
+**Le défaut.** `env.reset()` était appelé **sans graine** aux quatre points du fichier
+(0 occurrence de `reset(seed=` avant cette version). MiniGrid possède son **propre**
+générateur, initialisé sur l'entropie système : `torch.manual_seed`, `np.random.seed` et
+`random.seed` n'ont **aucun effet** dessus.
+
+Mesuré, même processus, les trois générateurs Python semés à 11 avant chaque essai :
+
+```
+reset()        → agent en (1,2), puis (2,4), puis (2,2)   ← 3 mondes DIFFÉRENTS
+reset(seed=11) → agent en (4,2), (4,2), (4,2)             ← identique
+```
+
+**Deux runs de même `--graine` voyaient donc des cartes différentes** et divergeaient dès
+le jour 1 (maîtrise 45 % contre 50 % sur 3 jours).
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `_graine_episode` / `_reset_seede` — graine dérivée de `graine_run × 1 000 003 + episodes_vecus`, reproductible **et** variée |
+| `src/naulthene/cerveau/noyau.py` | les 4 resets centralisés : un futur appel ne peut plus réintroduire le défaut |
+| `src/naulthene/cerveau/persistance.py` | `episodes_vecus` persisté — sans lui, un `.brain` repris rejouerait les mondes de sa naissance |
+
+**Vérifié (test A/A)** : deux runs de graine 11 donnent `0.0841 / 0.0845 / 0.0418`,
+identiques au chiffre près ; deux graines différentes restent distinctes (11 → 0,0841,
+22 → 0,1846). Confirmé ensuite sur runs longs en parallèle : **A/A OK sur 12 jours**.
+
+### ⚠️ Ce que ce correctif implique pour tout le dépôt
+
+> **Toute comparaison appariée antérieure à la v41.9 est non concluante** — elle n'est pas
+> fausse, elle n'établit rien : les deux branches différaient aussi par les cartes tirées.
+> Cela inclut la comparaison v41.4 « héritage ON/OFF » et, potentiellement, la conclusion
+> historique « 9 mécaniques cognitives sur 9 sans effet ».
+>
+> **Les chiffres antérieurs ne sont pas comparables aux suivants** : les cartes tirées ont
+> changé. Coût accepté une fois, en échange de la seule chose qui manquait — savoir si une
+> modification a un effet.
+
+**Taux de référence mesuré la veille** (20 graines × 600 j, code v41.8-fix1) :
+**40 % de graines franchissent ≥ 1 palier, IC 95 % [22 % ; 61 %]**. Les trois campagnes de
+6 graines de la nuit (33 %, 50 %, 33 %) tombent **toutes** dans cet intervalle.
+
+---
+
 ## [v41.4-experimental] - 2026-08-15 — Deux maîtrises, un héritage proportionnel à la parenté
 
 ### La mécanique marche ; elle n'a pas pu être prouvée — et elle ne débloque rien
