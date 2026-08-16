@@ -272,6 +272,95 @@ WANDB_MODE=offline PYTHONPATH=src python -m naulthene.salles_de_classe.cursus_de
 
 Il n'y a ni linter ni suite de tests automatisés configurés. Toute vérification passe par l'observation des logs console (progression de palier, teneur en dopamine, thermostat de neurogenèse) et des courbes du tableau de bord W&B (voir [Modèle de Données & Métriques W&B](readme_fr.md#modèle-de-données--métriques-wb) dans le README).
 
+## La Règle de Mesure — « rien sans témoin »
+
+> **Règle jumelle de « rien en dur ».** Celle-ci gouverne la conception ; celle-là gouverne
+> ce qu'on a le droit de conclure. Posée le 16/08/2026 après une nuit entière de
+> comparaisons qui ne mesuraient rien.
+
+**Aucune conclusion sans avoir vérifié que le test pouvait la produire.**
+
+### 1. Le test A/A avant tout test A/B
+
+Avant de comparer une version A à une version B, lancer **A contre A** — deux runs
+identiques, même graine, même code.
+
+- Si les deux A **diffèrent** autant que A et B diffèrent, **le test ne mesure rien**.
+- Ce contrôle coûte cinq minutes et invalide des nuits de calcul.
+
+C'est ainsi qu'a été découvert le défaut de reproductibilité v41.9 : `env.reset()` n'était
+jamais seedé, MiniGrid tirait ses cartes sur l'entropie système, et deux runs de même
+`--graine` voyaient des mondes différents. **Toutes les comparaisons appariées du projet
+antérieures à la v41.9 sont donc non concluantes** — elles ne sont pas fausses, elles
+n'établissent rien.
+
+### 2. La taille d'échantillon — ne jamais conclure sous 20 graines
+
+Mesuré le 16/08 : le taux de franchissement de référence vaut **40 % avec un intervalle de
+confiance à 95 % de [22 % ; 61 %]** sur 20 graines.
+
+| Échantillon | Intervalle de confiance | Ce qu'on peut détecter |
+|---|---|---|
+| 6 graines | ± ~30 points | **rien** |
+| 20 graines | ± ~20 points | un effet qui double le taux |
+| 40 graines | ± ~14 points | un effet de +50 % |
+
+Trois campagnes de 6 graines menées la même nuit ont donné 33 %, 50 % et 33 % : **les trois
+tombent dans l'intervalle du taux de base**. Aucune ne mesurait un effet, et j'ai
+interprété leurs écarts pendant des heures avant de le calculer.
+
+> ⚠️ **Interdit** : conclure « cette version est meilleure » sur moins de 20 graines.
+> **Obligatoire** : donner l'intervalle de confiance à côté de chaque taux, jamais le taux
+> seul.
+
+### 3. Se méfier des résultats qui font plaisir
+
+Deux réflexes qui ont chacun débusqué un bug réel :
+
+- **Un résultat trop propre est suspect.** Trois runs rigoureusement identiques, une
+  valence à `0.000` exact, un delta de `+0,0` sur toutes les cellules : c'est presque
+  toujours un canal débranché, pas une découverte. (v41.4 : le drapeau d'ablation
+  n'atteignait pas le module ; v41.7 : la valence de la nourriture ne recevait que des
+  zéros sur 4004 repas.)
+- **Un résultat favorable se vérifie deux fois plus qu'un défavorable.** La promotion la
+  plus précoce jamais observée (jour 23) s'est révélée être du bruit une fois l'intervalle
+  calculé.
+
+### 4. Distinguer trois natures de résultat
+
+| Nature | Fiable ? | Exemple |
+|---|---|---|
+| **Mesure directe** (lecture d'un `.brain`, statistique intra-run) | ✅ oui | `'FOOD' +0.000` sur 4004 repas |
+| **Comparaison appariée** (A vs B, mêmes graines) | 🟡 seulement depuis la v41.9, et à n ≥ 20 | héritage ON/OFF |
+| **Anecdote** (une graine, un run) | ❌ jamais | « g22 promue au jour 23 » |
+
+Une ablation dont le témoin est à zéro ne mesure rien : distinguer une ablation
+**négative** (mesurée à 0) d'une ablation **vide** (jamais activée).
+
+---
+
+## Format de Rapport — 3 / 3 / 3
+
+**À la fin de toute nuit ou journée de travail, produire systématiquement :**
+
+### ✅ 3 avancées
+Ce qui a progressé, **chiffré**. Une avancée sans chiffre n'est pas une avancée.
+
+### ⛔ 3 retards
+Ce qui a bloqué, échoué, ou été découvert comme cassé — **y compris mes propres erreurs**.
+Un rapport sans retard est un rapport incomplet : sur ce projet, les défauts trouvés dans
+le banc d'essai ont plus fait avancer que les mécaniques ajoutées.
+
+### 💡 3 améliorations
+Ce qu'il faudrait faire ensuite, **classé par ce que la mesure justifie**, pas par ce qui
+est le plus intéressant à coder. Distinguer ce qui est arbitré de ce qui attend une
+décision utilisateur.
+
+> Si l'une des trois catégories est vide, le dire explicitement plutôt que de la remplir
+> artificiellement.
+
+---
+
 ## Git Workflow
 
 ### État des branches (2026-08-15)
