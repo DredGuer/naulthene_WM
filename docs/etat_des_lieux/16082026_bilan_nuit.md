@@ -277,13 +277,16 @@ mécanique testée.
 
 ## 7. 📊 Le taux de référence — première mesure du projet sur un échantillon suffisant
 
-**18 graines × 600 jours**, code `v41.8-fix1` (2 runs encore en cours à la rédaction).
+**20 graines × 600 jours**, code `v41.8-fix1` — campagne complète.
 
 | Résultat | Graines | Taux | IC 95 % |
 |---|---|---|---|
-| Au moins 1 promotion | 7/18 | **39 %** | [20 % ; 61 %] |
-| 2 promotions (niveau 3) | 4/18 | **22 %** | [9 % ; 45 %] |
-| Aucune promotion | 11/18 | 61 % | — |
+| Au moins 1 promotion | **8/20** | **40 %** | [22 % ; 61 %] |
+| 2 promotions (niveau 3) | **5/20** | **25 %** | [11 % ; 47 %] |
+| Aucune promotion | 12/20 | 60 % | — |
+
+**13 promotions au total.** Répartition : 12 graines restent au niveau 1, 3 atteignent le
+niveau 2, 5 atteignent le niveau 3.
 
 ### La conclusion qui clôt la nuit
 
