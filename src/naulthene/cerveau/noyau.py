@@ -5059,6 +5059,23 @@ BRAIN_SPARING_ACTIF = True
 #   (OFF, ON)  = corps seul   | (ON, ON)  = v41.16 complet
 ECONOMIE_ACTION_ACTIVE = True
 
+# v41.18 — TEST DE FALSIFICATION DU VERROU P17 (`--defi-force`, hors par défaut).
+#
+# La mesure du 17/08 montre qu'au niveau 4 l'agent ne joue son propre palier que 34 % du
+# temps, et que la part de défi ne monte qu'AVEC la maîtrise (33 % à maîtrise 0,20, 65 %
+# à 0,60). D'où l'hypothèse d'un verrou : pour maîtriser il faut s'entraîner, pour
+# s'entraîner il faut déjà maîtriser.
+#
+# ⚠️ Cette hypothèse repose sur une CORRÉLATION, et le sens de la boucle est ambigu :
+# « peu de défi ⇒ peu de maîtrise » et « peu de maîtrise ⇒ peu de défi » expliquent tous
+# deux les mêmes chiffres. Ce drapeau force l'exposition à 100 % du palier de référence,
+# ce qui tranche : si la maîtrise décolle, le défi était bien le facteur limitant ; si
+# elle stagne, le palier est simplement trop dur et la formule P17 est innocentée.
+#
+# C'est un INSTRUMENT DE MESURE, pas une mécanique candidate : il court-circuite tout le
+# principe de P17 (le cursus comme distribution) et ne doit jamais être activé par défaut.
+DEFI_FORCE = False
+
 # --- v40.2 : LE SEUIL DE MATURITÉ, DÉRIVÉ (voir `_maturite_niveau`) ---
 #
 # Il n'est PAS posé. Il vaut la maturité d'un agent qui réussit `TAUX_PROMOTION` du temps
@@ -6226,6 +6243,9 @@ def _tirer_niveau_episode(etat) -> int:
     INDEX valide du `PROGRAMME` par construction (la distribution n'énumère que des
     index existants), ce que l'assertion vérifie explicitement.
     """
+    if DEFI_FORCE:
+        # Falsification : 100 % du palier de référence, aucune révision, aucune incursion.
+        return int(etat.niveau_actuel)
     niveaux, poids = _distribution_cursus(etat)
     # `np.random` et non `random` : c'est le générateur que tout le module utilise déjà
     # (placement des ressources, rêve, shuffle), et le seul que `--graine` réamorce — un
@@ -9138,6 +9158,9 @@ if __name__ == "__main__":
     # v41.17 — second axe du plan factoriel (voir ECONOMIE_ACTION_ACTIVE).
     _p.add_argument("--sans-economie-action", action="store_true",
                     help="ABLATION : le coût d'action ne suit plus la vigueur (témoin v41.15)")
+    # v41.18 — instrument de falsification du verrou P17 (voir DEFI_FORCE).
+    _p.add_argument("--defi-force", action="store_true",
+                    help="MESURE : 100 %% du palier de référence, court-circuite P17")
     _args = _p.parse_args()
 
     # Drapeau global lu par `facteur_guidage` — un seul point de lecture, pas de
@@ -9208,6 +9231,15 @@ if __name__ == "__main__":
         print("🔬 [ABLATION] économie d'action v41.16 COUPÉE — le coût ignore la vigueur")
         from naulthene.cerveau.noyau import ECONOMIE_ACTION_ACTIVE as _vea
         assert _vea is False, "l'ablation n'a pas atteint le module — campagne invalide"
+
+    # v41.18 — même discipline : module NOMMÉ + assertion runtime.
+    globals()["DEFI_FORCE"] = bool(_args.defi_force)
+    if _module_reel is not None:
+        _module_reel.DEFI_FORCE = bool(_args.defi_force)
+    if _args.defi_force:
+        print("🔬 [FALSIFICATION] défi forcé à 100 % — P17 court-circuité")
+        from naulthene.cerveau.noyau import DEFI_FORCE as _vdf
+        assert _vdf is True, "le drapeau n'a pas atteint le module — mesure invalide"
 
     # La graine est réappliquée ICI, après les `manual_seed(42)` du haut de fichier : ce
     # sont eux qui rendaient les runs indiscernables.
