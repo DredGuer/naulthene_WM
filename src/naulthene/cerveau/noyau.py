@@ -2607,9 +2607,10 @@ class BiologicalHomeostasisEngine:
         #
         # ⚠️ Aucune constante nouvelle : `vigueur` et `METABOLISME_BASAL_PART` existent
         # déjà, on les compose. Aucun seuil, aucune branche — un facteur continu de plus.
+        _mod_effort = self.vigueur() if ECONOMIE_ACTION_ACTIVE else 1.0
         depense = self.depense_energie * (METABOLISME_BASAL_PART
                                           + (1.0 - METABOLISME_BASAL_PART)
-                                            * cout_action * self.vigueur())
+                                            * cout_action * _mod_effort)
         # La conversion est bornée par le DÉBIT DIGESTIF : on ne transforme pas un estomac
         # plein en énergie instantanément. C'est ce qui crée le « coup de barre » (estomac
         # plein, énergie basse) sans qu'aucune règle ne le décrive.
@@ -5045,6 +5046,18 @@ CORPS_DANS_ROLLOUT_ACTIF = True
 # v41.16 — interrupteur d'ablation du BRAIN-SPARING (`--vigueur-sur-logits`).
 # False = la vigueur multiplie de nouveau les logits (comportement v41.15 exact).
 BRAIN_SPARING_ACTIF = True
+
+# v41.17 — ABLATION CROISÉE. La v41.16 a livré DEUX mécaniques dans le même commit, et sa
+# campagne (8 victoires sur 10 duels, intervalles disjoints au niveau 4) ne peut donc pas
+# dire laquelle produit l'effet. Ce second drapeau les sépare :
+#
+#   BRAIN_SPARING_ACTIF   : la vigueur cesse d'écraser les LOGITS   (loi A — l'esprit)
+#   ECONOMIE_ACTION_ACTIVE: la vigueur module le COÛT D'ACTION      (loi B — le corps)
+#
+# Les quatre cellules du plan factoriel :
+#   (OFF, OFF) = v41.15 exact | (ON, OFF) = esprit seul
+#   (OFF, ON)  = corps seul   | (ON, ON)  = v41.16 complet
+ECONOMIE_ACTION_ACTIVE = True
 
 # --- v40.2 : LE SEUIL DE MATURITÉ, DÉRIVÉ (voir `_maturite_niveau`) ---
 #
@@ -9122,6 +9135,9 @@ if __name__ == "__main__":
     # v41.16 — ABLATION du brain-sparing : la vigueur réécrase les logits (témoin v41.15).
     _p.add_argument("--vigueur-sur-logits", action="store_true",
                     help="ABLATION : la vigueur multiplie les logits (témoin v41.15)")
+    # v41.17 — second axe du plan factoriel (voir ECONOMIE_ACTION_ACTIVE).
+    _p.add_argument("--sans-economie-action", action="store_true",
+                    help="ABLATION : le coût d'action ne suit plus la vigueur (témoin v41.15)")
     _args = _p.parse_args()
 
     # Drapeau global lu par `facteur_guidage` — un seul point de lecture, pas de
@@ -9182,6 +9198,16 @@ if __name__ == "__main__":
         print("🔬 [ABLATION] brain-sparing v41.16 COUPÉ — la vigueur écrase les logits (témoin v41.15)")
         from naulthene.cerveau.noyau import BRAIN_SPARING_ACTIF as _vbs
         assert _vbs is False, "l'ablation n'a pas atteint le module — campagne invalide"
+
+    # v41.17 — second axe, même discipline : module NOMMÉ + assertion runtime.
+    _ea = not _args.sans_economie_action
+    globals()["ECONOMIE_ACTION_ACTIVE"] = _ea
+    if _module_reel is not None:
+        _module_reel.ECONOMIE_ACTION_ACTIVE = _ea
+    if not _ea:
+        print("🔬 [ABLATION] économie d'action v41.16 COUPÉE — le coût ignore la vigueur")
+        from naulthene.cerveau.noyau import ECONOMIE_ACTION_ACTIVE as _vea
+        assert _vea is False, "l'ablation n'a pas atteint le module — campagne invalide"
 
     # La graine est réappliquée ICI, après les `manual_seed(42)` du haut de fichier : ce
     # sont eux qui rendaient les runs indiscernables.
