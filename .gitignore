@@ -19,6 +19,11 @@ brains/**/*.brain
 # produit, et il est régénérable par `banc_ablation.py`.
 brains/ablations/*.json
 
+# Sorties JSON des sondes lancées sur un cerveau isolé (traducteur, autopsie) : même
+# raisonnement que ci-dessus — mesures d'un `.brain` local, régénérables par les scripts
+# de `docs/recherche/scripts/`, et sans intérêt hors de la machine qui les a produites.
+brains/**/tests/*.json
+
 # macOS
 .DS_Store
 

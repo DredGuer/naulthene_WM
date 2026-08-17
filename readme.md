@@ -122,12 +122,13 @@ Two caveats, both measurable rather than rhetorical:
 
 | Metric | Value |
 |---|---|
-| Level reached | **3 out of 15** — 85 % of seeds, 95 % CI **[64–95]** (n = 20 × 2,500 days) |
-| Level 4 | **0 out of 20 seeds** — the wall has never been crossed |
-| Effect of severing C2 on the score | **0.0 points across all 6 levels** (78 cells) |
-| C1/C2 agreement at day 2000 | **0.5 %** (down from 37 % at day 500) |
-| Cognitive mechanisms that improved anything | **0 out of 9 tested** — see the caveat below |
-| Levers that did work | **2 — both properties of the world** |
+| Level reached | **4 out of 15** — 80 % of seeds, 95 % CI **[58–92]** (n = 20 × 600 days, v41.16) |
+| Level 5 | **1 brain out of 40** — crossed, then lost again; the wall moved, it did not fall |
+| What unlocked level 4 | **brain-sparing**: 0 % [0–16] → 80 % [58–92], 18 wins / 0 losses (p < 0.001) |
+| Effect of severing C2 on the score | **0.0 points across all 6 levels** (78 cells) — and on `LavaGap`, severing it **triples** the success rate |
+| Learned valence of lava | **+0.072 — POSITIVE**, barely distinct from water (+0.069) |
+| Cognitive mechanisms that improved anything | **1 out of 10 tested** — brain-sparing |
+| Levers that did work | **3 — two properties of the world, one of the decision** |
 
 A standard PPO solves `Empty-8x8` in a few thousand episodes. **Naulthène currently does not.**
 
@@ -231,8 +232,9 @@ This is the table that would decide whether the architecture is *efficient* or m
 | PPO + LSTM | 52,664 | — | — | — |
 | **Naulthène** | **55,232** | **44.7 %** (v41 bench, 300 ep.) | — | **never reached** |
 
-Across **20 seeds × 2,500 simulated days** on a reproducible bench, **85 % [64–95]** of agents
-reach level 3 of the 15-level curriculum — and **0 out of 20** reach level 4. `SimpleCrossing`
+Across **20 seeds × 600 simulated days** on a reproducible bench, **80 % [58–92]** of agents
+reach level 4 of the 15-level curriculum since the v41.16 fix — against **0 % [0–16]**
+before it. Level 5 remains a wall. `SimpleCrossing`
 and everything beyond remain unsolved.
 
 > Naulthène's own numbers are filled in. Until the baseline row is too, the comparison proves
@@ -440,8 +442,10 @@ validation is by W&B curves, console logs and read-only probes.
 
 What that means concretely:
 
-- The agent is **blocked at level 3 of 15**: 20 seeds × 2,500 simulated days, **85 % [64–95]**
-  reach level 3, **0 out of 20** reach level 4.
+- The agent is **blocked at level 4 of 15**: 20 seeds × 600 simulated days, **80 % [58–92]**
+  reach level 4 since the v41.16 brain-sparing fix (0 % [0–16] before it). Level 5 was
+  reached by **1 brain out of 40**, which then fell back — and an autopsy showed it had not
+  learned to avoid lava, only to run fast.
 - **The bench itself was broken until v41.9.** `env.reset()` was never seeded, so two runs of
   the same seed saw different worlds. **Every paired comparison in this project's history is
   therefore inconclusive** — they are not wrong, they establish nothing. Fixed and verified by

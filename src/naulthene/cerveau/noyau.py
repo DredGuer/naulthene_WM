@@ -2443,8 +2443,26 @@ class BiologicalHomeostasisEngine:
       inventer de notion de "profondeur MCTS variable" qui n'existe pas dans
       l'architecture réelle (le rollout est toujours aux horizons fixes 1,3,7).
     """
-    POIDS_CERVEAU = 0.20
-    POIDS_CORPS = 0.80
+    # v41.21 — LES DEUX POIDS NE SONT PLUS POSÉS : ILS DÉRIVENT D'UNE LOI BIOLOGIQUE.
+    #
+    # Chez l'humain adulte, le cerveau pèse ~2 % de la masse corporelle et consomme ~20 %
+    # de l'énergie au repos. Ces deux nombres sont des MESURES sur le vivant, pas des
+    # réglages du projet — et ils suffisent à produire tout le reste :
+    #
+    #   POIDS_CERVEAU = FRACTION_ENERGIE_CERVEAU        = 0,20
+    #   POIDS_CORPS   = 1 − FRACTION_ENERGIE_CERVEAU    = 0,80
+    #
+    # Les valeurs numériques sont inchangées (le « 20/80 » de la v19.0 tombait juste),
+    # mais leur STATUT change : ce ne sont plus deux constantes arbitraires tolérées comme
+    # facteurs d'échelle, ce sont les conséquences d'une loi mesurable et vérifiable.
+    #
+    # Le rapport 20/2 = 10 est la DENSITÉ MÉTABOLIQUE cérébrale : un gramme de cerveau
+    # coûte dix grammes de corps. C'est ce qui rend la neurogenèse réellement chère, et
+    # c'est la loi qui donne son sens au coût moteur physique (v41.20).
+    FRACTION_MASSE_CERVEAU = 0.02      # mesure biologique : 2 % de la masse
+    FRACTION_ENERGIE_CERVEAU = 0.20    # mesure biologique : 20 % de l'énergie au repos
+    POIDS_CERVEAU = FRACTION_ENERGIE_CERVEAU
+    POIDS_CORPS = 1.0 - FRACTION_ENERGIE_CERVEAU
 
     # Coût corporel par action MiniGrid réelle (Actions.left=0, right=1, forward=2,
     # pickup=3, drop=4, toggle=5, done=6) — tourner est faible, avancer moyen,
@@ -2552,14 +2570,128 @@ class BiologicalHomeostasisEngine:
         return ((1.0 - self.satiete) ** 2 + (1.0 - self.hydratation) ** 2
                 + (1.0 - self.stimulation) ** 2 + (1.0 - self.energie) ** 2)
 
+    def masse_totale(self, dim_bus: int, porte_objet: bool = False) -> float:
+        """v41.20 — LA MASSE ÉMERGENTE. Aucune des trois composantes n'est posée.
+
+        `M_base` dérive de `dim_bus` : un cerveau qui grandit par neurogenèse pèse plus
+        lourd et coûte plus cher à déplacer. C'est le compromis évolutif de l'intelligence
+        — décision utilisateur explicite, et c'est ce qui évite de poser `M_base = 1.0`,
+        qui aurait été la même faute que la table qu'on remplace, mieux déguisée.
+
+        `BUS_REFERENCE_INITIAL` n'est pas un réglage : c'est la taille réelle du bus à la
+        naissance, donc l'unité naturelle. Un agent qui n'a jamais fait de neurogenèse a
+        `M_base = 1.0` par construction, pas par décret.
+        """
+        # v41.21 — LE CORPS DÉCOULE DU CERVEAU (loi des 2 % / 98 %).
+        #
+        # `m_cerveau` est la masse encéphalique, dérivée de `dim_bus`. Le corps qui la
+        # porte n'est plus absent du modèle : chez le vivant, le cerveau ne représente que
+        # 2 % de la masse totale — les 98 % restants sont le corps qui le transporte.
+        # La masse totale est donc `m_cerveau / FRACTION_MASSE_CERVEAU`, ce qui garde la
+        # proportion cérébrale rigoureusement constante quelle que soit la neurogenèse.
+        #
+        # ⚠️ Cette masse totale n'est PAS utilisée telle quelle dans le travail mécanique :
+        # elle est rapportée à la masse de naissance (voir `calculer_effort_metabolique`).
+        # Ce qui compte pour l'effort est le RATIO de masse, jamais sa valeur absolue —
+        # sans quoi le choix de l'unité (le kilo, le gramme) changerait la physique.
+        m_cerveau = float(dim_bus) / float(BUS_REFERENCE_INITIAL)
+        m_charge = 1.0 if porte_objet else 0.0
+        return m_cerveau / self.FRACTION_MASSE_CERVEAU + self.reserve + m_charge
+
     def calculer_effort_metabolique(self, action_item: int, force_planification: float,
-                                     horizons_planification=(1, 3, 7)) -> float:
-        """Fusionne l'effort corporel (80%, dépend de l'action réelle) et l'effort
-        cognitif (20%, dépend de l'intensité de planification du Système 2) en un
-        coût énergétique normalisé du tick courant."""
-        cout_corps = self.COUT_CORPOREL_PAR_ACTION.get(action_item, 0.5)
-        cout_cerveau = min(1.0, force_planification * (sum(horizons_planification) / 10.0))
-        return self.POIDS_CORPS * cout_corps + self.POIDS_CERVEAU * cout_cerveau
+                                     horizons_planification=(1, 3, 7),
+                                     dim_bus: int = None, deplacement: bool = None,
+                                     rotation: bool = False, porte_objet: bool = False,
+                                     erreur_jepa: float = 0.0) -> float:
+        """v41.20 — L'EFFORT EST UN TRAVAIL PHYSIQUE, plus une table de sept valeurs.
+
+        Remplace `COUT_CORPOREL_PAR_ACTION` (violation n°1 de la revue du dogme). Le coût
+        ne dépend plus de l'INDEX de l'action mais de ce que l'action A RÉELLEMENT FAIT —
+        mesuré autour du `env.step` par la sonde v41.19.
+
+        🔴 CE QUE ÇA CORRIGE, mesuré sur 6 graines × 400 jours (2400 nuits) :
+        l'ancienne table facturait **0,5016/tick** dont **0,3957 pour des gestes qui ne
+        changeaient rien au monde** — une sur-facturation de **×4,73**. `poser` et
+        `activer` étaient stériles à **100 %** (28,7 % des ticks) et payés 0,8 et 0,6.
+        C'est la cause mécanique de l'hypoglycémie permanente (énergie ~0,04).
+
+        --- La physique, sans une seule constante posée ---
+
+        MASSE      M = dim_bus/BUS_REFERENCE_INITIAL + réserve + charge   (voir masse_totale)
+        RAYON      r = ½ case — l'agent occupe EXACTEMENT une case de la grille, quelle
+                   que soit sa masse. Le rayon vient de la GÉOMÉTRIE DU MONDE, pas du
+                   corps : un organisme plus lourd est plus dense, pas plus large.
+        TRAVAIL    translation : W = M × 1.0        (une case = l'unité de la grille)
+                   rotation    : W = ½ M r² = M/8   (moment d'inertie d'un disque)
+                   stérile     : W = 0.0            (aucun travail : rien n'a bougé)
+
+        ⚠️ DEUX ERREURS ÉCARTÉES ICI, toutes deux mesurées avant correction.
+
+        (1) **La longueur d'arc `(π/2)·r` est fausse.** Avec elle, un agent de masse 7
+        paierait **2,3× plus cher pour tourner que pour avancer** — l'inverse exact de
+        l'intention. Une rotation sur place ne déplace pas le centre de gravité : son
+        travail de translation est NUL, seule l'inertie compte.
+
+        (2) **`r = √(M/π)` (surface = masse) rend la rotation QUADRATIQUE** : `½Mr²`
+        devient `M²/2π`, donc un corps 2× plus lourd serait 4× plus dur à tourner. Mesuré :
+        ×49 à masse 7. Avec le rayon géométrique, le rapport rotation/translation vaut
+        **0,125 quelle que soit la masse** — constant, et dérivé de la grille.
+
+        BASAL      Le coût d'EXISTER n'est PAS facturé ici. `taux_satiete` et
+        `taux_hydratation` le prélèvent déjà à chaque tick : l'ajouter serait le double
+        comptage que `calculer_deficit` interdit explicitement (risque n°3 du chantier
+        v34). Mesuré avant correction : l'effort moyen montait à **2,269** contre 0,639 au
+        témoin — un geste stérile coûtait 3,4× l'ancien tarif *parce qu'il portait le
+        basal*. L'effort d'ACTION ne porte que le TRAVAIL.
+
+        NORMALISATION  Le travail est rapporté à celui d'un agent NAISSANT qui se déplace
+        d'une case (M=1, W=1). Référence interne au modèle, pas un chiffre posé — même
+        statut que `ENERGIE_MAX = 1.0`. Elle garde l'échelle historique (~0,5/tick) sur
+        laquelle les jauges sont calibrées.
+
+        Rétrocompatibilité : sans `dim_bus` ni `deplacement` (appel à l'ancienne), on
+        retombe sur la table historique — c'est le chemin qu'emprunte le drapeau
+        d'ablation `--cout-moteur-table`.
+        """
+        if not COUT_MOTEUR_PHYSIQUE or dim_bus is None or deplacement is None:
+            cout_corps = self.COUT_CORPOREL_PAR_ACTION.get(action_item, 0.5)
+            cout_cerveau = min(1.0, force_planification * (sum(horizons_planification) / 10.0))
+            return self.POIDS_CORPS * cout_corps + self.POIDS_CERVEAU * cout_cerveau
+
+        m_base = float(dim_bus) / float(BUS_REFERENCE_INITIAL)
+        # Le TRAVAIL est un RATIO de masse, jamais une masse absolue : l'unité choisie
+        # (le « kilo » de ce monde) ne doit pas changer la physique. On rapporte donc la
+        # masse courante à celle d'un nouveau-né à vide.
+        masse = self.masse_totale(dim_bus, porte_objet) / self.masse_totale(
+            BUS_REFERENCE_INITIAL, porte_objet=False)
+
+        # LE RAYON EST DÉRIVÉ DE LA GRILLE, PAS POSÉ. L'agent occupe exactement une case
+        # (invariant MiniGrid), donc son rayon est une demi-case : `PAS_GRILLE / 2`. Le
+        # `0.5` qui figurait ici en dur n'était que cette division, non écrite.
+        rayon = PAS_GRILLE / 2.0
+
+        if deplacement:
+            travail = masse * PAS_GRILLE               # translation d'une case
+        elif rotation:
+            # Moment d'inertie d'un disque homogène : I = ½ M r². Le facteur ½ et le
+            # rayon viennent de la géométrie du disque et de la grille — rien n'est réglé.
+            travail = 0.5 * masse * rayon * rayon
+        else:
+            travail = 0.0                              # geste stérile : aucun travail
+
+        # Le corps ne paie QUE le travail (le basal est déjà prélevé par les jauges).
+        e_corps = travail
+        # Le cerveau, lui, paie bien un basal : maintenir le réseau en éveil a un coût
+        # même sans agir, et il croît avec la taille du cerveau. C'est le vrai prix de la
+        # neurogenèse — et il n'est prélevé nulle part ailleurs.
+        e_cerveau = m_base * (1.0 + force_planification + erreur_jepa)
+        effort = self.POIDS_CORPS * e_corps + self.POIDS_CERVEAU * e_cerveau
+
+        # Référence : le même calcul pour un nouveau-né qui AVANCE d'une case (M=1, W=1,
+        # jepa=0). Dérivée des poids du modèle, jamais posée.
+        reference = (self.POIDS_CORPS * 1.0
+                     + self.POIDS_CERVEAU * (1.0 + force_planification))
+        return effort / max(reference, 1e-9)
 
     def step_metabolisme(self, cout_action: float, erreur_jepa: float, nouvelle_case_visitee: bool):
         """Retourne (r_bio, quete_active_ou_None, effort). `cout_action` est ici l'effort
@@ -4007,6 +4139,11 @@ class ChronometreJalonsDoorKey:
 # --- 4. EXÉCUTION & CURSUS ---
 DIM_VISUELLE = 147
 DIM_BUS_MAX = 96
+# v41.21 — LE PAS DE LA GRILLE. MiniGrid est discret : une case est l'unité de distance
+# du monde, et l'agent en occupe exactement une. Ce n'est pas un réglage mais une
+# propriété de l'environnement — c'est d'elle que dérivent le rayon du corps
+# (`PAS_GRILLE / 2`) et l'unité de translation, qui étaient écrits en dur en v41.20.
+PAS_GRILLE = 1.0
 JOURS_ENTRE_MUTATIONS = 5
 
 BUS_REFERENCE_INITIAL = 16  # taille du bus à la naissance ; sert de référence pour
@@ -5059,6 +5196,17 @@ BRAIN_SPARING_ACTIF = True
 #   (OFF, ON)  = corps seul   | (ON, ON)  = v41.16 complet
 ECONOMIE_ACTION_ACTIVE = True
 
+# v41.20 — LE COÛT MOTEUR PHYSIQUE (`--cout-moteur-table` pour revenir à l'ancien).
+#
+# True  : l'effort est un TRAVAIL (masse × déplacement réel), voir
+#         `calculer_effort_metabolique`. La table des 7 valeurs n'est plus lue.
+# False : témoin — retour à `COUT_CORPOREL_PAR_ACTION`, la violation n°1 de la revue
+#         du dogme, conservée UNIQUEMENT comme bras de comparaison A/B.
+#
+# La table n'est pas supprimée du fichier : elle reste le témoin d'ablation, exactement
+# comme `reinitialiser_niveau` a été conservée en v41.10.
+COUT_MOTEUR_PHYSIQUE = True
+
 # v41.18 — TEST DE FALSIFICATION DU VERROU P17 (`--defi-force`, hors par défaut).
 #
 # La mesure du 17/08 montre qu'au niveau 4 l'agent ne joue son propre palier que 34 % du
@@ -5791,6 +5939,10 @@ class EtatCognitif:
         # sans qu'aucune délibération n'ait lieu (mesuré le 17/08).
         self.votes_c1_jour = {}
         self.votes_c2_jour = {}
+        # v41.19 — sonde du coût moteur réel (étape 1). Réarmée ici comme tout buffer
+        # journalier : sans cela la « distribution du jour » serait la distribution depuis
+        # la naissance (piège `score_vocal_jour` v27.0, rappelé en tête de cette méthode).
+        self.cout_moteur_reel_jour = {}
         self.gain_c1_jour = 0.0          # facteur de réamplification appliqué (1.0 = intact)
         self.ticks_arbitrage_jour = 0    # dénominateur commun des quatre lignes ci-dessus
 
@@ -7404,7 +7556,56 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
     else:
         action_effective_env = action_item
 
+    # --- v41.19 : SONDE DU COÛT MOTEUR RÉEL (télémétrie PURE, étape 1 du chantier) ---
+    #
+    # Objet : mesurer ce que chaque action FAIT réellement, pour pouvoir un jour DÉRIVER
+    # son coût au lieu de le déclarer. `COUT_CORPOREL_PAR_ACTION` pose 7 valeurs a priori
+    # (0.2 tourner, 0.5 avancer, 0.8 manipuler…) jamais confrontées à une mesure, alors
+    # qu'elles pèsent 80 % de l'effort à chaque tick (violation n°1 de la revue du dogme,
+    # `docs/recherche/REVUE_DOGME_17082026_rien_en_dur.md`).
+    #
+    # ⚠️ Cette sonde ne MODIFIE RIEN : elle lit la position et l'orientation avant/après le
+    # `step` et accumule. `calculer_effort_metabolique` continue d'utiliser la table en
+    # dur — c'est l'étape 2 qui la remplacera, une fois la distribution connue. Le run
+    # reste bit-identique (aucune lecture de ces compteurs par la décision, le gradient
+    # ou la dopamine).
+    #
+    # Trois grandeurs par action, parce que le coût physique d'un geste ne se lit pas sur
+    # son index mais sur son EFFET :
+    #   - deplacement : l'agent a-t-il changé de case ? (0 ou 1)
+    #   - rotation    : a-t-il changé d'orientation ? (0 ou 1)
+    #   - succes      : le monde a-t-il changé d'une façon ou d'une autre ? Un `forward`
+    #                   contre un mur ne déplace rien : il coûte aujourd'hui 0,5 comme un
+    #                   `forward` qui avance, alors qu'il ne produit aucun travail.
+    _u = etat.env.unwrapped
+    _pos_avant = tuple(_u.agent_pos)
+    _dir_avant = int(_u.agent_dir)
+    _porte_avant = _u.carrying is not None
+
     obs_suivante, recompense_env, termine, tronque, _ = etat.env.step(action_effective_env)
+
+    # La lecture encadre le `step` lui-même : elle est donc valide à chaque tick, y
+    # compris au premier de l'épisode (aucun `reset` ne s'intercale entre les deux).
+    _stats = etat.cout_moteur_reel_jour.setdefault(
+        int(action_effective_env),
+        {"n": 0, "deplacement": 0, "rotation": 0, "portage_change": 0, "sterile": 0})
+    _stats["n"] += 1
+    _a_bouge = tuple(_u.agent_pos) != _pos_avant
+    _a_tourne = int(_u.agent_dir) != _dir_avant
+    _a_manipule = (_u.carrying is not None) != _porte_avant
+    _stats["deplacement"] += int(_a_bouge)
+    _stats["rotation"] += int(_a_tourne)
+    _stats["portage_change"] += int(_a_manipule)
+    # STÉRILE : rien n'a changé dans le monde. C'est la mesure qui manquait — elle dit
+    # quelle fraction du barème actuel est facturée pour du travail qui n'existe pas.
+    _stats["sterile"] += int(not (_a_bouge or _a_tourne or _a_manipule))
+
+    # v41.20 — L'EFFET DU TICK COURANT, retenu pour la facturation plus bas. La sonde
+    # v41.19 n'agrégeait que des compteurs journaliers ; ici on conserve le tick lui-même,
+    # parce que `calculer_effort_metabolique` doit facturer CE geste, pas une moyenne.
+    etat.effet_moteur_tick = {"deplacement": bool(_a_bouge), "rotation": bool(_a_tourne),
+                              "porte_objet": _u.carrying is not None}
+
     if masquer_recompense_externe:
         # École de Rattrapage Vocal / Paradigme Bébé (v25.0, expérimental) : l'agent
         # "n'a aucune idée s'il fait bien ou mal" avant JOUR_FIN_MASQUAGE_EXTERNE — ce
@@ -7556,8 +7757,17 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
     if agent_pos_bio is not None:
         etat.positions_visitees_episode.add(agent_pos_bio)
 
+    # v41.20 — l'effort est facturé sur l'EFFET RÉEL du geste (mesuré autour du `step`
+    # 170 lignes plus haut), plus sur l'index de l'action. `valeur_erreur` est l'erreur
+    # JEPA du tick : elle porte l'éveil (une surprise mobilise l'attention, donc coûte).
+    _eff = getattr(etat, "effet_moteur_tick", None) or {}
     effort_metabolique = etat.moteur_bio.calculer_effort_metabolique(
-        action_item, etat.force_planification_jour, HORIZONS_PLANIFICATION
+        action_item, etat.force_planification_jour, HORIZONS_PLANIFICATION,
+        dim_bus=etat.agent.dim_bus,
+        deplacement=_eff.get("deplacement"),
+        rotation=_eff.get("rotation", False),
+        porte_objet=_eff.get("porte_objet", False),
+        erreur_jepa=float(valeur_erreur),
     )
     r_bio, _quete_bio = etat.moteur_bio.step_metabolisme(
         cout_action=effort_metabolique, erreur_jepa=valeur_erreur,
@@ -8240,14 +8450,55 @@ def executer_nuit(etat, plafond_reve=None):
     etat.teneur_dopamine += (DOPAMINE_NEUTRE - etat.teneur_dopamine) * TAUX_RESSORT
     etat.teneur_dopamine = float(np.clip(etat.teneur_dopamine, DOPAMINE_MIN, DOPAMINE_MAX))
 
+    # --- v41.21 : LE THERMOSTAT CRISTALLISE COMME UN RÉSEAU DE NAULTHÈNES ---
+    #
+    # Source : `docs/naulthene_cosmologie/` (modèle v5.0/v5.1). Le potentiel de Landau
+    # `V(Q,K) = C(c)Q²/2 + K²ln(N)/2 − Q·K + Q⁴/4` fait émerger la CRISTALLISATION d'une
+    # seule condition, la condition de survie :
+    #
+    #       C(c) > ln(N)        (cohésion interne  >  friction d'expansion)
+    #
+    # Rien n'y est posé : le seuil `c_min = 5` ÉMERGE du calcul (c=3 → 28,07 et c=4 →
+    # 120,69 échouent contre ln(10¹²²) ≈ 280,9 ; c=5 → 448,58 survit). Les deux termes
+    # vivent sur la MÊME échelle, ce qui rend la comparaison adimensionnelle.
+    #
+    # 🔴 CE QUE ÇA CORRIGE (violation n°2 de la revue du dogme, mesurée le 17/08).
+    # L'ancienne condition `variance_erreur < 0.005` comparait une variance ABSOLUE à un
+    # nombre posé. Erreur JEPA réelle mesurée : 0,0111 à 0,0173, donc variance ~4e-6 —
+    # **mille fois sous le seuil**. La condition était donc TOUJOURS vraie : elle ne
+    # discriminait rien. C'est le défaut exact de `SEUIL_CRISTAL = 0.80` (myéline réelle
+    # 0,0038) et de `q_ref = 1.0` (500× trop grand), tous deux corrigés en v37.0 — une
+    # échelle absolue posée a priori, jamais confrontée à une mesure.
+    #
+    # LA TRANSPOSITION, terme à terme :
+    #   C(c)  → cohésion   = 1/CV²  où CV = écart-type/moyenne de l'erreur JEPA.
+    #                        Un modèle du monde dont l'erreur est STABLE est cohérent ;
+    #                        le coefficient de variation est sans dimension, donc valable
+    #                        quelle que soit l'échelle de l'erreur — c'est tout l'intérêt.
+    #   ln(N) → friction   = ln(nb de paramètres du cerveau). Plus le réseau est grand,
+    #                        plus il est difficile d'y maintenir une cohérence globale.
+    #                        C'est littéralement l'horizon holographique du modèle : la
+    #                        friction croît avec la taille de l'espace à couvrir.
+    #
+    # La fenêtre d'observation n'est plus « 3 » posé : elle suit la période de mutation
+    # (`JOURS_ENTRE_MUTATIONS`), seule échelle de temps que la neurogenèse connaisse.
     etat.historique_erreurs.append(erreur_moyenne)
-    if len(etat.historique_erreurs) > 3:
+    if len(etat.historique_erreurs) > JOURS_ENTRE_MUTATIONS:
         etat.historique_erreurs.pop(0)
-    if len(etat.historique_erreurs) == 3:
-        variance_erreur = float(np.var(etat.historique_erreurs))
+    if len(etat.historique_erreurs) == JOURS_ENTRE_MUTATIONS:
         moyenne_glissante = float(np.mean(etat.historique_erreurs))
-        if variance_erreur < 0.005 and moyenne_glissante > etat.seuil_base * 1.5:
-            etat.seuil_base = (0.7 * etat.seuil_base) + (0.3 * moyenne_glissante)
+        ecart_type = float(np.std(etat.historique_erreurs))
+        # CV adimensionnel : la stabilité RELATIVE du modèle du monde.
+        cv = ecart_type / max(moyenne_glissante, 1e-9)
+        cohesion = 1.0 / max(cv * cv, 1e-9)
+        friction = math.log(max(sum(p.numel() for p in etat.agent.parameters()), math.e))
+        # `C(c) > ln(N)` : le réseau cristallise, donc sa référence se fige sur ce qu'il
+        # vient de vivre. Le pas de relaxation n'est plus 0,7/0,3 posé : il vaut 1/fenêtre,
+        # soit la même échelle de temps que l'observation elle-même.
+        if cohesion > friction:
+            pas = 1.0 / float(JOURS_ENTRE_MUTATIONS)
+            etat.seuil_base = (1.0 - pas) * etat.seuil_base + pas * moyenne_glissante
+        etat.cohesion_jour, etat.friction_jour = cohesion, friction
 
     etat_thermostat = "Stable"
     mutation_possible = (etat.jours_depuis_mutation >= JOURS_ENTRE_MUTATIONS
@@ -8537,6 +8788,20 @@ def executer_nuit(etat, plafond_reve=None):
           f"(max {getattr(etat, 'pression_max_jour', 0.0):.3f}) | "
           f"↔️ asymétrie moy {getattr(etat, 'asymetrie_ecart_cumul_jour', 0.0) / ticks_du_jour:.3f} "
           f"(0 = aucun signal latéral)")
+
+    # v41.19 — LE COÛT MOTEUR RÉEL, action par action. Compare ce que la table en dur
+    # FACTURE à ce que l'action FAIT. Une action stérile est un geste payé plein tarif
+    # pour un travail qui n'a pas eu lieu. Ligne conditionnelle (rien à dire si la sonde
+    # n'a rien vu), comme les blocs `Sens_*` et C3.
+    _cm = getattr(etat, "cout_moteur_reel_jour", {}) or {}
+    if _cm:
+        _tot = sum(s["n"] for s in _cm.values()) or 1
+        _st = sum(s["sterile"] for s in _cm.values())
+        _detail = " ".join(
+            f"a{a}:{s['n']*100//_tot}%/{s['sterile']*100//max(1,s['n'])}st"
+            for a, s in sorted(_cm.items()))
+        print(f"  ├─ Coût moteur v41.19: ⚙️ {_st*100//_tot}% de gestes STÉRILES "
+              f"({_st}/{_tot}) | par action (part/stérile) — {_detail}")
 
     # v41.10 — LES CARTES CONNUES. `len(souvenirs)` ne compte que la carte du moment :
     # sans cette ligne, la télémétrie sous-estimerait massivement le vécu spatial réel
@@ -9002,6 +9267,21 @@ def executer_nuit(etat, plafond_reve=None):
     log_wandb["Toucher_Pression_Moyenne"] = getattr(etat, "pression_cumul_jour", 0.0) / ticks_du_jour
     log_wandb["Toucher_Pression_Max"] = getattr(etat, "pression_max_jour", 0.0)
     log_wandb["Toucher_Asymetrie_Ecart"] = getattr(etat, "asymetrie_ecart_cumul_jour", 0.0) / ticks_du_jour
+
+    # v41.19 — sonde du coût moteur réel. Clés CONDITIONNELLES (rien de loggé si la sonde
+    # n'a rien vu), et une clé par action plutôt qu'une moyenne : c'est précisément la
+    # DISTRIBUTION par action qu'il faut pour dériver la formule de l'étape 2.
+    _cm_w = getattr(etat, "cout_moteur_reel_jour", {}) or {}
+    if _cm_w:
+        _tot_w = sum(s["n"] for s in _cm_w.values()) or 1
+        log_wandb["CoutMoteur_Sterile_Global"] = sum(s["sterile"] for s in _cm_w.values()) / _tot_w
+        for _a, _s in _cm_w.items():
+            _n = max(1, _s["n"])
+            log_wandb[f"CoutMoteur_a{_a}_Part"] = _s["n"] / _tot_w
+            log_wandb[f"CoutMoteur_a{_a}_Sterile"] = _s["sterile"] / _n
+            log_wandb[f"CoutMoteur_a{_a}_Deplacement"] = _s["deplacement"] / _n
+            log_wandb[f"CoutMoteur_a{_a}_Rotation"] = _s["rotation"] / _n
+            log_wandb[f"CoutMoteur_a{_a}_Portage"] = _s["portage_change"] / _n
     # v39.0 — L'EMPREINTE DE TYPE. Clés CONDITIONNELLES (règle v29.1) : tant qu'aucune
     # expérience n'a été vécue, ne rien logger plutôt que des zéros trompeurs.
     #
@@ -9161,6 +9441,9 @@ if __name__ == "__main__":
     # v41.18 — instrument de falsification du verrou P17 (voir DEFI_FORCE).
     _p.add_argument("--defi-force", action="store_true",
                     help="MESURE : 100 %% du palier de référence, court-circuite P17")
+    # v41.20 — témoin du coût moteur physique (voir COUT_MOTEUR_PHYSIQUE).
+    _p.add_argument("--cout-moteur-table", action="store_true",
+                    help="ABLATION : revient à COUT_CORPOREL_PAR_ACTION, les 7 valeurs en dur")
     _args = _p.parse_args()
 
     # Drapeau global lu par `facteur_guidage` — un seul point de lecture, pas de
@@ -9221,6 +9504,16 @@ if __name__ == "__main__":
         print("🔬 [ABLATION] brain-sparing v41.16 COUPÉ — la vigueur écrase les logits (témoin v41.15)")
         from naulthene.cerveau.noyau import BRAIN_SPARING_ACTIF as _vbs
         assert _vbs is False, "l'ablation n'a pas atteint le module — campagne invalide"
+
+    # v41.20 — même discipline : module NOMMÉ + assertion runtime.
+    _cmp = not _args.cout_moteur_table
+    globals()["COUT_MOTEUR_PHYSIQUE"] = _cmp
+    if _module_reel is not None:
+        _module_reel.COUT_MOTEUR_PHYSIQUE = _cmp
+    if not _cmp:
+        print("🔬 [ABLATION] coût moteur v41.20 COUPÉ — retour à la table des 7 valeurs en dur")
+        from naulthene.cerveau.noyau import COUT_MOTEUR_PHYSIQUE as _vcm
+        assert _vcm is False, "l'ablation n'a pas atteint le module — campagne invalide"
 
     # v41.17 — second axe, même discipline : module NOMMÉ + assertion runtime.
     _ea = not _args.sans_economie_action
