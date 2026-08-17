@@ -76,3 +76,7 @@ docs/notes/evals/
 # .tmp deja disparu — vu le 2026-08-13.
 *.brain.tmp
 brains/cas_isole_g22_v41/*.log.gz
+
+# v41.15 — logs de campagne archivés (275 Mo+), jamais versionnés : ce sont des
+# sorties de run, reproductibles depuis le code et la graine.
+brains/**/*.log
