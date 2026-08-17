@@ -2585,8 +2585,31 @@ class BiologicalHomeostasisEngine:
         # le mouvement — cohérent avec les 5,5 % de `forward` mesurés. Le coût pénalise
         # donc désormais l'effort SUPPLÉMENTAIRE, sur un fond incompressible : c'est la
         # ligne de flottaison de la v41, posée dans le CORPS au lieu d'être dérivée après.
+        # --- v41.16 : L'ÉCONOMIE D'ACTION — le corps ralentit quand l'énergie manque ---
+        #
+        # 🔴 CE QUE ÇA CORRIGE. La dépense ne consultait JAMAIS l'énergie : un agent à 4 %
+        # payait un pas exactement au même prix qu'un agent repu. La loi B du vivant
+        # (formulation utilisateur, 17/08) — *« quand l'énergie baisse, l'organisme ne
+        # s'agite pas davantage : il ralentit, limite les déplacements inutiles, passe en
+        # économie drastique »* — n'existait nulle part dans le code.
+        #
+        # C'est le pendant indispensable du brain-sparing appliqué juste au-dessus : en
+        # retirant `vigueur` des logits, on a rendu sa lucidité à l'agent affamé. Sans ce
+        # correctif-ci, `vigueur` ne modulerait plus RIEN d'autre que de la télémétrie —
+        # on aurait supprimé la contrainte au lieu de la déplacer, et le corps ne
+        # paierait plus jamais son épuisement.
+        #
+        # LA FORME est dérivée, pas posée : la part d'EFFORT est modulée par la vigueur,
+        # le BASAL ne l'est pas. Un organisme épuisé ne peut pas réduire son métabolisme
+        # de base (c'est ce qui le tue), mais il peut cesser de courir. À vigueur 0,15, un
+        # geste coûteux revient donc presque au prix d'un geste immobile — l'agitation
+        # stérile cesse d'être payante sans qu'aucune règle ne l'interdise.
+        #
+        # ⚠️ Aucune constante nouvelle : `vigueur` et `METABOLISME_BASAL_PART` existent
+        # déjà, on les compose. Aucun seuil, aucune branche — un facteur continu de plus.
         depense = self.depense_energie * (METABOLISME_BASAL_PART
-                                          + (1.0 - METABOLISME_BASAL_PART) * cout_action)
+                                          + (1.0 - METABOLISME_BASAL_PART)
+                                            * cout_action * self.vigueur())
         # La conversion est bornée par le DÉBIT DIGESTIF : on ne transforme pas un estomac
         # plein en énergie instantanément. C'est ce qui crée le « coup de barre » (estomac
         # plein, énergie basse) sans qu'aucune règle ne le décrive.
