@@ -4,6 +4,127 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.21-experimental] - 2026-08-17 — La cristallisation cosmologique & la loi des 2 % / 20 %
+
+### Le thermostat comparait une variance absolue à un nombre posé ; la biologie donne les poids
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | fix (expérimental) — conformité au dogme |
+| **Impact** | **Fonctionnel — neurogenèse & métabolisme** |
+| **Carnet** | [`REVUE_DOGME_17082026_rien_en_dur.md`](../recherche/REVUE_DOGME_17082026_rien_en_dur.md) |
+| **Source** | [`docs/naulthene_cosmologie/`](../naulthene_cosmologie/) — modèle v5.0/v5.1 |
+
+**Violation n°2 levée — le thermostat de neurogenèse.** L'ancienne condition était :
+
+```python
+if variance_erreur < 0.005 and moyenne_glissante > etat.seuil_base * 1.5:
+    etat.seuil_base = (0.7 * etat.seuil_base) + (0.3 * moyenne_glissante)
+```
+
+Cinq nombres nus, et surtout une **échelle absolue** : l'erreur JEPA réelle vaut 0,0111 à
+0,0173, donc une variance de ~4e-6 — **mille fois sous le seuil**. La condition était
+**toujours vraie** : elle ne discriminait rien. C'est le défaut exact de `SEUIL_CRISTAL =
+0.80` (myéline réelle 0,0038) et de `q_ref = 1.0`, tous deux corrigés en v37.0.
+
+**Le correctif vient du modèle cosmologique du projet.** Le potentiel de Landau
+`V(Q,K) = C(c)Q²/2 + K²ln(N)/2 − Q·K + Q⁴/4` fait émerger la cristallisation d'une seule
+condition de survie — `C(c) > ln(N)`, **cohésion interne contre friction d'expansion** —
+dont le seuil `c_min = 5` n'est pas posé mais **calculé** (c=3 → 28,07 et c=4 → 120,69
+échouent contre ln(10¹²²) ≈ 280,9 ; c=5 → 448,58 survit).
+
+Transposition terme à terme, adimensionnelle :
+
+| Cosmologie | Thermostat |
+|---|---|
+| `C(c)` cohésion du cluster | `1/CV²` où `CV = σ/μ` de l'erreur JEPA |
+| `ln(N)` friction d'expansion | `ln(nb de paramètres du cerveau)` |
+| cristallise si `C(c) > ln(N)` | fige la référence si `cohésion > friction` |
+
+La fenêtre suit désormais `JOURS_ENTRE_MUTATIONS` (seule échelle de temps que la
+neurogenèse connaisse) et le pas de relaxation vaut `1/fenêtre`, plus `0.7/0.3`.
+
+**Mesuré** — le thermostat discrimine enfin : sur 60 jours, 4 mutations puis 48 nuits
+stables, avec une erreur JEPA qui converge de 0,1543 à 0,0053.
+
+**La loi des 2 % / 20 % — `POIDS_CORPS` et `POIDS_CERVEAU` ne sont plus posés.**
+Chez l'humain adulte le cerveau pèse **2 % de la masse** et consomme **20 % de l'énergie**
+au repos. Ces deux mesures suffisent à produire les deux poids :
+
+```python
+FRACTION_MASSE_CERVEAU   = 0.02
+FRACTION_ENERGIE_CERVEAU = 0.20
+POIDS_CERVEAU = FRACTION_ENERGIE_CERVEAU        # 0,20
+POIDS_CORPS   = 1.0 - FRACTION_ENERGIE_CERVEAU  # 0,80
+```
+
+Les valeurs numériques sont **inchangées** — le « 20/80 » de la v19.0 tombait juste — mais
+leur statut change : ce ne sont plus des facteurs d'échelle tolérés, ce sont les
+conséquences d'une loi vérifiable. Le rapport 20/2 = **10** est la densité métabolique
+cérébrale : un gramme de cerveau coûte dix grammes de corps.
+
+**La masse totale découle du cerveau** : `masse_totale = m_cerveau / 0,02 + réserve +
+charge`. Le corps qui porte l'encéphale entre enfin dans le modèle, et la part cérébrale
+reste rigoureusement à 2 % quelle que soit la neurogenèse.
+
+**`rayon = 0.5` éliminé.** Il est remplacé par `PAS_GRILLE / 2` : MiniGrid est discret,
+l'agent occupe exactement une case, son rayon est donc une demi-case. Le `0.5` n'était que
+cette division, non écrite.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | thermostat en cohésion/friction · `FRACTION_MASSE_CERVEAU`/`FRACTION_ENERGIE_CERVEAU` · `PAS_GRILLE` · masse totale à 2 % |
+
+---
+
+## [v41.20-experimental] - 2026-08-17 — Le coût moteur devient un travail physique
+
+### Sept valeurs déclarées facturaient 79 % de leur montant pour des gestes sans effet
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | fix (expérimental) — conformité au dogme |
+| **Impact** | **Fonctionnel — métabolisme** |
+| **Carnet** | [`REVUE_DOGME_17082026_rien_en_dur.md`](../recherche/REVUE_DOGME_17082026_rien_en_dur.md) |
+
+**Violation n°1 levée.** `COUT_CORPOREL_PAR_ACTION` posait sept valeurs indexées par
+action MiniGrid (`0: 0.2` … `6: 0.1`), lues **à chaque tick** et pesant 80 % de l'effort.
+Structurellement la même faute que la table `lava = danger` interdite par l'invariant
+v36.0, déplacée du *quoi* vers le *combien*.
+
+**Mesuré** (sonde v41.19, 6 graines × 400 jours, 2400 nuits) :
+
+| action | tarif | part | stérile |
+|---|---|---|---|
+| tourner G/D | 0,2 | 25,3 % | **0 %** |
+| avancer | 0,5 | 15,3 % | **53 %** |
+| prendre | 0,8 | 21,8 % | **89 %** |
+| poser | 0,8 | 9,4 % | **100 %** |
+| activer | 0,6 | 19,3 % | **100 %** |
+
+Coût facturé **0,5016/tick dont 0,3957 pour du vide** — une sur-facturation de **×4,73**.
+
+**Le correctif** : l'effort est un travail (`masse × déplacement réel`), mesuré autour du
+`env.step`. Deux erreurs écartées en chemin, toutes deux mesurées :
+
+1. `E_corps = M × (1 + d)` **double-comptait le basal** — déjà prélevé par `taux_satiete`
+   et `taux_hydratation`. Effort mesuré à **2,269** contre 0,639 au témoin.
+2. `r = √(M/π)` rendait la rotation **quadratique** (×49 à masse 7), et `d = (π/2)·r`
+   faisait coûter une rotation **2,3× plus cher qu'une translation**.
+
+**Résultat de la campagne (20 graines × 2 bras × 600 j)** : `physique gagne 2 · perd 3 ·
+nul 15`, **p = 1,0000**. Aucun gain de performance — c'est une victoire de **conformité**,
+pas d'efficacité. La table survit uniquement comme témoin d'ablation
+(`--cout-moteur-table`).
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `calculer_effort_metabolique` physique · `masse_totale` · sonde v41.19 · `--cout-moteur-table` |
+
+---
+
 ## [v41.16-experimental] - 2026-08-17 — Le brain-sparing : la faim ne coupe plus la lucidité
 
 ### L'agent affamé ne ralentissait pas — il décidait au hasard

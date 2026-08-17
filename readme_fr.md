@@ -92,12 +92,13 @@ Deux nuances, mesurées et non rhétoriques :
 
 | Métrique | Valeur |
 |---|---|
-| Niveau atteint | **3 sur 15** — 85 % des graines, IC 95 % **[64–95]** (n = 20 × 2500 jours) |
-| Niveau 4 | **0 graine sur 20** — le mur n'a jamais été franchi |
-| Effet de couper C2 sur le score | **0,0 point sur les 6 niveaux** (78 cellules) |
-| Accord C1/C2 à 2000 jours | **0,5 %** (contre 37 % au jour 500) |
-| Mécaniques cognitives ayant amélioré quoi que ce soit | **0 sur 9 testées** — voir l'avertissement |
-| Leviers qui ont marché | **2 — tous deux des propriétés du monde** |
+| Niveau atteint | **4 sur 15** — 80 % des graines, IC 95 % **[58–92]** (n = 20 × 600 jours, v41.16) |
+| Niveau 5 | **1 cerveau sur 40** — franchi, puis reperdu ; le mur a reculé, pas disparu |
+| Ce qui a débloqué le niveau 4 | le **brain-sparing** : 0 % [0–16] → 80 % [58–92], 18 gagne / 0 perd (p < 0,001) |
+| Effet de couper C2 sur le score | **0,0 point sur les 6 niveaux** (78 cellules) — et sur `LavaGap`, le couper **triple** la réussite |
+| Valence apprise de la lave | **+0,072 — POSITIVE**, à peine distincte de l'eau (+0,069) |
+| Mécaniques cognitives ayant amélioré quoi que ce soit | **1 sur 10 testées** — le brain-sparing |
+| Leviers qui ont marché | **3 — deux propriétés du monde, une de la décision** |
 
 Un PPO standard résout `Empty-8x8` en quelques milliers d'épisodes. **Naulthène, non.**
 
@@ -299,6 +300,49 @@ Pour un historique complet commit par commit, consultez [docs/fonctionnement/CHA
 > courte que le budget natif de MiniGrid, et une économie de récompense à espérance négative. Le
 > document contient aussi les **formules et constantes de référence** du système, et la trace des
 > erreurs de diagnostic commises puis corrigées.
+
+### 🔬 Nouveautés v41.19 → v41.21 (expérimental) — La Physique du Coût & la Cristallisation (2026-08-17)
+
+**Une revue complète du cerveau contre le dogme « rien en dur »** (12 330 lignes, 209
+constantes) a trouvé **trois violations**, toutes en périphérie — le chemin de décision
+lui-même (C1, C2, rollout, sens, arbitrage) est conforme. Deux ont été levées.
+
+**v41.19 — la sonde du coût moteur.** Télémétrie pure autour du `env.step` : elle mesure ce
+que chaque action *fait* (déplacement, rotation, portage) au lieu de ce qu'elle *coûte*.
+Verdict sur 6 graines × 400 jours : la table `COUT_CORPOREL_PAR_ACTION` facturait
+**0,5016/tick dont 0,3957 pour des gestes sans aucun effet** — une sur-facturation de
+**×4,73**. `poser` et `activer` étaient stériles à **100 %**, payés 0,8 et 0,6.
+
+**v41.20 — l'effort devient un travail physique.** Les sept valeurs déclarées disparaissent
+du chemin cognitif au profit de `masse × déplacement réel`, avec une masse **émergente** :
+`M_base = dim_bus / BUS_REFERENCE_INITIAL`. La neurogenèse a désormais un coût — plus le
+cerveau grandit, plus il pèse. Deux erreurs de physique écartées en chemin, chacune mesurée
+avant correction : le double comptage du basal (effort à **2,269** au lieu de 0,639) et un
+rayon fonction de la masse qui rendait la rotation **quadratique** (×49 à masse 7).
+⚠️ Campagne 20 graines × 2 bras : **2 gagne / 3 perd / 15 nuls, p = 1,0000** — c'est une
+victoire de *conformité*, pas de performance.
+
+**v41.21 — la cristallisation vient de la cosmologie du projet.** Le thermostat de
+neurogenèse comparait une variance **absolue** (`< 0.005`) à une erreur JEPA réelle de
+0,012 — **mille fois plus petite**, donc une condition toujours vraie qui ne discriminait
+rien. Le correctif reprend la condition de survie du potentiel de Landau de
+[`docs/naulthene_cosmologie/`](docs/naulthene_cosmologie/) — `C(c) > ln(N)`, **cohésion
+contre friction d'expansion** — où le seuil `c_min = 5` n'est pas posé mais *calculé* :
+
+| Cosmologie | Thermostat |
+|---|---|
+| `C(c)` cohésion du cluster | `1/CV²` (CV = σ/μ de l'erreur JEPA) |
+| `ln(N)` friction d'expansion | `ln(nb de paramètres)` |
+
+**La loi des 2 % / 20 %.** Le cerveau humain pèse 2 % de la masse et consomme 20 % de
+l'énergie : ces deux *mesures biologiques* remplacent `POIDS_CORPS`/`POIDS_CERVEAU` posés.
+Les valeurs ne changent pas — le « 20/80 » de la v19.0 tombait juste — mais elles sont
+désormais **dérivées** d'une loi vérifiable. Le rapport 20/2 = 10 est la densité
+métabolique cérébrale : *un gramme de cerveau coûte dix grammes de corps*.
+
+> **Ce qui reste sciemment conservé** : les quatre coefficients de forme de P17. Ils
+> règlent la *forme* d'une distribution, jamais un seuil comportemental — et la campagne
+> factorielle a montré que le mur du niveau 4 n'était pas P17 mais la décision.
 
 ### 🍎 Nouveautés v41.2 (expérimental) — Le Métabolisme à Deux Étages (2026-08-15)
 
