@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `89ac5ad` |
 | **Catégorie** | fix (expérimental) — conformité au dogme |
 | **Impact** | **Fonctionnel — neurogenèse & métabolisme** |
 | **Carnet** | [`REVUE_DOGME_17082026_rien_en_dur.md`](../recherche/REVUE_DOGME_17082026_rien_en_dur.md) |
@@ -84,7 +84,7 @@ cette division, non écrite.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `89ac5ad` |
 | **Catégorie** | fix (expérimental) — conformité au dogme |
 | **Impact** | **Fonctionnel — métabolisme** |
 | **Carnet** | [`REVUE_DOGME_17082026_rien_en_dur.md`](../recherche/REVUE_DOGME_17082026_rien_en_dur.md) |
@@ -131,7 +131,7 @@ pas d'efficacité. La table survit uniquement comme témoin d'ablation
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `89ac5ad` |
 | **Catégorie** | fix (expérimental) |
 | **Impact** | **Critique — cognitif** |
 | **Carnet** | [`DIAGNOSTIC_17082026_pourquoi_C2_est_etouffe.md`](../recherche/DIAGNOSTIC_17082026_pourquoi_C2_est_etouffe.md) |
@@ -187,7 +187,7 @@ Run réel, graine 202, 100 jours : ratio C2/C1 **0,22× → 1,23×**, maîtrise 
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `89ac5ad` |
 | **Catégorie** | feat (expérimental) |
 | **Impact** | **Critique — architectural** |
 | **Carnet** | [`CORRECTIF_v4113_corps_dans_le_rollout.md`](../recherche/CORRECTIF_v4113_corps_dans_le_rollout.md) |
@@ -283,7 +283,7 @@ du blocage — en y préservant le pire réglage des sept testés.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `89ac5ad` |
 | **Catégorie** | feat (expérimental) |
 | **Impact** | **Fonctionnel** |
 | **Carnet** | [`CORRECTIF_v4110_memoire_par_carte.md`](../recherche/CORRECTIF_v4110_memoire_par_carte.md) §3 |
@@ -343,7 +343,7 @@ décroître).
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `89ac5ad` |
 | **Catégorie** | fix (expérimental) |
 | **Impact** | **Fonctionnel** |
 | **Carnet** | [`CORRECTIF_v4110_memoire_par_carte.md`](../recherche/CORRECTIF_v4110_memoire_par_carte.md) |
@@ -848,7 +848,7 @@ l'odorat mesuré **inerte** à l'ablation.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `89ac5ad` |
 | **Catégorie** | docs (**aucune ligne de `src/` modifiée**) |
 | **Impact** | Documentation — corrige une affirmation fausse de la vitrine publique |
 | **Branche** | `feat/v41-ligne-flottaison` |
@@ -895,7 +895,7 @@ corrigée en silence.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `89ac5ad` |
 | **Catégorie** | docs (campagne de mesure, **aucune ligne de `src/` modifiée**) |
 | **Impact** | Critique — infirme le résultat mis en avant en v41.0 |
 | **Branche** | `feat/v41-ligne-flottaison` |
@@ -1120,7 +1120,7 @@ reste modérée.*
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `89ac5ad` |
 | **Catégorie** | refactor + feat |
 | **Impact** | Critique — 3 interrupteurs cognitifs deviennent continus |
 | **Branche** | `feat/v40.1-envie-de-vivre` |
@@ -1182,7 +1182,7 @@ l'affichage. Neutralisé, pas supprimé.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `89ac5ad` |
 | **Catégorie** | feat |
 | **Impact** | Critique — module TOUTES les décisions |
 | **Branche** | `feat/v40.1-envie-de-vivre` |
@@ -1264,7 +1264,7 @@ envie à **1,000000** après 1 000 nuits sans la moindre réussite. **Correctif*
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `89ac5ad` |
 | **Catégorie** | feat |
 | **Impact** | Critique — change le chemin de décision |
 | **Branche** | `feat/v40-planification-emergente` |
@@ -1341,7 +1341,7 @@ réel est de ~70 %. **Défaut de mesure, pas de cognition** — aucune décision
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `89ac5ad` |
 | **Catégorie** | chore (versionnement) + fix (mémoire, audio, télémétrie) |
 | **Impact** | **Critique** — premier correctif issu d'une mesure directe, et fin du risque structurel n°1 |
 | **Branche** | `feat/v39-memoire-abstraite` |
@@ -1429,7 +1429,7 @@ avec et sans conservation de l'empreinte.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `89ac5ad` |
 | **Catégorie** | feat (expérimental) / docs |
 | **Impact** | **Documentation** — aucune ligne de `src/naulthene/` modifiée |
 
@@ -1624,7 +1624,7 @@ désigne comme principal.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `89ac5ad` |
 | **Catégorie** | docs (recherche expérimentale) |
 | **Impact** | **Documentation** — aucun changement de code |
 
@@ -1672,7 +1672,7 @@ agent *craintif*, pas *indifférent*.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `89ac5ad` |
 | **Catégorie** | docs (recherche expérimentale) |
 | **Impact** | **Documentation** — annule la conclusion des deux entrées précédentes |
 
@@ -1725,7 +1725,7 @@ réparation du cerveau et la cohérence du cursus — pas les raffinements d'app
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `89ac5ad` |
 | **Catégorie** | docs (recherche expérimentale) |
 | **Impact** | **Documentation** — annule la conclusion de l'entrée précédente |
 
@@ -1782,7 +1782,7 @@ répliquée sur ≥3 graines avec témoins appariés, avant publication et non a
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `89ac5ad` |
 | **Catégorie** | docs (recherche expérimentale) |
 | **Impact** | **Documentation** — aucun changement de code |
 
@@ -1855,7 +1855,7 @@ moment pour la grâce, fragilité mesurée de la compétence pour la révision).
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `89ac5ad` |
 | **Catégorie** | docs (recherche expérimentale) |
 | **Impact** | **Documentation** — aucun changement de code |
 
