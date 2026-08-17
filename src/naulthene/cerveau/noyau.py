@@ -10,6 +10,7 @@ import minigrid
 import wandb
 import numpy as np
 import math  # v41.2 — exp() pour la dérive métabolique et le seuil non linéaire
+import os    # v41.15 — NAULTHENE_DEVICE/THREADS, lus AVANT le choix du device ci-dessous
 
 # v27.0 — hemisphere_audio est pur numpy (aucune dépendance PyTorch/réseau), donc
 # importable au chargement du module sans risque de cycle. Remonté ici plutôt que
@@ -38,14 +39,56 @@ from naulthene.cerveau.bus_sensoriel import (BusSensoriel, DIM_TOUCHER, DIM_CHIM
                                              DIM_THERMOCEPTION, DIM_PRESSION,
                                              COULEUR_NOURRITURE, COULEUR_EAU)
 
-if torch.cuda.is_available():
+# --- v41.15 : LE BON DEVICE POUR CE RÉSEAU-CI (mesuré le 17/08) ---
+#
+# 🔴 CE QUE ÇA CORRIGE. Le device était choisi par simple disponibilité — cuda, sinon mps,
+# sinon cpu. C'est le bon réflexe pour un gros modèle ; c'est le mauvais ici. Mesuré sur
+# `penser()` complet, dim_bus=64, batch=1 :
+#
+#     mps          : 8,039 ms/tick
+#     cpu (6 thr)  : 3,226 ms/tick
+#     cpu (1 thr)  : 2,822 ms/tick     ← 2,85× PLUS RAPIDE que le GPU
+#
+# La raison est structurelle : ce cerveau fait des dizaines de très petits produits
+# matriciels (64×64) en séquence, un par branche du rollout. Le coût de lancement d'un
+# noyau GPU dépasse alors largement le calcul lui-même, et aucune parallélisation ne
+# rattrape ça à batch=1. Un GPU sert quand les matrices sont grandes, pas quand elles sont
+# nombreuses et minuscules.
+#
+# Le mono-thread gagne encore : à cette taille, la synchronisation entre 6 threads coûte
+# plus que le travail réparti. Et surtout, il rend une CAMPAGNE parallèle saine — 12 runs
+# mono-thread sur 12 cœurs, au lieu de 12 runs × 6 threads qui se battent pour la machine
+# (load mesuré : 12,4 sur 12 cœurs, soit une saturation complète).
+#
+# ⚠️ Ce choix est propre à MiniGrid + dim_bus ≲ 128. Le jour où le berceau sera remplacé
+# par une caméra (vecteurs d'entrée bien plus larges), il faudra REMESURER — d'où
+# `NAULTHENE_DEVICE` qui laisse la main plutôt qu'un chiffre gravé.
+#
+# ⚠️⚠️ RÈGLE DE CAMPAGNE — NE JAMAIS MÉLANGER LES DEVICES DANS UNE MÊME COMPARAISON.
+# Mesuré : à graine identique, CPU et MPS produisent des trajectoires DIFFÉRENTES
+# (md5 des bilans distincts sur 5 jours), alors que chacun est parfaitement déterministe
+# chez lui (A/A bit-identique en CPU). L'ordre des sommations flottantes diffère d'un
+# backend à l'autre, et un agent chaotique amplifie cet écart jusqu'à changer de
+# trajectoire. Comparer un témoin MPS à une variante CPU mesurerait donc le BACKEND, pas
+# la mécanique — exactement le défaut de reproductibilité corrigé en v41.9, réintroduit
+# par une autre porte. Un bras entamé sur un device doit être TERMINÉ sur ce device.
+_DEVICE_DEMANDE = os.environ.get("NAULTHENE_DEVICE", "").strip().lower()
+if _DEVICE_DEMANDE in ("cpu", "mps", "cuda"):
+    DEVICE = torch.device(_DEVICE_DEMANDE)
+elif torch.cuda.is_available():
     DEVICE = torch.device("cuda")
 elif torch.backends.mps.is_available():
     DEVICE = torch.device("mps")
 else:
     DEVICE = torch.device("cpu")
 
-print(f"🚀 Exécution sur : {DEVICE}")
+# Idem : borner les threads est un GAIN sur ce réseau, pas une bride. Réglable par
+# NAULTHENE_THREADS pour un futur modèle plus large.
+_THREADS = os.environ.get("NAULTHENE_THREADS", "").strip()
+if _THREADS.isdigit() and int(_THREADS) > 0:
+    torch.set_num_threads(int(_THREADS))
+
+print(f"🚀 Exécution sur : {DEVICE} ({torch.get_num_threads()} thread(s))")
 
 torch.manual_seed(42)
 np.random.seed(42)
