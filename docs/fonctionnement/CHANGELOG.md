@@ -131,7 +131,7 @@ pas d'efficacité. La table survit uniquement comme témoin d'ablation
 
 | Type | Details |
 |------|---------|
-| **Commit** | `89ac5ad` |
+| **Commit** | `ef7925d` |
 | **Catégorie** | fix (expérimental) |
 | **Impact** | **Critique — cognitif** |
 | **Carnet** | [`DIAGNOSTIC_17082026_pourquoi_C2_est_etouffe.md`](../recherche/DIAGNOSTIC_17082026_pourquoi_C2_est_etouffe.md) |
@@ -187,7 +187,7 @@ Run réel, graine 202, 100 jours : ratio C2/C1 **0,22× → 1,23×**, maîtrise 
 
 | Type | Details |
 |------|---------|
-| **Commit** | `89ac5ad` |
+| **Commit** | `f2f6105` |
 | **Catégorie** | feat (expérimental) |
 | **Impact** | **Critique — architectural** |
 | **Carnet** | [`CORRECTIF_v4113_corps_dans_le_rollout.md`](../recherche/CORRECTIF_v4113_corps_dans_le_rollout.md) |
@@ -283,7 +283,7 @@ du blocage — en y préservant le pire réglage des sept testés.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `89ac5ad` |
+| **Commit** | `bb1da9a` |
 | **Catégorie** | feat (expérimental) |
 | **Impact** | **Fonctionnel** |
 | **Carnet** | [`CORRECTIF_v4110_memoire_par_carte.md`](../recherche/CORRECTIF_v4110_memoire_par_carte.md) §3 |
