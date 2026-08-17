@@ -4,6 +4,62 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.16-experimental] - 2026-08-17 — Le brain-sparing : la faim ne coupe plus la lucidité
+
+### L'agent affamé ne ralentissait pas — il décidait au hasard
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | fix (expérimental) |
+| **Impact** | **Critique — cognitif** |
+| **Carnet** | [`DIAGNOSTIC_17082026_pourquoi_C2_est_etouffe.md`](../recherche/DIAGNOSTIC_17082026_pourquoi_C2_est_etouffe.md) |
+
+**Le défaut.** La v41.2 multipliait les **logits** par `vigueur`, et son commentaire
+promettait : *« le plancher garantit qu'il reste COHÉRENT — sans lui l'action deviendrait
+ALÉATOIRE »*. La mesure dit l'inverse exact, **plancher compris** :
+
+```
+vigueur 1.00 → amplitude 1.219 → proba de l'action favorite 0.231 → entropie 0.955
+vigueur 0.15 → amplitude 0.191 → proba de l'action favorite 0.158 → entropie 0.999
+                                                          (1/7 = 0.143 = HASARD PUR)
+```
+
+`softmax` est invariante par translation, **pas par échelle** : diviser l'écart entre les
+7 logits n'atténue pas une préférence, elle l'**efface**.
+
+Et c'est le régime **normal** de cet agent — énergie moyenne 0,041 sur les runs longs,
+`400/400 ticks en basse énergie` dès le premier jour. Toute sa vie, il a décidé au hasard.
+
+**La loi du vivant** (formulation utilisateur) : en pénurie sévère, le corps ne coupe
+jamais le cerveau en premier — il sacrifie la périphérie. *Un animal affamé qui perd sa
+motricité peut survivre immobile ; un animal qui perd sa lucidité est condamné.*
+
+**Le correctif.** `vigueur` cesse de multiplier les logits, des **deux** côtés (C1 et
+`force_planification`). Elle continue de moduler le coût des actions, le déficit, la
+plasticité et l'envie de vivre : **le corps ralentit toujours, seul l'esprit reste allumé**.
+
+⚠️ **Ce n'est pas « renforcer C2 ».** Les deux voix subissaient le même facteur : le
+retirer des deux laisse l'arbitrage inchangé (55,8 % pour C2 avant comme après, à
+vigueur 1,0). Ce qui change est la **netteté** de la décision.
+
+| Mesure (vigueur 0,15) | avant | après |
+|---|---|---|
+| amplitude des logits | 0,191 | **1,219** |
+| entropie de la décision | 0,999 | **0,955** |
+| part de C2 dans la fusion | 81,1 % *(dérive)* | **55,8 %** *(stable)* |
+
+Run réel, graine 202, 100 jours : ratio C2/C1 **0,22× → 1,23×**, maîtrise finale
+0 % → 25 %.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `voix_c1` et `force_planification` ne subissent plus `vigueur` ; drapeau `--vigueur-sur-logits` (témoin v41.15) |
+
+**Campagne 10 graines × 2 bras × 400 jours en cours.**
+
+---
+
 ## [v41.13-experimental] - 2026-08-16 — C2 imaginait un monde sans corps
 
 ### Le vecteur bio n'entrait jamais dans le rollout mental

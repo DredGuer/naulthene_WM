@@ -1209,7 +1209,23 @@ class AGI_Naulthene(nn.Module):
         # seuil d'incertitude (refusé trois fois). C2 est TOUJOURS sollicité, à chaque tick,
         # sans aucune condition — l'appel ci-dessus a déjà eu lieu. Seul son POIDS dans la
         # fusion varie, continûment. Il n'y a pas de branche : il y a un facteur.
-        force_planification = force_planification * vigueur
+        # v41.16 — LE BRAIN-SPARING S'APPLIQUE AUSSI ICI, et c'est ce qui rend le geste
+        # NEUTRE POUR L'ARBITRAGE. La v41.2 éteignait C2 en `vigueur²` (une fois ici, une
+        # fois via le gain de C1) au nom d'une hiérarchie de survie. Or la mesure montre
+        # que les deux voix subissaient le MÊME facteur : la part de C2 dans la décision
+        # reste à 61,3 % de vigueur 1,00 à 0,30 — C2 n'était donc pas « sacrifié en
+        # premier », il coulait avec C1. Ce que la vigueur détruisait n'était pas la
+        # hiérarchie entre les deux voix, c'était la NETTETÉ de leur somme.
+        #
+        # Retirer le facteur des DEUX côtés laisse donc l'arbitrage rigoureusement
+        # identique, et rend à la décision son relief. La délibération redevient ce que la
+        # biologie en fait : le dernier organe qu'on éteint, pas le premier.
+        #
+        # ⚠️ La vigueur n'est pas neutralisée pour autant — elle module toujours le coût
+        # métabolique des actions, le déficit, la plasticité nocturne et l'envie de vivre.
+        # Le corps ralentit toujours ; seul l'esprit reste allumé.
+        if not BRAIN_SPARING_ACTIF:
+            force_planification = force_planification * vigueur
 
         # --- v37.0 : LA VOIX DE C1 EST RENDUE AUDIBLE (Mesure 2) ---
         #
@@ -1257,13 +1273,45 @@ class AGI_Naulthene(nn.Module):
         # de la lucidité. Purement observationnel, aucune influence sur ce tick.
         with torch.no_grad():
             self.amplitude_c1_recente = float(amplitude_c1.mean().item())
-        # v41.2 — la vigueur module le VOLUME de C1, jamais son opinion : c'est un facteur
-        # SCALAIRE de plus, donc les rapports entre les 7 logits restent rigoureusement
-        # intacts (invariant v37.0 n°1). Un agent épuisé n'a pas d'autres préférences — il
-        # a des préférences moins affirmées. Le plancher de `vigueur` garantit qu'il reste
-        # COHÉRENT : sans lui, vigueur→0 annulerait C1 et C2, les logits seraient tous nuls
-        # et l'action deviendrait ALÉATOIRE — un mourant se mettrait à jouer à pile ou face.
-        voix_c1 = logits_instinct * gain_c1 * vigueur
+        # --- v41.16 : LE BRAIN-SPARING — LA VIGUEUR MODULE LE CORPS, PAS LA LUCIDITÉ ---
+        #
+        # 🔴 CE QUE ÇA CORRIGE (mesuré le 17/08). La v41.2 multipliait les LOGITS par la
+        # vigueur, et son commentaire promettait : « le plancher garantit qu'il reste
+        # COHÉRENT — sans lui l'action deviendrait ALÉATOIRE ». La mesure dit l'inverse
+        # exact, **plancher compris** :
+        #
+        #     vigueur 1.00 → amplitude 1.219 → proba de l'action favorite 0.231
+        #     vigueur 0.15 → amplitude 0.191 → proba de l'action favorite 0.158
+        #                                      entropie 0.999  (1/7 = 0.143 = HASARD PUR)
+        #
+        # Multiplier des logits par 0,15 ne rend pas la décision « moins affirmée » : ça
+        # l'aplatit vers l'uniforme, parce que `softmax` est invariante par translation
+        # mais PAS par échelle. Diviser l'écart entre les 7 logits, c'est effacer la
+        # préférence. **L'agent affamé ne devenait pas prudent : il devenait aléatoire.**
+        # Le plancher n'y change rien — il fixe seulement le niveau du hasard.
+        #
+        # Et c'est le régime NORMAL de cet agent : énergie moyenne 0,041 sur les runs
+        # longs, `400/400 ticks en basse énergie` dès le premier jour. Toute sa vie, il a
+        # donc décidé au hasard.
+        #
+        # LA LOI DU VIVANT (formulation utilisateur, 17/08) : *« en pénurie sévère le corps
+        # ne coupe jamais le cerveau en premier — il sacrifie la périphérie pour maintenir
+        # le métabolisme cérébral. Un animal affamé qui perd sa motricité peut survivre
+        # immobile ; un animal qui perd sa lucidité est condamné. »*
+        #
+        # LE CORRECTIF, minimal : la vigueur cesse de multiplier les logits. Elle continue
+        # de moduler tout le reste — `force_planification`, le déficit, la plasticité, le
+        # coût des actions — donc le corps ralentit toujours quand l'énergie manque. Seule
+        # la NETTETÉ de la décision est préservée : un organisme épuisé décide moins vite
+        # et bouge moins, il ne décide pas plus mal.
+        #
+        # ⚠️ Ce n'est PAS « rendre C2 plus fort ». Le rapport C1/C2 est rigoureusement
+        # inchangé (61,3 % pour C2 avant comme après) : les deux voix étaient multipliées
+        # par le même facteur, le retirer des deux ne déplace pas l'arbitrage d'un iota.
+        # Ce qui change est la SÉPARATION des 7 actions, donc la capacité à choisir.
+        #
+        # ⚠️ Aucun seuil, aucune branche : on retire un facteur, on n'en ajoute pas.
+        voix_c1 = logits_instinct * gain_c1 * (1.0 if BRAIN_SPARING_ACTIF else vigueur)
 
         # Télémétrie de l'arbitrage (v37.0) — déposée sur le module plutôt que retournée,
         # pour ne pas élargir un tuple de retour déjà consommé en plusieurs points du
@@ -4970,6 +5018,10 @@ MEMOIRE_PAR_CARTE_ACTIVE = True
 # v41.13 — interrupteur d'ablation du CORPS DANS LE ROLLOUT (`--sans-corps-rollout`).
 # False = C2 simule sans reprojeter le vecteur bio, comportement v41.12 bit-identique.
 CORPS_DANS_ROLLOUT_ACTIF = True
+
+# v41.16 — interrupteur d'ablation du BRAIN-SPARING (`--vigueur-sur-logits`).
+# False = la vigueur multiplie de nouveau les logits (comportement v41.15 exact).
+BRAIN_SPARING_ACTIF = True
 
 # --- v40.2 : LE SEUIL DE MATURITÉ, DÉRIVÉ (voir `_maturite_niveau`) ---
 #
@@ -9044,6 +9096,9 @@ if __name__ == "__main__":
     # « C2 est inerte parce qu'il simule un monde sans corps ».
     _p.add_argument("--sans-corps-rollout", action="store_true",
                     help="ABLATION : C2 simule sans reprojeter le vecteur bio (témoin v41.12)")
+    # v41.16 — ABLATION du brain-sparing : la vigueur réécrase les logits (témoin v41.15).
+    _p.add_argument("--vigueur-sur-logits", action="store_true",
+                    help="ABLATION : la vigueur multiplie les logits (témoin v41.15)")
     _args = _p.parse_args()
 
     # Drapeau global lu par `facteur_guidage` — un seul point de lecture, pas de
@@ -9094,6 +9149,16 @@ if __name__ == "__main__":
         print("🔬 [ABLATION] corps dans le rollout v41.13 COUPÉ — C2 simule sans corps (témoin v41.12)")
         from naulthene.cerveau.noyau import CORPS_DANS_ROLLOUT_ACTIF as _verif_corps
         assert _verif_corps is False, ("l'ablation n'a pas atteint le module — campagne invalide")
+
+    # v41.16 — même discipline : module NOMMÉ + assertion runtime.
+    _bs = not _args.vigueur_sur_logits
+    globals()["BRAIN_SPARING_ACTIF"] = _bs
+    if _module_reel is not None:
+        _module_reel.BRAIN_SPARING_ACTIF = _bs
+    if not _bs:
+        print("🔬 [ABLATION] brain-sparing v41.16 COUPÉ — la vigueur écrase les logits (témoin v41.15)")
+        from naulthene.cerveau.noyau import BRAIN_SPARING_ACTIF as _vbs
+        assert _vbs is False, "l'ablation n'a pas atteint le module — campagne invalide"
 
     # La graine est réappliquée ICI, après les `manual_seed(42)` du haut de fichier : ce
     # sont eux qui rendaient les runs indiscernables.
