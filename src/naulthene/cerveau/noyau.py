@@ -1246,6 +1246,27 @@ class AGI_Naulthene(nn.Module):
                 # MESURE, pas de cognition : rien dans la décision ne change ici.
                 "accord": float((logits_instinct.argmax(dim=-1)
                                  == valeurs_simulees.argmax(dim=-1)).float().mean().item()),
+                # --- v41.14 : QUI VOTE QUOI (le témoin qui manquait à `accord`) ---
+                #
+                # 🔴 CE QUE ÇA CORRIGE (mesuré le 17/08 sur la campagne v41.13).
+                # `accord` compare deux argmax. Deux voix qui votent CHACUNE une action
+                # CONSTANTE s'accordent donc à 100 % sans qu'aucune délibération n'ait eu
+                # lieu. Observé, témoin g1/g3 : `accord 100.0%` avec `C2=0.370` figé
+                # pendant que C1 oscillait de 1,70 à 2,72.
+                #
+                # Pire : le témoin (C2 SANS corps) affichait un accord PLUS HAUT que la
+                # variante (84,8/96,8/100 % contre 61,8/78,2/58,2 %). Lu naïvement, le
+                # correctif « dégradait » l'entente — alors qu'il faisait exactement ce
+                # qu'on attend de lui : donner à C2 un avis DISTINCT.
+                #
+                # Ces deux clés lèvent l'ambiguïté en enregistrant l'action votée par
+                # chaque voix. L'appelant en dérive l'entropie sur la journée : une
+                # entropie nulle = une voix figée, donc un accord dénué de sens.
+                #
+                # ⚠️ Télémétrie PURE. Aucune de ces valeurs n'est relue par la décision,
+                # le gradient ou la dopamine — le run reste bit-identique.
+                "vote_c1": int(logits_instinct.argmax(dim=-1).view(-1)[0].item()),
+                "vote_c2": int(valeurs_simulees.argmax(dim=-1).view(-1)[0].item()),
             }
 
         # --- Arbitrage C1 + C2 (structure inchangée depuis la v13.0) ---
@@ -5617,6 +5638,11 @@ class EtatCognitif:
         self.amplitude_c1_jour = 0.0     # vigueur brute du réflexe, AVANT réamplification
         self.amplitude_c2_jour = 0.0     # vigueur de la délibération, après confiance
         self.accord_c1c2_jour = 0        # ticks où les deux voix désignent la même action
+        # v41.14 — QUI vote QUOI. Sans cet histogramme, `accord_c1c2_jour` est
+        # ininterprétable : deux voix figées sur la même action donnent 100 % d'accord
+        # sans qu'aucune délibération n'ait lieu (mesuré le 17/08).
+        self.votes_c1_jour = {}
+        self.votes_c2_jour = {}
         self.gain_c1_jour = 0.0          # facteur de réamplification appliqué (1.0 = intact)
         self.ticks_arbitrage_jour = 0    # dénominateur commun des quatre lignes ci-dessus
 
@@ -7132,6 +7158,10 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
         etat.amplitude_c2_jour += mesure["amplitude_c2"]
         etat.gain_c1_jour += mesure["gain_c1"]
         etat.accord_c1c2_jour += mesure["accord"]
+        # v41.14 — histogramme des votes de chaque voix (télémétrie pure).
+        if "vote_c1" in mesure:
+            etat.votes_c1_jour[mesure["vote_c1"]] = etat.votes_c1_jour.get(mesure["vote_c1"], 0) + 1
+            etat.votes_c2_jour[mesure["vote_c2"]] = etat.votes_c2_jour.get(mesure["vote_c2"], 0) + 1
         etat.ticks_arbitrage_jour += 1
 
     etat.vecteurs_episodiques.append(bus_latent.detach())
@@ -8448,6 +8478,18 @@ def executer_nuit(etat, plafond_reve=None):
         amp_c2 = etat.amplitude_c2_jour / n_arb
         ratio_c2c1 = amp_c2 / max(1e-9, amp_c1)
         accord_pct = 100.0 * etat.accord_c1c2_jour / n_arb
+        # v41.14 — entropie normalisée des votes, dans [0,1]. 0 = la voix répète TOUJOURS
+        # la même action (elle est figée, pas décidée) ; 1 = elle répartit ses votes sur
+        # toutes les actions. C'est ce qui rend `accord` interprétable.
+        def _entropie_votes(hist):
+            total = sum(hist.values())
+            if total <= 0 or len(hist) <= 1:
+                return 0.0
+            import math as _m
+            h = -sum((n / total) * _m.log(n / total) for n in hist.values() if n > 0)
+            return h / _m.log(NUM_ACTIONS_BASE)   # 7 actions réelles (la 8e est masquée)
+        entropie_c1 = _entropie_votes(etat.votes_c1_jour)
+        entropie_c2 = _entropie_votes(etat.votes_c2_jour)
         gain_moy = etat.gain_c1_jour / n_arb
         sante = "✅" if ratio_c2c1 <= 3.0 else "⚠️"
         print(f"  ├─ Arbitrage C1/C2: {sante} C1={amp_c1:.3f} C2={amp_c2:.3f} "
@@ -8456,6 +8498,12 @@ def executer_nuit(etat, plafond_reve=None):
                  f" (crédit {getattr(etat.agent, 'dernier_credit_distillation', 0.0):.1%}"
                  f", réf. choc {(etat.agent.reference_choc_dopamine or 0.0):.3f})"
                  if getattr(etat.agent, "derniere_perte_distillation", 0.0) else ""))
+        # v41.14 — le témoin qui rend la ligne ci-dessus interprétable. Un accord de
+        # 100 % avec une entropie C2 à 0.000 ne dit PAS que les deux voix délibèrent et
+        # convergent : il dit que C2 répète toujours la même action.
+        print(f"  │                   🗳️ entropie des votes — C1 {entropie_c1:.3f} | "
+              f"C2 {entropie_c2:.3f} (0 = voix FIGÉE) | "
+              f"actions distinctes : C1 {len(etat.votes_c1_jour)}, C2 {len(etat.votes_c2_jour)}")
 
     print(f"  └─ Erreur JEPA moy: {erreur_moyenne:.4f} | Réc. moyenne: {rec_moy:.3f} | "
           f"Thermostat: {etat_thermostat}")
@@ -8861,6 +8909,12 @@ def executer_nuit(etat, plafond_reve=None):
         log_wandb["Arbitrage_Amplitude_C2"] = amp_c2
         log_wandb["Arbitrage_Ratio_C2C1"] = ratio_c2c1
         log_wandb["Arbitrage_Accord"] = etat.accord_c1c2_jour / n_arb
+        # v41.14 — SANS ces deux clés, `Arbitrage_Accord` est ininterprétable : un accord
+        # de 100 % peut signifier « les deux voix délibèrent et convergent » OU « les deux
+        # voix sont figées ». Une entropie C2 proche de 0 invalide toute lecture de
+        # l'accord — c'est le témoin qui distingue une mesure d'un artefact.
+        log_wandb["Arbitrage_Entropie_C1"] = entropie_c1
+        log_wandb["Arbitrage_Entropie_C2"] = entropie_c2
         log_wandb["Arbitrage_Gain_C1"] = gain_moy
         log_wandb["Arbitrage_Ticks"] = n_arb
     if getattr(etat.agent, "derniere_perte_distillation", 0.0):
