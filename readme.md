@@ -240,8 +240,9 @@ to 1078 nights on it. Before the v41.16 fix, level 4 was reached by **0 % [0–1
 **positive** (+0.07), indistinguishable from water. `SimpleCrossing`
 and everything beyond remain unsolved.
 ⚠️ v41.25 closes the loop that made this *structurally* impossible: heat now enters the
-homeostatic deficit as `+T²`, so walking into lava costs **r_bio = −1.000** instead of
-MiniGrid's `0.0`. Whether that actually teaches avoidance is **being measured** (20 seeds
+homeostatic deficit as `+T²`, so walking into lava costs **r_bio = −0.791** instead of
+MiniGrid's `0.0` (measured by the engine itself; an earlier `−1.000` figure was a
+measurement error — the pain was cancelling itself out, fixed in v41.25-fix1). Whether that actually teaches avoidance is **being measured** (20 seeds
 × 2 arms, forced `LavaGap` bench) — at 5 days the deficit differs but behaviour does not.
 
 > Naulthène's own numbers are filled in. Until the baseline row is too, the comparison proves
@@ -457,9 +458,11 @@ What that means concretely:
   +0.088), after up to 1078 nights spent on `LavaGap`. MiniGrid punishes death with exactly
   `0.0`, so no negative valence could ever form. The level is crossed by speed, not by
   understanding. **v41.25 removes that structural impossibility** — heat now enters the
-  homeostatic deficit (`+T²`), making a step into lava cost `r_bio = −1.000`. The
-  mechanism is built and instrumented; **whether it changes behaviour is still being
-  measured** and may well come back negative.
+  homeostatic deficit (`+T²`), making a step into lava cost `r_bio = −0.791`. The learned
+  valence of lava goes **+0.062 → −0.753**, negative for the first time in the project.
+  ⚠️ A first version of this fix was **entirely inoperative** — the pain appeared on both
+  sides of a subtraction and cancelled exactly to `0.000000`. **Whether any of this
+  improves survival is still being measured** and may come back negative.
 - **Growing the brain changes nothing**: across three campaigns (96 → 160 → 512 dims) the
   level reached is identical, while energy drops 11× and effort triples.
 - **The bench itself was broken until v41.9.** `env.reset()` was never seeded, so two runs of

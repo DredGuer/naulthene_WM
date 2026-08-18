@@ -4,6 +4,82 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.25-fix1-experimental] - 2026-08-18 — La douleur était annulée par sa propre soustraction
+
+### Une erreur de MESURE, pas de conception : `r_bio = −1,000` n'a jamais existé
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | fix critique |
+| **Impact** | **Critique — la mécanique v41.25 était entièrement inopérante** |
+| **Banc** | [`banc_intra_tick_douleur.py`](../recherche/scripts/banc_intra_tick_douleur.py) |
+
+**Le défaut.** `r_bio` est la DIFFÉRENCE `deficit_avant − deficit_apres`, et
+`step_metabolisme` calcule `deficit_avant` **en interne**. La v41.25 écrivait
+`moteur_bio.chaleur` **avant** d'appeler cette méthode : les deux déficits contenaient
+donc la **même** valeur de `T²`, qui **disparaissait de la soustraction**.
+
+```
+r_bio en entrant dans la lave : −0,000238
+r_bio sans aucune chaleur     : −0,000238
+ÉCART                         :  0,000000     ← la douleur, exactement annulée
+```
+
+**Comment l'erreur est passée.** Le `r_bio = −1,000` annoncé en v41.25 était mesuré
+**à la main**, hors du tick réel : deux appels à `calculer_deficit` encadrant une
+affectation. **Le moteur n'a jamais produit ce chiffre.** C'est exactement le défaut que
+le §3 de la règle de mesure décrit — un résultat trop propre, jamais confronté au chemin
+réel d'exécution.
+
+**Le signe qui aurait dû alerter immédiatement.** Sur 5 paires de graines, les valences
+étaient identiques **à la 6ᵉ décimale** — y compris `FOOD +0.254431` et `sol +0.160835`,
+qui n'ont aucun rapport avec la lave. Ce n'était pas « la douleur n'atteint pas la
+lave » : **les deux cerveaux étaient le même cerveau**. J'ai lu la ligne `lava` en
+premier et raisonné dessus au lieu de voir que la colonne entière était identique.
+
+⚠️ **Le diagnostic initial était faux lui aussi.** L'hypothèse retenue sur le moment
+était que `poids_evenement = 1.0 if recompense_env > 0 else 0.0` fermait la porte du
+choc dopaminergique. Vérification faite, **la valence ne lit jamais `poids_evenement`** :
+elle moyenne directement `intensite` = `recompense_interne`, où `r_bio` **est** présent
+(`noyau.py:8194`). Cette porte existe, mais pour la dopamine et la fortification
+synaptique — pas pour la valence.
+
+**Le correctif.** `chaleur_apres` devient un **argument** de `step_metabolisme`, appliqué
+**ENTRE** les deux mesures : `deficit_avant` porte la chaleur de la case quittée,
+`deficit_apres` celle de la case atteinte. C'est la **transition** qui fait mal, jamais
+le niveau seul.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `step_metabolisme(..., chaleur_apres=None)` ; la relecture post-step STOCKE au lieu d'appliquer |
+| `docs/recherche/scripts/banc_intra_tick_douleur.py` | **nouveau** — lit `r_bio` À LA SORTIE du moteur, interdiction de recalculer un déficit à la main |
+
+**Mesures après correctif** (banc intra-tick, produites **par le moteur**) :
+
+| transition thermique | `r_bio` | douleur vs témoin |
+|---|---|---|
+| 0,00 → 0,00 (témoin) | −0,000238 | 0,000000 |
+| 0,00 → 0,46 (case adjacente) | −0,211838 | **−0,2116** |
+| 0,46 → 1,00 (**pas réel dans la lave**) | **−0,791111** | **−0,7909** |
+| **1,00 → 0,00 (fuite)** | **+0,999762** | **SOULAGEMENT** |
+| même pas, `--sans-douleur` | −0,000238 | écart **−1,000000** |
+
+**Effet mesuré sur la valence apprise** (25 jours, graine 1) :
+
+| | douleur ON | témoin OFF |
+|---|---|---|
+| **`lava`** | **−0,752562** | **+0,062455** |
+
+La valence de la lave devient **négative pour la première fois du projet**. Elle était
+positive (+0,059 à +0,081, soit celle de l'eau) sur **tous** les cerveaux mesurés depuis
+l'origine.
+
+⚠️ Cela prouve que **le canal fonctionne**, pas que le comportement s'améliore : la
+campagne 20 graines × 2 bras est relancée pour mesurer la **survie**.
+
+---
+
 ## [v41.25-experimental] - 2026-08-18 — La chaleur qui fait mal : fermer la boucle nociceptive
 
 ### La lave avait la valence de l'eau
@@ -34,8 +110,10 @@ D(t) = (1−satiété)² + (1−hydratation)² + (1−stimulation)² + (1−éne
 
 `r_bio = D(t−1) − D(t)` étant une **dérivée**, tout en découle sans qu'aucune règle ne
 le décrive : approcher fait mal proportionnellement, entrer dans la source produit
-**`r_bio = −1,000`** (mesuré), soit 5 à 10× un choc de mur. **Aucune échelle n'est
-posée** — les trois jauges donnent `(1−x)² ∈ [0,1]`, la chaleur donne `T² ∈ [0,1]` par
+**`r_bio = −0,791`** sur un vrai pas dans la lave (banc intra-tick, transition
+0,457 → 1,000), soit ~3300× le coût métabolique d'un tick ordinaire (−0,000238).
+⚠️ **Le `−1,000` publié initialement était FAUX** — voir l'entrée `v41.25-fix1`
+ci-dessus. **Aucune échelle n'est posée** — les trois jauges donnent `(1−x)² ∈ [0,1]`, la chaleur donne `T² ∈ [0,1]` par
 construction du champ.
 
 **Le piège du décalage d'un tick.** La thermoception est lue **en tête de tick**, donc
