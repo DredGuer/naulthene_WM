@@ -126,7 +126,7 @@ Two caveats, both measurable rather than rhetorical:
 | Level 5 | **4 seeds out of 20** — 20 % [8–42], and the level is **held** (up to 1078 nights on it) |
 | What unlocked level 4 | **brain-sparing**: 0 % [0–16] → 80 % [58–92], 18 wins / 0 losses (p < 0.001) |
 | Effect of severing C2 on the score | **0.0 points across all 6 levels** (78 cells) — and on `LavaGap`, severing it **triples** the success rate |
-| Learned valence of lava | **+0.072 — POSITIVE**, barely distinct from water (+0.069) |
+| Learned valence of lava | **+0.072 — POSITIVE**, barely distinct from water (+0.069) — nociception wired in v41.25, **result not yet in** |
 | Cognitive mechanisms that improved anything | **1 out of 12 tested** — brain-sparing |
 | Effect of growing the brain (96 → 160 → 512 dims) | **none** across 3 campaigns — and energy drops 11× |
 | Levers that did work | **3 — two properties of the world, one of the decision** |
@@ -239,6 +239,10 @@ to 1078 nights on it. Before the v41.16 fix, level 4 was reached by **0 % [0–1
 ⚠️ They hold `LavaGap` **without having learned what lava is**: its learned valence stays
 **positive** (+0.07), indistinguishable from water. `SimpleCrossing`
 and everything beyond remain unsolved.
+⚠️ v41.25 closes the loop that made this *structurally* impossible: heat now enters the
+homeostatic deficit as `+T²`, so walking into lava costs **r_bio = −1.000** instead of
+MiniGrid's `0.0`. Whether that actually teaches avoidance is **being measured** (20 seeds
+× 2 arms, forced `LavaGap` bench) — at 5 days the deficit differs but behaviour does not.
 
 > Naulthène's own numbers are filled in. Until the baseline row is too, the comparison proves
 > nothing — a reader still cannot tell an elegant architecture from an underperforming one.
@@ -451,8 +455,11 @@ What that means concretely:
 - **But it has not learned danger.** On the four level-5 brains, the learned valence of
   lava is **positive** (+0.068 to +0.081) and indistinguishable from water (+0.060 to
   +0.088), after up to 1078 nights spent on `LavaGap`. MiniGrid punishes death with exactly
-  `0.0`, so no negative valence can ever form. The level is crossed by speed, not by
-  understanding.
+  `0.0`, so no negative valence could ever form. The level is crossed by speed, not by
+  understanding. **v41.25 removes that structural impossibility** — heat now enters the
+  homeostatic deficit (`+T²`), making a step into lava cost `r_bio = −1.000`. The
+  mechanism is built and instrumented; **whether it changes behaviour is still being
+  measured** and may well come back negative.
 - **Growing the brain changes nothing**: across three campaigns (96 → 160 → 512 dims) the
   level reached is identical, while energy drops 11× and effort triples.
 - **The bench itself was broken until v41.9.** `env.reset()` was never seeded, so two runs of

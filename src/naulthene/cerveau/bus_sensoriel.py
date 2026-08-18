@@ -570,33 +570,12 @@ class BusSensoriel:
             self._avertir(e)
             return [0.0, 0.5]
 
-    def lire_thermoception(self, env) -> list:
-        """v41.11 — LA CHALEUR : le danger perçu comme un champ continu (DIM_THERMOCEPTION=2).
+    def _champ_thermique(self, env) -> float:
+        """v41.25 — le CHAMP de rayonnement seul (BFS topologique), sans mémoire ni delta.
 
-        - `chaleur` : intensité dans [0, 1] de la source brûlante la plus proche, par la
-          MÊME loi que l'odorat (`exp(-LAMBDA_ODORAT * d)` sur la distance de cheminement).
-          C'est la gradation demandée : loin = 0, à quelques cases = tiède, adjacent =
-          brûlant, dessus = maximum.
-        - `delta_chaleur` : sa variation depuis le tick précédent, normalisée dans [0, 1]
-          avec un neutre à **0.5** — même contrat que la clinotaxie olfactive (v32.0), et
-          même piège évité : 0.0 signifierait « refroidissement maximal », ce qui ferait
-          croire à l'agent qu'il fuit un danger inexistant à chaque premier tick.
-
-        ⚠️ LA DIFFÉRENCE AVEC L'ODORAT, ET POURQUOI ELLE EST NÉCESSAIRE. Une source
-        brûlante est aussi un obstacle (`lava` est dans `TYPES_BLOQUANTS_ODORAT`) : si on
-        la traitait comme une source olfactive ordinaire, le BFS partirait d'une case
-        marquée infranchissable et ne propagerait rien du tout. La chaleur se propage donc
-        sur une topologie où les cases brûlantes sont FRANCHISSABLES en tant que points de
-        départ — ce qui est physiquement juste : la chaleur rayonne depuis le feu, elle
-        n'est pas arrêtée par lui.
-
-        Les murs, eux, arrêtent bien la chaleur — un agent séparé de la lave par une
-        cloison n'est pas en danger, et lui envoyer un signal serait exactement le défaut
-        que la v32.0 a corrigé pour l'odorat (un gradient qui traverse un mur est PIRE que
-        pas de gradient, car il est faux une partie du temps seulement).
-
-        ⚠️ Le cerveau ne reçoit que deux nombres. Il n'apprendra ce qu'ils signifient que
-        par ce qui lui arrive quand ils montent — jamais par une déclaration.
+        Extrait de `lire_thermoception` pour être partagé avec `chaleur_seule` : un seul
+        calcul, deux lectures. Dupliquer le BFS aurait ouvert la porte à ce que les deux
+        versions divergent au premier correctif.
         """
         chaleur = 0.0
         if self.actif:
@@ -635,6 +614,37 @@ class BusSensoriel:
             except Exception as e:
                 self._avertir(e)
                 chaleur = 0.0
+        return chaleur
+
+    def lire_thermoception(self, env) -> list:
+        """v41.11 — LA CHALEUR : le danger perçu comme un champ continu (DIM_THERMOCEPTION=2).
+
+        - `chaleur` : intensité dans [0, 1] de la source brûlante la plus proche, par la
+          MÊME loi que l'odorat (`exp(-LAMBDA_ODORAT * d)` sur la distance de cheminement).
+          C'est la gradation demandée : loin = 0, à quelques cases = tiède, adjacent =
+          brûlant, dessus = maximum.
+        - `delta_chaleur` : sa variation depuis le tick précédent, normalisée dans [0, 1]
+          avec un neutre à **0.5** — même contrat que la clinotaxie olfactive (v32.0), et
+          même piège évité : 0.0 signifierait « refroidissement maximal », ce qui ferait
+          croire à l'agent qu'il fuit un danger inexistant à chaque premier tick.
+
+        ⚠️ LA DIFFÉRENCE AVEC L'ODORAT, ET POURQUOI ELLE EST NÉCESSAIRE. Une source
+        brûlante est aussi un obstacle (`lava` est dans `TYPES_BLOQUANTS_ODORAT`) : si on
+        la traitait comme une source olfactive ordinaire, le BFS partirait d'une case
+        marquée infranchissable et ne propagerait rien du tout. La chaleur se propage donc
+        sur une topologie où les cases brûlantes sont FRANCHISSABLES en tant que points de
+        départ — ce qui est physiquement juste : la chaleur rayonne depuis le feu, elle
+        n'est pas arrêtée par lui.
+
+        Les murs, eux, arrêtent bien la chaleur — un agent séparé de la lave par une
+        cloison n'est pas en danger, et lui envoyer un signal serait exactement le défaut
+        que la v32.0 a corrigé pour l'odorat (un gradient qui traverse un mur est PIRE que
+        pas de gradient, car il est faux une partie du temps seulement).
+
+        ⚠️ Le cerveau ne reçoit que deux nombres. Il n'apprendra ce qu'ils signifient que
+        par ce qui lui arrive quand ils montent — jamais par une déclaration.
+        """
+        chaleur = self._champ_thermique(env)
 
         # Même neutre à 0.5 et même normalisation que la clinotaxie olfactive.
         if self._chaleur_precedente is None:
@@ -643,6 +653,22 @@ class BusSensoriel:
             delta = float(np.clip((chaleur - self._chaleur_precedente + 1.0) / 2.0, 0.0, 1.0))
         self._chaleur_precedente = chaleur
         return [float(np.clip(chaleur, 0.0, 1.0)), delta]
+
+    def chaleur_seule(self, env) -> float:
+        """v41.25 — la chaleur INSTANTANÉE, sans effet de bord.
+
+        Même champ de rayonnement que `lire_thermoception`, mais SANS toucher à
+        `_chaleur_precedente` et sans produire de delta. Existe pour un seul usage : la
+        facturation nociceptive doit relire la température APRÈS `env.step` (la case où
+        l'agent est arrivé), alors que la perception, elle, reste celle du début de tick.
+
+        ⚠️ Appeler `lire_thermoception` une seconde fois dans le même tick serait un
+        BUG : il écraserait `_chaleur_precedente` avec la valeur post-step, si bien que
+        la clinotaxie du tick suivant comparerait deux mesures séparées par un demi-tick
+        et rapporterait une variation deux fois trop petite. Le signal d'approche — la
+        seule chose qui permet d'apprendre à FUIR — serait silencieusement faussé.
+        """
+        return float(self._champ_thermique(env))
 
     def _calculer_deltas_odorat(self, odeurs) -> list:
         """v32.0 — la clinotaxie : ΔS = S_t − S_{t−1} par type de ressource, normalisé

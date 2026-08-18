@@ -96,7 +96,7 @@ Deux nuances, mesurées et non rhétoriques :
 | Niveau 5 | **4 graines sur 20** — 20 % [8–42], et le palier est **tenu** (jusqu'à 1078 nuits dessus) |
 | Ce qui a débloqué le niveau 4 | le **brain-sparing** : 0 % [0–16] → 80 % [58–92], 18 gagne / 0 perd (p < 0,001) |
 | Effet de couper C2 sur le score | **0,0 point sur les 6 niveaux** (78 cellules) — et sur `LavaGap`, le couper **triple** la réussite |
-| Valence apprise de la lave | **+0,072 — POSITIVE**, à peine distincte de l'eau (+0,069) |
+| Valence apprise de la lave | **+0,072 — POSITIVE**, à peine distincte de l'eau (+0,069) — nociception branchée en v41.25, **résultat pas encore tombé** |
 | Mécaniques cognitives ayant amélioré quoi que ce soit | **1 sur 12 testées** — le brain-sparing |
 | Effet d'agrandir le cerveau (96 → 160 → 512 dims) | **aucun** sur 3 campagnes — et l'énergie chute ×11 |
 | Leviers qui ont marché | **3 — deux propriétés du monde, une de la décision** |
@@ -341,6 +341,51 @@ terminent leur run.
 >
 > ⚠️ **La lave reste positive** (+0,07, comme l'eau) sur les quatre cerveaux de niveau 5,
 > après jusqu'à 1078 nuits dessus. Le palier est franchi par vitesse, pas par compréhension.
+> La **v41.25** lève l'impossibilité *structurelle* (la chaleur entre au déficit, un pas
+> dans la lave coûte `r_bio = −1,000`) ; **que cela change le comportement reste à mesurer**.
+
+### 🔬 Nouveautés v41.25 (expérimental) — La Nociception Thermique (2026-08-18)
+
+**La lave avait la valence de l'eau.** Mesuré sur 17 graines × 2000 jours : `'lava'`
+à **+0,059 / +0,066**, positif. Cause directe — MiniGrid punit la mort par **exactement
+`0.0`**, quand toucher un mur coûte `−0,01` : **mourir était infiniment moins cher que
+se cogner**.
+
+La v41.11 avait livré **le sens**, pas **la douleur**. Le champ de rayonnement
+`T = e^{−λd}` (BFS topologique, murs faisant ombre thermique, `λ` dérivé de la carte,
+2 dims en queue du vecteur bio) existait déjà. L'agent **percevait** la chaleur sans
+qu'elle lui **coûte** quoi que ce soit : la boucle était ouverte.
+
+**Le correctif tient en un terme** — la chaleur devient un **quatrième manque**, à la
+même échelle que la faim :
+
+```
+D(t) = (1−satiété)² + (1−hydratation)² + (1−stimulation)² + (1−énergie)² + T(t)²
+```
+
+`r_bio` étant la **dérivée** du déficit, tout en découle sans qu'aucune règle ne le
+décrive : approcher fait mal proportionnellement, entrer dans la source produit
+**`r_bio = −1,000`** (mesuré). **Aucun coefficient n'est posé** : `(1−x)²` et `T²` sont
+tous deux dans [0,1] par construction.
+
+**Le piège trouvé en chemin.** La thermoception est lue **en tête de tick**, la
+facturation a lieu **après `env.step`**. Sans correctif, l'agent qui marche dans la lave
+payait la température de la case **quittée** (~0,457) et **n'aurait jamais ressenti
+`T=1`** — le signal central du mécanisme aurait été précisément celui qui n'arrive pas.
+C'est le décalage temporel corrigé en v41.5, reproduit à l'identique. Résolu par
+`chaleur_seule()`, accesseur **sans effet de bord** (rappeler `lire_thermoception()`
+aurait faussé la clinotaxie du tick suivant).
+
+**Refusé** : `si mort: malus` (seuil en dur sur un type nommé) et le drain d'hydratation
+au contact (**arbitrage utilisateur** — double comptage, risque n°3 déjà écarté).
+
+**Le banc.** La lave n'apparaît qu'au niveau 5, l'agent est bloqué au 4 : sur le cursus,
+la chaleur moyenne vaut **0,001** (1 tick / 400). Mesurer là aurait comparé deux bras
+dont le terme est nul dans 99,7 % des ticks — une ablation **VIDE**. D'où `--env-force`.
+
+⚠️ **Résultat non établi.** À 5 jours, la survie est **identique** dans les deux bras.
+Campagne 20 graines × 2 bras en cours ; conclusions avec intervalles de Wilson, jamais
+un taux seul.
 
 ### 🔬 Nouveautés v41.19 → v41.21 (expérimental) — La Physique du Coût & la Cristallisation (2026-08-17)
 
