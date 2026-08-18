@@ -4,6 +4,67 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.23-experimental] - 2026-08-18 — Le frein d'expansion en formules, et ce qu'il ne borne pas
+
+### Le thermostat n'avait que des `if` ; il a maintenant deux pressions continues
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | fix (expérimental) — conformité au dogme |
+| **Impact** | **Fonctionnel — neurogenèse** |
+| **Carnet** | [`EXPANSION_17082026_le_frein_de_la_neurogenese.md`](../recherche/EXPANSION_17082026_le_frein_de_la_neurogenese.md) · [`NUIT_18082026_...`](../recherche/NUIT_18082026_le_niveau_5_franchi_et_le_frein_qui_ne_borne_pas.md) |
+
+**Deux remarques de l'utilisateur, le même défaut.** *« C'est quoi la différence entre
+avant V30 où le système se stabilisait tout seul ? »* et *« Je ne vois que des conditions…
+alors qu'il faudrait des formules. »*
+
+**La régression.** Les `.brain` V30 archivés se stabilisent à **dim_bus 48** (plafond 96,
+jamais atteint). Après la v41.21 : **20/20 collent au plafond**. J'avais remplacé la
+condition historique par la seule cristallisation cosmologique, en jugeant la ligne
+`variance < 0.005 AND moyenne > seuil*1.5` sur son membre mort (la variance, toujours
+vraie) — alors que le second membre faisait **monter `seuil_base` vers l'erreur**, et que
+c'est ce rattrapage qui éteignait la neurogenèse.
+
+**Le correctif (Option B, arbitrage utilisateur)** — deux pressions continues, aucun seuil :
+
+```python
+exigence = 1.0 + 1.0 / JOURS_ENTRE_MUTATIONS          # 1,20 — remplace le 1.5 posé
+pression_structure   = (coh/fr) / (1 + coh/fr)        # limite physique (Landau)
+_ecart               = moyenne / (seuil_base * exigence)
+pression_habituation = _ecart / (1 + _ecart)          # limite d'habituation
+pas = max(pression_structure, pression_habituation)   # le « OU » devient un max continu
+```
+
+`x/(1+x)` est une saturation : pas de pente réglable, pas de point de bascule. Le « OU »
+logique devient un `max` continu — c'est ce qui fait disparaître le `if`. L'exigence
+dérive de la fenêtre d'observation, plus du `1.5` posé.
+
+**Résultats mesurés (nuit du 18/08, 20 graines × 1500 jours) :**
+
+| Palier | Atteint | Wilson 95 % |
+|---|---|---|
+| niveau 4 | **20/20** | **100 %** [84–100] |
+| niveau 5 | **4/20** | **20 %** [8–42] |
+
+Trois cerveaux vivent 521 à **1078 nuits** au palier 5 et y terminent — le palier est
+**tenu**, contrairement à `esprit_g7` (17/08) qui y montait puis redescendait.
+
+⚠️ **Ce que le frein NE fait PAS.** Plafond relevé à 512 (banc `NAULTHENE_PLAFOND_BUS`) :
+`dim_bus` finit à **512/512** sur 3 graines. Le frein rattrape bien l'erreur, mais un gros
+cerveau prédit **3,6× mieux** (0,0013 contre 0,0047), donc son seuil descend avec elle. Il
+stabilise le **rapport** erreur/seuil, jamais la **taille** — exactement le défaut de
+`reference_choc_dopamine` (v37.1-fix1) reproduit dans un autre organe.
+
+**Et grandir ne rapporte rien** : à plafond 512, niveau identique (4/3/4) pour une énergie
+divisée par 11 (0,19 → 0,017) et un effort triplé.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | pressions continues dans le thermostat · `NAULTHENE_PLAFOND_BUS` (banc) |
+
+---
+
 ## [v41.21-experimental] - 2026-08-17 — La cristallisation cosmologique & la loi des 2 % / 20 %
 
 ### Le thermostat comparait une variance absolue à un nombre posé ; la biologie donne les poids

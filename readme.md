@@ -122,12 +122,13 @@ Two caveats, both measurable rather than rhetorical:
 
 | Metric | Value |
 |---|---|
-| Level reached | **4 out of 15** — 80 % of seeds, 95 % CI **[58–92]** (n = 20 × 600 days, v41.16) |
-| Level 5 | **1 brain out of 40** — crossed, then lost again; the wall moved, it did not fall |
+| Level reached | **4 out of 15** — 100 % of seeds, 95 % CI **[84–100]** (n = 20 × 1500 days, v41.23) |
+| Level 5 | **4 seeds out of 20** — 20 % [8–42], and the level is **held** (up to 1078 nights on it) |
 | What unlocked level 4 | **brain-sparing**: 0 % [0–16] → 80 % [58–92], 18 wins / 0 losses (p < 0.001) |
 | Effect of severing C2 on the score | **0.0 points across all 6 levels** (78 cells) — and on `LavaGap`, severing it **triples** the success rate |
 | Learned valence of lava | **+0.072 — POSITIVE**, barely distinct from water (+0.069) |
-| Cognitive mechanisms that improved anything | **1 out of 10 tested** — brain-sparing |
+| Cognitive mechanisms that improved anything | **1 out of 12 tested** — brain-sparing |
+| Effect of growing the brain (96 → 160 → 512 dims) | **none** across 3 campaigns — and energy drops 11× |
 | Levers that did work | **3 — two properties of the world, one of the decision** |
 
 A standard PPO solves `Empty-8x8` in a few thousand episodes. **Naulthène currently does not.**
@@ -232,9 +233,11 @@ This is the table that would decide whether the architecture is *efficient* or m
 | PPO + LSTM | 52,664 | — | — | — |
 | **Naulthène** | **55,232** | **44.7 %** (v41 bench, 300 ep.) | — | **never reached** |
 
-Across **20 seeds × 600 simulated days** on a reproducible bench, **80 % [58–92]** of agents
-reach level 4 of the 15-level curriculum since the v41.16 fix — against **0 % [0–16]**
-before it. Level 5 remains a wall. `SimpleCrossing`
+Across **20 seeds × 1500 simulated days** on a reproducible bench, **100 % [84–100]** of
+agents reach level 4 of the 15-level curriculum, and **20 % [8–42]** now hold level 5 — up
+to 1078 nights on it. Before the v41.16 fix, level 4 was reached by **0 % [0–16]**.
+⚠️ They hold `LavaGap` **without having learned what lava is**: its learned valence stays
+**positive** (+0.07), indistinguishable from water. `SimpleCrossing`
 and everything beyond remain unsolved.
 
 > Naulthène's own numbers are filled in. Until the baseline row is too, the comparison proves
@@ -442,10 +445,16 @@ validation is by W&B curves, console logs and read-only probes.
 
 What that means concretely:
 
-- The agent is **blocked at level 4 of 15**: 20 seeds × 600 simulated days, **80 % [58–92]**
-  reach level 4 since the v41.16 brain-sparing fix (0 % [0–16] before it). Level 5 was
-  reached by **1 brain out of 40**, which then fell back — and an autopsy showed it had not
-  learned to avoid lava, only to run fast.
+- The agent now reaches **level 4 of 15** on **100 %** of seeds [84–100] and **holds level
+  5** on 20 % [8–42] (20 seeds × 1500 simulated days). Before the v41.16 brain-sparing fix,
+  level 4 was reached by **0 %** [0–16].
+- **But it has not learned danger.** On the four level-5 brains, the learned valence of
+  lava is **positive** (+0.068 to +0.081) and indistinguishable from water (+0.060 to
+  +0.088), after up to 1078 nights spent on `LavaGap`. MiniGrid punishes death with exactly
+  `0.0`, so no negative valence can ever form. The level is crossed by speed, not by
+  understanding.
+- **Growing the brain changes nothing**: across three campaigns (96 → 160 → 512 dims) the
+  level reached is identical, while energy drops 11× and effort triples.
 - **The bench itself was broken until v41.9.** `env.reset()` was never seeded, so two runs of
   the same seed saw different worlds. **Every paired comparison in this project's history is
   therefore inconclusive** — they are not wrong, they establish nothing. Fixed and verified by

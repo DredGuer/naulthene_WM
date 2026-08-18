@@ -92,12 +92,13 @@ Deux nuances, mesurées et non rhétoriques :
 
 | Métrique | Valeur |
 |---|---|
-| Niveau atteint | **4 sur 15** — 80 % des graines, IC 95 % **[58–92]** (n = 20 × 600 jours, v41.16) |
-| Niveau 5 | **1 cerveau sur 40** — franchi, puis reperdu ; le mur a reculé, pas disparu |
+| Niveau atteint | **4 sur 15** — 100 % des graines, IC 95 % **[84–100]** (n = 20 × 1500 jours, v41.23) |
+| Niveau 5 | **4 graines sur 20** — 20 % [8–42], et le palier est **tenu** (jusqu'à 1078 nuits dessus) |
 | Ce qui a débloqué le niveau 4 | le **brain-sparing** : 0 % [0–16] → 80 % [58–92], 18 gagne / 0 perd (p < 0,001) |
 | Effet de couper C2 sur le score | **0,0 point sur les 6 niveaux** (78 cellules) — et sur `LavaGap`, le couper **triple** la réussite |
 | Valence apprise de la lave | **+0,072 — POSITIVE**, à peine distincte de l'eau (+0,069) |
-| Mécaniques cognitives ayant amélioré quoi que ce soit | **1 sur 10 testées** — le brain-sparing |
+| Mécaniques cognitives ayant amélioré quoi que ce soit | **1 sur 12 testées** — le brain-sparing |
+| Effet d'agrandir le cerveau (96 → 160 → 512 dims) | **aucun** sur 3 campagnes — et l'énergie chute ×11 |
 | Leviers qui ont marché | **3 — deux propriétés du monde, une de la décision** |
 
 Un PPO standard résout `Empty-8x8` en quelques milliers d'épisodes. **Naulthène, non.**
@@ -300,6 +301,46 @@ Pour un historique complet commit par commit, consultez [docs/fonctionnement/CHA
 > courte que le budget natif de MiniGrid, et une économie de récompense à espérance négative. Le
 > document contient aussi les **formules et constantes de référence** du système, et la trace des
 > erreurs de diagnostic commises puis corrigées.
+
+### 🌱 Nouveautés v41.22 / v41.23 (expérimental) — Le Frein d'Expansion (2026-08-18)
+
+**Le système ne se stabilisait plus.** Les `.brain` V30 archivés s'arrêtent d'eux-mêmes à
+**dim_bus 48** (plafond 96, jamais atteint) ; après la v41.21, **20 cerveaux sur 20**
+collaient au plafond. La cause était une régression : j'avais jugé la condition historique
+`variance < 0.005 AND moyenne > seuil × 1.5` sur son membre mort — la variance, toujours
+vraie — sans voir que le second membre faisait **monter `seuil_base` vers l'erreur**, et
+que ce rattrapage était précisément ce qui éteignait la neurogenèse.
+
+**v41.22 — le plafond devient une propriété de la machine.** `DIM_BUS_MAX` n'est plus
+posé : il dérive de la borne la plus contraignante entre la mémoire disponible et le budget
+de calcul (ici 160, contre 96 auparavant).
+
+**v41.23 — deux pressions continues, plus aucun `if`** (arbitrage utilisateur) :
+
+```python
+exigence = 1.0 + 1.0 / JOURS_ENTRE_MUTATIONS      # remplace le 1.5 posé
+pression_structure   = (coh/fr) / (1 + coh/fr)    # limite physique (Landau)
+pression_habituation = écart  / (1 + écart)       # limite d'habituation
+pas = max(pression_structure, pression_habituation)
+```
+
+`x/(1+x)` est une saturation — ni pente réglable, ni point de bascule — et le « OU »
+logique devient un `max` continu. L'exigence dérive de la fenêtre d'observation.
+
+**Résultat (20 graines × 1500 jours)** : niveau 4 à **100 %** [84–100], niveau 5 à **20 %**
+[8–42], et le palier 5 est **tenu** — trois cerveaux y vivent de 521 à **1078 nuits** et y
+terminent leur run.
+
+> ⚠️ **Ce que le frein ne fait pas.** Plafond relevé à 512 : `dim_bus` finit à **512/512**.
+> Le frein rattrape l'erreur, mais un gros cerveau prédit 3,6× mieux, donc son seuil descend
+> avec elle — il stabilise le **rapport**, jamais la **taille**. C'est le défaut de
+> `reference_choc_dopamine` (v37.1-fix1) reproduit ailleurs.
+>
+> ⚠️ **Et grandir ne sert à rien** : sur trois campagnes (96 → 160 → 512 dims), le niveau
+> atteint est identique, pour une énergie divisée par 11 et un effort triplé.
+>
+> ⚠️ **La lave reste positive** (+0,07, comme l'eau) sur les quatre cerveaux de niveau 5,
+> après jusqu'à 1078 nuits dessus. Le palier est franchi par vitesse, pas par compréhension.
 
 ### 🔬 Nouveautés v41.19 → v41.21 (expérimental) — La Physique du Coût & la Cristallisation (2026-08-17)
 

@@ -4138,16 +4138,106 @@ class ChronometreJalonsDoorKey:
 
 # --- 4. EXÉCUTION & CURSUS ---
 DIM_VISUELLE = 147
-DIM_BUS_MAX = 96
+
+BUS_REFERENCE_INITIAL = 16  # taille du bus à la naissance ; sert de référence pour
+                             # l'Empreinte de l'Enfance même après résurrection (v21.0)
+                             # et pour la masse cérébrale (v41.20) — doit rester défini
+                             # AVANT `_plafond_bus_machine()`, qui le lit.
+
+# v41.22 — LES DEUX BORNES DU BUDGET DE CROISSANCE. Ce sont des BORNES au sens du dogme
+# (elles disent « pas au-delà »), pas des seuils de décision : rien ne les lit dans le
+# chemin cognitif, elles ne servent qu'à convertir une capacité machine en dimension.
+FRACTION_RAM_PAR_CERVEAU = 0.02   # part de la RAM d'un cœur qu'un cerveau peut prendre.
+                                  # Volontairement basse : le modèle n'est pas le seul
+                                  # consommateur d'un run (env, buffers, rêve).
+FACTEUR_TEMPS_MATURITE = 100.0    # un cerveau adulte peut coûter jusqu'à 100× un
+                                  # nouveau-né par tick. Mesuré : le coût est en O(d²),
+                                  # donc cela autorise 10× la dimension de naissance.
+                                  # À 160 dims un run de 600 jours prend ~0,05 h — le
+                                  # banc de mesure du projet reste praticable.
+
+
+def _plafond_bus_machine() -> int:
+    """v41.22 — LE PLAFOND DU BUS EST UNE PROPRIÉTÉ DE LA MACHINE, PLUS UN CHIFFRE POSÉ.
+
+    🔴 POURQUOI CE CHANGEMENT (mesuré le 17/08, campagne v41.21).
+    Tant que le thermostat était cassé, `DIM_BUS_MAX = 96` n'était atteint que par
+    **1 cerveau sur 40** : le plafond ne limitait rien. Une fois le thermostat rendu
+    relatif (v41.21), **10 cerveaux sur 10 le touchent**. Le plafond est donc devenu le
+    facteur qui arrête la croissance — et c'est exactement ce qu'un chiffre posé ne doit
+    jamais faire.
+
+    ⚠️ CE QUE LA MESURE DIT, ET QU'IL FAUT ASSUMER : ni la RAM ni le temps ne sont
+    réellement contraignants sur cette machine. Mesuré : un cerveau à `dim_bus=512` pèse
+    **144 Mo** optimiseur compris (0,4 % des 38,7 Go) et un run de 600 jours à
+    `dim_bus=384` prend **0,12 h**. Dériver le plafond de la RAM seule donnerait 544 à
+    **1 % du budget**, et 2800 à 25 % — c'est-à-dire un plafond qui ne veut plus rien dire.
+
+    Le plafond retenu est donc celui d'un **budget de calcul explicite** : un run doit
+    rester praticable en parallèle sur cette machine. On borne la part du temps qu'un
+    tick a le droit de coûter par rapport à la naissance, et on convertit ce budget en
+    dimension. Le coût par tick croît en O(d²) (mesuré : 0,30 ms à d=16, 1,73 ms à d=384,
+    soit 5,8×), donc `d_max = d_naissance × √(budget_temps)`.
+
+    Le budget est lui-même dérivé du parallélisme réel : la machine fait tourner
+    `os.cpu_count()` runs de front, et un cerveau ne doit pas monopoliser plus que sa
+    part. C'est la seule grandeur qui change vraiment d'une machine à l'autre.
+
+    Le résultat est **borné par le bas à l'ancienne valeur** : jamais moins que 96, pour
+    qu'une petite machine ne rétrograde pas silencieusement des `.brain` existants (le
+    même piège que le remappage de `niveau_actuel` en v35.0).
+
+    ⚠️ UNE PREMIÈRE VERSION DE CETTE FONCTION ÉTAIT INOPÉRANTE, et c'est consigné parce
+    que c'est exactement la faute que la revue du dogme dénonce. J'avais posé
+    `budget = √(cpu_count)`, ce qui donne `16 × √12 = 55`, arrondi à 48 — **moins que
+    l'ancien plafond de 96**, donc entièrement absorbé par le plancher. Une borne
+    inventée qui ne mord jamais n'est pas une dérivation : c'est un chiffre posé avec un
+    habillage. La formule ci-dessous part des DEUX mesures réelles.
+    """
+    import os as _os
+    coeurs = max(1, _os.cpu_count() or 1)
+    try:
+        ram = _os.sysconf("SC_PAGE_SIZE") * _os.sysconf("SC_PHYS_PAGES")
+    except (ValueError, AttributeError, OSError):
+        ram = 4e9      # machine qui ne sait pas se décrire : hypothèse basse
+
+    # --- Borne 1 : LA MÉMOIRE ---------------------------------------------------------
+    # La machine fait tourner `coeurs` runs de front ; un cerveau ne doit pas monopoliser
+    # plus que sa part. `FRACTION_RAM_PAR_CERVEAU` est volontairement basse : le modèle
+    # n'est pas le seul consommateur d'un run (environnement, buffers, rêve).
+    # Coût mesuré : ~8,5·d² paramètres, ×4 octets, ×3 (poids + moments Adam).
+    budget_octets = (ram / coeurs) * FRACTION_RAM_PAR_CERVEAU
+    d_ram = math.sqrt(budget_octets / (8.5 * 4 * 3))
+
+    # --- Borne 2 : LE TEMPS -----------------------------------------------------------
+    # Le coût par tick croît en O(d²) — mesuré : 0,30 ms à d=16, 1,73 ms à d=384 (5,8×,
+    # soit exactement (384/16)^2 amorti par les frais fixes). Un cerveau mature a le droit
+    # de coûter `FACTEUR_TEMPS_MATURITE` fois un nouveau-né : au-delà, un run long cesse
+    # d'être praticable et le banc de mesure du projet s'effondre.
+    d_temps = BUS_REFERENCE_INITIAL * math.sqrt(FACTEUR_TEMPS_MATURITE)
+
+    # La plus CONTRAIGNANTE des deux gouverne — c'est la définition d'un plafond.
+    d_max = int(min(d_ram, d_temps))
+    # Arrondi au pas de neurogenèse, et jamais sous le plafond historique : une machine
+    # modeste ne doit pas rétrograder silencieusement des `.brain` déjà à 96.
+    return max(96, (d_max // 16) * 16)
+
+
+DIM_BUS_MAX = _plafond_bus_machine()
+# v41.23 — surcharge du plafond pour les BANCS DE MESURE uniquement. Le seul moyen de
+# savoir si la croissance s'arrête d'elle-même est de relever le plafond hors de portée
+# et de regarder où elle se pose : tant que `dim_bus` finit exactement AU plafond, on
+# mesure le plafond, jamais le frein. N'est jamais lue par la décision.
+_PLAFOND_TEST = os.environ.get("NAULTHENE_PLAFOND_BUS", "").strip()
+if _PLAFOND_TEST.isdigit() and int(_PLAFOND_TEST) >= 96:
+    DIM_BUS_MAX = (int(_PLAFOND_TEST) // 16) * 16
+    print(f"🔬 [BANC] plafond de bus forcé à {DIM_BUS_MAX} (NAULTHENE_PLAFOND_BUS)")
 # v41.21 — LE PAS DE LA GRILLE. MiniGrid est discret : une case est l'unité de distance
 # du monde, et l'agent en occupe exactement une. Ce n'est pas un réglage mais une
 # propriété de l'environnement — c'est d'elle que dérivent le rayon du corps
 # (`PAS_GRILLE / 2`) et l'unité de translation, qui étaient écrits en dur en v41.20.
 PAS_GRILLE = 1.0
 JOURS_ENTRE_MUTATIONS = 5
-
-BUS_REFERENCE_INITIAL = 16  # taille du bus à la naissance ; sert de référence pour
-                             # l'Empreinte de l'Enfance même après résurrection (v21.0)
 
 jours_totaux = 500  # run long en local (Mac) — 400 dans agi_google_colab.py
 ticks_par_jour = 400
@@ -8492,13 +8582,54 @@ def executer_nuit(etat, plafond_reve=None):
         cv = ecart_type / max(moyenne_glissante, 1e-9)
         cohesion = 1.0 / max(cv * cv, 1e-9)
         friction = math.log(max(sum(p.numel() for p in etat.agent.parameters()), math.e))
-        # `C(c) > ln(N)` : le réseau cristallise, donc sa référence se fige sur ce qu'il
-        # vient de vivre. Le pas de relaxation n'est plus 0,7/0,3 posé : il vaut 1/fenêtre,
-        # soit la même échelle de temps que l'observation elle-même.
-        if cohesion > friction:
-            pas = 1.0 / float(JOURS_ENTRE_MUTATIONS)
-            etat.seuil_base = (1.0 - pas) * etat.seuil_base + pas * moyenne_glissante
+        # --- v41.23 : DEUX RAISONS DE SE RECALIBRER, ET ELLES SONT CONTINUES ----------
+        #
+        # 🔴 CE QUE ÇA CORRIGE — une régression que j'ai moi-même introduite en v41.21.
+        # J'avais remplacé la condition historique par la seule cristallisation
+        # cosmologique. Mesuré : les cerveaux V30 se stabilisaient d'eux-mêmes à
+        # **dim_bus 48** (plafond 96, jamais atteint) ; après v41.21, **20/20 collent au
+        # plafond**, quel qu'il soit (96, puis 160). J'avais retiré le frein.
+        #
+        # La cause : la condition historique `variance < 0.005 AND moyenne > seuil*1.5`
+        # avait un membre mort (la variance, toujours vraie) et un membre VIVANT
+        # (`moyenne > seuil*1.5`) qui faisait MONTER `seuil_base` vers l'erreur réelle.
+        # Ce rattrapage est ce qui éteignait la neurogenèse. J'ai jugé la ligne sur son
+        # membre mort et jeté le vivant avec.
+        #
+        # LES DEUX FORCES, en OU — un organisme cesse de croître pour deux raisons :
+        #
+        #   (1) LIMITE STRUCTURELLE — `cohésion / friction` (Landau, v41.21). Le réseau
+        #       a atteint une densité où l'expansion coûterait plus de friction qu'elle
+        #       n'apporte de cohésion. La structure dit stop.
+        #   (2) LIMITE D'HABITUATION — `moyenne / (seuil_base × exigence)`. L'agent se
+        #       trompe beaucoup mais son erreur STAGNE : il accepte ce niveau comme sa
+        #       nouvelle normalité, la référence remonte, et le signal de détresse qui
+        #       déclenchait la neurogenèse s'éteint de lui-même.
+        #
+        # ⚠️ AUCUNE DES DEUX N'EST UN `if`. Chacune produit une PRESSION dans [0,1] par
+        # une saturation `x/(1+x)` — la forme continue d'un rapport, sans seuil ni pente
+        # réglable. Le pas de recalibrage est le MAXIMUM des deux (le « OU » logique
+        # devient un max continu), multiplié par le pas d'observation. Une force faible
+        # recalibre un peu, une force forte recalibre beaucoup : il n'existe plus de
+        # point où le comportement bascule.
+        #
+        # L'EXIGENCE N'EST PLUS `1.5` POSÉ : elle vaut `1 + 1/fenêtre`. Un agent qui
+        # observe sur 5 nuits tolère 20 % d'écart avant de se recalibrer ; s'il observait
+        # sur 20 nuits il n'en tolérerait que 5 %. L'exigence dérive de la durée
+        # d'observation — c'est la même échelle de temps qui gouverne tout le bloc.
+        exigence = 1.0 + 1.0 / float(JOURS_ENTRE_MUTATIONS)
+        pression_structure = (cohesion / friction) / (1.0 + cohesion / friction)
+        _ecart = moyenne_glissante / max(etat.seuil_base * exigence, 1e-9)
+        pression_habituation = _ecart / (1.0 + _ecart)
+        #
+        # ⚠️ LE PAS EST LA PRESSION ELLE-MÊME, PAS `pression / fenêtre`. Une première
+        # version divisait encore par la fenêtre : la fenêtre gouverne l'EXIGENCE (à quel
+        # écart on se recalibre), jamais la VITESSE (de combien). La diviser deux fois
+        # écrasait le recalibrage et reproduisait exactement le défaut de la v41.21.
+        pas = max(pression_structure, pression_habituation)
+        etat.seuil_base = (1.0 - pas) * etat.seuil_base + pas * moyenne_glissante
         etat.cohesion_jour, etat.friction_jour = cohesion, friction
+        etat.pression_expansion_jour = max(pression_structure, pression_habituation)
 
     etat_thermostat = "Stable"
     mutation_possible = (etat.jours_depuis_mutation >= JOURS_ENTRE_MUTATIONS
@@ -9444,6 +9575,9 @@ if __name__ == "__main__":
     # v41.20 — témoin du coût moteur physique (voir COUT_MOTEUR_PHYSIQUE).
     _p.add_argument("--cout-moteur-table", action="store_true",
                     help="ABLATION : revient à COUT_CORPOREL_PAR_ACTION, les 7 valeurs en dur")
+    # v41.22 — témoin du plafond de bus indexé machine (voir _plafond_bus_machine).
+    _p.add_argument("--plafond-bus-fixe", action="store_true",
+                    help="ABLATION : fige DIM_BUS_MAX à 96, l'ancienne valeur posée")
     _args = _p.parse_args()
 
     # Drapeau global lu par `facteur_guidage` — un seul point de lecture, pas de
@@ -9514,6 +9648,15 @@ if __name__ == "__main__":
         print("🔬 [ABLATION] coût moteur v41.20 COUPÉ — retour à la table des 7 valeurs en dur")
         from naulthene.cerveau.noyau import COUT_MOTEUR_PHYSIQUE as _vcm
         assert _vcm is False, "l'ablation n'a pas atteint le module — campagne invalide"
+
+    # v41.22 — même discipline : module NOMMÉ + assertion runtime.
+    if _args.plafond_bus_fixe:
+        globals()["DIM_BUS_MAX"] = 96
+        if _module_reel is not None:
+            _module_reel.DIM_BUS_MAX = 96
+        print("🔬 [ABLATION] plafond de bus v41.22 COUPÉ — DIM_BUS_MAX figé à 96")
+        from naulthene.cerveau.noyau import DIM_BUS_MAX as _vpb
+        assert _vpb == 96, "l'ablation n'a pas atteint le module — campagne invalide"
 
     # v41.17 — second axe, même discipline : module NOMMÉ + assertion runtime.
     _ea = not _args.sans_economie_action

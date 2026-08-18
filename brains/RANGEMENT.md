@@ -21,7 +21,8 @@
 | `old_V414_invalides/` | ⚠️ **campagne du 15/08 14h20 — INVALIDE**, l'ablation n'atteignait pas le module (voir CHANTIER_v41.4 §6.1). Conservés pour la traçabilité, **à ne pas exploiter** |
 | `cas_isole_g22_v41/` | le cerveau de la « loterie natale » (niveau 4, non reproductible) |
 | `ablations/` | résultats JSON du banc d'ablation |
-| `doublons_icloud/` | copies `… 2.brain`, `… 3.brain` créées par la synchro iCloud. **Redondantes**, conservées par prudence — supprimables si l'espace manque |
+| `old_V419_snapshots_intermediaires/` | ex-`doublons_icloud/`. ⚠️ **Le nom était faux : ce ne sont PAS des doublons.** Vérifié le 18/08 sur les 57 fichiers — **0 redondant, 57 uniques**, chacun portant un `tick_absolu`/`dim_bus` introuvable ailleurs. Le suffixe ` 2`, ` 3` marque un **état intermédiaire** du même run (ex. 2 400 / 5 600 / 400 000 ticks), pas une copie. **Ne pas supprimer** |
+| `nuit_18082026_V4123_optionB/` | les 4 cerveaux qui **tiennent le niveau 5** (jusqu'à 1078 nuits dessus) + 1 témoin niveau 4, campagne Option B 20×1500 j |
 
 ## Convention de nommage
 
