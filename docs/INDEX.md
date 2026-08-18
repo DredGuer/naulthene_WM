@@ -62,6 +62,7 @@ autorité sur l'état courant.**
 | Document | Ce qu'il contient | Lié à |
 |---|---|---|
 | **[etat_des_lieux/15082026_v41.4.md](etat_des_lieux/15082026_v41.4.md)** | **Synthèse en 3 volets : les objectifs · l'état du cerveau (fonctionnement, contraintes, blocages) · le parcours (grilles, nourriture, jours, ticks).** Inclut les chantiers v41.2 → v41.4 et la découverte du décalage de maturité | tout |
+| **[etat_des_lieux/18082026_revue_dogme_avant_publication.md](etat_des_lieux/18082026_revue_dogme_avant_publication.md)** | **Peut-on dire « rien en dur » devant un chercheur ? NON.** Audit des 161 constantes : 4 récompenses posées, 7 sites qui nomment le monde, ~25 constantes de calibration. Donne la formulation qui, elle, résiste à l'audit | tout |
 | **[ETAT_DU_PROJET_aout_2026.md](recherche/ETAT_DU_PROJET_aout_2026.md)** | **Forces, faiblesses, ce qui reste à faire.** Le point d'entrée | tout |
 | [CHANGELOG.md](fonctionnement/CHANGELOG.md) | Historique version par version — **la référence factuelle** | tout |
 | [REVUE_CODE_v39_aout_2026.md](recherche/REVUE_CODE_v39_aout_2026.md) | **6 défauts trouvés le 13-14/08**, dont le biais qui faussait 2a/2b | §B, §D |
