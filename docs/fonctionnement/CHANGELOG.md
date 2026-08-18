@@ -4,6 +4,59 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.25-mesure] - 2026-08-18 — La peur s'apprend (20/20), la survie baisse (−3,1 pts)
+
+### Résultat de campagne : mécanisme validé, objectif manqué
+
+| Type | Details |
+|------|---------|
+| **Commit** | `62210e7` |
+| **Catégorie** | docs (résultat de mesure) |
+| **Impact** | **Mesure — aucun changement de code** |
+| **Carnet** | [`CAMPAGNE_18082026_...`](../recherche/CAMPAGNE_18082026_nociception_20_graines.md) |
+
+**Banc** : `LavaGapS5` forcé, 20 graines × 2 bras × 300 jours, **40/40 runs terminés**.
+
+**✅ Le mécanisme fonctionne — sans ambiguïté.**
+
+| | ON (douleur) | OFF (témoin) |
+|---|---|---|
+| Valence apprise de `lava` | **−0,7614** | **+0,0615** |
+| Graines à valence négative | **20/20** | **0/20** |
+
+`delta = −0,8229` · `t apparié = −1066` (seuil 2,09) · **aucun chevauchement**. C'est la
+**première fois du projet** que la lave porte une valence négative — elle valait celle de
+l'eau sur tous les cerveaux depuis l'origine. Le comportement suit : **−5,60 points**
+d'approche du danger (`t = −5,51`).
+
+**❌ Mais la survie BAISSE.**
+
+| | survie | IC95 Wilson |
+|---|---|---|
+| ON | **6,71 %** | [6,19 – 7,27] |
+| OFF | **8,57 %** | [8,19 – 8,96] |
+
+`delta apparié = −3,10 pts` · `t = −3,36` · 14 graines sur 20 dans ce sens · **les IC ne
+se chevauchent pas**.
+
+**Ce que les chiffres disent** : l'agent qui a mal **meurt 2,4× moins** (7 800 vs 18 531)
+mais **gagne 2,9× moins** (0,40 vs 1,16 victoire/jour), avec des épisodes 2,4× plus longs.
+Il ne se jette plus dans la lave — **il n'arrive plus non plus**. Sur `LavaGapS5` le but
+est *derrière* le couloir de lave : fuir le danger, c'est fuir l'objectif. La douleur
+enseigne l'évitement, pas le franchissement prudent.
+
+⚠️ Cette lecture est une **hypothèse cohérente avec les chiffres**, non testée : il
+faudrait un banc à danger *latéral* (`LavaCrossing`) pour la trancher.
+
+**Contrôle clé** : chaleur moyenne ressentie **0,3617 (ON) vs 0,3553 (OFF)** — les deux
+bras voient autant de danger, seule la douleur diffère.
+
+**Conclusion.** Une contrainte homéostatique **peut** faire émerger une aversion sans
+qu'aucune règle ne nomme le danger. Mais **la peur seule ne produit pas la compétence**.
+Bilan général inchangé : **1 mécanique cognitive sur 13** a amélioré une métrique de tâche.
+
+---
+
 ## [v41.25-fix1-experimental] - 2026-08-18 — La douleur était annulée par sa propre soustraction
 
 ### Une erreur de MESURE, pas de conception : `r_bio = −1,000` n'a jamais existé

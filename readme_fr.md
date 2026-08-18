@@ -103,7 +103,7 @@ Deux nuances, mesurées et non rhétoriques :
 | Niveau 5 | **4 graines sur 20** — 20 % [8–42], et le palier est **tenu** (jusqu'à 1078 nuits dessus) |
 | Ce qui a débloqué le niveau 4 | le **brain-sparing** : 0 % [0–16] → 80 % [58–92], 18 gagne / 0 perd (p < 0,001) |
 | Effet de couper C2 sur le score | **0,0 point sur les 6 niveaux** (78 cellules) — et sur `LavaGap`, le couper **triple** la réussite |
-| Valence apprise de la lave | **+0,072 — POSITIVE**, à peine distincte de l'eau (+0,069) — nociception branchée en v41.25, **résultat pas encore tombé** |
+| Valence apprise de la lave | **+0,072 — POSITIVE**, à peine distincte de l'eau (+0,069). La nociception (v41.25) la fait basculer à **−0,761 sur 20/20 graines** — mais la survie **BAISSE** : 8,6 % → 6,7 % |
 | Mécaniques cognitives ayant amélioré quoi que ce soit | **1 sur 12 testées** — le brain-sparing |
 | Effet d'agrandir le cerveau (96 → 160 → 512 dims) | **aucun** sur 3 campagnes — et l'énergie chute ×11 |
 | Leviers qui ont marché | **3 — deux propriétés du monde, une de la décision** |
@@ -349,8 +349,11 @@ terminent leur run.
 > ⚠️ **La lave reste positive** (+0,07, comme l'eau) sur les quatre cerveaux de niveau 5,
 > après jusqu'à 1078 nuits dessus. Le palier est franchi par vitesse, pas par compréhension.
 > La **v41.25** lève l'impossibilité *structurelle* (la chaleur entre au déficit, un pas
-> dans la lave coûte `r_bio = −0,791`, valence `lava` **+0,062 → −0,753**) ; **que cela
-> change le comportement reste à mesurer**.
+> dans la lave coûte `r_bio = −0,791`). **Mesuré sur 20 graines × 2 bras** : la valence
+> bascule à **−0,761 sur 20/20** (témoin +0,062 sur 0/20, `t = −1066`) et l'agent approche
+> **5,6 points moins** du danger — mais la **survie baisse** de 8,57 % à 6,71 %. Il meurt
+> **2,4× moins** et gagne **2,9× moins** : sur `LavaGap` le but est *derrière* la lave,
+> donc fuir le danger revient à fuir l'objectif.
 
 ### 🔬 Nouveautés v41.25 (expérimental) — La Nociception Thermique (2026-08-18)
 

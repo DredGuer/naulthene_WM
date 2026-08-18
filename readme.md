@@ -133,8 +133,8 @@ Two caveats, both measurable rather than rhetorical:
 | Level 5 | **4 seeds out of 20** — 20 % [8–42], and the level is **held** (up to 1078 nights on it) |
 | What unlocked level 4 | **brain-sparing**: 0 % [0–16] → 80 % [58–92], 18 wins / 0 losses (p < 0.001) |
 | Effect of severing C2 on the score | **0.0 points across all 6 levels** (78 cells) — and on `LavaGap`, severing it **triples** the success rate |
-| Learned valence of lava | **+0.072 — POSITIVE**, barely distinct from water (+0.069) — nociception wired in v41.25, **result not yet in** |
-| Cognitive mechanisms that improved anything | **1 out of 12 tested** — brain-sparing |
+| Learned valence of lava | **+0.072 — POSITIVE**, barely distinct from water (+0.069). Nociception (v41.25) flips it to **−0.761 on 20/20 seeds** — but survival **drops** 8.6 % → 6.7 % |
+| Cognitive mechanisms that improved anything | **1 out of 13 tested** — brain-sparing (thermal nociception works, but *lowers* survival) |
 | Effect of growing the brain (96 → 160 → 512 dims) | **none** across 3 campaigns — and energy drops 11× |
 | Levers that did work | **3 — two properties of the world, one of the decision** |
 
@@ -465,11 +465,15 @@ What that means concretely:
   +0.088), after up to 1078 nights spent on `LavaGap`. MiniGrid punishes death with exactly
   `0.0`, so no negative valence could ever form. The level is crossed by speed, not by
   understanding. **v41.25 removes that structural impossibility** — heat now enters the
-  homeostatic deficit (`+T²`), making a step into lava cost `r_bio = −0.791`. The learned
-  valence of lava goes **+0.062 → −0.753**, negative for the first time in the project.
+  homeostatic deficit (`+T²`), making a step into lava cost `r_bio = −0.791`. Measured over
+  **20 seeds × 2 arms**: the learned valence of lava flips to **−0.761 on 20/20 seeds**
+  (control: +0.062 on 0/20, `t = −1066`), and the agent approaches danger **5.6 points
+  less**. **But survival drops** — 8.57 % [8.19–8.96] → 6.71 % [6.19–7.27], non-overlapping
+  intervals. The agent dies **2.4× less** and wins **2.9× less**: on `LavaGap` the goal sits
+  *behind* the lava, so fleeing danger means fleeing the objective. **Fear alone does not
+  produce competence.**
   ⚠️ A first version of this fix was **entirely inoperative** — the pain appeared on both
-  sides of a subtraction and cancelled exactly to `0.000000`. **Whether any of this
-  improves survival is still being measured** and may come back negative.
+  sides of a subtraction and cancelled to exactly `0.000000`.
 - **Growing the brain changes nothing**: across three campaigns (96 → 160 → 512 dims) the
   level reached is identical, while energy drops 11× and effort triples.
 - **The bench itself was broken until v41.9.** `env.reset()` was never seeded, so two runs of
