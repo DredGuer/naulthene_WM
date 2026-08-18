@@ -80,12 +80,23 @@ il **gagne 2,9× moins**, et pas seulement en proportion : en valeur absolue.
 Ses épisodes sont **2,4× plus longs** (moins de fins pour un budget de jours comparable) :
 il ne se jette plus dans la lave, il tourne autour sans jamais franchir.
 
-> **Sur `LavaGapS5`, le but est DERRIÈRE le couloir de lave. Fuir le danger, c'est fuir
-> l'objectif.** La douleur enseigne l'évitement, pas le franchissement prudent.
+> ~~**Sur `LavaGapS5`, le but est DERRIÈRE le couloir de lave. Fuir le danger, c'est fuir
+> l'objectif.**~~
 
-⚠️ Cette lecture est une **hypothèse cohérente avec les chiffres**, pas une mesure directe :
-elle n'a pas été testée sur une carte où le danger serait latéral au chemin. C'est le test
-qui la trancherait.
+🔴 **HYPOTHÈSE RÉFUTÉE le 18/08 au soir** — elle figurait ici comme lecture « cohérente
+avec les chiffres, non testée ». La vérification l'infirme :
+
+| environnement | chemin sûr existe | détour vs plus court chemin |
+|---|---|---|
+| `LavaGapS5` | **10/10 graines** | **+0,0 case** |
+| `LavaCrossingS9N1` | **10/10 graines** | **+0,0 case** |
+
+**Éviter la lave ne coûte rien géométriquement.** Le chemin sûr est exactement aussi court
+que le plus court chemin — l'agent n'a jamais eu à arbitrer entre sécurité et objectif.
+
+La cause réelle est **métabolique** : énergie 0,156 (ON) contre 0,259 (OFF), **86 % des
+ticks en hypoglycémie**, vigueur à 0,020 du plancher — donc C2 éteint à ~97 %. Voir
+[`DIAGNOSTIC_18082026_pourquoi_la_douleur_coute.md`](DIAGNOSTIC_18082026_pourquoi_la_douleur_coute.md).
 
 ---
 
@@ -122,9 +133,8 @@ importante : les deux agents **voient** autant de danger. Seule la douleur diff�
 - **Le couplage douleur/but.** La douleur doit rendre le danger coûteux *sans* rendre
   l'objectif inatteignable. C'est une question de **conception**, pas de réglage — et
   aucune constante ne la résoudra.
-- **Tester sur un danger latéral** (`LavaCrossing` plutôt que `LavaGap`) : si la
-  dégradation disparaît quand le danger n'est plus sur le chemin, l'hypothèse du §4 est
-  confirmée. C'est le test le moins cher et le plus informatif.
+- ~~Tester sur un danger latéral~~ — **fait, et l'hypothèse est tombée** (voir §4) : le
+  détour est gratuit dans les DEUX environnements. La piste réelle est métabolique.
 - **Faut-il garder la douleur ?** Le mécanisme est juste et biologiquement fondé, mais il
   coûte 3,1 points de survie sur ce banc. Décision utilisateur — la mesure est fournie,
   elle ne tranche pas seule.

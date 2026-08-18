@@ -45,8 +45,12 @@ Il ne se jette plus dans la lave — **il n'arrive plus non plus**. Sur `LavaGap
 est *derrière* le couloir de lave : fuir le danger, c'est fuir l'objectif. La douleur
 enseigne l'évitement, pas le franchissement prudent.
 
-⚠️ Cette lecture est une **hypothèse cohérente avec les chiffres**, non testée : il
-faudrait un banc à danger *latéral* (`LavaCrossing`) pour la trancher.
+🔴 **Cette lecture a été RÉFUTÉE le soir même.** Vérification : le chemin sûr existe sur
+**10/10 graines** et le détour coûte **+0,0 case** dans `LavaGap` **comme** dans
+`LavaCrossing` — éviter la lave ne coûte rien géométriquement. La cause réelle est
+**métabolique** : 86 % des ticks en hypoglycémie, vigueur à 0,020 du plancher, donc C2
+éteint à ~97 %. Voir
+[`DIAGNOSTIC_18082026_...`](../recherche/DIAGNOSTIC_18082026_pourquoi_la_douleur_coute.md).
 
 **Contrôle clé** : chaleur moyenne ressentie **0,3617 (ON) vs 0,3553 (OFF)** — les deux
 bras voient autant de danger, seule la douleur diffère.
