@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `5b361a7` |
 | **Catégorie** | feat (expérimental) |
 | **Impact** | **Fonctionnel — homéostasie / apprentissage du danger** |
 | **Carnet** | [`NOCICEPTION_18082026_...`](../recherche/NOCICEPTION_18082026_la_chaleur_qui_fait_mal.md) |
