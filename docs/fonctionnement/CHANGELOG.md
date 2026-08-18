@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `b648e1f` |
 | **Catégorie** | fix critique |
 | **Impact** | **Critique — la mécanique v41.25 était entièrement inopérante** |
 | **Banc** | [`banc_intra_tick_douleur.py`](../recherche/scripts/banc_intra_tick_douleur.py) |
