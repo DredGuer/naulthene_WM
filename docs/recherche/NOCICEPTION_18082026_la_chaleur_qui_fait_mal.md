@@ -44,7 +44,12 @@ D(t) = (1−satiété)² + (1−hydratation)² + (1−stimulation)² + (1−éne
 
 `r_bio = D(t−1) − D(t)` étant une **dérivée**, tout en découle sans qu'aucune règle ne
 le décrive : approcher fait mal proportionnellement, entrer dans la source produit
-**r_bio = −1,000** (mesuré), soit 5 à 10× un choc de mur.
+**r_bio = −0,791** sur un vrai pas dans la lave (banc intra-tick), soit ~3300× le
+coût d'un tick ordinaire.
+
+⚠️ **Le `−1,000` initialement publié était FAUX** : mesuré à la main hors du tick réel,
+alors que le moteur produisait **0,000000** de douleur (annulation arithmétique — voir
+§8).
 
 **Aucune échelle n'est posée** : les trois jauges donnent `(1−x)² ∈ [0,1]`, la chaleur
 donne `T² ∈ [0,1]` par construction du champ. C'est la géométrie de la carte qui règle
@@ -121,3 +126,90 @@ Critères :
 
 ⚠️ Aucune conclusion ne sera tirée sous 20 graines, et chaque taux sera donné **avec son
 intervalle de confiance**, jamais seul.
+
+---
+
+## 8. L'ERREUR — la douleur annulée par sa propre soustraction (fix1)
+
+**La campagne a mesuré du vide.** 5 paires de graines, valences **identiques à la 6ᵉ
+décimale** — et pas seulement sur la lave :
+
+```
+FOOD  +0.254431   (ON et OFF)
+sol   +0.160835   (ON et OFF)
+lava  +0.059012   (ON et OFF)
+```
+
+`FOOD` et `sol` n'ont **aucun rapport** avec la lave. Ce n'était donc pas « la douleur
+n'atteint pas la lave » : **les deux cerveaux étaient le même cerveau**. J'ai lu la ligne
+`lava` en premier et raisonné dessus, au lieu de voir que la colonne entière était
+identique. C'est exactement le « résultat trop propre » du §3 de la règle de mesure.
+
+### La cause
+
+```python
+def step_metabolisme(self, ...):
+    deficit_avant = self.calculer_deficit()   # ← calculé ICI, en interne
+    ...
+    r_bio = deficit_avant - deficit_apres
+```
+
+J'écrivais `moteur_bio.chaleur` **avant** l'appel. Les deux déficits portaient donc la
+**même** valeur de `T²`, éliminée par la soustraction :
+
+```
+r_bio en entrant dans la lave : −0,000238
+r_bio sans aucune chaleur     : −0,000238
+ÉCART                         :  0,000000
+```
+
+### Le chiffre faux
+
+Le **`r_bio = −1,000`** publié en v41.25 était mesuré **à la main** — deux appels à
+`calculer_deficit` encadrant une affectation, hors du tick réel. **Le moteur ne l'a
+jamais produit.** Il a été inscrit au CHANGELOG et dans les deux README comme une mesure ;
+c'en était une, mais d'autre chose que ce que le code exécute.
+
+> **Leçon.** Une grandeur calculée par une fonction doit être vérifiée **à la sortie de
+> cette fonction**. La reconstruire à côté vérifie l'arithmétique de l'expérimentateur,
+> jamais le chemin réel. D'où `banc_intra_tick_douleur.py`, à qui il est **interdit** de
+> recalculer un déficit lui-même.
+
+### Le diagnostic intermédiaire était faux aussi
+
+L'hypothèse retenue sur le moment : `poids_evenement = 1.0 if recompense_env > 0 else
+0.0` fermerait la porte du choc dopaminergique, donc la valence ne serait jamais mise à
+jour sur un échec.
+
+**Vérification faite, ce n'est pas ce chemin.** La valence ne lit **jamais**
+`poids_evenement` : `_memoriser_si_saillant` reçoit `recompense_interne`, dans laquelle
+`r_bio` **est** présent (`noyau.py:8194`), et `enregistrer_evenement` en fait une moyenne
+glissante. La porte décrite existe, mais gouverne la **dopamine** et la **fortification
+synaptique**, pas la valence. Une explication plausible et cohérente peut désigner le
+mauvais organe — seule la lecture du chemin réel tranche.
+
+### Le correctif
+
+`chaleur_apres` devient un **argument**, appliqué **entre** les deux mesures. C'est la
+**transition** thermique qui fait mal, jamais le niveau seul.
+
+| transition | `r_bio` (produit par le moteur) |
+|---|---|
+| 0,00 → 0,00 (témoin) | −0,000238 |
+| 0,00 → 0,46 (case adjacente) | −0,211838 |
+| **0,46 → 1,00 (pas réel dans la lave)** | **−0,791111** |
+| **1,00 → 0,00 (fuite)** | **+0,999762** — soulagement |
+| même pas, `--sans-douleur` | −0,000238 (écart **−1,000000**) |
+
+**Effet sur la valence apprise** (25 jours, graine 1) :
+
+| | douleur ON | témoin OFF |
+|---|---|---|
+| **`lava`** | **−0,752562** | **+0,062455** |
+
+**Négative pour la première fois du projet.** Elle était positive sur *tous* les cerveaux
+mesurés depuis l'origine.
+
+⚠️ Cela prouve que **le canal fonctionne**, pas que le comportement s'améliore. La
+campagne 20 graines × 2 bras × 300 jours est relancée pour mesurer la **survie** — et
+elle peut parfaitement revenir négative.

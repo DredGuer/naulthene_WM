@@ -2728,11 +2728,38 @@ class BiologicalHomeostasisEngine:
                      + self.POIDS_CERVEAU * (1.0 + force_planification))
         return effort / max(reference, 1e-9)
 
-    def step_metabolisme(self, cout_action: float, erreur_jepa: float, nouvelle_case_visitee: bool):
+    def step_metabolisme(self, cout_action: float, erreur_jepa: float, nouvelle_case_visitee: bool,
+                         chaleur_apres: float = None):
         """Retourne (r_bio, quete_active_ou_None, effort). `cout_action` est ici l'effort
         métabolique déjà fusionné 20/80 (voir calculer_effort_metabolique), pas une
-        constante fixe comme en v18.0."""
+        constante fixe comme en v18.0.
+
+        v41.25-fix1 — `chaleur_apres` : la chaleur de la case ATTEINTE, appliquée ENTRE
+        les deux mesures de déficit.
+
+        🔴 CE QUE ÇA CORRIGE, et c'est une annulation arithmétique pure. `r_bio` est la
+        DIFFÉRENCE `deficit_avant − deficit_apres`, et `deficit_avant` est calculé ICI,
+        en interne. La v41.25 écrivait `self.chaleur` AVANT d'appeler cette méthode :
+        les deux déficits contenaient donc la MÊME valeur de `T²`, qui disparaissait de
+        la soustraction. Mesuré : `r_bio` en entrant dans la lave = **−0,000238**, contre
+        **−0,000238** sans aucune chaleur — un écart de **0,000000**. La douleur était
+        exactement annulée, et 5 paires de graines ont donné des valences identiques à
+        la 6ᵉ décimale (y compris sur `FOOD` et `sol`, sans rapport avec la lave — le
+        signe qui aurait dû alerter immédiatement).
+
+        ⚠️ Le `r_bio = −1,000` publié en v41.25 était mesuré À LA MAIN, hors du tick réel
+        (deux appels à `calculer_deficit` encadrant une affectation). Il n'a jamais été
+        produit par le moteur. C'est l'erreur de mesure que le §3 de la règle de mesure
+        décrit : un chiffre trop propre, jamais confronté au chemin réel.
+
+        `None` ⇒ comportement inchangé (la chaleur courante vaut pour les deux mesures),
+        ce qui garde la compatibilité de tout appelant qui ne la fournit pas."""
         deficit_avant = self.calculer_deficit()
+        if chaleur_apres is not None:
+            # La chaleur change ENTRE les deux mesures : `deficit_avant` porte celle de
+            # la case quittée, `deficit_apres` celle de la case atteinte. C'est cette
+            # transition — et elle seule — qui produit la douleur dans `r_bio`.
+            self.chaleur = float(chaleur_apres)
 
         # v41.2 — LA SATIÉTÉ NE SE VIDE PLUS TOUTE SEULE. Dans un modèle à deux étages, le
         # STOCK ne baisse que parce qu'il est DIGÉRÉ (voir plus bas) : lui appliquer en
@@ -7800,9 +7827,14 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
     # prise. Seule la facturation homéostatique est réalignée sur la position réelle.
     if _thermo:
         try:
-            etat.moteur_bio.chaleur = etat.bus_sensoriel.chaleur_seule(etat.env)
+            # v41.25-fix1 — on STOCKE, on n'applique pas. Écrire `moteur_bio.chaleur` ici
+            # ferait porter la MÊME chaleur aux deux mesures de déficit de
+            # `step_metabolisme`, et la soustraction l'annulerait intégralement (mesuré :
+            # écart de 0,000000). La valeur est passée en argument plus bas, pour être
+            # appliquée ENTRE `deficit_avant` et `deficit_apres`.
+            etat.chaleur_apres_step = etat.bus_sensoriel.chaleur_seule(etat.env)
         except Exception:
-            pass    # un capteur qui échoue laisse la chaleur du début de tick
+            etat.chaleur_apres_step = None   # capteur en échec : pas de transition
 
     if masquer_recompense_externe:
         # École de Rattrapage Vocal / Paradigme Bébé (v25.0, expérimental) : l'agent
@@ -7989,6 +8021,9 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
     r_bio, _quete_bio = etat.moteur_bio.step_metabolisme(
         cout_action=effort_metabolique, erreur_jepa=valeur_erreur,
         nouvelle_case_visitee=nouvelle_case_visitee,
+        # v41.25-fix1 — la chaleur de la case ATTEINTE, appliquée entre les deux mesures
+        # de déficit. C'est la TRANSITION thermique qui fait mal, jamais le niveau seul.
+        chaleur_apres=getattr(etat, "chaleur_apres_step", None),
     )
     etat.r_bio_jour += r_bio
     etat.effort_metabolique_jour += effort_metabolique

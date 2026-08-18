@@ -342,7 +342,8 @@ terminent leur run.
 > ⚠️ **La lave reste positive** (+0,07, comme l'eau) sur les quatre cerveaux de niveau 5,
 > après jusqu'à 1078 nuits dessus. Le palier est franchi par vitesse, pas par compréhension.
 > La **v41.25** lève l'impossibilité *structurelle* (la chaleur entre au déficit, un pas
-> dans la lave coûte `r_bio = −1,000`) ; **que cela change le comportement reste à mesurer**.
+> dans la lave coûte `r_bio = −0,791`, valence `lava` **+0,062 → −0,753**) ; **que cela
+> change le comportement reste à mesurer**.
 
 ### 🔬 Nouveautés v41.25 (expérimental) — La Nociception Thermique (2026-08-18)
 
@@ -365,8 +366,14 @@ D(t) = (1−satiété)² + (1−hydratation)² + (1−stimulation)² + (1−éne
 
 `r_bio` étant la **dérivée** du déficit, tout en découle sans qu'aucune règle ne le
 décrive : approcher fait mal proportionnellement, entrer dans la source produit
-**`r_bio = −1,000`** (mesuré). **Aucun coefficient n'est posé** : `(1−x)²` et `T²` sont
-tous deux dans [0,1] par construction.
+**`r_bio = −0,791`** sur un vrai pas dans la lave (banc intra-tick). **Aucun coefficient
+n'est posé** : `(1−x)²` et `T²` sont tous deux dans [0,1] par construction.
+
+⚠️ **La première version de ce correctif était inopérante** : `step_metabolisme` calcule
+lui-même `deficit_avant`, si bien que `T²` figurait des DEUX côtés de la soustraction et
+s'annulait exactement (`0,000000`). Le `−1,000` alors publié avait été mesuré **à la
+main**, hors du tick réel. Corrigé en v41.25-fix1 ; la valence de la lave passe de
+**+0,062 à −0,753**.
 
 **Le piège trouvé en chemin.** La thermoception est lue **en tête de tick**, la
 facturation a lieu **après `env.step`**. Sans correctif, l'agent qui marche dans la lave
