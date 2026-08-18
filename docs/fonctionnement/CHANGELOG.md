@@ -4,6 +4,75 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.25-experimental] - 2026-08-18 — La chaleur qui fait mal : fermer la boucle nociceptive
+
+### La lave avait la valence de l'eau
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | feat (expérimental) |
+| **Impact** | **Fonctionnel — homéostasie / apprentissage du danger** |
+| **Carnet** | [`NOCICEPTION_18082026_...`](../recherche/NOCICEPTION_18082026_la_chaleur_qui_fait_mal.md) |
+
+**Le défaut mesuré.** Sur la campagne v41.24 (17 graines × 2000 jours), la valence
+apprise de la lave est **`+0,059` à `+0,066` — POSITIVE**, à peu près celle de l'eau.
+Cause directe : MiniGrid punit la mort par **exactement `0.0`**, quand toucher un mur
+coûte `−0,01`. **Mourir était infiniment moins cher que se cogner.**
+
+**Ce qui existait déjà.** La v41.11 avait livré le **sens**, pas la **douleur** : champ
+de rayonnement `T = e^{−λd}`, BFS topologique, murs faisant ombre thermique, 2 dims
+(chaleur + ΔT) en queue du vecteur bio, `λ` dérivé de la carte. Tout cela était en
+place. L'agent **percevait** la chaleur sans qu'elle lui **coûte** quoi que ce soit :
+la boucle était ouverte.
+
+**Le correctif — une ligne, aucun coefficient.**
+
+```python
+D(t) = (1−satiété)² + (1−hydratation)² + (1−stimulation)² + (1−énergie)² + T(t)²
+```
+
+`r_bio = D(t−1) − D(t)` étant une **dérivée**, tout en découle sans qu'aucune règle ne
+le décrive : approcher fait mal proportionnellement, entrer dans la source produit
+**`r_bio = −1,000`** (mesuré), soit 5 à 10× un choc de mur. **Aucune échelle n'est
+posée** — les trois jauges donnent `(1−x)² ∈ [0,1]`, la chaleur donne `T² ∈ [0,1]` par
+construction du champ.
+
+**Le piège du décalage d'un tick.** La thermoception est lue **en tête de tick**, donc
+avant `env.step` ; la facturation a lieu **après**. Sans correctif, l'agent qui marche
+dans la lave payait la température de la case **quittée** (~0,457) et, l'épisode
+s'arrêtant aussitôt, **n'aurait jamais ressenti `T=1`**. C'est le décalage temporel
+corrigé en v41.5 sur la maturité, reproduit ici pour la même raison. Corrigé par
+`chaleur_seule()`, accesseur **sans effet de bord** — rappeler `lire_thermoception()`
+aurait écrasé `_chaleur_precedente` et faussé la clinotaxie du tick suivant.
+
+**Ce qui a été REFUSÉ.**
+- ❌ `si mort: récompense −= X` — seuil en dur sur un type nommé (invariant v41.11).
+- ❌ Drain d'hydratation au contact (**arbitrage utilisateur**) — double comptage, le
+  risque n°3 déjà écarté dans `calculer_deficit`. À `T=1` le déficit est déjà maximal.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `+ chaleur**2` dans `calculer_deficit` ; état `chaleur` ; relecture post-step ; compteurs de survie ; drapeau `DOULEUR_THERMIQUE_ACTIVE` ; `ENV_FORCE` |
+| `src/naulthene/cerveau/bus_sensoriel.py` | `_champ_thermique()` extrait (BFS partagé) + `chaleur_seule()` sans effet de bord |
+
+**Banc de mesure (`--env-force`).** La lave n'apparaît qu'au **niveau 5** et l'agent est
+bloqué au **4** : sur le cursus, la chaleur moyenne vaut **0,001 (1 tick actif / 400)**.
+Un A/B lancé là aurait comparé deux bras dont le terme mesuré est nul dans **99,7 %**
+des ticks — une ablation **VIDE**, pas négative (§4 de la règle de mesure). Sur
+`LavaGapS5` forcé : **300 à 400 ticks actifs / 400**.
+
+**Contrôles.** Test **A/A identique** ✅ · ablation atteignant le module (déficit
+**1,107 ON vs 0,998 OFF**) · `chaleur_seule` sans effet de bord ✅ · ablation **vide**
+sur monde sans lave (chaleur max `0,000000`) · `chaleur moy. à la mort = 1,000`.
+
+⚠️ **Résultat non encore établi.** À 5 jours, la survie est **identique** dans les deux
+bras : le déficit diffère bien, mais la douleur n'a pas encore changé les **décisions**.
+Campagne **20 graines × 2 bras × 800 jours** en cours ; aucune conclusion ne sera tirée
+sous 20 graines, et chaque taux sera donné **avec son intervalle de Wilson**.
+
+---
+
 ## [v41.24-experimental] - 2026-08-18 — La croissance n'est plus un droit, c'est un budget
 
 ### L'hypertrophie : 512 dimensions, 60 % de synapses mortes, aucun gain de niveau

@@ -2496,6 +2496,16 @@ class BiologicalHomeostasisEngine:
         # métabolisme d'espèce, sans greffe ni erreur.
         self.derive_metabolique = 0.0
         self.derive_kappa = 0.0
+        # v41.25 — LA NOCICEPTION THERMIQUE. La chaleur ressentie au tick courant, dans
+        # [0,1], lue depuis le champ de rayonnement (bus_sensoriel.lire_thermoception).
+        # Ce n'est PAS un sens de plus : le sens existe depuis la v41.11. C'est le
+        # CHAINON MANQUANT — jusqu'ici l'agent percevait la chaleur sans qu'elle lui
+        # coûte quoi que ce soit, donc sans aucune raison de l'éviter (mesuré sur
+        # 6 graines : valence de 'lava' à +0,059 / +0,066, soit celle de l'EAU).
+        # Écrite une fois par tick AVANT calculer_deficit ; 0.0 = ambiante, et un monde
+        # sans source brûlante laisse ce terme rigoureusement nul (ablation VIDE, pas
+        # négative — la distinction est celle du §4 de la règle de mesure).
+        self.chaleur = 0.0
         self.cause_mort = None
 
         # v41.2 — L'ÉCHELLE TEMPORELLE. Les taux sont exprimés PAR JOURNÉE et divisés par
@@ -2566,9 +2576,34 @@ class BiologicalHomeostasisEngine:
         ⚠️ Le double comptage était le risque n°3 du chantier (et le §7.2 de
         CONCEPTION_v34) : l'effort est déjà facturé en dépense d'énergie. Il l'est donc
         UNE SEULE FOIS — dépenser fait baisser `energie`, ce qui creuse le déficit, ce qui
-        rend `r_bio` négatif. L'effort n'est pas soustrait une seconde fois ailleurs."""
+        rend `r_bio` négatif. L'effort n'est pas soustrait une seconde fois ailleurs.
+
+        v41.25 — LA DOULEUR EST UN DÉFICIT, pas une pénalité. `+ chaleur**2` ferme la
+        boucle nociceptive : la chaleur n'entre PAS comme un malus conditionnel
+        (`si mort: -X`, ce que l'invariant v41.11 interdit explicitement), mais comme un
+        quatrième manque, au même titre et à la même échelle que la faim ou la soif.
+
+        L'échelle n'est posée par personne. Les trois jauges donnent `(1-x)**2` dans
+        [0,1] ; la chaleur donne `T**2` dans [0,1] par construction du champ de
+        rayonnement. Aucun coefficient multiplicateur n'est introduit — c'est la
+        géométrie de la carte (le `lambda_diffusion_carte` de l'odorat, dérivé de ses
+        dimensions) qui règle seule la pente du gradient.
+
+        Ce qui en découle MÉCANIQUEMENT, sans qu'aucune règle ne le décrive : `r_bio` est
+        la DÉRIVÉE du déficit (`D(t-1) - D(t)`), donc avancer vers la chaleur produit un
+        r_bio négatif proportionnel au rapprochement, et marcher DANS la source (T=1)
+        produit un effondrement de ~-1.0 — cinq à dix fois le choc d'un mur. La valence
+        de la trace mnésique s'inverse par la seule moyenne des chocs vécus, et C2, qui
+        reçoit le corps dans son rollout depuis la v41.13, projette cet effondrement
+        avant de s'y jeter.
+
+        ⚠️ PAS de drain de jauge au contact (arbitrage utilisateur explicite) : ce serait
+        facturer deux fois le même événement, exactement le risque n°3 écarté plus haut.
+        À T=1 le déficit est déjà maximal — la thermodynamique se suffit.
+        """
         return ((1.0 - self.satiete) ** 2 + (1.0 - self.hydratation) ** 2
-                + (1.0 - self.stimulation) ** 2 + (1.0 - self.energie) ** 2)
+                + (1.0 - self.stimulation) ** 2 + (1.0 - self.energie) ** 2
+                + (self.chaleur ** 2 if DOULEUR_THERMIQUE_ACTIVE else 0.0))
 
     def masse_totale(self, dim_bus: int, porte_objet: bool = False) -> float:
         """v41.20 — LA MASSE ÉMERGENTE. Aucune des trois composantes n'est posée.
@@ -5116,6 +5151,16 @@ TAILLE_MIN_REVE = 8                  # sous ce nombre de souvenirs, le lot est j
 # Rétrocompatibilité : `niveau_actuel` est un INDEX. Un `.brain` sauvegardé au niveau 4
 # (ex-Doctorat) se retrouverait à l'index 4 du nouveau programme (`LavaGapS5`) — voir
 # `persistance._remapper_niveau_cursus`, qui traduit l'ancien index vers le nouveau.
+# v41.25 — BANC DE MESURE (`--env-force`). Quand il est non-nul, le PROGRAMME entier est
+# remplacé par ce seul niveau, répété : l'agent naît dedans et n'en sort jamais.
+#
+# 🔴 POURQUOI. La lave n'apparaît qu'au niveau 5 (`LavaGapS5`) et l'agent est bloqué au
+# niveau 4 depuis toutes les campagnes mesurées. Un A/B de la douleur thermique lancé sur
+# le cursus normal comparerait donc deux bras dont le terme mesuré vaut zéro dans 99,7 %
+# des ticks — une ablation VIDE, pas négative (§4 de la règle de mesure). Le banc n'est
+# pas un raccourci : c'est la seule façon d'exposer réellement le mécanisme testé.
+ENV_FORCE = None
+
 PROGRAMME = [
     # — Socle moteur : se déplacer, sans aucun objet à manipuler —
     ("MiniGrid-Empty-5x5-v0",         "Nourrisson (Premiers pas)"),
@@ -5270,6 +5315,14 @@ FENETRE_MAITRISE_GENERALE = 100   # borne : ~5 fenêtres de niveau, assez long p
 # sevrage retombe exactement sur v41.3. Il n'existe que pour disposer d'un témoin à
 # graine identique — voir `--sans-heritage`.
 HERITAGE_SEVRAGE_ACTIF = True
+
+# v41.25 — interrupteur d'ablation de la NOCICEPTION THERMIQUE (`--sans-douleur`).
+# True  : la chaleur entre dans le déficit (`+ chaleur**2`) — elle FAIT MAL.
+# False : la chaleur reste perçue par les 2 dims de thermoception, mais ne coûte rien —
+#         c'est exactement l'état v41.11 à v41.24, le TÉMOIN de la campagne.
+# Le témoin n'est donc pas « sans thermoception » : le sens est identique des deux côtés,
+# seule la douleur diffère. C'est ce qui isole la boucle nociceptive du sens lui-même.
+DOULEUR_THERMIQUE_ACTIVE = True
 
 # v41.10 — interrupteur d'ablation de la mémoire par carte (`--sans-memoire-cartes`).
 # False = la bascule EFFACE, comportement v41.9 exact. Un seul point de lecture
@@ -6134,6 +6187,13 @@ class EtatCognitif:
         # v41.11 — THERMOCEPTION. Réarmés ici comme tout compteur journalier : les laisser
         # cumuler depuis la naissance ferait passer « la chaleur moyenne du jour » pour la
         # chaleur moyenne d'une vie (piège `score_vocal_jour` v27.0).
+        # v41.25 — compteurs de survie. Remis à zéro ICI, jamais seulement par getattr :
+        # c'est le piège `score_vocal_jour` (v27.0), où « la moyenne du jour » cumulait
+        # en réalité depuis la naissance.
+        self.morts_jour = 0
+        self.episodes_gagnes_jour = 0
+        self.episodes_epuises_jour = 0
+        self.chaleur_a_la_mort_jour = 0.0
         self.chaleur_cumul_jour = 0.0         # somme des intensités thermiques du jour
         self.chaleur_max_jour = 0.0           # pic de chaleur ressenti
         self.chaleur_ticks_actifs_jour = 0    # ticks où un danger est perceptible
@@ -6210,7 +6270,8 @@ def initialiser_etat_cognitif():
     Utilisée par le mode standalone ET par PersistanceAnatomique.charger_ou_naitre()
     quand aucun fichier .brain n'existe encore (v21.0)."""
     agent = AGI_Naulthene(dim_visuelle=DIM_VISUELLE, dim_bus=BUS_REFERENCE_INITIAL).to(DEVICE)
-    env_id, nom_classe = PROGRAMME[0]
+    env_id, nom_classe = ((ENV_FORCE, "Banc de mesure (env forcé)")
+                          if ENV_FORCE else PROGRAMME[0])
     env = creer_env(env_id, DIM_VISUELLE)
     print(f"\n🎒 Rentrée des classes : L'Agent démarre en {nom_classe}...")
     return EtatCognitif(agent, env, env_id, nom_classe)
@@ -6530,7 +6591,7 @@ def _appliquer_niveau_episode(etat, niveau: int) -> None:
     elif niveau > etat.niveau_actuel:
         etat.p17_incursions_jour = getattr(etat, "p17_incursions_jour", 0) + 1
 
-    env_id_voulu = PROGRAMME[niveau][0]
+    env_id_voulu = ENV_FORCE if ENV_FORCE else PROGRAMME[niveau][0]
     if env_id_voulu == etat.env_id:
         return
     etat.env.close()
@@ -7480,6 +7541,13 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
     _thermo = signaux_sensoriels[_debut_thermo:_debut_thermo + DIM_THERMOCEPTION]
     if _thermo:
         _chaleur, _delta_chaleur = float(_thermo[0]), float(_thermo[1])
+        # v41.25 — LA BOUCLE SE FERME ICI. La chaleur perçue devient la chaleur SUBIE :
+        # le moteur homéostatique la lira dans `calculer_deficit` (terme `+ chaleur**2`).
+        # ⚠️ L'écriture doit avoir lieu AVANT le `calculer_deficit` du tick (plus bas,
+        # `deficit_tick`), sinon la douleur serait facturée avec un tick de retard et
+        # `r_bio` créditerait le déplacement suivant — une superstition, au sens exact
+        # de l'invariant v37.1 sur les frontières d'épisode.
+        etat.moteur_bio.chaleur = _chaleur
         etat.chaleur_cumul_jour = getattr(etat, "chaleur_cumul_jour", 0.0) + _chaleur
         etat.chaleur_max_jour = max(getattr(etat, "chaleur_max_jour", 0.0), _chaleur)
         etat.chaleur_ticks_actifs_jour = (
@@ -7714,6 +7782,28 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
     etat.effet_moteur_tick = {"deplacement": bool(_a_bouge), "rotation": bool(_a_tourne),
                               "porte_objet": _u.carrying is not None}
 
+    # --- v41.25 : LA DOULEUR SE FACTURE LÀ OÙ LE CORPS EST ARRIVÉ ---
+    #
+    # 🔴 LE PIÈGE, et il est subtil. La thermoception est lue en tête de tick (avec tout
+    # le vecteur sensoriel), donc AVANT ce `step` : c'est la chaleur de la case QUITTÉE.
+    # `step_metabolisme` s'exécute lui APRÈS. Sans cette relecture, l'agent qui marche
+    # dans la lave paierait la température de la case d'où il vient — soit ~0.45 au lieu
+    # de 1.0 — et, l'épisode se terminant aussitôt, il ne ressentirait JAMAIS T=1. Le
+    # signal le plus important du mécanisme serait précisément celui qui n'arrive pas.
+    #
+    # C'est le même défaut de décalage temporel que la v41.5 avait corrigé sur la
+    # maturité, et il se reproduit ici pour la même raison : une grandeur lue en tête de
+    # tick et consommée en queue traverse un `env.step` qui l'a périmée.
+    #
+    # ⚠️ La perception (`signaux_sensoriels`, ce que le CERVEAU voit) n'est pas touchée :
+    # elle reste celle du début de tick, cohérente avec la décision qui vient d'être
+    # prise. Seule la facturation homéostatique est réalignée sur la position réelle.
+    if _thermo:
+        try:
+            etat.moteur_bio.chaleur = etat.bus_sensoriel.chaleur_seule(etat.env)
+        except Exception:
+            pass    # un capteur qui échoue laisse la chaleur du début de tick
+
     if masquer_recompense_externe:
         # École de Rattrapage Vocal / Paradigme Bébé (v25.0, expérimental) : l'agent
         # "n'a aucune idée s'il fait bien ou mal" avant JOUR_FIN_MASQUAGE_EXTERNE — ce
@@ -7725,6 +7815,25 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
         recompense_env = 0.0
     etat_suivant = encoder(obs_suivante)
     etat.fin_episode = bool(termine or tronque)
+
+    # --- v41.25 : LE COMPTAGE DES MORTS (instrumentation du même commit) ---
+    # `termine` sans récompense = l'épisode s'est arrêté sans victoire. Sur un banc à
+    # lave c'est une mort par le danger ; MiniGrid la punit par exactement 0.0, ce qui
+    # est précisément le trou que la nociception vient combler. C'est la mesure de
+    # SURVIE de la campagne : elle doit baisser dans le bras qui a mal.
+    # ⚠️ `termine` seul ne suffit pas à juger d'un succès (invariant v35.0) — c'est la
+    # même raison qui le rend, ici, exactement le bon signal pour compter les échecs.
+    if termine:
+        if recompense_env > 0:
+            etat.episodes_gagnes_jour = getattr(etat, "episodes_gagnes_jour", 0) + 1
+        else:
+            etat.morts_jour = getattr(etat, "morts_jour", 0) + 1
+            # La chaleur au moment de la fin : ~1.0 si l'agent est DANS la source.
+            etat.chaleur_a_la_mort_jour = (
+                getattr(etat, "chaleur_a_la_mort_jour", 0.0)
+                + float(getattr(etat.moteur_bio, "chaleur", 0.0)))
+    elif tronque:
+        etat.episodes_epuises_jour = getattr(etat, "episodes_epuises_jour", 0) + 1
     # v28.0 : l'action "done" substituée pour ACTION_DEMANDER laisse l'observation
     # inchangée PAR CONSTRUCTION (agent immobile) — ce n'est jamais un mur touché,
     # juste l'agent qui a choisi de tendre la main plutôt que de bouger.
@@ -8391,7 +8500,8 @@ def executer_nuit(etat, plafond_reve=None):
             except Exception:
                 profil_ancien = None   # un monde non-MiniGrid n'a pas de grille : pas
                                         # d'héritage, l'agent repart en débutant complet
-            etat.env_id, etat.nom_classe = PROGRAMME[etat.niveau_actuel]
+            etat.env_id, etat.nom_classe = ((ENV_FORCE, "Banc de mesure (env forcé)")
+                                            if ENV_FORCE else PROGRAMME[etat.niveau_actuel])
             etat.env.close()
             etat.env = creer_env(etat.env_id, DIM_VISUELLE)
             # La parenté exige une carte instanciée : le reset a lieu au prochain épisode,
@@ -9008,6 +9118,16 @@ def executer_nuit(etat, plafond_reve=None):
               f"chaleur moy {getattr(etat, 'chaleur_cumul_jour', 0.0) / ticks_du_jour:.3f} "
               f"(max {getattr(etat, 'chaleur_max_jour', 0.0):.3f}) | "
               f"🧭 approche {100.0 * _appr_chaud / max(1, _var_chaud):.1f}% des ticks de variation")
+        # v41.25 — la SURVIE, la mesure qui juge la nociception. Conditionnelle comme
+        # le reste du bloc : sur une carte sans danger, ces chiffres n'ont pas de sens.
+        _morts = getattr(etat, "morts_jour", 0)
+        _gagnes = getattr(etat, "episodes_gagnes_jour", 0)
+        _fins = _morts + _gagnes
+        print(f"  ├─ Survie v41.25 : {'💀' if _morts else '🛡️'} {_morts} mort(s) / "
+              f"{_gagnes} victoire(s) — survie {100.0 * _gagnes / max(_fins, 1):.0f}% | "
+              f"douleur {'ON' if DOULEUR_THERMIQUE_ACTIVE else 'OFF (témoin)'} | "
+              f"chaleur moy. à la mort "
+              f"{getattr(etat, 'chaleur_a_la_mort_jour', 0.0) / max(_morts, 1):.3f}")
 
     _amp = getattr(etat, "jepa_amplitude_cumul_jour", 0.0) / ticks_du_jour
     _conc = getattr(etat, "jepa_concentration_cumul_jour", 0.0) / ticks_du_jour
@@ -9481,6 +9601,16 @@ def executer_nuit(etat, plafond_reve=None):
         log_wandb["Thermo_Ticks_Actifs"] = etat.chaleur_ticks_actifs_jour
         log_wandb["Thermo_Chaleur_Moyenne"] = etat.chaleur_cumul_jour / ticks_du_jour
         log_wandb["Thermo_Chaleur_Max"] = etat.chaleur_max_jour
+        # v41.25 — la boucle nociceptive. `Thermo_Morts` est la métrique de survie de la
+        # campagne ; `Thermo_Douleur_Active` distingue les deux bras dans W&B.
+        _m = getattr(etat, "morts_jour", 0)
+        _g = getattr(etat, "episodes_gagnes_jour", 0)
+        log_wandb["Thermo_Morts"] = _m
+        log_wandb["Thermo_Victoires"] = _g
+        log_wandb["Thermo_Taux_Survie"] = _g / max(_m + _g, 1)
+        log_wandb["Thermo_Chaleur_A_La_Mort"] = (
+            getattr(etat, "chaleur_a_la_mort_jour", 0.0) / max(_m, 1))
+        log_wandb["Thermo_Douleur_Active"] = int(DOULEUR_THERMIQUE_ACTIVE)
         _var = getattr(etat, "chaleur_ticks_variation_jour", 0)
         if _var:
             log_wandb["Thermo_Taux_Approche"] = etat.chaleur_ticks_approche_jour / _var
@@ -9677,6 +9807,15 @@ if __name__ == "__main__":
     # v41.22 — témoin du plafond de bus indexé machine (voir _plafond_bus_machine).
     _p.add_argument("--plafond-bus-fixe", action="store_true",
                     help="ABLATION : fige DIM_BUS_MAX à 96, l'ancienne valeur posée")
+    # v41.25 — témoin de la nociception thermique (voir DOULEUR_THERMIQUE_ACTIVE).
+    _p.add_argument("--sans-douleur", action="store_true",
+                    help="ABLATION : la chaleur reste perçue mais ne coûte rien (témoin v41.24)")
+    # v41.25 — banc de mesure. Le cursus est bloqué au niveau 4, or les niveaux 1-4 ne
+    # contiennent AUCUNE lave : mesurer la douleur thermique sur le cursus normal
+    # reviendrait à mesurer un terme nul dans 99,7 % des ticks (mesuré : chaleur moyenne
+    # 0,001, 1 tick sur 400). Ce flag force l'environnement où le signal existe.
+    _p.add_argument("--env-force", type=str, default=None,
+                    help="MESURE : force un env_id MiniGrid unique (ex. MiniGrid-LavaGapS6-v0)")
     _args = _p.parse_args()
 
     # Drapeau global lu par `facteur_guidage` — un seul point de lecture, pas de
@@ -9717,6 +9856,24 @@ if __name__ == "__main__":
         print("🔬 [ABLATION] mémoire par carte v41.10 COUPÉE — la bascule efface (témoin v41.9)")
         from naulthene.cerveau.noyau import MEMOIRE_PAR_CARTE_ACTIVE as _verif_mem
         assert _verif_mem is False, ("l'ablation n'a pas atteint le module — campagne invalide")
+
+    if _args.env_force:
+        globals()["ENV_FORCE"] = _args.env_force
+        if _module_reel is not None:
+            _module_reel.ENV_FORCE = _args.env_force
+        print(f"🔬 [BANC] environnement forcé sur {_args.env_force} — cursus court-circuité")
+        from naulthene.cerveau.noyau import ENV_FORCE as _verif_env
+        assert _verif_env == _args.env_force, "le forçage n'a pas atteint le module"
+
+    # v41.25 — même discipline : écriture dans le module NOMMÉ + assertion runtime.
+    _douleur_active = not _args.sans_douleur
+    globals()["DOULEUR_THERMIQUE_ACTIVE"] = _douleur_active
+    if _module_reel is not None:
+        _module_reel.DOULEUR_THERMIQUE_ACTIVE = _douleur_active
+    if not _douleur_active:
+        print("🔬 [ABLATION] nociception thermique v41.25 COUPÉE — chaleur perçue mais indolore")
+        from naulthene.cerveau.noyau import DOULEUR_THERMIQUE_ACTIVE as _verif_dlr
+        assert _verif_dlr is False, ("l'ablation n'a pas atteint le module — campagne invalide")
 
     # v41.13 — même discipline : écriture dans le module NOMMÉ + assertion runtime.
     _corps_actif = not _args.sans_corps_rollout
