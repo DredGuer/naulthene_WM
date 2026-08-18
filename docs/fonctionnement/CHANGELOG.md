@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `a8c49b7` |
 | **Catégorie** | feat (expérimental) |
 | **Impact** | **Fonctionnel — homéostasie / nociception** |
 | **Carnet** | [`THERMOHOMEOSTASIE_18082026_...`](../recherche/THERMOHOMEOSTASIE_18082026_la_douleur_graduee.md) |
