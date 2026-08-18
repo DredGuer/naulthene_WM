@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `54f2f1b` |
 | **Catégorie** | feat (expérimental) |
 | **Impact** | **Fonctionnel — neurogenèse** |
 | **Carnet** | [`NUIT_18082026_...`](../recherche/NUIT_18082026_le_niveau_5_franchi_et_le_frein_qui_ne_borne_pas.md) |
