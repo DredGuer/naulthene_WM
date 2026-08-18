@@ -333,6 +333,14 @@ class PersistanceAnatomique:
             'module_acceptation_historique_vitesses': etat.module_acceptation.historique_vitesses,
 
             # --- 6. Thermostat de neurogenèse ---
+            # v41.24 — mémoire du rendement structurel. SANS elle, un `.brain` rechargé
+            # repartirait avec `rendement_moyen = None`, donc une vitalité de 1.0, donc
+            # +16 dimensions à la première mutation : l'agent oublierait à chaque
+            # résurrection que grandir ne lui rapporte plus rien.
+            'erreur_avant_mutation': etat.erreur_avant_mutation,
+            'effort_avant_mutation': etat.effort_avant_mutation,
+            'rendement_moyen': etat.rendement_moyen,
+            'rendement_ref': etat.rendement_ref,
             'seuil_base': etat.seuil_base,
             'seuil_actuel': etat.seuil_actuel,
             'cooldown_jours': etat.cooldown_jours,
@@ -670,6 +678,12 @@ class PersistanceAnatomique:
         etat.module_acceptation.historique_vitesses = checkpoint['module_acceptation_historique_vitesses']
 
         # --- Thermostat de neurogenèse ---
+        # v41.24 — lecture défensive : un `.brain` antérieur repart avec un rendement
+        # vierge (None), donc une force vitale de naissance. Aucune greffe nécessaire.
+        etat.erreur_avant_mutation = checkpoint.get('erreur_avant_mutation')
+        etat.effort_avant_mutation = checkpoint.get('effort_avant_mutation')
+        etat.rendement_moyen = checkpoint.get('rendement_moyen')
+        etat.rendement_ref = checkpoint.get('rendement_ref')
         etat.seuil_base = checkpoint['seuil_base']
         etat.seuil_actuel = checkpoint['seuil_actuel']
         etat.cooldown_jours = checkpoint['cooldown_jours']

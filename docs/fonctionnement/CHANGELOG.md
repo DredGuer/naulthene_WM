@@ -4,6 +4,62 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.24-experimental] - 2026-08-18 — La croissance n'est plus un droit, c'est un budget
+
+### L'hypertrophie : 512 dimensions, 60 % de synapses mortes, aucun gain de niveau
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | feat (expérimental) |
+| **Impact** | **Fonctionnel — neurogenèse** |
+| **Carnet** | [`NUIT_18082026_...`](../recherche/NUIT_18082026_le_niveau_5_franchi_et_le_frein_qui_ne_borne_pas.md) |
+
+**Le défaut mesuré.** Plafond relevé à 512 : `dim_bus` finissait à **512/512 sur
+3 graines (31 mutations)** pour un niveau atteint **identique** (4/3/4), une énergie
+divisée par 11 (0,19 → 0,017) et un effort triplé. Et **60 % des synapses** du gros
+cerveau n'étaient **jamais myélinisées** — on ajoutait du tissu, pas de la capacité.
+
+**Le piège d'auto-justification** : un gros réseau prédit marginalement mieux (0,0013
+contre 0,0047), donc `seuil_base` relaxe vers cette erreur ultra-basse, donc l'agent se
+crée un standard d'exigence infini — chaque agrandissement justifie le suivant. Le frein
+v41.23 stabilise le **rapport** erreur/seuil, jamais la **taille**.
+
+**Le principe (décision utilisateur)** : un organisme n'investit dans du tissu neural que
+si les calories dépensées rapportent un bénéfice de survie.
+
+```
+rendement = Δ(erreur JEPA gagnée) / Δ(effort métabolique payé)
+vitalité  = rendement courant / rendement de référence
+ajout     = round(AJOUT_DIM_BASE × vitalité)
+```
+
+⚠️ **Aucun `if rendement < X`.** L'arrêt est **arithmétique** : `round(16 × 0.03) == 0`.
+L'agent déclenche sa mutation, la biologie ne lui accorde aucun neurone. Mesuré sur les
+gains réels de `t512_g7` : l'ajout tombe **16 → 11 → 7 → 5 → 3 → 2 → 1 → 0**.
+
+**Ce que la mesure a imposé de corriger dans la conception initiale.** `rendement_ref`
+devait être figé au premier rendement. Testé : si la première mutation tombe sur un
+rendement anormalement bas (l'erreur baissait déjà seule), la vitalité **explose** —
+simulé, **ajout = 1020 dimensions**. C'est le défaut de `norme_naissance` (v34.0-fix2) à
+l'identique. `rendement_ref` est donc un **cliquet** : montée immédiate, descente 50× plus
+lente (`INERTIE_OUBLI_RENDEMENT`), et `vitalité` est bornée à 1.0.
+
+**Vérifié en run réel** (60 jours) : `MUTATION +16` → `MUTATION +1` →
+`Rendement nul (croissance refusée)`, `dim_bus` final **75** au lieu de 160.
+
+**Persistance** : les quatre champs du rendement sont sérialisés. Sans cela un `.brain`
+rechargé repartirait à vitalité 1.0, donc +16 — l'agent oublierait à chaque résurrection
+que grandir ne lui rapporte plus rien. Lecture défensive `.get()` : un `.brain` antérieur
+repart avec un rendement vierge, sans greffe.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | neurogenèse budgétée par le rendement · `AJOUT_DIM_BASE` · `INERTIE_OUBLI_RENDEMENT` |
+| `src/naulthene/cerveau/persistance.py` | sérialisation du rendement structurel (4 champs, lecture défensive) |
+
+---
+
 ## [v41.23-experimental] - 2026-08-18 — Le frein d'expansion en formules, et ce qu'il ne borne pas
 
 ### Le thermostat n'avait que des `if` ; il a maintenant deux pressions continues

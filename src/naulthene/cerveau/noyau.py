@@ -4258,6 +4258,16 @@ TAUX_RESSORT = 0.4
 PLAFOND_ERREUR_DOPAMINE = 2.0
 BOOST_ANCRAGE_MAX = 20.0
 SEUIL_APHASIE_NEUROGENESE = 0.05
+
+# v41.24 — LE BUDGET DE CROISSANCE (voir le thermostat dans `executer_nuit`).
+AJOUT_DIM_BASE = 16          # BORNE : la mutation d'un organisme à plein rendement.
+                             # C'est un MAXIMUM, jamais une quantité garantie — l'ajout
+                             # réel vaut `round(AJOUT_DIM_BASE × vitalité)` et tombe à 0
+                             # de lui-même quand le rendement s'effondre.
+INERTIE_OUBLI_RENDEMENT = 50.0  # le cliquet du rendement de référence : montée immédiate,
+                                # descente ~50× plus lente. Même discipline que
+                                # `INERTIE_OUBLI_REFERENCE_CHOC` (v37.1-fix1) — une
+                                # référence qui suit la décroissance ne borne plus rien.
 MALUS_DOULEUR = -0.01
 
 # --- CRISTALLISATION SOUPLE (v26.0-experimental, §A.5 AMELIORATION_V1.md, correctif
@@ -5863,6 +5873,14 @@ class EtatCognitif:
 
         # --- Thermostat de neurogenèse ---
         self.seuil_base, self.seuil_actuel, self.delta_max = 0.0005, 0.0005, 0.50
+        # v41.24 — mémoire du RENDEMENT structurel : ce que les mutations passées ont
+        # rapporté (baisse d'erreur JEPA) rapporté à ce qu'elles ont coûté (effort
+        # métabolique permanent). `None` = aucune mutation encore jugée.
+        self.erreur_avant_mutation = None
+        self.effort_avant_mutation = None
+        self.rendement_moyen = None
+        self.rendement_ref = None
+        self.vitalite_jour = 1.0
         self.cooldown_jours = 0
         self.jours_depuis_mutation = JOURS_ENTRE_MUTATIONS
         self.historique_erreurs = []
@@ -8572,6 +8590,10 @@ def executer_nuit(etat, plafond_reve=None):
     #
     # La fenêtre d'observation n'est plus « 3 » posé : elle suit la période de mutation
     # (`JOURS_ENTRE_MUTATIONS`), seule échelle de temps que la neurogenèse connaisse.
+    # v41.24 — `pas` est lu plus bas par le lissage du rendement structurel, or il n'est
+    # calculé que lorsque la fenêtre d'observation est PLEINE. Sans cette valeur par
+    # défaut, la première mutation d'un cerveau neuf lèverait un NameError.
+    pas = 1.0 / float(JOURS_ENTRE_MUTATIONS)
     etat.historique_erreurs.append(erreur_moyenne)
     if len(etat.historique_erreurs) > JOURS_ENTRE_MUTATIONS:
         etat.historique_erreurs.pop(0)
@@ -8644,12 +8666,89 @@ def executer_nuit(etat, plafond_reve=None):
             etat_thermostat = "Guérison"
     elif erreur_moyenne > etat.seuil_actuel and etat.jour > 1:
         if mutation_possible:
-            etat.agent.declencher_neurogenese(ajout_dim=16)
-            etat.jours_depuis_mutation = 0
-            ratio_gravite = erreur_moyenne / max(etat.seuil_base, 1e-9)
-            etat.cooldown_jours = min(5, max(1, int(ratio_gravite * 0.1)))
-            etat.seuil_actuel = min(etat.seuil_actuel + (erreur_moyenne * 1.5), etat.seuil_base + etat.delta_max)
-            etat_thermostat = "MUTATION !"
+            # --- v41.24 : LA CROISSANCE N'EST PLUS UN DROIT, C'EST UN BUDGET ---
+            #
+            # 🔴 CE QUE ÇA CORRIGE — l'hypertrophie mesurée le 18/08. Avec un plafond
+            # relevé à 512, `dim_bus` finissait à **512/512 sur 3 graines (31 mutations)**
+            # pour un niveau atteint IDENTIQUE (4/3/4), une énergie divisée par 11
+            # (0,19 → 0,017) et un effort triplé. Et 60 % des synapses du gros cerveau
+            # n'étaient JAMAIS myélinisées : on ajoutait du tissu, pas de la capacité.
+            #
+            # LE PIÈGE D'AUTO-JUSTIFICATION : un gros réseau prédit marginalement mieux
+            # (erreur 0,0013 contre 0,0047), donc `seuil_base` relaxe vers cette erreur
+            # ultra-basse, donc l'agent se crée un standard d'exigence infini — chaque
+            # agrandissement justifie le suivant. Le frein v41.23 stabilise le RAPPORT
+            # erreur/seuil, jamais la TAILLE.
+            #
+            # LE PRINCIPE (décision utilisateur) : un organisme n'investit dans du tissu
+            # neural que si les calories dépensées rapportent un bénéfice de survie.
+            #
+            #     rendement = Δ(erreur JEPA gagnée) / Δ(effort métabolique payé)
+            #     vitalité  = rendement courant / rendement de référence
+            #     ajout     = round(AJOUT_DIM_BASE × vitalité)
+            #
+            # ⚠️ IL N'Y A AUCUN `if rendement < X`. L'arrêt est ARITHMÉTIQUE :
+            # `round(16 × 0.03) == 0`. L'agent déclenche sa mutation, la biologie ne lui
+            # accorde aucun neurone. Mesuré sur les gains réels de `t512_g7` : l'ajout
+            # tombe à 16 → 11 → 7 → 5 → 3 → 2 → 1 → 0 au fil des mutations.
+            #
+            # ⚠️ `rendement_ref` EST UN CLIQUET, jamais une valeur figée au premier
+            # rendement. Testé : si la première mutation tombe sur un rendement
+            # anormalement bas (l'erreur baissait déjà toute seule), une référence figée
+            # fait exploser la vitalité — mesuré **ajout = 1020 dimensions**. Montée
+            # immédiate, descente ~50× plus lente : c'est exactement la discipline de
+            # `reference_choc_dopamine` (v37.1-fix1) et de `norme_naissance` (v34.0-fix2).
+            # Le `min(…, 1.0)` borne l'ajout à sa valeur de base : on ne finance jamais
+            # plus qu'un organisme sain.
+            _effort_moyen = etat.effort_metabolique_jour / max(1, ticks_du_jour)
+
+            if etat.erreur_avant_mutation is not None:
+                # Gain cognitif — nul si la mutation a DÉGRADÉ la prédiction (14 des 30
+                # mutations mesurées sur t512_g7 n'amélioraient rien).
+                _gain = max(0.0, etat.erreur_avant_mutation - erreur_moyenne)
+                # Surcoût métabolique permanent : le prix à payer, chaque tick, à vie.
+                _surcout = max(1e-4, _effort_moyen - etat.effort_avant_mutation)
+                _rendement = _gain / _surcout
+                if etat.rendement_moyen is None:
+                    etat.rendement_moyen = _rendement
+                    etat.rendement_ref = max(_rendement, 1e-9)
+                else:
+                    # Lissé au MÊME pas que le thermostat : tout le système respire
+                    # sur la même horloge.
+                    etat.rendement_moyen = ((1.0 - pas) * etat.rendement_moyen
+                                            + pas * _rendement)
+                    if etat.rendement_moyen > etat.rendement_ref:
+                        etat.rendement_ref = etat.rendement_moyen        # montée immédiate
+                    else:
+                        etat.rendement_ref += ((etat.rendement_moyen - etat.rendement_ref)
+                                               / INERTIE_OUBLI_RENDEMENT)  # descente lente
+
+            if etat.rendement_moyen is None:
+                _ajout = AJOUT_DIM_BASE      # force vitale de naissance : rien à comparer
+                etat.vitalite_jour = 1.0
+            else:
+                etat.vitalite_jour = min(etat.rendement_moyen
+                                         / max(etat.rendement_ref, 1e-9), 1.0)
+                _ajout = int(round(AJOUT_DIM_BASE * etat.vitalite_jour))
+
+            # Le plafond reste une borne matérielle, jamais le régulateur.
+            _ajout = min(_ajout, DIM_BUS_MAX - etat.agent.dim_bus)
+
+            if _ajout > 0:
+                etat.agent.declencher_neurogenese(ajout_dim=_ajout)
+                etat.jours_depuis_mutation = 0
+                ratio_gravite = erreur_moyenne / max(etat.seuil_base, 1e-9)
+                etat.cooldown_jours = min(5, max(1, int(ratio_gravite * 0.1)))
+                etat.seuil_actuel = min(etat.seuil_actuel + (erreur_moyenne * 1.5),
+                                        etat.seuil_base + etat.delta_max)
+                # Base de comparaison pour juger CETTE mutation la prochaine fois.
+                etat.erreur_avant_mutation = erreur_moyenne
+                etat.effort_avant_mutation = _effort_moyen
+                etat_thermostat = f"MUTATION +{_ajout} !"
+            else:
+                # Fonds insuffisants : l'agent voulait grandir, son métabolisme refuse.
+                etat.cooldown_jours = 1
+                etat_thermostat = "Rendement nul (croissance refusée)"
         elif etat.plasticite_base <= SEUIL_APHASIE_NEUROGENESE:
             etat_thermostat = "Aphasique (neurogenèse suspendue)"
         else:
