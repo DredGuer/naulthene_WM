@@ -2506,6 +2506,37 @@ class BiologicalHomeostasisEngine:
         # sans source brûlante laisse ce terme rigoureusement nul (ablation VIDE, pas
         # négative — la distinction est celle du §4 de la règle de mesure).
         self.chaleur = 0.0
+        # --- v41.26 : LA THERMOHOMÉOSTASIE — la douleur devient GRADUÉE ---
+        #
+        # 🔴 CE QUE ÇA CORRIGE. En v41.25 la douleur valait `T²`, donc elle était NON NULLE
+        # PARTOUT : mesuré sur les cartes du banc, **77 % des cases libres** portent une
+        # chaleur > 0,25 et **100 %** une chaleur > 0,10. L'agent n'avait donc **aucun lieu
+        # de repos** — son déficit restait creusé en permanence, `r_bio` négatif partout, et
+        # il fuyait sans jamais pouvoir cesser de fuir. Conséquence mesurée : **−26 % de
+        # ressources récoltées** (8,88 contre 11,98/jour), énergie 0,156 contre 0,259, donc
+        # vigueur au plancher et C2 éteint à ~97 %.
+        #
+        # ⚠️ La cause n'était PAS métabolique : `chaleur` ne touche ni l'énergie, ni la
+        # satiété, ni la dépense — vérifié. C'était **comportemental** : l'agent fuyait le
+        # danger, et sur ces cartes les ressources sont à 1,23 case de la lave en moyenne.
+        # Fuir la lave, c'est fuir le garde-manger.
+        #
+        # LA FORME (gradation utilisateur, 18/08) :
+        #   1. « ça va, c'est chaud »            → douleur RIGOUREUSEMENT NULLE
+        #   2. « gênant mais supportable »       → croissance très lente
+        #   3. « douloureux, tenable qq secondes »→ croissance rapide ET cumul temporel
+        #   4. « intense, recul réflexe + dégât »→ explosif
+        #
+        # `chaleur_habituee` : le niveau thermique auquel CET agent s'est habitué. C'est un
+        # CLIQUET, exactement comme `reference_choc_dopamine` (v37.1-fix1) — montée rapide,
+        # descente ~50× plus lente. Aucune structure nouvelle n'est introduite : c'est la
+        # même dynamique, déjà validée, appliquée à une autre grandeur. C'est ce qui crée le
+        # palier 1 SANS poser de seuil : le zéro est DÉRIVÉ du vécu de l'agent, pas décrété.
+        self.chaleur_habituee = 0.0
+        # `brulure` : la douleur ACCUMULÉE. C'est ce qui donne un sens à « tenable quelques
+        # secondes » — rester coûte, partir soulage. Sans elle, un tick au contact et vingt
+        # ticks au contact coûtent identiquement, ce qui est faux de toute brûlure réelle.
+        self.brulure = 0.0
         self.cause_mort = None
 
         # v41.2 — L'ÉCHELLE TEMPORELLE. Les taux sont exprimés PAR JOURNÉE et divisés par
@@ -2566,8 +2597,99 @@ class BiologicalHomeostasisEngine:
         """Les jauges ne se réinitialisent PAS à chaque épisode (contrairement aux
         détecteurs de position) : la faim/soif de l'agent est un état continu qui
         traverse les épisodes au sein d'une même journée, cohérent avec un métabolisme
-        réel plutôt qu'un compteur remis à zéro à chaque reset MiniGrid."""
-        pass
+        réel plutôt qu'un compteur remis à zéro à chaque reset MiniGrid.
+
+        v41.26 — EXCEPTION : la `brulure` accumulée, elle, repart à zéro. Ce n'est pas une
+        jauge métabolique mais une LÉSION LOCALE, et au `reset()` l'agent est téléporté sur
+        une carte régénérée : conserver la brûlure du dernier tick de l'épisode précédent
+        ferait payer un corps qui n'existe plus. Même raison que `_odeurs_precedentes`
+        (v32.0) et `_chaleur_precedente` (v41.11), remis à `None` pour ce motif exact.
+
+        ⚠️ `chaleur_habituee` SURVIT, elle : c'est un apprentissage sur la vie de l'agent,
+        pas un état corporel — au même titre que `reference_choc_dopamine`, qui traverse
+        les épisodes ET les journées."""
+        self.brulure = 0.0
+
+    def douleur_thermique(self) -> float:
+        """v41.26 — LA DOULEUR GRADUÉE, dérivée du vécu de l'agent.
+
+        Retourne la charge nociceptive dans [0,1], somme de deux termes :
+          • l'INSTANT  : l'excès thermique au-dessus de ce à quoi l'agent est habitué,
+                         élevé au cube — quasi nul tant qu'on n'est pas près, explosif
+                         au contact ;
+          • la BRÛLURE : ce même instant ACCUMULÉ tant qu'on reste, dissipé quand on part.
+
+        Les quatre paliers ÉMERGENT de cette forme, aucun n'est codé (mesuré à λ=0,782,
+        habituation 0,20) :
+
+            distance 3+ « ça va »          → 0,0000   ← un vrai ZÉRO, pas un epsilon
+            distance 2  « gênant »         → 0,0000
+            distance 1  « douloureux »     → 0,033 au 1er tick, 0,162 après 8
+            distance 0  « intense »        → 1,0000 immédiatement
+
+        ⚠️ LE ZÉRO EST DÉRIVÉ, JAMAIS POSÉ. `chaleur_habituee` est un niveau vécu, pas un
+        seuil : deux agents d'histoires différentes n'ont pas le même palier 1. C'est le
+        même mécanisme que `reference_choc_dopamine`, dont le projet a déjà démontré qu'il
+        rend le même événement « 100 % remarquable pour un débutant, 11,4 % pour un
+        expert ». Ici : la même chaleur est atroce pour qui n'a jamais brûlé, supportable
+        pour qui vit près du feu.
+        """
+        return float(min(1.0, self._douleur_instantanee() + self.brulure))
+
+    def _douleur_instantanee(self) -> float:
+        """v41.26 — la charge du tick courant, AVANT accumulation. Lecture pure.
+
+        Le PALIER 1 (« ça va, c'est chaud ») est produit par un seuil de perception
+        nociceptive : sous une intensité minimale, le nocicepteur **ne décharge pas du
+        tout**, et la douleur vaut ZÉRO EXACT — pas un epsilon. C'est ce qui rend un lieu
+        de repos possible, et c'est précisément ce qui manquait en v41.25 (mesuré : **0 %**
+        des cases libres étaient indolores, donc l'agent souffrait partout et fuyait sans
+        pouvoir s'arrêter).
+
+        ⚠️ Ce seuil n'est PAS une constante posée sur la chaleur : il est RELATIF à
+        l'habituation de l'agent, donc dérivé de son vécu. Deux agents d'histoires
+        différentes n'ont pas le même palier 1. Un agent neuf (habituation 0) a un seuil
+        plancher minimal, ce qui est correct : un nouveau-né sent tout.
+        """
+        seuil = max(FRACTION_SEUIL_NOCICEPTION * self.chaleur_habituee,
+                    SEUIL_NOCICEPTION_PLANCHER)
+        if self.chaleur <= seuil:
+            return 0.0
+        marge = 1.0 - seuil
+        if marge <= 1e-9:
+            return 0.0
+        exces = (self.chaleur - seuil) / marge
+        return exces ** EXPOSANT_GRADATION_DOULEUR
+
+    def encaisser_chaleur(self, chaleur: float):
+        """v41.26 — met à jour la brûlure accumulée et l'habituation. UNE fois par tick.
+
+        Séparée de `douleur_thermique` (lecture pure) pour la même raison que
+        `chaleur_seule` l'est de `lire_thermoception` : une fonction consultée plusieurs
+        fois dans un tick ne doit JAMAIS faire avancer un état. C'est le défaut qui a
+        produit le bug v41.25-fix1 (la douleur annulée par sa propre soustraction).
+        """
+        self.chaleur = float(chaleur)
+        # Une SEULE définition de la douleur instantanée, partagée avec la lecture pure :
+        # dupliquer le calcul serait la porte ouverte à ce que les deux divergent au
+        # premier correctif (même discipline que `_champ_thermique` en v41.25).
+        instant = self._douleur_instantanee()
+        # La brûlure s'accumule tant qu'on reste, se dissipe quand on part.
+        self.brulure = float(min(1.0, self.brulure * (1.0 - DISSIPATION_BRULURE) + instant))
+        # Habituation : cliquet LENT dans les deux sens.
+        #
+        # 🔴 CORRECTIF (banc du 18/08, défaut n°1). Une montée IMMÉDIATE — le cliquet de
+        # `reference_choc_dopamine` — est ici un contresens : l'habituation rattrapait la
+        # chaleur en UN tick, l'excès tombait à zéro, et la brûlure DÉCROISSAIT pendant que
+        # l'agent restait dans le feu (mesuré : 0,0956 → 0,0307 en 8 ticks, l'inverse exact
+        # du palier 3). Une brûlure ne s'apaise pas parce qu'on reste dedans.
+        #
+        # L'habituation est une adaptation de LONG TERME (des centaines de ticks), pas une
+        # réaction du tick. Montée ~10× plus rapide que la descente : on s'habitue plus vite
+        # qu'on ne se déshabitue, ce qui reste la forme d'un cliquet.
+        _vitesse = (VITESSE_HABITUATION_MONTEE if self.chaleur > self.chaleur_habituee
+                    else 1.0 - INERTIE_OUBLI_HABITUATION)
+        self.chaleur_habituee += (self.chaleur - self.chaleur_habituee) * _vitesse
 
     def calculer_deficit(self) -> float:
         """v41.2 — l'énergie entre dans le déficit comme ÉTAT (le carré de son manque),
@@ -2603,7 +2725,7 @@ class BiologicalHomeostasisEngine:
         """
         return ((1.0 - self.satiete) ** 2 + (1.0 - self.hydratation) ** 2
                 + (1.0 - self.stimulation) ** 2 + (1.0 - self.energie) ** 2
-                + (self.chaleur ** 2 if DOULEUR_THERMIQUE_ACTIVE else 0.0))
+                + (self.douleur_thermique() if DOULEUR_THERMIQUE_ACTIVE else 0.0))
 
     def masse_totale(self, dim_bus: int, porte_objet: bool = False) -> float:
         """v41.20 — LA MASSE ÉMERGENTE. Aucune des trois composantes n'est posée.
@@ -2759,7 +2881,9 @@ class BiologicalHomeostasisEngine:
             # La chaleur change ENTRE les deux mesures : `deficit_avant` porte celle de
             # la case quittée, `deficit_apres` celle de la case atteinte. C'est cette
             # transition — et elle seule — qui produit la douleur dans `r_bio`.
-            self.chaleur = float(chaleur_apres)
+            # v41.26 — passe par `encaisser_chaleur` : la brûlure accumulée et
+            # l'habituation avancent d'un tick ICI, et nulle part ailleurs.
+            self.encaisser_chaleur(chaleur_apres)
 
         # v41.2 — LA SATIÉTÉ NE SE VIDE PLUS TOUTE SEULE. Dans un modèle à deux étages, le
         # STOCK ne baisse que parce qu'il est DIGÉRÉ (voir plus bas) : lui appliquer en
@@ -4660,6 +4784,36 @@ INERTIE_REFERENCE_CHOC = 0.99      # inertie de `reference_choc_dopamine` À LA 
                                     # cesse de trouver un micro-progrès marquant, alors
                                     # qu'un agent qui n'a rien connu de mieux le grave.
 INERTIE_OUBLI_REFERENCE_CHOC = 0.9998
+# --- v41.26 : THERMOHOMÉOSTASIE ---
+# L'exposant de la gradation. 3 = la douleur croît comme le CUBE de l'excès thermique :
+# le palier 2 reste quasi nul, le palier 4 domine tout. Ce n'est pas un réglage libre —
+# c'est le plus petit entier qui produit les 4 paliers décrits, vérifié numériquement
+# (n=2 laisse le palier 2 à 3,3 % d'un manque vital, n=4 écrase le palier 3).
+EXPOSANT_GRADATION_DOULEUR = 3
+# Dissipation de la brûlure accumulée, PAR TICK. La brûlure perd 15 % de sa charge à
+# chaque tick passé hors du danger : un contact bref se dissipe en ~15 ticks, un séjour
+# prolongé sature. C'est la seule constante de temps du mécanisme, du même ordre que les
+# demi-vies déjà présentes (DEMI_VIE_OKAY, DEMI_VIE_DANGER).
+DISSIPATION_BRULURE = 0.15
+# Habituation thermique : même cliquet que la référence de choc (montée immédiate,
+# descente ~50× plus lente). Un agent qui vit près du feu s'y habitue ; s'il s'en éloigne
+# durablement, sa sensibilité revient — mais lentement, jamais en une journée.
+INERTIE_OUBLI_HABITUATION = 0.998
+# Montée de l'habituation, par tick. ~10× la descente : on s'habitue plus vite qu'on ne
+# se déshabitue (forme de cliquet), mais sur des CENTAINES de ticks — jamais en un seul,
+# sinon la brûlure s'éteindrait pendant que l'agent est encore dans le feu.
+VITESSE_HABITUATION_MONTEE = 0.02
+# Seuil de PERCEPTION nociceptive, en fraction de l'habituation courante. C'est le palier 1
+# — « ça va, c'est chaud » — et c'est la seule façon d'obtenir un ZÉRO EXACT plutôt qu'un
+# epsilon : sous ce niveau, le nocicepteur ne décharge pas du tout. Chez le vivant ce
+# seuil existe littéralement (les nocicepteurs ont une intensité minimale d'activation) ;
+# ici il est RELATIF au vécu de l'agent, donc jamais le même d'un agent à l'autre.
+FRACTION_SEUIL_NOCICEPTION = 0.25
+# Plancher du seuil de perception, pour un agent qui n'a jamais rien senti (habituation 0).
+# Correspond à la chaleur ressentie à ~3 cases d'une source sur une petite carte : au-delà,
+# l'agent perçoit toujours la chaleur par ses 2 dims sensorielles, mais elle ne lui fait
+# plus MAL. C'est la frontière entre percevoir et souffrir.
+SEUIL_NOCICEPTION_PLANCHER = 0.12
                                     # v37.1-fix — inertie À LA DESCENTE, ~50× plus lente que
                                     # la montée. C'est un CLIQUET, et il n'est pas
                                     # décoratif : avec une inertie symétrique (le bug v37.1),
@@ -6221,6 +6375,12 @@ class EtatCognitif:
         self.episodes_gagnes_jour = 0
         self.episodes_epuises_jour = 0
         self.chaleur_a_la_mort_jour = 0.0
+        # v41.26 — la douleur EFFECTIVEMENT ressentie (après gradation), distincte de la
+        # chaleur brute : c'est elle qui entre dans le déficit. Sans ce compteur, on ne
+        # saurait pas si le palier 1 produit bien un vrai zéro.
+        self.douleur_cumul_jour = 0.0
+        self.douleur_max_jour = 0.0
+        self.douleur_ticks_actifs_jour = 0
         self.chaleur_cumul_jour = 0.0         # somme des intensités thermiques du jour
         self.chaleur_max_jour = 0.0           # pic de chaleur ressenti
         self.chaleur_ticks_actifs_jour = 0    # ticks où un danger est perceptible
@@ -7009,6 +7169,7 @@ def demarrer_journee(etat):
     etat.sursaut_volonte.reinitialiser_episode()
     etat.detecteur_ressources_bio.reinitialiser_episode(etat.env)
     etat.bus_sensoriel.reinitialiser_episode(etat.env)  # v29.0 — efface la trace de goût
+    etat.moteur_bio.reinitialiser_episode()  # v41.26 — la brûlure est une lésion locale
     etat.positions_visitees_episode = set()
 
     etat._reinitialiser_buffers_journee()
@@ -7576,6 +7737,12 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
         # de l'invariant v37.1 sur les frontières d'épisode.
         etat.moteur_bio.chaleur = _chaleur
         etat.chaleur_cumul_jour = getattr(etat, "chaleur_cumul_jour", 0.0) + _chaleur
+        # v41.26 — la douleur GRADUÉE réellement facturée (lecture pure, sans effet de bord)
+        _dlr = etat.moteur_bio.douleur_thermique()
+        etat.douleur_cumul_jour = getattr(etat, "douleur_cumul_jour", 0.0) + _dlr
+        etat.douleur_max_jour = max(getattr(etat, "douleur_max_jour", 0.0), _dlr)
+        etat.douleur_ticks_actifs_jour = (
+            getattr(etat, "douleur_ticks_actifs_jour", 0) + int(_dlr > 1e-6))
         etat.chaleur_max_jour = max(getattr(etat, "chaleur_max_jour", 0.0), _chaleur)
         etat.chaleur_ticks_actifs_jour = (
             getattr(etat, "chaleur_ticks_actifs_jour", 0) + int(_chaleur > 0.0))
@@ -8384,6 +8551,7 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
         etat.sursaut_volonte.reinitialiser_episode()
         etat.detecteur_ressources_bio.reinitialiser_episode(etat.env)
         etat.bus_sensoriel.reinitialiser_episode(etat.env)  # v29.0 — efface la trace de goût
+        etat.moteur_bio.reinitialiser_episode()  # v41.26 — la brûlure est une lésion locale
         etat.positions_visitees_episode = set()
         # v34.0-etape0 (télémétrie) : chaque nouvelle carte de la journée est comptée.
         etat.ressources_vues_jour += _compter_ressources_grille(etat)
@@ -9158,6 +9326,12 @@ def executer_nuit(etat, plafond_reve=None):
         _morts = getattr(etat, "morts_jour", 0)
         _gagnes = getattr(etat, "episodes_gagnes_jour", 0)
         _fins = _morts + _gagnes
+        _dm = getattr(etat, "douleur_cumul_jour", 0.0) / max(ticks_du_jour, 1)
+        print(f"  ├─ Douleur v41.26: 🩹 moy {_dm:.4f} (max "
+              f"{getattr(etat, 'douleur_max_jour', 0.0):.3f}) | "
+              f"{getattr(etat, 'douleur_ticks_actifs_jour', 0)}/{ticks_du_jour} tick(s) douloureux | "
+              f"habituation {etat.moteur_bio.chaleur_habituee:.3f}"
+              f"{'' if DOULEUR_THERMIQUE_ACTIVE else ' [CALCULÉE, NON FACTURÉE — témoin]'}")
         print(f"  ├─ Survie v41.25 : {'💀' if _morts else '🛡️'} {_morts} mort(s) / "
               f"{_gagnes} victoire(s) — survie {100.0 * _gagnes / max(_fins, 1):.0f}% | "
               f"douleur {'ON' if DOULEUR_THERMIQUE_ACTIVE else 'OFF (témoin)'} | "
@@ -9646,6 +9820,12 @@ def executer_nuit(etat, plafond_reve=None):
         log_wandb["Thermo_Chaleur_A_La_Mort"] = (
             getattr(etat, "chaleur_a_la_mort_jour", 0.0) / max(_m, 1))
         log_wandb["Thermo_Douleur_Active"] = int(DOULEUR_THERMIQUE_ACTIVE)
+        # v41.26 — la gradation : douleur effective vs chaleur brute, et l'habituation.
+        log_wandb["Thermo_Douleur_Moyenne"] = (
+            getattr(etat, "douleur_cumul_jour", 0.0) / max(ticks_du_jour, 1))
+        log_wandb["Thermo_Douleur_Max"] = getattr(etat, "douleur_max_jour", 0.0)
+        log_wandb["Thermo_Ticks_Douloureux"] = getattr(etat, "douleur_ticks_actifs_jour", 0)
+        log_wandb["Thermo_Habituation"] = etat.moteur_bio.chaleur_habituee
         _var = getattr(etat, "chaleur_ticks_variation_jour", 0)
         if _var:
             log_wandb["Thermo_Taux_Approche"] = etat.chaleur_ticks_approche_jour / _var
