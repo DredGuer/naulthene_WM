@@ -4,6 +4,85 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.26-experimental] - 2026-08-18 — La thermohoméostasie : la douleur devient graduée
+
+### Le défaut : une douleur sans zéro, donc sans lieu de repos
+
+| Type | Details |
+|------|---------|
+| **Commit** | `a8c49b7` |
+| **Catégorie** | feat (expérimental) |
+| **Impact** | **Fonctionnel — homéostasie / nociception** |
+| **Carnet** | [`THERMOHOMEOSTASIE_18082026_...`](../recherche/THERMOHOMEOSTASIE_18082026_la_douleur_graduee.md) |
+
+**Le défaut mesuré.** `douleur = T²` est continue et **jamais nulle** : sur les cartes du
+banc, **100 %** des cases libres portent une chaleur > 0,10 et **77 %** > 0,25. L'agent
+n'avait **aucun lieu de repos** — déficit creusé partout, `r_bio` négatif en permanence,
+fuite sans fin possible.
+
+**La cause n'était PAS métabolique.** `self.chaleur` ne touche ni l'énergie, ni la satiété,
+ni la dépense — vérifié. La chaîne est **comportementale** : douleur permanente → évitement
+permanent → **moins de nourriture atteinte** → énergie basse → vigueur au plancher → C2
+éteint. Mesuré sur **deux cartes sans rien de commun** :
+
+| ressources récoltées/jour | douleur ON | témoin | écart |
+|---|---|---|---|
+| `LavaGapS5` | 8,88 | 11,98 | **−26 %** |
+| `LavaCrossingS9N1` | 10,24 | 13,73 | **−25 %** |
+
+⚠️ *Rectification* : un diagnostic antérieur de la même nuit concluait « c'est
+métabolique ». C'était une corrélation prise pour une cause.
+
+**La gradation (formulation utilisateur).**
+
+```
+seuil    = max(FRACTION × habituation, plancher)   ← palier 1, DÉRIVÉ du vécu
+instant  = ((T − seuil) / (1 − seuil))³            ← paliers 2/3/4
+brûlure  = brûlure × (1 − dissipation) + instant   ← la durée
+douleur  = min(1, instant + brûlure)
+```
+
+Les quatre paliers **émergent**, aucun n'est codé (banc `banc_gradation_douleur.py`) :
+
+| distance | chaleur | douleur | palier |
+|---|---|---|---|
+| 0 | 1,0000 | **1,000000** | 4. intense (dégât) |
+| 1 | 0,4573 | 0,112629 | 3. douloureux |
+| 2 | 0,2091 | 0,002078 | 2. gênant |
+| 3 | 0,0956 | **0,000000** | **1. ça va — ZÉRO EXACT** |
+
+**La durée** (distance 1, l'agent reste) : 0,113 → 0,160 → 0,236 → **0,329** en 8 ticks.
+Supportable un instant, insupportable si l'on s'attarde. Dissipation : 0,103 après 6 ticks
+hors du danger.
+
+**Rien n'est empilé** : l'habituation est le **même cliquet** que
+`reference_choc_dopamine` (v37.1), déjà validé. Aucune jauge « adrénaline » ou
+« endorphine » ajoutée.
+
+**Deux défauts trouvés par le banc et corrigés avant lancement :**
+1. **L'habituation montait trop vite** (cliquet immédiat repris tel quel) : elle
+   rattrapait la chaleur en UN tick, et la brûlure **DÉCROISSAIT pendant que l'agent
+   restait dans le feu** (0,0956 → 0,0307). L'inverse du palier 3.
+2. **Le palier 1 n'avait pas de vrai zéro** : `T³` vaut `0,000084` à distance 4 — un
+   epsilon. Un nocicepteur a une intensité minimale d'activation.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `douleur_thermique()`, `_douleur_instantanee()`, `encaisser_chaleur()` ; état `chaleur_habituee` + `brulure` ; reset de la brûlure par épisode ; instrumentation |
+| `src/naulthene/cerveau/persistance.py` | `chaleur_habituee` sérialisée (lecture défensive) |
+| `docs/recherche/scripts/banc_gradation_douleur.py` | **nouveau** — vérifie les 4 paliers en sortie de moteur |
+
+⚠️ **Limite du banc à connaître avant lecture des résultats.** Sur `LavaGapS5`, **aucune
+case n'est à distance ≥ 3 de la lave** (77 % à d=1) : le lieu de repos **n'existe pas
+géométriquement**. La gradation divise la douleur moyenne par ~2 (0,16 → 0,087) mais ne
+peut pas créer un repos absent de la carte. Cases indolores : **0 %** sur `LavaGapS5`,
+**11 %** sur `LavaCrossingS9N1`.
+
+**Campagne en cours** : 20 graines × 2 bras × 300 jours. Critère n°1 = **la récolte
+remonte-t-elle ?**
+
+---
+
 ## [v41.25-mesure] - 2026-08-18 — La peur s'apprend (20/20), la survie baisse (−3,1 pts)
 
 ### Résultat de campagne : mécanisme validé, objectif manqué

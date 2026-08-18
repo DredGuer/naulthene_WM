@@ -341,6 +341,11 @@ class PersistanceAnatomique:
             'effort_avant_mutation': etat.effort_avant_mutation,
             'rendement_moyen': etat.rendement_moyen,
             'rendement_ref': etat.rendement_ref,
+            # v41.26 — l'habituation thermique est un APPRENTISSAGE de la vie de
+            # l'agent (comme reference_choc_dopamine), donc elle se sérialise. La
+            # `brulure`, elle, est une lésion locale remise à zéro à chaque épisode :
+            # la persister n'aurait aucun sens.
+            'chaleur_habituee': getattr(etat.moteur_bio, 'chaleur_habituee', 0.0),
             'seuil_base': etat.seuil_base,
             'seuil_actuel': etat.seuil_actuel,
             'cooldown_jours': etat.cooldown_jours,
@@ -684,6 +689,9 @@ class PersistanceAnatomique:
         etat.effort_avant_mutation = checkpoint.get('effort_avant_mutation')
         etat.rendement_moyen = checkpoint.get('rendement_moyen')
         etat.rendement_ref = checkpoint.get('rendement_ref')
+        # Lecture défensive : un `.brain` antérieur à la v41.26 repart avec une
+        # sensibilité thermique vierge (0.0), sans greffe ni erreur.
+        etat.moteur_bio.chaleur_habituee = checkpoint.get('chaleur_habituee', 0.0)
         etat.seuil_base = checkpoint['seuil_base']
         etat.seuil_actuel = checkpoint['seuil_actuel']
         etat.cooldown_jours = checkpoint['cooldown_jours']

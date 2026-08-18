@@ -133,7 +133,7 @@ Two caveats, both measurable rather than rhetorical:
 | Level 5 | **4 seeds out of 20** — 20 % [8–42], and the level is **held** (up to 1078 nights on it) |
 | What unlocked level 4 | **brain-sparing**: 0 % [0–16] → 80 % [58–92], 18 wins / 0 losses (p < 0.001) |
 | Effect of severing C2 on the score | **0.0 points across all 6 levels** (78 cells) — and on `LavaGap`, severing it **triples** the success rate |
-| Learned valence of lava | **+0.072 — POSITIVE**, barely distinct from water (+0.069). Nociception (v41.25) flips it to **−0.761 on 20/20 seeds** — but survival **drops** 8.6 % → 6.7 % |
+| Learned valence of lava | **+0.072 — POSITIVE**, barely distinct from water (+0.069). Nociception (v41.25) flips it to **−0.761 on 20/20 seeds** — but survival **drops** 8.6 % → 6.7 %, because pain was **non-zero everywhere** (77 % of cells) and the agent fled its own food supply (**−25 % harvest**, two maps). Graded pain (v41.26) under test |
 | Cognitive mechanisms that improved anything | **1 out of 13 tested** — brain-sparing (thermal nociception works, but *lowers* survival) |
 | Effect of growing the brain (96 → 160 → 512 dims) | **none** across 3 campaigns — and energy drops 11× |
 | Levers that did work | **3 — two properties of the world, one of the decision** |
@@ -474,6 +474,16 @@ What that means concretely:
   produce competence.**
   ⚠️ A first version of this fix was **entirely inoperative** — the pain appeared on both
   sides of a subtraction and cancelled to exactly `0.000000`.
+- **Why fear cost performance — measured, not assumed.** `pain = T²` is continuous and
+  **never zero**: 100 % of free cells carry heat > 0.10, 77 % carry > 0.25. The agent had
+  **no place to rest**, so it fled permanently — and on these maps food sits ~1.2 cells
+  from the lava. Result: **−25 % food harvested**, on two maps with nothing in common
+  (`LavaGap` −26 %, `LavaCrossing` −25 %), hence low energy, vigour at its floor, C2
+  silenced. The cause is **behavioural, not metabolic**: heat never touches energy,
+  satiety or expenditure. **v41.26** replaces `T²` with a graded pain — a perception
+  threshold derived from the agent's own habituation (a true zero, not an epsilon), a
+  cubic rise, and a burn that **accumulates while you stay and dissipates when you
+  leave**. Under test.
 - **Growing the brain changes nothing**: across three campaigns (96 → 160 → 512 dims) the
   level reached is identical, while energy drops 11× and effort triples.
 - **The bench itself was broken until v41.9.** `env.reset()` was never seeded, so two runs of
