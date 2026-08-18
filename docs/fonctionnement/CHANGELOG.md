@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `bfc546f` |
 | **Catégorie** | fix (expérimental) — conformité au dogme |
 | **Impact** | **Fonctionnel — neurogenèse** |
 | **Carnet** | [`EXPANSION_17082026_le_frein_de_la_neurogenese.md`](../recherche/EXPANSION_17082026_le_frein_de_la_neurogenese.md) · [`NUIT_18082026_...`](../recherche/NUIT_18082026_le_niveau_5_franchi_et_le_frein_qui_ne_borne_pas.md) |
