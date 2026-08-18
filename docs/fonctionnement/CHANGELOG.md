@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `62210e7` |
 | **Catégorie** | docs (résultat de mesure) |
 | **Impact** | **Mesure — aucun changement de code** |
 | **Carnet** | [`CAMPAGNE_18082026_...`](../recherche/CAMPAGNE_18082026_nociception_20_graines.md) |
