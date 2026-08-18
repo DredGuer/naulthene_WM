@@ -19,8 +19,15 @@ rapide dans lequel un cerveau peut être élevé, cassé et mesuré. Ce qui se c
 l'organe lui-même : des sens qui alimentent tous le même espace, un métabolisme qui a faim, une
 couche réflexe et une couche délibérative, une mémoire qui abstrait par répétition, et un cycle
 jour/nuit qui consolide ou oublie. Remplacez le berceau par une caméra, un micro et un bus moteur,
-et le même `nn.Module` devrait continuer de tourner — parce que rien à l'intérieur ne nomme
-« grille », « clé » ou « porte ».
+et le même `nn.Module` devrait continuer de tourner.
+
+⚠️ **Énoncé précisément** (une version antérieure de cette ligne en promettait trop) : le
+chemin de décision ne contient **aucun seuil de déclenchement**, et les grandeurs
+d'apprentissage sont **dérivées du vécu**, jamais réglées — la même récompense vaut 100 %
+pour un débutant et 11 % pour le même agent devenu expert. Ce qui reste en dur, documenté
+plutôt que caché : **quatre récompenses posées**, ~25 constantes de calibration, et la
+**nourriture/eau identifiées par couleur** (`"red"`/`"blue"`) dans le cœur. Audit complet :
+[revue du dogme](docs/etat_des_lieux/18082026_revue_dogme_avant_publication.md).
 
 **⚠️ Cela ne fonctionne pas encore.** L'agent franchit **1 à 5 paliers sur 6** selon la graine
 aléatoire — une **variance ×69 entre deux runs identiques**. Huit mécaniques cognitives ont été

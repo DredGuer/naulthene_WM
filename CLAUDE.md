@@ -28,8 +28,11 @@ Ce n'est pas une application produit : c'est un script de recherche exécuté en
 MiniGrid n'est pas la finalité : c'est un **berceau** — un monde peu coûteux et rapide où élever,
 casser et mesurer un cerveau. Ce qui se construit est l'organe : des sens qui alimentent tous le
 même espace, un métabolisme, une couche réflexe et une couche délibérative, une mémoire qui
-abstrait par répétition, un cycle jour/nuit. **Rien dans le cœur ne nomme « grille », « clé » ni
-« porte »** — c'est précisément ce qui rend envisageable le remplacement du berceau par une
+abstrait par répétition, un cycle jour/nuit. **Le cœur ne nomme presque rien du monde** —
+⚠️ audit du 18/08/2026 : `COULEUR_FOOD="red"`/`COULEUR_WATER="blue"` et un test
+`type == "ball"` subsistent dans `noyau.py` (voir
+`docs/etat_des_lieux/18082026_revue_dogme_avant_publication.md`), donc ne jamais affirmer
+« rien en dur » sans nuance — c'est précisément ce qui rend envisageable le remplacement du berceau par une
 caméra, un micro et un bus moteur.
 
 Deux conséquences pour la rédaction de toute doc, tout commit, toute description :

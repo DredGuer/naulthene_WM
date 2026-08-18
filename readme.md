@@ -17,8 +17,15 @@ Naulthène is not a MiniGrid solver. MiniGrid is a *crib* — a cheap, fast worl
 can be grown, broken and measured. What is being built is the organ itself: senses that all feed
 one space, a metabolism that gets hungry, a reflex layer and a deliberative layer, memory that
 abstracts by repetition, and a day/night cycle that consolidates or forgets. Swap the crib for a
-camera, a microphone and a motor bus, and the same `nn.Module` should keep running — because
-nothing in it names "grid", "key" or "door".
+camera, a microphone and a motor bus, and the same `nn.Module` should keep running.
+
+⚠️ **Precisely stated** (an earlier version of this line overclaimed): the decision path
+contains **no triggering threshold**, and learning quantities are **derived from what the
+agent has lived**, not tuned — the same reward is worth 100 % to a beginner and 11 % to
+the same agent once expert. What remains hardcoded, and is documented rather than hidden:
+**four posed rewards**, ~25 calibration constants, and **food/water identified by colour**
+(`"red"`/`"blue"`) inside the core. Full audit:
+[dogma review](docs/etat_des_lieux/18082026_revue_dogme_avant_publication.md).
 
 **⚠️ It does not work yet.** The agent clears 1 to 5 levels out of 6 depending on the random
 seed — a **×69 variance between two identical runs**. Eight cognitive mechanisms have been
