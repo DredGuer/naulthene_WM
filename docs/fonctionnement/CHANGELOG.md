@@ -4,6 +4,82 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.27-experimental] - 2026-08-19 — La douleur unique : un seul état, deux signatures
+
+### Il y avait DEUX douleurs sans rapport ; il n'y en a plus qu'une
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | feat (expérimental) — **refonte** |
+| **Impact** | **Fonctionnel — homéostasie / nociception / récompense** |
+| **Carnet** | [`DOULEUR_UNIQUE_19082026_refonte.md`](../recherche/DOULEUR_UNIQUE_19082026_refonte.md) |
+
+**Le défaut.** Deux canaux sans rapport : `MALUS_DOULEUR = −0,01` (constante, dans la
+récompense) pour le mur, et `chaleur²` (dans le déficit) pour le feu. Deux échelles, deux
+traitements — l'empilement que le projet refuse. `MALUS_DOULEUR` était l'une des **4
+récompenses en dur** de l'audit du dogme, et celle qui produisait l'inversion *« mourir
+coûte moins cher que se cogner »*. **Elle est SUPPRIMÉE.**
+
+**La forme** (formulation utilisateur du 19/08) :
+
+```
+douleur(t) = douleur(t−1) × (1 − dégradation(t)) + pic(t)
+```
+
+Un **seul** état corporel. Le « type » n'est pas un canal — c'est le couple
+**(pic, demi-vie)** fourni par l'organe sensoriel :
+
+| événement | pic | demi-vie |
+|---|---|---|
+| brûlure | ∝ excès thermique | **60 ticks** — ça s'installe |
+| choc mural | ∝ **vitesse d'impact** | **5 ticks** — ça passe |
+
+Les signatures vivent dans `bus_sensoriel.py` ; **`noyau.py` ne reçoit que deux nombres**
+et ignore ce qui l'a blessé.
+
+**⚠️ Le temps n'augmente PAS la douleur aiguë — il allonge la RÉCUPÉRATION.**
+
+| exposition | douleur pendant | après 50 ticks de repos |
+|---|---|---|
+| 1 tick | 0,1973 | **0,0955** |
+| 50 ticks | 0,9744 | **0,6925** |
+
+**La chaleur est un état MAINTENU par la source** (correction utilisateur). Une première
+version infligeait un pic à chaque tick → douleur **0,898** en régime permanent, pire que
+la v41.26. Un corps **évacue** la chaleur et ne se lèse que si l'apport dépasse sa
+capacité :
+
+```
+apport net = max(0, chaleur − CAPACITE_EVACUATION_THERMIQUE)
+```
+
+⚠️ **Évacuer ≠ percevoir** : seuil de perception 0,12, capacité d'évacuation 0,40. Les
+confondre faisait brûler l'agent partout où il sentait quelque chose — le défaut de fond
+des v41.25 et v41.26. La distance module désormais le **palier d'équilibre** :
+
+| distance | douleur permanente (400 ticks) |
+|---|---|
+| d≥2 | **0,0000** |
+| d=1 (longer) | 0,1664 |
+| d=0 (dedans) | **0,8057** |
+
+**Option (b)** — mourir coûte le reste de la journée (`--mort-sans-cout` pour le témoin).
+⚠️ Bien plus lourd que prévu : **90 % de la journée perdue**, l'agent ne vit que ~39 ticks
+sur 400, et il meurt **à côté** de la lave (chaleur 0,457) faute de temps pour manger.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `encaisser_douleur()`, `douleur_corporelle()` ; état `douleur`/`exposition` ; vitesse d'impact ; `MALUS_DOULEUR` supprimé du chemin ; option (b) + son ablation |
+| `src/naulthene/cerveau/bus_sensoriel.py` | `DEMI_VIE_BRULURE` / `DEMI_VIE_CHOC` — les signatures nociceptives |
+| `docs/recherche/scripts/banc_douleur_unique.py` | **nouveau** — teste le **régime permanent** (400 ticks), l'erreur qui a fait passer la v41.26 |
+
+**Campagne en cours** : **3 bras × 20 graines × 300 jours**. A (tout) / B (douleur seule) /
+C (témoin). Deux changements simultanés seraient confondus — B vs C isole la douleur,
+A vs B isole l'option (b). Vérifié : déficits distincts **1,641 / 2,758 / 2,009**.
+
+---
+
 ## [v41.26-experimental] - 2026-08-18 — La thermohoméostasie : la douleur devient graduée
 
 ### Le défaut : une douleur sans zéro, donc sans lieu de repos

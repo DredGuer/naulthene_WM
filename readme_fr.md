@@ -103,7 +103,7 @@ Deux nuances, mesurées et non rhétoriques :
 | Niveau 5 | **4 graines sur 20** — 20 % [8–42], et le palier est **tenu** (jusqu'à 1078 nuits dessus) |
 | Ce qui a débloqué le niveau 4 | le **brain-sparing** : 0 % [0–16] → 80 % [58–92], 18 gagne / 0 perd (p < 0,001) |
 | Effet de couper C2 sur le score | **0,0 point sur les 6 niveaux** (78 cellules) — et sur `LavaGap`, le couper **triple** la réussite |
-| Valence apprise de la lave | **+0,072 — POSITIVE**, à peine distincte de l'eau (+0,069). La nociception (v41.25) la fait basculer à **−0,761 sur 20/20 graines** — mais la survie **BAISSE** : 8,6 % → 6,7 %, parce que la douleur était **non nulle partout** (77 % des cases) et que l'agent fuyait son propre garde-manger (**−25 % de récolte**, deux cartes). Douleur graduée (v41.26) à l'essai |
+| Valence apprise de la lave | **+0,072 — POSITIVE**, à peine distincte de l'eau (+0,069). La nociception (v41.25) la fait basculer à **−0,761 sur 20/20 graines** — mais la survie **BAISSE** : 8,6 % → 6,7 %, parce que la douleur était **non nulle partout** (77 % des cases) et que l'agent fuyait son propre garde-manger (**−25 % de récolte**, deux cartes). Douleur graduée (v41.26) **mesurée : échec** (récolte encore −22,8 %) ; douleur **unique** (v41.27) à l'essai |
 | Mécaniques cognitives ayant amélioré quoi que ce soit | **1 sur 12 testées** — le brain-sparing |
 | Effet d'agrandir le cerveau (96 → 160 → 512 dims) | **aucun** sur 3 campagnes — et l'énergie chute ×11 |
 | Leviers qui ont marché | **3 — deux propriétés du monde, une de la décision** |

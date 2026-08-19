@@ -37,7 +37,12 @@ from naulthene.exocortex.port_c3 import PortC3, RequeteC3
 from naulthene.cerveau.bus_sensoriel import (BusSensoriel, DIM_TOUCHER, DIM_CHIMIE,
                                              DIM_EXO, DIM_ODORAT_DELTA,
                                              DIM_THERMOCEPTION, DIM_PRESSION,
-                                             COULEUR_NOURRITURE, COULEUR_EAU)
+                                             COULEUR_NOURRITURE, COULEUR_EAU,
+                                             # v41.27 — signatures nociceptives : le
+                                             # « type » de douleur est un couple de
+                                             # nombres, jamais un nom (le cœur ignore ce
+                                             # qui l'a blessé).
+                                             DEMI_VIE_BRULURE, DEMI_VIE_CHOC)
 
 # --- v41.15 : LE BON DEVICE POUR CE RÉSEAU-CI (mesuré le 17/08) ---
 #
@@ -2533,6 +2538,34 @@ class BiologicalHomeostasisEngine:
         # même dynamique, déjà validée, appliquée à une autre grandeur. C'est ce qui crée le
         # palier 1 SANS poser de seuil : le zéro est DÉRIVÉ du vécu de l'agent, pas décrété.
         self.chaleur_habituee = 0.0
+        # --- v41.27 : LA DOULEUR UNIQUE (refonte, décision utilisateur du 19/08) ---
+        #
+        # 🔴 CE QUE ÇA REMPLACE. Il existait DEUX douleurs sans rapport : `MALUS_DOULEUR`
+        # (−0,01, constante, dans la récompense) pour le mur, et `chaleur²` (dans le
+        # déficit) pour le feu. Deux canaux, deux échelles, deux traitements — l'empilement
+        # que le projet refuse. Formulation utilisateur : *« le seul élément à gérer dans
+        # la gestion du corps, c'est la douleur, avec ses facteurs de points de douleur, de
+        # temps, et sa dégradation proportionnelle au pic et au type »*.
+        #
+        # LA FORME. Un SEUL état corporel, alimenté par des couples (pic, dégradation) que
+        # les organes sensoriels fournissent. Le « type » de douleur n'est PAS un canal :
+        # c'est le couple lui-même.
+        #
+        #     douleur(t) = douleur(t−1) × (1 − dégradation(t)) + pic(t)
+        #
+        #   • brûlure      : pic ∝ chaleur,          dégradation LENTE   → s'installe
+        #   • choc mural   : pic ∝ vitesse d'impact, dégradation RAPIDE  → passe vite
+        #
+        # ⚠️ LE TEMPS N'AUGMENTE PAS LA DOULEUR AIGUË, IL RALLONGE LA RÉCUPÉRATION.
+        # C'est la correction utilisateur du 19/08, et c'est l'inverse exact de la v41.26 :
+        # sa `brulure` s'accumulait jusqu'à saturer à 0,375 (point fixe pic/dissipation
+        # = ×6,67), ce qui ANNULAIT le gain de la gradation — mesuré 0,2365 de douleur en
+        # run contre 0,087 attendu au banc. Ici l'exposition n'alimente pas le pic : elle
+        # ralentit la descente.
+        self.douleur = 0.0
+        # Exposition cumulée, dans [0,1] : mémoire de « combien de temps ça a fait mal ».
+        # C'est elle qui ralentit la récupération, jamais qui augmente le pic.
+        self.exposition = 0.0
         # `brulure` : la douleur ACCUMULÉE. C'est ce qui donne un sens à « tenable quelques
         # secondes » — rester coûte, partir soulage. Sans elle, un tick au contact et vingt
         # ticks au contact coûtent identiquement, ce qui est faux de toute brûlure réelle.
@@ -2609,6 +2642,59 @@ class BiologicalHomeostasisEngine:
         pas un état corporel — au même titre que `reference_choc_dopamine`, qui traverse
         les épisodes ET les journées."""
         self.brulure = 0.0
+        # v41.27 — la douleur et son exposition sont des états du CORPS : au `reset()`
+        # l'agent est téléporté, le corps blessé n'existe plus.
+        self.douleur = 0.0
+        self.exposition = 0.0
+
+    def encaisser_douleur(self, pic: float, demi_vie_type: float):
+        """v41.27 — LE POINT D'ENTRÉE UNIQUE DE TOUTE DOULEUR.
+
+        `pic`            : l'intensité de l'événement, dans [0,1]. Chaleur ressentie pour
+                           une brûlure, vitesse d'impact pour un choc — c'est à l'organe
+                           sensoriel de le fournir, pas au cœur de le deviner.
+        `demi_vie_type`  : en ticks, la vitesse de récupération PROPRE AU TYPE. Courte pour
+                           un choc (ça passe), longue pour une brûlure (ça s'installe).
+                           C'est le seul endroit où « le type » existe — et c'est un
+                           NOMBRE, jamais un nom : `noyau.py` ne sait pas ce qu'est la lave.
+
+        --- L'indexation exponentielle, dans les deux sens (formulation utilisateur) ---
+
+        (1) **Le pic SATURE.** `douleur += pic × (1 − douleur)` : plus on a déjà mal, moins
+            un surcroît ajoute. Un corps déjà au maximum ne peut pas avoir « deux fois plus
+            mal ». Borné dans [0,1] par construction, sans aucun `clip`.
+
+        (2) **La récupération RALENTIT avec l'exposition ET avec l'intensité.** C'est la
+            correction utilisateur du 19/08 : *« ce n'est pas que la douleur prolongée fait
+            plus mal, c'est que le temps de récupération est plus long à redescendre »*.
+
+                dégradation = (1/demi_vie) × exp(−(exposition + douleur))
+
+            Un choc bref sur un corps reposé s'efface en quelques ticks ; la même douleur
+            sur un corps déjà éprouvé traîne des dizaines de ticks.
+
+        ⚠️ CE QUI EST INTERDIT ICI : que l'exposition alimente le PIC. C'est le défaut
+        v41.26 — la brûlure accumulée saturait à `pic/dissipation` (×6,67) et amplifiait un
+        état permanent au lieu de mémoriser un événement. Mesuré : douleur réelle 0,2365
+        contre 0,087 attendu. L'exposition ne doit toucher QUE la vitesse de descente.
+        """
+        pic = max(0.0, min(1.0, float(pic)))
+        # (1) Saturation du pic — l'exponentielle « vers le haut ».
+        self.douleur += pic * (1.0 - self.douleur)
+        # L'exposition monte quand ça fait mal, redescend quand ça ne fait plus mal. Même
+        # échelle temporelle que la douleur elle-même, donc rien de nouveau à calibrer.
+        self.exposition += (pic - self.exposition) * TAUX_EXPOSITION_DOULEUR
+        # (2) Récupération — l'exponentielle « vers le bas ». Un corps éprouvé récupère
+        # lentement ; un corps neuf récupère vite.
+        demi_vie = max(1.0, float(demi_vie_type))
+        degradation = (1.0 / demi_vie) * math.exp(-(self.exposition + self.douleur))
+        self.douleur = max(0.0, self.douleur - self.douleur * degradation)
+
+    def douleur_corporelle(self) -> float:
+        """v41.27 — l'état douloureux du corps, dans [0,1]. Lecture pure, aucun effet de
+        bord (même discipline que `chaleur_seule` : une grandeur consultée plusieurs fois
+        par tick ne doit jamais faire avancer un état — c'est le bug v41.25-fix1)."""
+        return float(self.douleur)
 
     def douleur_thermique(self) -> float:
         """v41.26 — LA DOULEUR GRADUÉE, dérivée du vécu de l'agent.
@@ -2725,7 +2811,7 @@ class BiologicalHomeostasisEngine:
         """
         return ((1.0 - self.satiete) ** 2 + (1.0 - self.hydratation) ** 2
                 + (1.0 - self.stimulation) ** 2 + (1.0 - self.energie) ** 2
-                + (self.douleur_thermique() if DOULEUR_THERMIQUE_ACTIVE else 0.0))
+                + (self.douleur_corporelle() if DOULEUR_THERMIQUE_ACTIVE else 0.0))
 
     def masse_totale(self, dim_bus: int, porte_objet: bool = False) -> float:
         """v41.20 — LA MASSE ÉMERGENTE. Aucune des trois composantes n'est posée.
@@ -2881,9 +2967,35 @@ class BiologicalHomeostasisEngine:
             # La chaleur change ENTRE les deux mesures : `deficit_avant` porte celle de
             # la case quittée, `deficit_apres` celle de la case atteinte. C'est cette
             # transition — et elle seule — qui produit la douleur dans `r_bio`.
-            # v41.26 — passe par `encaisser_chaleur` : la brûlure accumulée et
-            # l'habituation avancent d'un tick ICI, et nulle part ailleurs.
+            # v41.26 — passe par `encaisser_chaleur` : l'habituation avance d'un tick ICI,
+            # et nulle part ailleurs.
             self.encaisser_chaleur(chaleur_apres)
+            # v41.27 — la chaleur alimente LA douleur unique, avec sa signature de type
+            # (pic = excès thermique au-dessus du seuil de perception, récupération LENTE).
+            # Le pic passe par `_douleur_instantanee` : le palier 1 (« ça va, c'est chaud »)
+            # reste un ZÉRO EXACT, donc une case tiède n'alimente rien du tout.
+            # v41.27-fix1 — LA CHALEUR EST UN ÉTAT MAINTENU PAR LA SOURCE, pas un pic
+            # que le corps s'infligerait à chaque tick (correction utilisateur du 19/08 :
+            # *« selon la distance, la chauffe est un état maintenu, lié au feu ou à la
+            # lave, pas qu'au cerveau »*).
+            #
+            # 🔴 CE QUE ÇA CORRIGE. Traiter la chaleur comme un pic répété faisait monter
+            # la douleur à **0,898** en régime permanent (400 ticks à distance 1) — pire
+            # que la v41.26 (0,432). Le pic arrivait à chaque tick pendant que la
+            # récupération ralentissait : les deux effets se cumulaient au lieu de
+            # s'équilibrer. C'est le même piège que la brûlure v41.26, sous une autre forme.
+            #
+            # LA PHYSIQUE. Un corps ÉVACUE la chaleur ; il ne se lèse que si l'apport
+            # DÉPASSE sa capacité d'évacuation. Percevoir et évacuer sont deux capacités
+            # distinctes : on sent la chaleur bien avant de brûler.
+            #
+            #     apport net = max(0, chaleur − CAPACITE_EVACUATION_THERMIQUE)
+            #
+            # La distance module alors le PALIER D'ÉQUILIBRE, pas seulement la vitesse d'y
+            # arriver (mesuré à 400 ticks) : d≥2 → 0,000 · d=1 → 0,166 · d=0 → 0,800.
+            # L'agent peut LONGER la lave sans se consumer, mais y entrer brûle à fond.
+            _apport = max(0.0, self.chaleur - CAPACITE_EVACUATION_THERMIQUE)
+            self.encaisser_douleur(_apport * PENETRATION_THERMIQUE, DEMI_VIE_BRULURE)
 
         # v41.2 — LA SATIÉTÉ NE SE VIDE PLUS TOUTE SEULE. Dans un modèle à deux étages, le
         # STOCK ne baisse que parce qu'il est DIGÉRÉ (voir plus bas) : lui appliquer en
@@ -4808,6 +4920,20 @@ VITESSE_HABITUATION_MONTEE = 0.02
 # epsilon : sous ce niveau, le nocicepteur ne décharge pas du tout. Chez le vivant ce
 # seuil existe littéralement (les nocicepteurs ont une intensité minimale d'activation) ;
 # ici il est RELATIF au vécu de l'agent, donc jamais le même d'un agent à l'autre.
+# v41.27 — vitesse à laquelle l'exposition suit la douleur vécue. Même ordre que les
+# autres inerties du projet ; c'est la mémoire « ça fait mal depuis un moment ».
+TAUX_EXPOSITION_DOULEUR = 0.05
+# v41.27-fix1 — CAPACITÉ D'ÉVACUATION THERMIQUE du corps. En dessous, la chaleur est
+# ressentie (les 2 dims de thermoception la rapportent toujours) mais **évacuée sans
+# lésion** : c'est la différence entre « il fait chaud » et « je brûle ». Au-dessus, le
+# surplus pénètre et lèse.
+# ⚠️ Distincte du seuil de PERCEPTION (`SEUIL_NOCICEPTION_PLANCHER`, 0.12) : un corps
+# perçoit la chaleur bien avant d'en souffrir. Les confondre revenait à faire brûler
+# l'agent partout où il sentait quelque chose — le défaut de fond des v41.25 et v41.26.
+CAPACITE_EVACUATION_THERMIQUE = 0.40
+# Vitesse à laquelle le surplus thermique pénètre les tissus. Une brûlure ne s'installe
+# pas en un tick : c'est ce qui laisse à l'agent le temps de FUIR avant la lésion.
+PENETRATION_THERMIQUE = 0.05
 FRACTION_SEUIL_NOCICEPTION = 0.25
 # Plancher du seuil de perception, pour un agent qui n'a jamais rien senti (habituation 0).
 # Correspond à la chaleur ressentie à ~3 cases d'une source sur une petite carte : au-delà,
@@ -5496,6 +5622,14 @@ FENETRE_MAITRISE_GENERALE = 100   # borne : ~5 fenêtres de niveau, assez long p
 # sevrage retombe exactement sur v41.3. Il n'existe que pour disposer d'un témoin à
 # graine identique — voir `--sans-heritage`.
 HERITAGE_SEVRAGE_ACTIF = True
+
+# v41.27 — interrupteur de l'option (b) : mourir coûte le reste de la journée.
+# True  : la journée s'arrête à la mort (décision utilisateur du 19/08).
+# False : l'agent repart au tick suivant — le comportement de toutes les versions
+#         antérieures, et le TÉMOIN qui isole le coût de l'option (b) de celui de la
+#         douleur elle-même. Sans ce témoin, deux changements simultanés seraient
+#         confondus et le résultat ininterprétable (règle « rien sans témoin »).
+MORT_COUTE_LA_JOURNEE = True
 
 # v41.25 — interrupteur d'ablation de la NOCICEPTION THERMIQUE (`--sans-douleur`).
 # True  : la chaleur entre dans le déficit (`+ chaleur**2`) — elle FAIT MAL.
@@ -6381,6 +6515,12 @@ class EtatCognitif:
         self.douleur_cumul_jour = 0.0
         self.douleur_max_jour = 0.0
         self.douleur_ticks_actifs_jour = 0
+        # v41.27 — la douleur UNIQUE (thermique + mécanique) et ses causes.
+        self.douleur_corp_cumul_jour = 0.0
+        self.douleur_corp_max_jour = 0.0
+        self.chocs_muraux_jour = 0
+        self.ticks_perdus_mort_jour = 0
+        self.mort_du_jour = False
         self.chaleur_cumul_jour = 0.0         # somme des intensités thermiques du jour
         self.chaleur_max_jour = 0.0           # pic de chaleur ressenti
         self.chaleur_ticks_actifs_jour = 0    # ticks où un danger est perceptible
@@ -7755,6 +7895,12 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
                 getattr(etat, "chaleur_ticks_approche_jour", 0)
                 + int(_delta_chaleur > 0.5))
 
+    # v41.27 — la douleur UNIQUE, hors du bloc thermique : elle existe même sans danger
+    # thermique (un choc mural suffit), donc son compteur est inconditionnel.
+    _dc = etat.moteur_bio.douleur_corporelle()
+    etat.douleur_corp_cumul_jour = getattr(etat, "douleur_corp_cumul_jour", 0.0) + _dc
+    etat.douleur_corp_max_jour = max(getattr(etat, "douleur_corp_max_jour", 0.0), _dc)
+
     # --- v41.12 : LE TOUCHER À DISTANCE — les 2 DERNIÈRES dims du vecteur sensoriel ---
     # Contrairement à la thermoception, ce sens est actif sur TOUTE carte (il y a toujours
     # des murs) : les clés sont donc inconditionnelles. `Pression_Moyenne` mesure
@@ -7960,6 +8106,12 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
         int(action_effective_env),
         {"n": 0, "deplacement": 0, "rotation": 0, "portage_change": 0, "sterile": 0})
     _stats["n"] += 1
+    # --- v41.27 : LA VITESSE D'IMPACT (formulation utilisateur : « compte le temps entre
+    # deux cases et crée une formule de vitesse »). MiniGrid n'a pas de vitesse continue :
+    # l'agent change de case ou non. La vitesse est donc l'INVERSE du nombre de ticks
+    # écoulés depuis le dernier déplacement réussi — avancer à chaque tick donne 1,0,
+    # piétiner donne une valeur qui s'effondre. Se cogner en pleine course pique ; se
+    # cogner à l'arrêt, presque pas.
     _a_bouge = tuple(_u.agent_pos) != _pos_avant
     _a_tourne = int(_u.agent_dir) != _dir_avant
     _a_manipule = (_u.carrying is not None) != _porte_avant
@@ -7975,6 +8127,13 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
     # parce que `calculer_effort_metabolique` doit facturer CE geste, pas une moyenne.
     etat.effet_moteur_tick = {"deplacement": bool(_a_bouge), "rotation": bool(_a_tourne),
                               "porte_objet": _u.carrying is not None}
+
+    # v41.27 — horloge de déplacement, base de la vitesse d'impact.
+    if _a_bouge:
+        etat.vitesse_agent = 1.0 / max(1, getattr(etat, "ticks_depuis_deplacement", 1))
+        etat.ticks_depuis_deplacement = 1
+    else:
+        etat.ticks_depuis_deplacement = getattr(etat, "ticks_depuis_deplacement", 1) + 1
 
     # --- v41.25 : LA DOULEUR SE FACTURE LÀ OÙ LE CORPS EST ARRIVÉ ---
     #
@@ -8023,6 +8182,19 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
     # ⚠️ `termine` seul ne suffit pas à juger d'un succès (invariant v35.0) — c'est la
     # même raison qui le rend, ici, exactement le bon signal pour compter les échecs.
     if termine:
+        # --- v41.27 : MOURIR COÛTE LA JOURNÉE (option (b), décision utilisateur 19/08) ---
+        #
+        # `termine` sans récompense = l'agent est mort. Jusqu'ici il repartait au tick
+        # suivant, si bien que mourir ne coûtait RIEN : mesuré, 7 800 à 18 500 morts par
+        # run de 300 jours. Désormais la journée s'arrête là — l'agent perd ses ticks
+        # restants, la nuit tombe, il repart le lendemain.
+        #
+        # ⚠️ L'utilisateur assume que c'est une convention (« même si c'est tricher ») :
+        # une vraie mort terminerait le run, mais aucun cerveau ne dépasserait le jour 2
+        # (206 morts sur 300 épisodes mesurées), donc plus rien ne serait apprenable. Le
+        # coût est réel sans être terminal — l'agent a le temps d'apprendre à l'éviter.
+        if recompense_env <= 0 and MORT_COUTE_LA_JOURNEE:
+            etat.mort_du_jour = True
         if recompense_env > 0:
             etat.episodes_gagnes_jour = getattr(etat, "episodes_gagnes_jour", 0) + 1
         else:
@@ -8037,6 +8209,15 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
     # inchangée PAR CONSTRUCTION (agent immobile) — ce n'est jamais un mur touché,
     # juste l'agent qui a choisi de tendre la main plutôt que de bouger.
     mur_touche = (action_item != ACTION_DEMANDER) and torch.equal(etat.etat_courant, etat_suivant)
+    # v41.27 — LE CHOC EST UNE DOULEUR, pas un malus. Pic ∝ vitesse d'impact (v41.27),
+    # récupération RAPIDE (DEMI_VIE_CHOC ≈ 12× plus courte que la brûlure) : ça pique fort
+    # et ça passe. Encaissé AVANT `step_metabolisme`, donc le déficit du tick le voit.
+    if mur_touche:
+        # La vitesse retenue est celle du DERNIER déplacement réussi : l'agent qui avançait
+        # vite et percute paie cher, celui qui piétinait déjà ne se fait presque rien.
+        etat.moteur_bio.encaisser_douleur(
+            float(getattr(etat, "vitesse_agent", 0.0)), DEMI_VIE_CHOC)
+        etat.chocs_muraux_jour = getattr(etat, "chocs_muraux_jour", 0) + 1
 
     # --- Muscle de la Volonté : Sursaut avant l'abandon (v17.0 ; continu v40.1-fix4) ---
     #
@@ -8406,8 +8587,13 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
     # décrété par un seuil de palier. ⚠️ Changement de comportement réel : un agent
     # au-delà du palier 5 qui NE maîtrise PAS garde son aide — c'est le but.
     recompense_interne += recompense_continue
-    if mur_touche:
-        recompense_interne += MALUS_DOULEUR
+    # v41.27 — `MALUS_DOULEUR` SUPPRIMÉ. Le choc mural n'est plus une pénalité posée dans
+    # la récompense (−0,01, l'une des 4 récompenses en dur que l'audit du dogme signalait,
+    # et celle-là même qui produisait l'inversion « mourir coûte moins cher que se
+    # cogner ») : c'est désormais LA douleur, au même titre que la brûlure, avec sa
+    # signature propre — pic ∝ vitesse d'impact, récupération RAPIDE.
+    # Le coût atteint `r_bio` par le déficit, comme toute douleur. Rien n'est ajouté à la
+    # récompense : `r_bio` en dérive déjà.
 
     if poids_evenement > 0:
         etat.teneur_dopamine += (DOPAMINE_MAX - etat.teneur_dopamine) * TAUX_CHOC_BASE * poids_evenement
@@ -9332,6 +9518,11 @@ def executer_nuit(etat, plafond_reve=None):
               f"{getattr(etat, 'douleur_ticks_actifs_jour', 0)}/{ticks_du_jour} tick(s) douloureux | "
               f"habituation {etat.moteur_bio.chaleur_habituee:.3f}"
               f"{'' if DOULEUR_THERMIQUE_ACTIVE else ' [CALCULÉE, NON FACTURÉE — témoin]'}")
+        print(f"  ├─ Douleur v41.27: 🤕 corps moy "
+              f"{getattr(etat, 'douleur_corp_cumul_jour', 0.0) / max(ticks_du_jour, 1):.4f} "
+              f"(max {getattr(etat, 'douleur_corp_max_jour', 0.0):.3f}) | "
+              f"💥 {getattr(etat, 'chocs_muraux_jour', 0)} choc(s) mural(aux) | "
+              f"⏳ {getattr(etat, 'ticks_perdus_mort_jour', 0)} tick(s) perdus (mort)")
         print(f"  ├─ Survie v41.25 : {'💀' if _morts else '🛡️'} {_morts} mort(s) / "
               f"{_gagnes} victoire(s) — survie {100.0 * _gagnes / max(_fins, 1):.0f}% | "
               f"douleur {'ON' if DOULEUR_THERMIQUE_ACTIVE else 'OFF (témoin)'} | "
@@ -9826,6 +10017,11 @@ def executer_nuit(etat, plafond_reve=None):
         log_wandb["Thermo_Douleur_Max"] = getattr(etat, "douleur_max_jour", 0.0)
         log_wandb["Thermo_Ticks_Douloureux"] = getattr(etat, "douleur_ticks_actifs_jour", 0)
         log_wandb["Thermo_Habituation"] = etat.moteur_bio.chaleur_habituee
+        log_wandb["Douleur_Corps_Moyenne"] = (
+            getattr(etat, "douleur_corp_cumul_jour", 0.0) / max(ticks_du_jour, 1))
+        log_wandb["Douleur_Corps_Max"] = getattr(etat, "douleur_corp_max_jour", 0.0)
+        log_wandb["Douleur_Chocs_Muraux"] = getattr(etat, "chocs_muraux_jour", 0)
+        log_wandb["Douleur_Ticks_Perdus_Mort"] = getattr(etat, "ticks_perdus_mort_jour", 0)
         _var = getattr(etat, "chaleur_ticks_variation_jour", 0)
         if _var:
             log_wandb["Thermo_Taux_Approche"] = etat.chaleur_ticks_approche_jour / _var
@@ -10023,6 +10219,9 @@ if __name__ == "__main__":
     _p.add_argument("--plafond-bus-fixe", action="store_true",
                     help="ABLATION : fige DIM_BUS_MAX à 96, l'ancienne valeur posée")
     # v41.25 — témoin de la nociception thermique (voir DOULEUR_THERMIQUE_ACTIVE).
+    # v41.27 — témoin de l'option (b), voir MORT_COUTE_LA_JOURNEE.
+    _p.add_argument("--mort-sans-cout", action="store_true",
+                    help="ABLATION : mourir ne coûte plus la journée (comportement < v41.27)")
     _p.add_argument("--sans-douleur", action="store_true",
                     help="ABLATION : la chaleur reste perçue mais ne coûte rien (témoin v41.24)")
     # v41.25 — banc de mesure. Le cursus est bloqué au niveau 4, or les niveaux 1-4 ne
@@ -10079,6 +10278,16 @@ if __name__ == "__main__":
         print(f"🔬 [BANC] environnement forcé sur {_args.env_force} — cursus court-circuité")
         from naulthene.cerveau.noyau import ENV_FORCE as _verif_env
         assert _verif_env == _args.env_force, "le forçage n'a pas atteint le module"
+
+    # v41.27 — même discipline : écriture dans le module NOMMÉ + assertion runtime.
+    _mort_cout = not _args.mort_sans_cout
+    globals()["MORT_COUTE_LA_JOURNEE"] = _mort_cout
+    if _module_reel is not None:
+        _module_reel.MORT_COUTE_LA_JOURNEE = _mort_cout
+    if not _mort_cout:
+        print("🔬 [ABLATION] option (b) COUPÉE — mourir ne coûte plus la journée")
+        from naulthene.cerveau.noyau import MORT_COUTE_LA_JOURNEE as _v
+        assert _v is False, "l'ablation n'a pas atteint le module — campagne invalide"
 
     # v41.25 — même discipline : écriture dans le module NOMMÉ + assertion runtime.
     _douleur_active = not _args.sans_douleur
@@ -10174,8 +10383,16 @@ if __name__ == "__main__":
 
     for _ in range(1, _args.jours + 1):
         demarrer_journee(etat)
+        etat.mort_du_jour = False
         for _tick in range(ticks_par_jour):
             traiter_tick(etat)
+            # v41.27 (option b) — la mort coûte le reste de la journée. `executer_nuit`
+            # s'exécute normalement juste après : l'agent dort, rêve et consolide ce qu'il
+            # a vécu, exactement comme une journée complète — il en a simplement vécu
+            # moins. C'est le coût.
+            if getattr(etat, "mort_du_jour", False):
+                etat.ticks_perdus_mort_jour = ticks_par_jour - _tick - 1
+                break
         log = executer_nuit(etat)
         wandb.log(log)
         if _persist is not None:
