@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `1b0ab5d` |
 | **Catégorie** | feat (expérimental) — **refonte** |
 | **Impact** | **Fonctionnel — homéostasie / nociception / récompense** |
 | **Carnet** | [`DOULEUR_UNIQUE_19082026_refonte.md`](../recherche/DOULEUR_UNIQUE_19082026_refonte.md) |
