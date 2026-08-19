@@ -134,7 +134,7 @@ Two caveats, both measurable rather than rhetorical:
 | What unlocked level 4 | **brain-sparing**: 0 % [0–16] → 80 % [58–92], 18 wins / 0 losses (p < 0.001) |
 | Effect of severing C2 on the score | **0.0 points across all 6 levels** (78 cells) — and on `LavaGap`, severing it **triples** the success rate |
 | Learned valence of lava | **+0.072 — POSITIVE**, barely distinct from water (+0.069). Nociception (v41.25) flips it to **−0.761 on 20/20 seeds** — but survival **drops** 8.6 % → 6.7 %, because pain was **non-zero everywhere** (77 % of cells) and the agent fled its own food supply (**−25 % harvest**, two maps). Graded pain (v41.26) under test |
-| Cognitive mechanisms that improved anything | **1 out of 13 tested** — brain-sparing (thermal nociception works, but *lowers* survival) |
+| Cognitive mechanisms that improved anything | **1 out of 14 tested** — brain-sparing (thermal nociception works, but *lowers* survival; unified pain v41.27 under test) |
 | Effect of growing the brain (96 → 160 → 512 dims) | **none** across 3 campaigns — and energy drops 11× |
 | Levers that did work | **3 — two properties of the world, one of the decision** |
 
@@ -483,7 +483,18 @@ What that means concretely:
   satiety or expenditure. **v41.26** replaces `T²` with a graded pain — a perception
   threshold derived from the agent's own habituation (a true zero, not an epsilon), a
   cubic rise, and a burn that **accumulates while you stay and dissipates when you
-  leave**. Under test.
+  leave**. **Measured: it failed** — the burn saturated at `peak/decay` (×6.67), so pain
+  reached 0.24 in real runs against 0.087 on the bench, and harvest stayed at −22.8 %.
+- **v41.27 rebuilds pain as a single body state.** There were two unrelated pains: a
+  hardcoded `−0.01` for walls (in the reward) and `heat²` for fire (in the deficit). Now
+  one state, fed by (peak, half-life) couples the *senses* supply — burn recovers over
+  60 ticks, a wall impact over 5, and impact pain scales with **speed**. The core receives
+  two numbers and never learns what hurt it. The hardcoded `−0.01` — one of the four posed
+  rewards flagged by the dogma audit, and the one that made *dying cheaper than bumping
+  into a wall* — **is gone**. Heat is now a **state maintained by the source**: the body
+  evacuates it and only burns above its capacity, so distance sets the *equilibrium* pain
+  (d≥2 → 0.000, d=1 → 0.166, inside → 0.806) instead of a permanent ache everywhere.
+  Under test on three arms.
 - **Growing the brain changes nothing**: across three campaigns (96 → 160 → 512 dims) the
   level reached is identical, while energy drops 11× and effort triples.
 - **The bench itself was broken until v41.9.** `env.reset()` was never seeded, so two runs of

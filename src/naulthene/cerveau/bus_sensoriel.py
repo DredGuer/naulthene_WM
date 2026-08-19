@@ -186,6 +186,25 @@ PORTEE_PRESSION = 3
 # devient une source de chaleur sans qu'aucune autre ligne ne change.
 TYPES_BRULANTS = ("lava",)
 
+# --- v41.27 : LES SIGNATURES NOCICEPTIVES ---
+#
+# Le « type » d'une douleur n'est PAS un canal séparé dans le cerveau : c'est un couple
+# (pic, demi-vie de récupération) que l'organe sensoriel fournit. C'est ici, dans le bus —
+# la frontière corps/monde, où `lava` a le droit d'exister au même titre que `red`/`blue`
+# pour la nourriture — et NULLE PART ailleurs. `noyau.py` ne reçoit que deux nombres et ne
+# sait pas ce qui l'a blessé.
+#
+# Formulation utilisateur (19/08) : *« le chaud ça brûle, mais se taper contre un mur est
+# aussi une douleur. Brûlure = douleur vive avec dégradation lente, alors que se cogner
+# est une douleur proportionnelle à la vitesse de percussion avec une dégradation
+# proportionnellement rapide. »*
+#
+# Les deux demi-vies sont en TICKS. Leur RAPPORT (~12×) est ce qui porte le sens : une
+# brûlure s'installe, un choc passe. Les valeurs absolues sont un ordre de grandeur, pas
+# un réglage fin — c'est le rapport qui doit être préservé si on les révise.
+DEMI_VIE_BRULURE = 60.0   # la chaleur marque : des dizaines de ticks pour redescendre
+DEMI_VIE_CHOC = 5.0       # le choc mécanique passe vite
+
 # --- ODORAT : atténuation exponentielle de proximité (v30.0) ---
 #
 # En v29.x, l'odorat décroissait LINÉAIREMENT sur une portée fixe de 4 cases
