@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `4deb9fc` |
 | **Catégorie** | fix critique (expérimental) |
 | **Impact** | **Fonctionnel — fonction de coût / incitation** |
 | **Carnet** | [`POURQUOI_20082026_l_agent_economise.md`](../recherche/POURQUOI_20082026_l_agent_economise.md) |
