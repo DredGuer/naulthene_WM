@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `fd08537` |
 | **Catégorie** | chore |
 | **Impact** | **Critique — tous les hash de commit du dépôt ont changé** |
 
