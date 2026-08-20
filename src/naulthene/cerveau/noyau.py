@@ -5346,6 +5346,27 @@ FACTEUR_NOUVEAUTE_VOCALE_MIN = 0.1  # au dernier palier : 10% de l'effet dopamin
                                      # rien dans ce moteur ne tombe jamais à un plancher
                                      # dur exactement nul).
 
+# ⚠️⚠️ C3 EST MORT AU RUNTIME (constat du 20/08/2026, décision utilisateur) ⚠️⚠️
+#
+# Vérifié par la mesure, pas par lecture : **aucun plug n'est jamais enregistré** sur
+# `port_c3` dans tout le noyau, donc `ACTION_DEMANDER` est masquée à `-inf` EN PERMANENCE
+# (voir `penser()`), et l'action 7 n'apparaît dans AUCUN log de run — 0 occurrence sur les
+# campagnes de 20 graines. `COUT_REQUETE_C3` n'est donc jamais prélevé, et l'Exo-Sens
+# renvoie un vecteur nul à chaque tick.
+#
+# 🔴 POURQUOI CE CODE N'EST PAS SUPPRIMÉ NI COMMENTÉ. `DIM_EXO = 8` entre dans
+# `DIM_VECTEUR_BIO` (= 41), donc dans la FORME des poids de `integrateur_bio`, et
+# `num_actions = 8` dans celle de `tete_motrice`. Les retirer changerait la géométrie du
+# réseau et **rendrait illisible tout `.brain` existant** — exactement ce que la règle
+# « greffe par recopie, jamais par exclusion » interdit (bug v24.0-fix4).
+#
+# Le coût réel est donc : 8 dimensions d'entrée nulles et une colonne de sortie dormante.
+# Aucun cycle CPU sur le chemin de décision, aucun effet sur le comportement.
+#
+# ➡️ À traiter dans un chantier dédié (retrait propre + greffe de rétrocompatibilité), pas
+#    au détour d'un correctif. Tant que ce n'est pas fait, ne PAS s'appuyer sur C3 et ne
+#    pas le compter comme une fonctionnalité du système.
+#
 # --- PORT EXOCORTEX C3 (v28.0, expérimental) --- voir naulthene.exocortex.port_c3 et
 # la section 2 (AGI_Naulthene) pour la cascade complète. Aucune de ces constantes n'a
 # d'effet tant qu'aucun plug n'est enregistré sur port_c3 (comportement identique à la

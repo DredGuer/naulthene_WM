@@ -4,6 +4,61 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.27-mesure-fix1] - 2026-08-20 — La baseline était fausse ; et on sait POURQUOI l'agent économise
+
+### Deux résultats : une rectification, et la cause du blocage
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | docs (rectification + mesure) |
+| **Impact** | **Critique — inverse une conclusion publiée dans les deux README** |
+| **Carnet** | [`POURQUOI_20082026_l_agent_economise.md`](../recherche/POURQUOI_20082026_l_agent_economise.md) |
+
+**🔴 RECTIFICATION.** Le CHANGELOG et les deux README affirmaient que l'agent « plafonne
+21 points SOUS une politique aléatoire » (54,4 % contre 75,7 %). **C'est faux** : la
+baseline tirait parmi **3 actions**, l'agent en a **7**. Ce n'est pas la même tâche.
+
+```
+hasard sur 3 actions (baseline fausse) : 75,7 %
+hasard sur 7 actions (équitable)       : 39,2 %
+Naulthène                              : 54,4 %
+```
+
+**L'agent bat le hasard équitable de 15 points.** Troisième erreur de mesure en trois
+jours, et la plus grave — elle avait été publiée.
+
+**✅ LA CAUSE DU GASPILLAGE EST TROUVÉE.** Sur `Empty-5x5`, **57,2 % des ticks** partent en
+gestes stériles (`poser`/`activer`/`parler` : **100 %** stériles). Pourquoi :
+
+| geste | effort facturé |
+|---|---|
+| **AVANCER** (le seul qui rapproche du but) | **4,0000** |
+| tourner | 1,4545 |
+| **STÉRILE** | **1,0909** |
+
+> **Le seul geste utile coûte 3,7× plus cher que ne rien faire.** La punition de l'effort
+> est immédiate et à chaque tick ; la récompense du but est rare et lointaine.
+
+**L'agent n'est pas irrationnel : il optimise exactement ce qu'on lui demande.** Le
+comportement est une **conséquence** de la fonction de coût, pas un défaut d'apprentissage.
+
+Deux hypothèses concurrentes **écartées** : l'entropie d'exploration (C1 à **0,499**, 4
+actions distinctes sur 7 — il a de vraies préférences) et une tête motrice qui n'apprend
+pas (maîtrise 13,8 % → 54,4 % sur 10/10 graines).
+
+⚠️ **Ce n'est pas un argument pour re-poser une table de coûts.** Le problème n'est pas que
+l'effort soit dérivé — c'est que le **bénéfice ne l'est pas symétriquement** : un geste qui
+ne change rien coûte le minimum et rapporte zéro, donc il gagne.
+
+**🗑️ C3 est mort au runtime** (constat vérifié) : aucun plug n'est jamais enregistré,
+`ACTION_DEMANDER` est masquée à `-inf` en permanence, l'action 7 apparaît dans **zéro** log
+de run. Non supprimé car `DIM_EXO` (8) et `num_actions` (8) sont dans la **forme des
+poids** — les retirer casserait tout `.brain` existant. Noté en tête de section dans
+`noyau.py` et dans les deux README.
+
+---
+
 ## [v41.27-mesure] - 2026-08-20 — L'agent APPREND, mais plafonne sous le hasard
 
 ### La baseline aléatoire révèle le vrai blocage — après trois nuits passées ailleurs

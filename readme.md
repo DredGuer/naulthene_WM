@@ -102,7 +102,7 @@ This section exists because the thesis above is only worth stating if it can be 
 | `analyseur` (64 → 64) | 4,096 |
 | `tete_motrice` (64 → 8) — C1 | 512 |
 | `tete_vocale` (64 → 8) | 512 |
-| `tete_requete` (64 → 5) — C3 routing | 320 |
+| `tete_requete` (64 → 5) — C3 routing ⚠️ **dead at runtime** | 320 |
 | `cortex_prefrontal` (64 → 1) — C2 | 64 |
 | **Total** | **55,232** (0.21 MB fp32) |
 
@@ -135,7 +135,8 @@ Two caveats, both measurable rather than rhetorical:
 | Effect of severing C2 on the score | **0.0 points across all 6 levels** (78 cells) — and on `LavaGap`, severing it **triples** the success rate |
 | Learned valence of lava | **+0.072 — POSITIVE**, barely distinct from water (+0.069). Nociception (v41.25) flips it to **−0.761 on 20/20 seeds** — but survival **drops** 8.6 % → 6.7 %, because pain was **non-zero everywhere** (77 % of cells) and the agent fled its own food supply (**−25 % harvest**, two maps). Graded pain (v41.26) under test |
 | Cognitive mechanisms that improved anything | **1 out of 14 tested** — brain-sparing. Three pain models (v41.25/26/27) changed behaviour by **0 pt** (`t = −1.51`, n=20) |
-| Navigation on an empty 5×5 room | **54.4 %** after 300 days vs **75.7 %** for a random policy — learns, but stays **21 pts below chance** |
+| Navigation on an empty 5×5 room | **54.4 %** after 300 days vs **39.2 %** for a random policy *over the same 7 actions* — the agent **beats chance by 15 pts** |
+| Ticks spent on gestures that change nothing (`Empty-5x5`) | **57.2 %** — `poser`/`activer`/`parler` are sterile **100 %** of the time, and cost **1.09** against **4.00** for the one gesture that moves toward the goal |
 | Effect of growing the brain (96 → 160 → 512 dims) | **none** across 3 campaigns — and energy drops 11× |
 | Levers that did work | **3 — two properties of the world, one of the decision** |
 
@@ -144,10 +145,19 @@ A standard PPO solves `Empty-8x8` in a few thousand episodes. **Naulthène curre
 > 🔴 **The clearest measurement in this repository (20 Aug 2026).** On `Empty-5x5` — an
 > empty room, no hazard, goal 4 cells away — the agent **does learn**: mastery climbs
 > 13.8 % → 26.7 % → 43.8 % → **54.4 %** over 300 days, on **10 seeds out of 10**, and the
-> gap between wins shrinks from 5.4 to 1.4 days. **But a random policy scores 75.7 %.**
-> The agent plateaus **21 points below chance** on the simplest task of the curriculum.
-> Learning is real; competence is not. This — not lava, not pain — is what blocks the
-> project. [Full measurement](docs/recherche/NAVIGATION_20082026_le_vrai_blocage.md).
+> gap between wins shrinks from 5.4 to 1.4 days. Against a random policy drawing from the
+> **same 7 actions** (39.2 %), it is **15 points ahead**.
+>
+> ⚠️ **An earlier version of this block claimed the opposite** — "21 points below chance" —
+> by comparing a 7-action agent to a 3-action random baseline. That was not the same task,
+> and the conclusion was wrong. Corrected here rather than quietly deleted.
+>
+> **What the measurement does show** is a misaligned incentive: **57.2 % of ticks** go to
+> gestures that change nothing on this map, because the physical-work cost model (v41.20)
+> charges **4.00** for the one gesture that approaches the goal and **1.09** for doing
+> nothing. The agent is not irrational — it is optimising exactly what it was asked to.
+> [Full measurement](docs/recherche/NAVIGATION_20082026_le_vrai_blocage.md) ·
+> [why](docs/recherche/POURQUOI_20082026_l_agent_economise.md).
 
 > ⚠️ **Every paired comparison predating v41.9 is inconclusive — including the "0 out of 9"
 > line above.** `env.reset()` was never seeded: MiniGrid draws its layouts from its own RNG,
@@ -376,7 +386,11 @@ src/naulthene/
 ├── salles_de_classe/  training curricula (15 MiniGrid levels + vocal)
 ├── cuve/           client/server: a persistent brain in "cryostasis"
 ├── audio/          formants, MFCC, synthesis, Whisper
-├── exocortex/      C3 port — pluggable external senses (LLM/RAG, APIs, IoT)
+├── exocortex/      C3 port — ⚠️ DEAD at runtime: no plug is ever registered, so
+│                   ACTION_DEMANDER stays masked to -inf and action 7 appears in
+│                   zero run logs. Kept only because DIM_EXO (8) and num_actions (8)
+│                   are baked into the weight shapes — removing them would break
+│                   every existing .brain. Costs 8 null input dims, nothing else.
 └── instruments/    read-only probes: ablation bench, C1/C2, weights, gradients, reward
 ```
 

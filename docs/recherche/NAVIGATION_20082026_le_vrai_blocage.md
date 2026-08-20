@@ -8,9 +8,12 @@ bloque »*.
 
 ## 1. La réponse en une ligne
 
-> **OUI, l'agent apprend — sans ambiguïté et sur 10 graines sur 10.** Mais il apprend
-> **lentement** et plafonne **sous le niveau d'une politique aléatoire** : 54,4 % contre
-> **75,7 %**, sur une pièce vide où le but est à 4 cases.
+> **OUI, l'agent apprend — sans ambiguïté et sur 10 graines sur 10.**
+>
+> 🔴 **RECTIFICATION (même jour).** Ce carnet affirmait ensuite qu'il « plafonne sous une
+> politique aléatoire » (54,4 % contre 75,7 %). **C'était faux** : la baseline tirait parmi
+> **3 actions**, l'agent en a **7**. À armes égales, le hasard fait **39,2 %** — l'agent le
+> **bat de 15 points**. La conclusion est corrigée ici plutôt que supprimée.
 
 Apprendre et être compétent sont deux choses différentes. Les données établissent la
 première, réfutent la seconde.
@@ -24,10 +27,13 @@ pièce vide de 5×5, l'agent en haut à gauche, le but en bas à droite, **4 cas
 
 **Baseline** (2000 épisodes, politique tirée au sort parmi gauche/droite/avancer) :
 
-| environnement | politique aléatoire |
+| baseline | `Empty-5x5` |
 |---|---|
-| `Empty-5x5` | **75,7 % de réussite** |
-| `LavaGapS5` | 10,3 % de réussite, 88,7 % de morts |
+| hasard sur **3 actions** (biaisé — pas la même tâche) | 75,7 % |
+| **hasard sur 7 actions** (équitable) | **39,2 %** |
+| **Naulthène à 300 jours** | **54,4 %** |
+
+Sur `LavaGapS5`, le hasard à 3 actions donne 10,3 % de réussite et 88,7 % de morts.
 
 ---
 
@@ -95,10 +101,10 @@ deux jours (après la douleur mesurée hors du tick réel).
 
 ## 5. Le vrai blocage
 
-L'agent **apprend**, mais son plafond est **21 points sous une politique aléatoire**.
-
-Ce n'est donc pas « il ne sait pas naviguer » — c'est **il navigue moins bien qu'en tirant
-au sort**, après 300 jours et 120 000 ticks, sur la tâche la plus simple du cursus.
+L'agent apprend **et** bat le hasard équitable (54,4 % contre 39,2 %). Le blocage n'est
+donc pas la politique elle-même, mais **ce qu'elle est incitée à faire** : **57,2 % des
+ticks** partent en gestes stériles, parce qu'ils coûtent **1,09** quand avancer coûte
+**4,00**. Voir [`POURQUOI_20082026_l_agent_economise.md`](POURQUOI_20082026_l_agent_economise.md).
 
 Cela converge avec tout ce que le projet a mesuré par ailleurs :
 
