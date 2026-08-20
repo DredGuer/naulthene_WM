@@ -398,15 +398,28 @@ promotion** : vérifié, vider la fenêtre glissante laisse la patience inchang�
 > (0,476 contre 0,119). Une portion est une propriété de la **ressource**, pas de l'agenda de
 > l'agent : elle dérive maintenant de la contenance de l'estomac (gaspillage **0,000**).
 >
-> **Ce que le rythme vécu règle désormais, et lui seul : la vitesse de vidange.** 1 épisode/jour
-> ⇒ un estomac plein tient **1,79 jour** ; 4 épisodes/jour ⇒ **0,45 jour**.
+> **Ce que le rythme vécu devait régler, et lui seul : la vitesse de vidange.**
+> 🔴 **RECTIFICATION — il ne règle rien : `taux_satiete` est une VARIABLE MORTE.** Rien ne la
+> soustrait ; la v41.2 l'a remplacée par la digestion et l'a laissée sans consommateur
+> (vérifié : un agent qui jeûne perd **0,083333** de satiété en 10 ticks, soit exactement
+> `debit_digestif / RENDEMENT_CONVERSION`, et non les 0,017500 qu'un prélèvement produirait).
+> Le vrai régulateur est **`DEBIT_DIGESTIF_JOUR`**, qui impose une vidange de **3,333
+> estomacs/jour IDENTIQUE dans les deux bras** — ce qui explique entièrement l'invariance
+> énergétique. L'agent mange **5,4 fois par jour** et reste à 0,22 d'énergie : son tube
+> digestif est calibré pour une vie hyper-dépensière qui n'est plus la sienne.
+> [Enquête complète](docs/recherche/METABOLISME_20082026_la_variable_morte.md).
 >
 > ✅ **Après les deux correctifs le signe s'inverse : +0,0567** (0,3567 dérivé contre 0,3000
 > fossile), **3 graines sur 3** favorables, seuil de 0,26 franchi. A/A identique, rétrocompat
 > `.brain` sans erreur.
-> ⚠️ **`t = +1,64` à n=3 — NON SIGNIFICATIF** (seuil 4,30). Le critère est atteint et la
-> direction est bonne, mais trois graines ne concluent rien : c'est un feu vert pour la campagne
-> à 20 graines, **pas** une démonstration d'effet.
+> ⚠️ **`t = +1,64` à n=3 — NON SIGNIFICATIF** (seuil 4,30).
+>
+> 🔴 **Et la campagne à 1500 jours n'a rien trouvé.** Sur 1479 jours appariés × 5 graines :
+> énergie **+0,027 (`t = +1,40`, NS)**, maîtrise **+0,37 (NS)**, ratio C2/C1 **+0,474
+> (`t = +1,93`, NS, 3/5 graines)**. ⚠️ Une lecture à mi-parcours (jour 1046) donnait
+> `t = +3,68` sur 5/5 graines et a été annoncée comme significative — **elle n'a pas tenu** :
+> au jour 1479, deux graines étaient repassées en négatif. Un `t` calculé sur un run EN COURS
+> est un instantané, pas une mesure. Corrigé ici plutôt que discrètement retiré.
 
 ⚠️ **Le sens de la correction n'est PAS tranché.** Suivre la patience réelle ferait *baisser*
 le besoin (2,80 → ~1,1/axe), donc **moins** de sources — alors que l'énergie est déjà au

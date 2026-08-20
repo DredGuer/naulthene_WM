@@ -446,13 +446,26 @@ PORTION est une propriété de la RESSOURCE** (`PART_ESTOMAC_PAR_PRISE`), jamais
 étant plafonnée à 1,0 avec excédent **jeté** mais digestion facturée sur la portion
 **entière**, une portion dérivée du rythme produit une **taxe sur le vide** : à rythme 1,0,
 2,175 gaspillé sur 3,175 pour un coût digestif **×4** (0,476 contre 0,119). **(c) Le RYTHME
-VÉCU ne règle QUE la vitesse de vidange** — donc le nombre de prises qu'une journée exige
-(1 épisode/jour ⇒ estomac plein pendant 1,79 jour ; 4 épisodes/jour ⇒ 0,45 jour). Ni la
-densité, ni la portion.
+VÉCU ne devait régler QUE la vitesse de vidange** — ni la densité, ni la portion. 🔴 **MAIS
+`taux_satiete` EST UNE VARIABLE MORTE** (découvert le 20/08) : rien ne la soustrait depuis
+que la v41.2 l'a remplacée par la digestion. Le vrai régulateur est `DEBIT_DIGESTIF_JOUR`
+(= `DEPENSE_ENERGIE_JOUR × 1,5`), qui impose **3,333 estomacs/jour identiques dans les deux
+bras**. ⚠️ Le commentaire de `noyau.py:2991` (« `taux_satiete` … prélève déjà à chaque tick »)
+est **FAUX** et sert de justification à ne pas facturer le basal : à revoir. Chantier v41.31 —
+indexer la digestion sur la dépense RÉELLE, voir
+`docs/recherche/METABOLISME_20082026_la_variable_morte.md`.
 
-Après les deux correctifs, le signe s'inverse : **+0,0567** (0,3567 dérivé contre 0,3000
-fossile), 3 graines sur 3 favorables. ⚠️ **`t = +1,64` à n=3 — NON SIGNIFICATIF** (seuil
-4,30) : feu vert pour une campagne à 20 graines, **pas** une démonstration d'effet.
+Après les deux correctifs, le signe s'inverse au banc : **+0,0567**, 3 graines sur 3. ⚠️ Mais
+**la campagne à 1500 jours ne trouve RIEN** : énergie +0,027 (`t=+1,40` NS), maîtrise +0,37
+(NS), ratio C2/C1 +0,474 (`t=+1,93` NS, 3/5 graines) — sur 1479 jours appariés × 5 graines.
+
+🔴 **LEÇON DE MÉTHODE (20/08/2026) : NE JAMAIS ANNONCER UNE SIGNIFICATIVITÉ SUR UN RUN EN
+COURS.** Le ratio C2/C1 mesuré à mi-parcours donnait `t = +3,68` sur **5/5 graines** au jour
+1046 — annoncé comme « premier résultat significatif de la campagne ». Au jour 1479 il valait
+`t = +1,93` sur **3/5** : deux graines étaient repassées en négatif. L'écart moyen avait
+pourtant AUGMENTÉ (+0,378 → +0,474) — c'est la dispersion qui a explosé. Un `t` calculé sur un
+run inachevé est un **instantané**, pas une mesure : il choisit implicitement sa fenêtre. La
+règle des 20 graines ne suffit pas ; il faut aussi attendre la FIN des runs.
 
 ⚠️ **Historique de ces TROIS CONSTANTES** (mesuré le 20/08/2026 — voir
 `docs/ameliorations/EPISODES_REFERENCE_20082026_la_derniere_constante_posee.md`) :

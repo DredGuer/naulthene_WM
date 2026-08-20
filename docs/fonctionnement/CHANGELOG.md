@@ -170,6 +170,20 @@ gain 0,800 · gaspillé **0,000** · coût **0,120**.
 
 Ni la densité (fix1), ni la portion (fix2) : la **vitesse de vidange des jauges**.
 
+> 🔴 **RECTIFICATION du 20/08/2026 — cette écriture n'a AUCUN EFFET.** `taux_satiete` n'est
+> **soustrait nulle part** : la v41.2 l'a remplacé par la digestion et il est resté sans
+> consommateur. Vérifié empiriquement (agent qui ne mange pas, 10 ticks) : la baisse de
+> satiété vaut **0,083333**, soit exactement `debit_digestif / RENDEMENT_CONVERSION`, et non
+> les 0,017500 qu'un prélèvement par `taux_satiete` produirait.
+>
+> Le vrai régulateur est **`DEBIT_DIGESTIF_JOUR`** (= `DEPENSE_ENERGIE_JOUR × 1,5 = 3,0`),
+> qui impose une vidange de **3,333 estomacs/jour identique dans les deux bras** — d'où
+> l'invariance énergétique mesurée (`t = +1,40`, NS). Le tableau ci-dessous décrit donc une
+> intention, pas un comportement.
+>
+> Enquête complète, avec le chantier v41.31 qui en découle :
+> [la variable morte](../recherche/METABOLISME_20082026_la_variable_morte.md).
+
 | rythme | prises/journée | vidange/jour | autonomie d'un estomac plein |
 |---|---|---|---|
 | 1,00 | 0,70 | 0,560 | **1,79 jour** |

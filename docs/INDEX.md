@@ -16,7 +16,8 @@
 | « Qu'est-ce qui a changé et quand ? » | [CHANGELOG.md](fonctionnement/CHANGELOG.md) | consultation |
 | « Comment je lance un run ? » | [LANCEMENT.md](fonctionnement/LANCEMENT.md) | 5 min |
 | « Comment ça marche, en détail ? » | [explications_readme.md](fonctionnement/explications_readme.md) | long |
-| « Qu'est-ce qu'on a déjà essayé ? » | [recherche_bug_or_not_bug.md](recherche/recherche_bug_or_not_bug.md) | ⚠️ **à lire avant toute idée neuve** |
+| « Qu'est-ce qu'on a déjà essayé ? » | **[METABOLISME_20082026_la_variable_morte.md](recherche/METABOLISME_20082026_la_variable_morte.md)** | **`taux_satiete` n'est soustrait NULLE PART** depuis la v41.2 — le vrai régulateur est `DEBIT_DIGESTIF_JOUR`, qui impose 3,333 estomacs/jour **identiques dans les deux bras** d'une ablation. Explique l'invariance énergétique de la campagne v41.30, et invalide le fix2. Contient la leçon « ne jamais annoncer un SIG sur un run en cours » |
+| [recherche_bug_or_not_bug.md](recherche/recherche_bug_or_not_bug.md) | ⚠️ **à lire avant toute idée neuve** |
 | « Qu'est-ce qu'on fait ensuite ? » | [AVIS_ET_PROPOSITIONS_aout_2026.md](ameliorations/AVIS_ET_PROPOSITIONS_aout_2026.md) | 20 min |
 
 ---

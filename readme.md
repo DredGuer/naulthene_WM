@@ -533,12 +533,23 @@ What that means concretely:
   charged on the **whole** portion: at rhythm 1.0 a meal was 3.175, of which **2.175 was thrown
   away** for a **×4 digestive cost** (0.476 vs 0.119). A portion is a property of the *resource*,
   not of the agent's schedule; it now derives from stomach capacity (waste: **0.000**). The
-  lived rhythm sets only what remains physiological — the **drain rate**: 1 episode/day means a
-  full stomach lasts **1.79 days**, 4 episodes/day **0.45 days**.
+  lived rhythm was meant to set only what remains physiological — the **drain rate**.
+  ⚠️ **It does not: `taux_satiete` is a dead variable.** Nothing subtracts it — v41.2 replaced
+  it with digestion and left it without a consumer (verified: a fasting agent loses 0.083333
+  of satiety over 10 ticks, exactly `debit_digestif / RENDEMENT_CONVERSION`, not the 0.017500
+  that rate would produce). The real regulator is **`DEBIT_DIGESTIF_JOUR`**, forcing a drain of
+  **3.333 stomachs/day identical in both arms** — which fully explains why energy does not move
+  (`t = +1.40`, NS). The agent eats **5.4 times a day** and still sits at 0.22 energy: its gut
+  is calibrated for a hyper-expensive life it no longer leads.
+  [Investigation](docs/recherche/METABOLISME_20082026_la_variable_morte.md).
 - **After both fixes the sign flips: +0.0567** (0.3567 derived vs 0.3000 fossil), **3 seeds out
-  of 3** favourable. ⚠️ **`t = +1.64` at n=3 is NOT significant** (threshold 4.30). The criterion
-  is met and the direction is right, but three seeds conclude nothing — this is a green light
-  for the 20-seed campaign, not a demonstration of effect.
+  of 3** favourable. ⚠️ **`t = +1.64` at n=3 is NOT significant** (threshold 4.30).
+- **The 1500-day campaign then found nothing.** Over 1479 paired days × 5 seeds: energy
+  **+0.027 (`t = +1.40`, NS)**, mastery **+0.37 (NS)**, C2/C1 ratio **+0.474 (`t = +1.93`, NS,
+  3/5 seeds)**. ⚠️ A mid-run reading at day 1046 showed `t = +3.68` on 5/5 seeds and was
+  reported as significant — **it did not hold**: by day 1479 two seeds had flipped negative.
+  A `t` computed on a running job is a snapshot, not a measurement. Corrected here rather than
+  quietly dropped.
   [Design note](docs/ameliorations/EPISODES_REFERENCE_20082026_la_derniere_constante_posee.md).
 - **But it has not learned danger.** On the four level-5 brains, the learned valence of
   lava is **positive** (+0.068 to +0.081) and indistinguishable from water (+0.060 to
