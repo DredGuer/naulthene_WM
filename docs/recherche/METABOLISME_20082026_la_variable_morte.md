@@ -28,8 +28,21 @@ place **sans consommateur**. Il n'est plus lu que par le constructeur.
 
 ⚠️ **Un commentaire du code affirme le contraire** (`noyau.py:2991`) : *« `taux_satiete` et
 `taux_hydratation` le prélèvent déjà à chaque tick »*. Cette phrase est **fausse depuis la
-v41.2** et sert de justification à ne pas facturer le basal dans l'effort d'action. À
-vérifier lors du chantier : le basal est-il facturé quelque part, ou nulle part ?
+v41.2**.
+
+> ✅ **VÉRIFIÉ le 20/08 — mais le BASAL EST BIEN FACTURÉ, ailleurs.** J'avais laissé ouverte
+> la crainte qu'il ne le soit nulle part et que l'inaction soit « subventionnée ». Mesuré :
+> un agent **totalement inactif, estomac vide**, perd **0,325000** d'énergie en 100 ticks —
+> exactement `100 × (DEPENSE_ENERGIE_JOUR / 400) × METABOLISME_BASAL_PART`.
+>
+> Le basal est prélevé dans la **dépense énergétique**, pas dans la satiété :
+> `depense = depense_energie × (BASAL + (1 − BASAL) × cout_action × vigueur)`.
+> À `cout_action = 0`, l'agent paie donc **65 % du tarif plein** — l'inaction n'est pas gratuite.
+>
+> Conclusion : le commentaire est faux sur le **POURQUOI** (il invoque `taux_satiete`, mort),
+> mais la **règle qu'il défend reste juste** — ne pas re-facturer le basal dans l'effort
+> d'action, puisque `METABOLISME_BASAL_PART` s'en charge. Il faut corriger le texte, pas le
+> comportement.
 
 ## 2. Ce que ça invalide — mon propre correctif v41.30-fix2
 
@@ -91,6 +104,30 @@ vient de l'élasticité de la patience rendue au potentiomètre (fin du plafond 
 
 ⚠️ **MAIS voir §7 — cet écart n'a PAS tenu jusqu'à 1500 jours.**
 
+## 6bis. D'où vient la dispersion — hypothèse testée, partiellement confirmée
+
+Hypothèse (utilisateur) : en fin de parcours les agents ne vivent plus les mêmes vies — les
+graines qui franchissent un palier sollicitent C2 en permanence, celles restées sur un
+plateau stabilisent un réflexe C1.
+
+Testé sur les 5 graines, écart C2/C1 à j1479 :
+
+| graine | niveau DERIVE | niveau FOSSILE | écart |
+|---|---|---|---|
+| g1 | **5** | 4 | **+1,202** |
+| g3 | 4 | **5** | +0,617 |
+| g5 | 4 | 4 | +0,704 |
+| g2 | 4 | 4 | −0,035 |
+| g4 | 4 | 4 | −0,116 |
+
+Moyenne **avec** un niveau 5 : **+0,909** · **sans** : **+0,184**. La direction est la bonne.
+
+⚠️ **Mais deux observations l'empêchent d'être une explication complète.** (1) g3 a son
+niveau 5 **du côté FOSSILE** et son écart reste **positif** (+0,617) : si la profondeur du
+cursus expliquait tout, il serait négatif. (2) g5 (+0,704) n'a **aucun** niveau 5 et devance
+g3 qui en a un. La profondeur atteinte explique **une partie** de la dispersion, pas sa
+totalité — n=5 ne permet pas d'aller plus loin.
+
 ## 7. ⚠️ RECTIFICATION — le SIG sur C2 était TRANSITOIRE
 
 Mesure du ratio C2/C1 selon la fenêtre, mêmes graines, mêmes runs :
@@ -120,8 +157,10 @@ effet stable.
    laisser une variable morte que le code semble utiliser.
 2. **Indexer la vitesse de digestion sur la dépense RÉELLE** de l'agent plutôt que sur
    `DEPENSE_ENERGIE_JOUR = 2.0`, constante héritée d'un régime à 3 repas/jour.
-3. **Vérifier où le basal est facturé** — le commentaire qui justifiait son absence dans
-   l'effort d'action repose sur une prémisse fausse.
+3. **Corriger le commentaire de `noyau.py:2991`** — sa prémisse est fausse (`taux_satiete`
+   est mort) mais sa conclusion est juste (`METABOLISME_BASAL_PART` facture bien le basal,
+   vérifié : 0,325000 sur 100 ticks d'inaction). C'est le TEXTE qu'il faut réparer, pas le
+   comportement. Aucune urgence fonctionnelle.
 
 ⚠️ **Rien de tout cela ne doit être codé pendant que la campagne v41.30 tourne** : modifier le
 métabolisme invaliderait les 40 runs en cours.

@@ -451,7 +451,11 @@ VÉCU ne devait régler QUE la vitesse de vidange** — ni la densité, ni la po
 que la v41.2 l'a remplacée par la digestion. Le vrai régulateur est `DEBIT_DIGESTIF_JOUR`
 (= `DEPENSE_ENERGIE_JOUR × 1,5`), qui impose **3,333 estomacs/jour identiques dans les deux
 bras**. ⚠️ Le commentaire de `noyau.py:2991` (« `taux_satiete` … prélève déjà à chaque tick »)
-est **FAUX** et sert de justification à ne pas facturer le basal : à revoir. Chantier v41.31 —
+est **FAUX sur le POURQUOI**, mais ✅ **le basal EST bien facturé** — par
+`METABOLISME_BASAL_PART` dans la dépense énergétique (vérifié : un agent totalement inactif
+à l'estomac vide perd **0,325000** en 100 ticks, soit exactement le basal). L'inaction coûte
+65 % du tarif plein, elle n'est **pas** subventionnée. C'est le TEXTE du commentaire qu'il
+faut réparer, pas le comportement. Chantier v41.31 —
 indexer la digestion sur la dépense RÉELLE, voir
 `docs/recherche/METABOLISME_20082026_la_variable_morte.md`.
 
