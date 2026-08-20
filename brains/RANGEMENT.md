@@ -22,6 +22,12 @@
 | `cas_isole_g22_v41/` | le cerveau de la « loterie natale » (niveau 4, non reproductible) |
 | `ablations/` | résultats JSON du banc d'ablation |
 | `old_V419_snapshots_intermediaires/` | ex-`doublons_icloud/`. ⚠️ **Le nom était faux : ce ne sont PAS des doublons.** Vérifié le 18/08 sur les 57 fichiers — **0 redondant, 57 uniques**, chacun portant un `tick_absolu`/`dim_bus` introuvable ailleurs. Le suffixe ` 2`, ` 3` marque un **état intermédiaire** du même run (ex. 2 400 / 5 600 / 400 000 ticks), pas une copie. **Ne pas supprimer** |
+| `old_V4124_roi/` | **campagne ROI** (18/08) — 20 graines × 2000 j, plafond 512. Celle qui établit que **la taille du bus n'explique rien** (`r = +0,018`, IC95 [−0,45 ; +0,48]) |
+| `old_V4125_nociception/` | **campagne nociception** (18/08) — 20 graines × 2 bras × 300 j, banc `LavaGapS5`. Valence de la lave **+0,062 → −0,761 sur 20/20** (`t = −1066`), mais survie **8,57 % → 6,71 %** |
+| `old_V4126_graduee/` | **douleur graduée** (18/08) — 20 graines × 2 bras. ⚠️ **Échec mesuré** : la brûlure saturait à `pic/dissipation` (×6,67), récolte encore −22,8 % |
+| `old_V4127_douleur_unique/` | **douleur unique, 3 bras** (19/08) — 20 graines × 3 × 300 j. A (douleur + mort coûteuse) / B (douleur seule) / C (témoin). Établit que **la douleur seule ne change rien** (`t = −1,51`) et que **le coût de la mort, si** (`t = −15,21`) |
+| `old_V4128_navigation/` | **diagnostic navigation** (19-20/08) — 10 graines × 300 j sur `Empty-5x5`. Celle qui montre que **l'agent apprend** (13,8 % → 54,4 %, 10/10 graines) et **bat le hasard équitable** (39,2 %) |
+| `old_V4128_travail_tente/` | **travail tenté** (20/08) — 20 graines × 2 bras. ⚠️ **Résultat négatif** : −2,52 pts de gestes stériles, `t = −1,71`, non significatif. Le coût n'était pas le levier |
 | `nuit_18082026_V4123_optionB/` | les 4 cerveaux qui **tiennent le niveau 5** (jusqu'à 1078 nuits dessus) + 1 témoin niveau 4, campagne Option B 20×1500 j |
 
 ## Convention de nommage

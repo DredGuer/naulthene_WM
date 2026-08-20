@@ -129,7 +129,7 @@ Two caveats, both measurable rather than rhetorical:
 
 | Metric | Value |
 |---|---|
-| Level reached | **4 out of 15** — 100 % of seeds, 95 % CI **[84–100]** (n = 20 × 1500 days, v41.23) |
+| Level reached | **4 out of 15** — 100 % of seeds, 95 % CI **[84–100]** (n = 20 × 1500 days, v41.23). A fresh 1500-day curriculum campaign is running on v41.29 |
 | Level 5 | **4 seeds out of 20** — 20 % [8–42], and the level is **held** (up to 1078 nights on it) |
 | What unlocked level 4 | **brain-sparing**: 0 % [0–16] → 80 % [58–92], 18 wins / 0 losses (p < 0.001) |
 | Effect of severing C2 on the score | **0.0 points across all 6 levels** (78 cells) — and on `LavaGap`, severing it **triples** the success rate |

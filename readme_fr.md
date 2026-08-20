@@ -99,7 +99,7 @@ Deux nuances, mesurées et non rhétoriques :
 
 | Métrique | Valeur |
 |---|---|
-| Niveau atteint | **4 sur 15** — 100 % des graines, IC 95 % **[84–100]** (n = 20 × 1500 jours, v41.23) |
+| Niveau atteint | **4 sur 15** — 100 % des graines, IC 95 % **[84–100]** (n = 20 × 1500 jours, v41.23). Une nouvelle campagne cursus 1500 j tourne en v41.29 |
 | Niveau 5 | **4 graines sur 20** — 20 % [8–42], et le palier est **tenu** (jusqu'à 1078 nuits dessus) |
 | Ce qui a débloqué le niveau 4 | le **brain-sparing** : 0 % [0–16] → 80 % [58–92], 18 gagne / 0 perd (p < 0,001) |
 | Effet de couper C2 sur le score | **0,0 point sur les 6 niveaux** (78 cellules) — et sur `LavaGap`, le couper **triple** la réussite |

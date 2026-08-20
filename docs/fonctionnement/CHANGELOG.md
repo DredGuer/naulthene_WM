@@ -4,6 +4,41 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.29-campagne] - 2026-08-20 — Le cursus complet, 1500 jours : « jusqu'où va-t-il ? »
+
+### Retour au cursus 15 niveaux après trois jours de bancs forcés
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | docs (campagne en cours) |
+| **Impact** | **Mesure — la question de fond** |
+
+**Le protocole.** Après trois jours passés sur des bancs **forcés** (`LavaGapS5`,
+`Empty-5x5`), retour au **cursus complet** : l'agent naît au niveau 0
+(`Empty-5x5`) et progresse aussi loin qu'il peut, **1500 jours**.
+
+**Deux bras × 10 graines**, pour répondre à deux questions à la fois :
+
+| bras | option (b) | question |
+|---|---|---|
+| **LIBRE** (`--mort-sans-cout`) | ❌ | jusqu'où va-t-il sans handicap ? |
+| **MORT** (défauts) | ✅ | de combien l'option (b) le freine-t-elle sur le cursus ? |
+
+⚠️ **Pourquoi ce choix.** L'option (b) est active par défaut depuis la v41.27, mais elle
+coûte **90 % de la journée** (~39 ticks vécus sur 400) et donne la **survie la plus basse**
+des trois bras mesurés le 19/08. La lancer seule risquait de mesurer son handicap plutôt
+que la progression réelle ; la couper seule aurait laissé sa question sans réponse.
+
+**Tous les acquis des trois derniers jours sont actifs** dans les deux bras : douleur
+unique (v41.27), travail tenté (v41.28), thermoception graduée (v41.26), ROI de
+neurogenèse (v41.24).
+
+⚠️ **n=10 par bras**, sous le seuil de 20 du projet. Cette campagne donne une **tendance**
+sur la profondeur atteinte, pas une comparaison concluante entre les deux bras.
+
+---
+
 ## [v41.28-mesure] - 2026-08-20 — Le travail tenté ne suffit pas : le coût n'était pas le levier
 
 ### Résultat NÉGATIF, documenté comme tel
