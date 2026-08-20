@@ -4,6 +4,236 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.30] - 2026-08-20 — Les trois constantes fossiles, supprimées
+
+### La patience devient un trait de vie, et le métabolisme respire au rythme réel
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | feat (expérimental, `noyau.py` uniquement) |
+| **Impact** | **Critique — trois constantes posées retirées du chemin cognitif** |
+
+**Décision utilisateur du 20/08/2026**, après la mesure v41.29. Les trois constantes
+décrivaient toutes **le même agent d'août 2026** — elles mesuraient sa jeunesse et on les
+appliquait à sa vieillesse.
+
+| constante | valeur | remplacée par |
+|---|---|---|
+| `EPISODES_PAR_JOURNEE_REFERENCE` | 4.0 | `etat.episodes_jour` **vécu**, lissé |
+| `PATIENCE_MAX` | 350 | le **budget natif de la carte** (`max_steps`) |
+| `BOOST_PATIENCE_MIN_PAR_RECURRENCE` | 10 | l'**écart mesuré** raté ↔ réussite |
+
+**Bornes CONSERVÉES** (ce sont des rapports, jamais des valeurs) : `MARGE_SUBSISTANCE`,
+`MARGE_TROUVABILITE`, `FRACTION_CASES_RESSOURCES_MAX`, `PATIENCE_MIN`.
+
+### 1. La patience — un trait de vie, sans plafond
+
+Formulation utilisateur : *« un genre d'exponentielle qui part de 1 jusqu'à l'infini, mais
+exponentiel : plus tu gagnes en patience, plus c'est dur d'en gagner à nouveau »*, et
+*« le gain est lié à l'écart entre le raté et la réussite »*.
+
+```
+patience = patience_min × exp(capital)
+capital += contraste / (1 + capital)          ← rendement décroissant, sans borne
+contraste = max(0, (durée_réussite − durée_abandon) / durée_abandon)
+```
+
+Le gain ne dépend plus d'un **compteur d'événements** (+10 par victoire-sursaut, quelle que
+soit sa difficulté) mais d'une **grandeur mesurée**. Sens : si l'agent réussit en 80 ticks
+et abandonne à 100, attendre plus ne sert à rien → gain nul. S'il réussit à 300 alors qu'il
+coupe à 150, il tranche trop tôt → gain fort. Vérifié au banc : le capital progresse de
++1,00 → +0,50 → +0,40 → +0,34 → +0,31 sur cinq gains successifs.
+
+**Le plafond n'a pas été remplacé par un autre chiffre : il vient du MONDE.**
+`_budget_natif_carte` lit `max_steps`, que MiniGrid impose de toute façon. Les patiences
+relevées dans la campagne v41.29 (100 · 144 · 256 · 324) sont exactement les `max_steps`
+des cartes jouées : le vrai plafond était **déjà là**, et `PATIENCE_MAX` ne faisait que le
+doubler d'une borne arbitraire. `PLAFOND_PATIENCE_HORS_MONDE = ticks_par_jour` ne sert plus
+qu'aux contextes SANS carte (vocal isolé, rêve).
+
+### 2. Le trait porte sur la VIE ENTIÈRE — jamais réinitialisé
+
+Arbitrage utilisateur explicite entre la fenêtre glissante et la vie de l'agent :
+**la vie**, par lissage exponentiel (EMA), **sans réinitialisation au changement de carte**.
+
+- **Pas d'amnésie** — promu, l'agent conserve son endurance acquise. Vérifié : vider la
+  fenêtre glissante ne change **pas** `patience_de_vie()` (471,9 → 471,9).
+- **Pas d'écrasement par le passé** — l'EMA pèse le récent ; quand les durées s'étirent sur
+  une carte neuve, la référence glisse vers le haut **sans rupture**.
+- **Zéro division par zéro** — 20 échecs d'affilée ne détruisent pas la mémoire des
+  réussites : vérifié, `capital = 0.0000` et aucun crash.
+
+`INERTIE_TRAIT_ENDURANCE = 0.02` est une borne sur une **vitesse d'oubli** (~50 épisodes de
+mémoire), jamais une valeur de patience — même nature que `INERTIE_OUBLI_REFERENCE_CHOC`.
+
+⚠️ **`historique_vitesses` n'enregistrait que les RÉUSSITES** : mesurer un écart avec une
+seule moitié était impossible. Les ratés sont désormais enregistrés eux aussi.
+
+### 3. Le métabolisme suit le rythme réellement vécu
+
+`besoin_par_axe(rythme)` remplace la constante. Le rythme est lu sur `etat.episodes_jour` —
+**grandeur qui existait déjà**, réarmée chaque nuit et loguée en W&B : il n'y avait rien à
+instrumenter, seulement à la LIRE. Rafraîchi **une fois par nuit**, jamais par tick (un
+besoin fluctuant en cours de journée rendrait la faim illisible, discipline v31.0).
+
+La valeur de naissance est **prudente, jamais optimiste** : `EPISODES_PAR_JOURNEE_NAISSANCE
+= 1.0`. Un agent au jour 1 n'a rien vécu — on suppose le cas défavorable, comme le plancher
+vital.
+
+### Vérifications
+
+| test | résultat |
+|---|---|
+| **A/A** (2 runs, même graine, 5 jours) | ✅ **identique** — reproductible |
+| Rétrocompatibilité `.brain` v41.29 | ✅ **3 nuits complètes**, endurance vierge, aucune greffe |
+| Contraste faible (80t vs 100t) | ✅ capital 0,0000 — aucun gain, comme voulu |
+| Que des échecs (30 épisodes) | ✅ capital 0,0000, pas de crash |
+| Continuité à la promotion | ✅ patience **inchangée** (471,9 → 471,9) |
+| Témoin `--rythme-fossile` | ✅ besoin **2,80/axe, 6 sources** (régime v41.2 exact) |
+| Témoin `--patience-fossile` | ✅ +10 plafonné à 350 |
+
+⚠️ **La validation d'un `.brain` inclut une NUIT COMPLÈTE** (règle v32.0) : un crash de
+greffe ne survient ni au chargement ni pendant la journée, mais à la première
+`executer_nuit`.
+
+### Deux drapeaux d'ablation SÉPARÉS — obligatoire
+
+`--patience-fossile` et `--rythme-fossile`, jamais groupés : patience et rythme métabolique
+sont **couplés** (`épisodes/jour` est l'entrée du besoin), donc les couper ensemble
+produirait une **ablation confondue**. Chacun écrit dans le module NOMMÉ avec assertion
+runtime (discipline v41.4).
+
+### ⚠️ Ce que cette version ne démontre PAS
+
+**Aucune mesure d'effet.** Le code est vérifié, pas validé : il faut une campagne à
+**20 graines** avec les deux témoins.
+
+⚠️ **Le SENS de la correction n'est pas tranché.** Suivre le rythme réel fait *baisser* le
+besoin (2,80 → ~1,1/axe), donc **moins** de sources — alors que l'énergie est déjà au
+plancher. Soit le besoin était trop haut, soit les occasions sont trop rares : **les deux
+corrections sont opposées et une seule est bonne.**
+
+⚠️ **Boucle de rétroaction à surveiller** : moins d'épisodes → moins de sources → plus de
+faim → patience modifiée → moins d'épisodes. L'inertie l'amortit (~50 journées) ; c'est
+précisément ce que la campagne doit mesurer.
+
+### ✅ v41.30-fix1 / fix2 — le monde et le corps, séparés
+
+La première mesure était **défavorable** (voir plus bas). Deux correctifs, tous deux issus de
+la même faute de conception : **avoir indexé le MONDE sur le MÉTABOLISME de l'agent**.
+
+#### fix1 — la densité est une propriété du BIOTOPE
+
+Formulation utilisateur : *« Le monde n'a pas à faire disparaître des ressources physiques de
+la grille sous prétexte que l'agent prend son temps pour réfléchir. »*
+
+La v41.30 recalculait `nb_sources_*` à partir du rythme vécu — à deux endroits, dont un à
+l'import (`NB_SOURCES_FOOD = REPAS_PAR_JOURNEE × MARGE_TROUVABILITE`). Le besoin de naissance
+tombant de 2,80 à 0,70, la carte ne recevait plus que **2 sources au lieu de 6** dès le jour 1.
+
+**La falaise de rencontre** : en début de vie la politique motrice est quasi aléatoire, donc la
+survie dépend de la **densité spatiale** (N_sources / surface), pas de la valeur nutritive.
+Quadrupler la valeur d'une ressource ne compense rien si l'agent a moins de chances de poser
+le pied dessus.
+
+La densité est désormais dérivée de la **surface**, le souhait étant rendu *saturant* pour que
+le plafond de placement (`FRACTION_CASES_RESSOURCES_MAX`, déjà dans le détecteur) fasse seul la
+loi. Mesuré, densité par case : `Empty-5x5` 0,286 · `Empty-8x8` 0,324 · `SimpleCrossingS9N1`
+0,341. Vérifié en run : **les deux bras placent exactement le même nombre de ressources**.
+
+#### fix2 — la portion est une propriété de la RESSOURCE
+
+Le fix1 seul n'a **rien changé** (−0,0709 contre −0,0683). La cause principale était ailleurs.
+
+Décision utilisateur : *« Une pomme ne quadruple pas de volume ni de valeur nutritive sous
+prétexte que l'animal qui la regarde a décidé de marcher plus lentement aujourd'hui. »*
+
+**La taxe sur le vide.** `valeur_nutritive` dérivait la portion du rythme. Or la satiété est
+plafonnée (`np.clip(..., 0, 1)`) et l'excédent **perdu**, tandis que le coût de digestion est
+facturé sur la portion **entière** :
+
+| rythme | portion | gain satiété | **gaspillé** | **coût digestion** |
+|---|---|---|---|---|
+| 1,00 | 3,175 | 1,000 | **2,175** | **0,476** |
+| 4,00 (fossile) | 0,794 | 0,794 | 0,000 | 0,119 |
+
+L'agent payait l'impôt digestif **maximal** (×4) sur des calories qu'il ne pouvait pas faire
+entrer dans son estomac — 68 % de chaque repas jeté. C'est le défaut corrigé en v41.2-fix pour
+l'eau (0,889 sur une jauge à 1,0), reproduit à plus grande échelle.
+
+La portion dérive donc de la **contenance de l'estomac** (`PART_ESTOMAC_PAR_PRISE = 0.80`,
+borne : remplir l'essentiel d'un estomac vide **sans déborder**). Mesuré après correctif :
+gain 0,800 · gaspillé **0,000** · coût **0,120**.
+
+#### Ce que le rythme vécu règle désormais — et lui seul
+
+Ni la densité (fix1), ni la portion (fix2) : la **vitesse de vidange des jauges**.
+
+| rythme | prises/journée | vidange/jour | autonomie d'un estomac plein |
+|---|---|---|---|
+| 1,00 | 0,70 | 0,560 | **1,79 jour** |
+| 4,00 | 2,80 | 2,240 | **0,45 jour** |
+
+Sémantique de bon sens : un agent qui ne joue qu'un épisode par jour n'a qu'une poignée
+d'occasions de manger, donc son corps doit tenir plus longtemps sur un estomac plein.
+
+#### Résultat du banc rejoué (3 graines × 10 jours)
+
+| version | écart dérivé − fossile |
+|---|---|
+| v41.30 brut | **−0,0683** |
+| + fix1 (biotope) | −0,0709 |
+| **+ fix2 (portion)** | **+0,0567** |
+
+Énergie **0,3567 dérivé contre 0,3000 fossile**, **3 graines sur 3 favorables**, et le seuil
+posé par l'utilisateur (≥ 0,26) est franchi. A/A identique, rétrocompat `.brain` sans erreur.
+
+⚠️ **`t = +1,64` à n=3 — NON SIGNIFICATIF.** Le signe s'est inversé et le critère est atteint,
+mais trois graines ne concluent rien (seuil 4,30 à n=3). C'est un feu vert pour la campagne à
+20 graines, **pas** une démonstration d'effet.
+
+### 🔴 PREMIÈRE MESURE — le rythme dérivé COÛTE de l'énergie (banc court, n=3)
+
+Banc d'isolation lancé immédiatement après l'implémentation : 3 graines × 3 bras × 10 jours,
+**seuls les drapeaux changent**.
+
+| bras | énergie moyenne | ticks critiques |
+|---|---|---|
+| **v41.30 dérivé** | **0,1968** | 288/400 |
+| rythme fossile seul | 0,2651 | 324/400 |
+| tout fossile | **0,2651** | 324/400 |
+
+**Écart dérivé − fossile : −0,068 d'énergie** (graines : +0,005 · −0,089 · −0,121).
+
+**Deux faits que ce banc établit :**
+
+1. **Couper la patience dérivée ne change RIEN.** `--rythme-fossile` seul et
+   `--rythme-fossile --patience-fossile` produisent des runs **rigoureusement identiques**
+   sur les 3 graines (énergie au dixième de millième près). Sur 10 jours, la nouvelle
+   patience n'a aucun effet mesurable — cohérent avec l'observation du contraste (voir
+   ci-dessous) : le gain ne se déclenche presque jamais.
+2. **Tout l'écart vient donc du RYTHME métabolique**, isolé sans ambiguïté. C'est
+   exactement ce que la séparation des deux drapeaux devait permettre.
+
+⚠️ **C'est la lecture défavorable des deux qui est pour l'instant soutenue** (§5 de la note
+de conception) : baisser le besoin ne soulage pas l'agent, il le prive. Moins de besoin ⇒
+moins de sources souhaitées (6 → 4) ⇒ moins d'occasions sur la carte, alors que la *valeur*
+de chaque ressource monte pourtant (0,794 → 3,175). L'agent ne compense pas.
+
+⚠️ **n=3, 10 jours — c'est un banc, PAS une conclusion.** Sous le seuil des 20 graines, et
+sur une durée où la maîtrise n'existe pas encore. Ce résultat oriente la campagne ; il ne la
+remplace pas. Il est consigné ici parce qu'un résultat défavorable trouvé en 20 minutes vaut
+mieux qu'une campagne de 20 h lancée sur une hypothèse fausse.
+
+⚠️ **Observation du banc** : sur les cerveaux v41.29 rechargés, le contraste est **négatif**
+(réussite 70t contre abandon 221t) — l'agent réussit bien plus vite qu'il n'abandonne, donc
+**ne gagne aucune patience**. C'est le comportement voulu (il en a déjà assez), mais cela
+signifie que le nouveau gain sera **rare** sur les cerveaux existants ; il jouera surtout à
+la naissance et sur les cartes où les victoires arrivent tard.
+
+---
+
 ## [v41.29-resultats] - 2026-08-20 — 10/10 au niveau 4, et la découverte des trois constantes posées
 
 ### Le blocage au niveau 1 est levé — mais il s'est déplacé, et sa cause est identifiée

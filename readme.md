@@ -505,13 +505,41 @@ What that means concretely:
   4.0 assumed, and the gap **widens** over a run (×1.68 → ×2.58) because patience ratchets up
   and never comes back down. Worse, **9 seeds out of 10 sit at the exact `PATIENCE_MAX = 350`
   ceiling**: the current mechanism grants a **constant** +10 per willpower-win until the wall,
-  then **nothing** — 30 wins saturate it, and 1200 days change nothing after that. Planned
-  replacements: lived `episodes_jour` with inertia; an **unbounded** exponentially-decaying
-  return on patience; and a gain derived from the **measured gap between failure and success
-  durations**. ⚠️ **Not implemented, and the direction of the fix is not settled** — following
-  real patience would *lower* the need (2.80 → ~1.1/axis), hence *fewer* food sources, while
-  energy already sits at its floor. Two opposite readings remain open; only measurement will
-  decide. [Design note](docs/ameliorations/EPISODES_REFERENCE_20082026_la_derniere_constante_posee.md).
+  then **nothing** — 30 wins saturate it, and 1200 days change nothing after that.
+- **v41.30 removes all three.** Patience becomes a **trait of the agent's whole life**:
+  `patience = patience_min × exp(capital)`, each gain adding `contrast / (1 + capital)` —
+  **unbounded, with a decaying return** (measured: +1.00 → +0.50 → +0.40 → +0.34 → +0.31).
+  The gain no longer counts *events* (+10 per win regardless of difficulty) but measures the
+  **gap between how long success takes and how long the agent waits before quitting**: succeed
+  in 80 ticks while quitting at 100 and more patience buys nothing, so nothing is granted. The
+  ceiling is not another number — it comes from the **world** (`max_steps`, which MiniGrid
+  enforces anyway; the patiences observed in v41.29 — 100 · 144 · 256 · 324 — *are* those
+  `max_steps`). The metabolic need now reads `episodes_jour`, a quantity the code already
+  measured and logged. The life-long EMA is **never reset on promotion**: verified, clearing
+  the sliding window leaves patience unchanged (471.9 → 471.9).
+- **🔴 The first measurement was unfavourable — and it found a real design fault.** A 3-seed ×
+  3-arm × 10-day isolation bench, run immediately: energy **0.1968 derived vs 0.2651 fossil**
+  (−0.068). Cutting the new patience changed **literally nothing** (bit-identical runs), so the
+  whole gap came from the **metabolic rhythm** — which is exactly what keeping the two ablation
+  flags separate was for.
+- **The fault: the WORLD had been indexed on the agent's METABOLISM.** Two corrections.
+  **(fix1)** Resource density was derived from the need, so a slower agent made food
+  *physically vanish* from the grid — 2 sources instead of 6 from day one. Early on the policy
+  is near-random, so survival depends on **spatial density**, not nutritional value: quadrupling
+  what an apple is worth compensates nothing if you are less likely to step on one. Density now
+  derives from **surface area** alone (measured per cell: 0.286 · 0.324 · 0.341 across levels),
+  and both arms place identical resources. **(fix2)** The portion itself derived from the
+  rhythm — but satiety is capped at 1.0 and the overflow **discarded**, while digestion is
+  charged on the **whole** portion: at rhythm 1.0 a meal was 3.175, of which **2.175 was thrown
+  away** for a **×4 digestive cost** (0.476 vs 0.119). A portion is a property of the *resource*,
+  not of the agent's schedule; it now derives from stomach capacity (waste: **0.000**). The
+  lived rhythm sets only what remains physiological — the **drain rate**: 1 episode/day means a
+  full stomach lasts **1.79 days**, 4 episodes/day **0.45 days**.
+- **After both fixes the sign flips: +0.0567** (0.3567 derived vs 0.3000 fossil), **3 seeds out
+  of 3** favourable. ⚠️ **`t = +1.64` at n=3 is NOT significant** (threshold 4.30). The criterion
+  is met and the direction is right, but three seeds conclude nothing — this is a green light
+  for the 20-seed campaign, not a demonstration of effect.
+  [Design note](docs/ameliorations/EPISODES_REFERENCE_20082026_la_derniere_constante_posee.md).
 - **But it has not learned danger.** On the four level-5 brains, the learned valence of
   lava is **positive** (+0.068 to +0.081) and indistinguishable from water (+0.060 to
   +0.088), after up to 1078 nights spent on `LavaGap`. MiniGrid punishes death with exactly

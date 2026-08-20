@@ -365,12 +365,48 @@ donc calibré sur 4 épisodes/jour pendant que l'agent en joue 1,55, et **l'éca
 > **Ce n'est pas une constante fausse : c'est une constante qui mesure la jeunesse d'un agent
 > et qu'on applique à sa vieillesse.**
 
-**Remplacements prévus** (⚠️ **non implémentés**) : `episodes_jour` vécu à inertie ; un
-rendement de patience **exponentiellement décroissant et sans borne** — le motif que le projet
-emploie déjà pour la dérive métabolique (« une PENTE QUI DEVIENT VERTICALE, pas une
-barrière ») ; et un gain dérivé de l'**écart mesuré entre la durée des ratés et celle des
-réussites**. Bornes **conservées** : `MARGE_SUBSISTANCE`, `MARGE_TROUVABILITE`,
+**✅ v41.30 — les trois sont SUPPRIMÉES.** La patience devient un **trait de vie** :
+`patience = patience_min × exp(capital)`, chaque gain ajoutant `contraste / (1 + capital)` —
+**sans borne, à rendement décroissant** (mesuré : +1,00 → +0,50 → +0,40 → +0,34 → +0,31).
+Le gain ne compte plus des *événements* (+10 par victoire, quelle que soit sa difficulté)
+mais mesure l'**écart entre le temps qu'il faut pour réussir et celui au bout duquel l'agent
+abandonne** : réussir en 80 ticks en coupant à 100 ⇒ plus de patience n'apporte rien ⇒ aucun
+gain. Le plafond n'est pas un autre chiffre : il vient du **monde** (`max_steps`, que
+MiniGrid impose de toute façon — les patiences relevées en v41.29, 100 · 144 · 256 · 324,
+**sont** ces `max_steps`). Le besoin métabolique lit `episodes_jour`, grandeur que le code
+mesurait et loguait déjà. L'EMA porte sur la **vie entière, jamais réinitialisée à la
+promotion** : vérifié, vider la fenêtre glissante laisse la patience inchangée
+(471,9 → 471,9). Bornes **conservées** : `MARGE_SUBSISTANCE`, `MARGE_TROUVABILITE`,
 `FRACTION_CASES_RESSOURCES_MAX` — ce sont des rapports, pas des valeurs.
+
+> 🔴 **La première mesure fut DÉFAVORABLE — et elle a trouvé une vraie faute de conception.**
+> Banc d'isolation (3 graines × 3 bras × 10 jours) : énergie **0,1968 dérivé contre 0,2651
+> fossile** (−0,068). Couper la nouvelle patience ne changeait **rien** (runs identiques), donc
+> tout l'écart venait du **rythme métabolique** — c'est précisément à cela que servait la
+> séparation des deux drapeaux.
+>
+> **La faute : avoir indexé le MONDE sur le MÉTABOLISME de l'agent.** Deux correctifs.
+> **(fix1)** La densité de ressources dérivait du besoin, donc un agent plus lent faisait
+> *physiquement disparaître* la nourriture de la grille — 2 sources au lieu de 6 dès le jour 1.
+> En début de vie la politique est quasi aléatoire : la survie dépend de la **densité spatiale**,
+> pas de la valeur nutritive. Quadrupler ce que vaut une pomme ne compense rien si l'agent a
+> moins de chances de poser le pied dessus. La densité dérive désormais de la **surface** seule
+> (par case : 0,286 · 0,324 · 0,341 selon les paliers), et les deux bras placent des ressources
+> identiques. **(fix2)** La portion elle-même dérivait du rythme — or la satiété est plafonnée à
+> 1,0 et l'excédent **jeté**, tandis que la digestion est facturée sur la portion **entière** :
+> à rythme 1,0 un repas valait 3,175, dont **2,175 gaspillés** pour un coût digestif **×4**
+> (0,476 contre 0,119). Une portion est une propriété de la **ressource**, pas de l'agenda de
+> l'agent : elle dérive maintenant de la contenance de l'estomac (gaspillage **0,000**).
+>
+> **Ce que le rythme vécu règle désormais, et lui seul : la vitesse de vidange.** 1 épisode/jour
+> ⇒ un estomac plein tient **1,79 jour** ; 4 épisodes/jour ⇒ **0,45 jour**.
+>
+> ✅ **Après les deux correctifs le signe s'inverse : +0,0567** (0,3567 dérivé contre 0,3000
+> fossile), **3 graines sur 3** favorables, seuil de 0,26 franchi. A/A identique, rétrocompat
+> `.brain` sans erreur.
+> ⚠️ **`t = +1,64` à n=3 — NON SIGNIFICATIF** (seuil 4,30). Le critère est atteint et la
+> direction est bonne, mais trois graines ne concluent rien : c'est un feu vert pour la campagne
+> à 20 graines, **pas** une démonstration d'effet.
 
 ⚠️ **Le sens de la correction n'est PAS tranché.** Suivre la patience réelle ferait *baisser*
 le besoin (2,80 → ~1,1/axe), donc **moins** de sources — alors que l'énergie est déjà au

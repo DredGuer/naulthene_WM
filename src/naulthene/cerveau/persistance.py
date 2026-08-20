@@ -331,6 +331,14 @@ class PersistanceAnatomique:
             'module_acceptation_patience_min': etat.module_acceptation.patience_min,
             'module_acceptation_historique_succes': etat.module_acceptation.historique_succes,
             'module_acceptation_historique_vitesses': etat.module_acceptation.historique_vitesses,
+            # v41.30 — LE TRAIT D'ENDURANCE, lissé sur la vie entière de l'agent. Ce n'est
+            # pas un état de journée : c'est ce qui garantit qu'une promotion ne lui fasse
+            # pas perdre sa capacité à chercher longtemps (continuité ontogénétique).
+            'endurance_duree_reussite': getattr(etat.module_acceptation, 'duree_reussite_vie', None),
+            'endurance_duree_echec': getattr(etat.module_acceptation, 'duree_echec_vie', None),
+            'endurance_capital': getattr(etat.module_acceptation, 'capital_endurance', 0.0),
+            # v41.30 — le rythme métabolique réellement vécu (remplace la constante 4.0).
+            'rythme_episodes': getattr(etat.moteur_bio, 'rythme_episodes', 1.0),
 
             # --- 6. Thermostat de neurogenèse ---
             # v41.24 — mémoire du rendement structurel. SANS elle, un `.brain` rechargé
@@ -681,6 +689,13 @@ class PersistanceAnatomique:
         etat.module_acceptation.patience_min = checkpoint['module_acceptation_patience_min']
         etat.module_acceptation.historique_succes = checkpoint['module_acceptation_historique_succes']
         etat.module_acceptation.historique_vitesses = checkpoint['module_acceptation_historique_vitesses']
+        # v41.30 — lecture DÉFENSIVE : un `.brain` antérieur n'a ni trait d'endurance ni
+        # rythme vécu. Il repart à la naissance (endurance vierge, rythme prudent), sans
+        # greffe ni erreur — même discipline que `chaleur_habituee` (v41.26).
+        etat.module_acceptation.duree_reussite_vie = checkpoint.get('endurance_duree_reussite', None)
+        etat.module_acceptation.duree_echec_vie = checkpoint.get('endurance_duree_echec', None)
+        etat.module_acceptation.capital_endurance = float(checkpoint.get('endurance_capital', 0.0))
+        etat.moteur_bio.rythme_episodes = float(checkpoint.get('rythme_episodes', 1.0))
 
         # --- Thermostat de neurogenèse ---
         # v41.24 — lecture défensive : un `.brain` antérieur repart avec un rendement

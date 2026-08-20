@@ -411,7 +411,50 @@ niveau 4** et 2/10 au niveau 5 — le niveau 4 de g22 n'était donc pas une lote
 `docs/fonctionnement/CHANGELOG.md` §[v41.29-resultats] et
 `docs/recherche/CAMPAGNE_v41_population_et_ablation_aout_2026.md`.
 
-⚠️ **TROIS CONSTANTES POSÉES à supprimer** (mesuré le 20/08/2026, non implémenté — voir
+✅ **v41.30 — LES TROIS CONSTANTES POSÉES SONT SUPPRIMÉES** (20/08/2026). Quatre invariants.
+**(1) Le plafond de patience vient du MONDE, jamais d'une constante** : `_budget_natif_carte`
+lit `max_steps`, que MiniGrid impose de toute façon — les patiences relevées en v41.29
+(100 · 144 · 256 · 324) **sont** ces `max_steps`. `PLAFOND_PATIENCE_HORS_MONDE` ne sert
+qu'aux contextes SANS carte (vocal isolé, rêve) ; ne jamais le réintroduire comme plafond de
+jeu. **(2) Le trait d'endurance porte sur la VIE ENTIÈRE, jamais réinitialisé** (arbitrage
+utilisateur explicite contre la fenêtre glissante) : promu, l'agent conserve sa capacité à
+chercher longtemps — vérifié, vider `historique_succes` laisse `patience_de_vie()` inchangée
+(471,9 → 471,9). Vider ce trait à la promotion reproduirait exactement l'effondrement que la
+v41.30 corrige. **(3) Le gain de patience est un CONTRASTE, jamais un compteur** :
+`(durée_réussite − durée_abandon) / durée_abandon`, à rendement décroissant
+(`contraste / (1 + capital)`). Un agent qui réussit PLUS VITE qu'il n'abandonne ne gagne
+**rien** — c'est voulu : il a déjà assez de patience. ⚠️ `historique_vitesses` n'enregistrait
+que les RÉUSSITES avant la v41.30 ; les ratés doivent y rester, sans quoi l'écart se calcule
+avec une moitié manquante. **(4) Le rythme métabolique se rafraîchit UNE FOIS PAR NUIT**,
+jamais par tick (un besoin fluctuant en cours de journée rendrait la faim illisible, même
+discipline que `ajuster_capacite` v31.0), et une journée sans aucun épisode clos ne tire
+**pas** la référence vers zéro. ⚠️ **Les deux drapeaux d'ablation `--patience-fossile` et
+`--rythme-fossile` doivent rester SÉPARÉS** : patience et rythme sont couplés
+(`épisodes/jour` est l'entrée du besoin), les couper ensemble donne une ablation
+**confondue**. C'est cette séparation qui a permis d'établir que la patience dérivée ne
+change **rien** sur 10 jours (runs identiques) et que tout l'écart vient du rythme.
+
+✅ **v41.30-fix1/fix2 — LA SÉPARATION MONDE / CORPS.** La première mesure fut **défavorable**
+(−0,068 d'énergie) et a révélé une faute de conception : **le MONDE avait été indexé sur le
+MÉTABOLISME**. Trois frontières à ne plus jamais franchir. **(a) La DENSITÉ est une propriété
+du BIOTOPE**, dérivée de la SURFACE de la carte — jamais du besoin. Sinon un agent qui prend
+son temps fait *physiquement disparaître* la nourriture de la grille (mesuré : 2 sources au
+lieu de 6). En début de vie la politique est quasi aléatoire, donc la survie dépend de la
+**densité spatiale**, pas de la valeur nutritive : c'est la **falaise de rencontre**. **(b) La
+PORTION est une propriété de la RESSOURCE** (`PART_ESTOMAC_PAR_PRISE`), jamais du rythme —
+« une pomme ne quadruple pas de volume parce que l'animal marche plus lentement ». La satiété
+étant plafonnée à 1,0 avec excédent **jeté** mais digestion facturée sur la portion
+**entière**, une portion dérivée du rythme produit une **taxe sur le vide** : à rythme 1,0,
+2,175 gaspillé sur 3,175 pour un coût digestif **×4** (0,476 contre 0,119). **(c) Le RYTHME
+VÉCU ne règle QUE la vitesse de vidange** — donc le nombre de prises qu'une journée exige
+(1 épisode/jour ⇒ estomac plein pendant 1,79 jour ; 4 épisodes/jour ⇒ 0,45 jour). Ni la
+densité, ni la portion.
+
+Après les deux correctifs, le signe s'inverse : **+0,0567** (0,3567 dérivé contre 0,3000
+fossile), 3 graines sur 3 favorables. ⚠️ **`t = +1,64` à n=3 — NON SIGNIFICATIF** (seuil
+4,30) : feu vert pour une campagne à 20 graines, **pas** une démonstration d'effet.
+
+⚠️ **Historique de ces TROIS CONSTANTES** (mesuré le 20/08/2026 — voir
 `docs/ameliorations/EPISODES_REFERENCE_20082026_la_derniere_constante_posee.md`) :
 `EPISODES_PAR_JOURNEE_REFERENCE = 4.0`, `PATIENCE_MAX = 350`,
 `BOOST_PATIENCE_MIN_PAR_RECURRENCE = 10`. Elles décrivent toutes le **même agent d'août 2026**.

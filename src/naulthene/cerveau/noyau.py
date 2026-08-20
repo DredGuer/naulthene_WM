@@ -2229,29 +2229,110 @@ class ModuleAcceptationAbnegation:
     volontaire (abandon lucide) plutôt que d'épuiser ses ressources cognitives dans un
     épisode déjà mal engagé.
     """
-    def __init__(self, patience_min=50, patience_max=350, fenetre_historique=20,
-                 boost_patience_min_par_recurrence=10):
+    def __init__(self, patience_min=50, plafond_hors_monde=400, fenetre_historique=20):
         self.patience_min = patience_min
-        self.patience_max = patience_max
+        # v41.30 — plus de `patience_max` posé : le plafond vient du MONDE
+        # (`_budget_natif_carte` → `max_steps`). Celui-ci ne sert qu'aux contextes SANS
+        # carte (vocal isolé, rêve), où `max_steps` n'existe pas.
+        self.plafond_hors_monde = plafond_hors_monde
         self.fenetre_historique = fenetre_historique
-        self.boost_patience_min_par_recurrence = boost_patience_min_par_recurrence
         self.historique_succes = []
         self.historique_vitesses = []
+        # v41.30 — LE TRAIT D'ENDURANCE, lissé sur la VIE ENTIÈRE de l'agent.
+        #
+        # Décision utilisateur du 20/08/2026 : *« La solution la plus élégante et la plus
+        # fidèle au Dogme est de calculer l'écart sur la dynamique continue de la vie de
+        # l'agent via un lissage exponentiel, SANS réinitialisation au changement de
+        # carte. »* Trois propriétés qui en découlent et qu'il ne faut pas casser :
+        #
+        #   • **Pas d'amnésie** — promu, l'agent conserve son endurance acquise. Il arrive
+        #     sur le palier suivant armé de sa capacité à chercher longtemps, au lieu de
+        #     s'effondrer à chaque promotion.
+        #   • **Pas d'écrasement par le passé** — l'EMA pèse davantage le récent que les
+        #     jours lointains de la naissance : quand les durées s'étirent sur une carte
+        #     neuve, la référence glisse vers le haut sans rupture.
+        #   • **Zéro division par zéro** — 20 échecs d'affilée ne détruisent pas la mémoire
+        #     des réussites antérieures, donc le contraste reste estimable.
+        #
+        # `None` = jamais vécu. On ne pose PAS de valeur de départ : la première expérience
+        # l'amorce (voir `_lisser`), au lieu qu'un chiffre inventé doive être « oublié ».
+        self.duree_reussite_vie = None   # EMA des durées d'épisodes RÉUSSIS
+        self.duree_echec_vie = None      # EMA des durées d'épisodes RATÉS
+        self.capital_endurance = 0.0     # exposant : patience = patience_min × exp(capital)
+
+    def _lisser(self, ancienne, valeur):
+        """EMA à amorçage par la première mesure — jamais par une constante posée."""
+        if ancienne is None:
+            return float(valeur)
+        return ancienne + (float(valeur) - ancienne) * INERTIE_TRAIT_ENDURANCE
 
     def augmenter_patience_de_base_definitivement(self):
-        """Phase C (v17.0) — Apprentissage de la récurrence : quand un épisode réussit
-        APRÈS avoir consommé un Sursaut de Volonté (voir ModuleSursautVolonte), l'agent
-        a démontré par l'expérience que l'effort prolongé mène à la victoire. Sa
-        patience_min DE BASE augmente alors définitivement (jamais reprise), plutôt que
-        de ne dépendre que du calcul quotidien recalculé à partir de l'historique
-        glissant — une victoire d'exploit laisse une trace permanente, pas seulement
-        une moyenne qui finira par s'estomper avec le temps."""
-        self.patience_min = min(self.patience_max, self.patience_min + self.boost_patience_min_par_recurrence)
+        """Phase C (v17.0), refondue en v41.30 — LE GAIN EST DÉRIVÉ DE L'ÉCART VÉCU,
+        et son RENDEMENT DÉCROÎT EXPONENTIELLEMENT.
+
+        🔴 Ce que faisait l'ancienne version : `patience_min += 10`, plafonné à 350. Gain
+        CONSTANT jusqu'au mur, puis NUL. Mesuré sur la campagne v41.29 : **9 graines sur
+        10 collées au plafond exact**, saturées après ~30 victoires, puis 1200 jours sans
+        que rien ne bouge.
+
+        Deux corrections, toutes deux dérivées :
+
+        (1) **COMBIEN mérite-t-il ?** — plus par un compteur d'événements (+10 quelle que
+            soit la difficulté), mais par l'ÉCART MESURÉ entre le temps qu'il faut pour
+            réussir et celui au bout duquel il abandonne. Si ses réussites arrivent à 80
+            ticks et qu'il coupe à 100, attendre plus ne sert à rien → gain quasi nul. Si
+            elles arrivent à 300 alors qu'il coupe à 150, il tranche systématiquement trop
+            tôt → gain fort. La patience se cale sur ce que le MONDE exige réellement,
+            mesuré par l'agent lui-même.
+
+        (2) **RENDEMENT DÉCROISSANT, SANS PLAFOND** — formulation utilisateur : *« un genre
+            d'exponentielle qui part de 1 jusqu'à l'infini, mais exponentiel : plus tu
+            gagnes en patience, plus c'est dur d'en gagner à nouveau. »* Le gain est donc
+            divisé par le capital déjà acquis. La patience croît sans borne, mais chaque
+            palier coûte plus cher que le précédent — c'est le motif déjà employé par la
+            dérive métabolique (« une PENTE QUI DEVIENT VERTICALE, pas une barrière »).
+        """
+        if not ENDURANCE_DERIVEE_ACTIVE:
+            # Témoin `--patience-fossile` : le régime EXACT d'avant v41.30 (gain constant
+            # +10, plafonné à 350). Fidèle, pas approximatif — sinon le témoin mesure une
+            # troisième chose.
+            self.patience_min = min(PATIENCE_MAX_FOSSILE,
+                                    self.patience_min + BOOST_PATIENCE_FOSSILE)
+            return
+
+        # Sans les deux mesures, aucun écart n'est estimable : on ne crédite RIEN plutôt
+        # que d'inventer un gain (même discipline que « une journée stérile ne distille
+        # rien », v37.1).
+        if self.duree_reussite_vie is None or self.duree_echec_vie is None:
+            return
+
+        # L'écart est RELATIF à ce que l'agent tient déjà : un retard de 50 ticks n'a pas
+        # le même sens pour qui abandonne à 60 ou à 600. Négatif (il réussit plus vite
+        # qu'il n'abandonne) ⇒ rien à gagner.
+        reference = max(1.0, self.duree_echec_vie)
+        contraste = max(0.0, (self.duree_reussite_vie - self.duree_echec_vie) / reference)
+        if contraste <= 0.0:
+            return
+
+        # Rendement décroissant : divisé par le capital déjà acquis. Le +1 évite la
+        # division par zéro à la naissance ET donne au premier gain son plein effet.
+        self.capital_endurance += contraste / (1.0 + self.capital_endurance)
+
+    def patience_de_vie(self) -> float:
+        """La patience de base, sans borne supérieure — le monde la plafonnera."""
+        if not ENDURANCE_DERIVEE_ACTIVE:
+            return float(min(PATIENCE_MAX_FOSSILE, self.patience_min))
+        return self.patience_min * math.exp(self.capital_endurance)
 
     def enregistrer_episode(self, reussi: bool, nombre_ticks: int):
         self.historique_succes.append(1.0 if reussi else 0.0)
+        # v41.30 — LES RATÉS SONT ENREGISTRÉS EUX AUSSI. Avant, seules les réussites
+        # l'étaient : mesurer un ÉCART avec une seule moitié était impossible.
         if reussi:
             self.historique_vitesses.append(nombre_ticks)
+            self.duree_reussite_vie = self._lisser(self.duree_reussite_vie, nombre_ticks)
+        else:
+            self.duree_echec_vie = self._lisser(self.duree_echec_vie, nombre_ticks)
 
         if len(self.historique_succes) > self.fenetre_historique:
             self.historique_succes.pop(0)
@@ -2259,22 +2340,36 @@ class ModuleAcceptationAbnegation:
             self.historique_vitesses.pop(0)
 
     def obtenir_seuil_patience(self, facteur_complexite_sous_seuil: float = 1.0) -> int:
+        """v41.30 — L'ÉCHELLE EST LA PATIENCE DE VIE, plus une borne posée.
+
+        Les trois usages de `patience_max` disparaissent ensemble : il servait à la fois
+        de valeur de départ, d'échelle de normalisation de la vitesse et de plafond. Tous
+        trois sont remplacés par `patience_de_vie()`, dérivée du vécu — et le plafond
+        réel est appliqué en aval par `_patience_budget` (`max_steps` de la carte).
+        """
+        echelle = self.patience_de_vie()
+
         if not self.historique_succes:
-            base_patience = (self.patience_min + self.patience_max) / 2
+            # Naissance : rien de vécu, donc rien à moduler. L'agent part de son endurance
+            # de base — c'est `_patience_budget` qui lui accordera l'épisode entier tant
+            # qu'il n'a démontré aucune maîtrise (« le bénéfice du doute va au temps »).
+            base_patience = echelle
         else:
             taux_succes = sum(self.historique_succes) / len(self.historique_succes)
 
             if self.historique_vitesses:
                 vitesse_moyenne = sum(self.historique_vitesses) / len(self.historique_vitesses)
-                facteur_vitesse = max(0.2, 1.0 - (vitesse_moyenne / self.patience_max))
+                facteur_vitesse = max(0.2, 1.0 - (vitesse_moyenne / max(1.0, echelle)))
             else:
                 facteur_vitesse = 0.5
 
             potentiometre = 0.7 * taux_succes + 0.3 * facteur_vitesse
-            base_patience = self.patience_min + potentiometre * (self.patience_max - self.patience_min)
+            base_patience = self.patience_min + potentiometre * max(0.0, echelle - self.patience_min)
 
         patience_effective = base_patience * facteur_complexite_sous_seuil
-        return int(min(self.patience_max, patience_effective))
+        # Le seul plafond ici est celui des contextes SANS carte ; le budget natif de la
+        # carte (`max_steps`) est appliqué en aval par `_patience_budget`.
+        return int(max(self.patience_min, min(self.plafond_hors_monde, patience_effective)))
 
 
 class GestionnaireCursusAbnegation:
@@ -2376,7 +2471,8 @@ class ModuleSursautVolonte:
 
     1. Un boost dopaminergique ponctuel lié à l'effort (`BOOST_SECOND_SOUFFLE`).
     2. Une extension mathématique de la patience de l'épisode courant
-       (`EXTENSION_PATIENCE_SURSAUT` ticks), plafonnée à `patience_max`.
+       (`EXTENSION_PATIENCE_SURSAUT` ticks), plafonnée au budget natif de la carte
+       (`max_steps`, v41.30) — plus à une constante posée.
 
     Volontairement OMIS par rapport à la spécification initiale : le "chuchotement
     d'indice visuel" (illuminer l'objet pertinent dans le champ de vision) — cela
@@ -2506,6 +2602,14 @@ class BiologicalHomeostasisEngine:
         # métabolisme d'espèce, sans greffe ni erreur.
         self.derive_metabolique = 0.0
         self.derive_kappa = 0.0
+        # v41.30 — LE RYTHME VÉCU : combien d'épisodes l'agent joue réellement par journée,
+        # lissé sur sa vie. C'est ce qui remplace `EPISODES_PAR_JOURNEE_REFERENCE = 4.0`.
+        #
+        # Naît à la valeur PRUDENTE (1 épisode/jour) : au jour 1 l'agent n'a rien vécu, et
+        # supposer peu d'occasions est le cas défavorable — même discipline que le plancher
+        # vital. Sérialisé dans le `.brain` avec lecture défensive `.get()` : un cerveau
+        # antérieur repart à la naissance, sans greffe ni erreur.
+        self.rythme_episodes = EPISODES_PAR_JOURNEE_NAISSANCE
         # v41.25 — LA NOCICEPTION THERMIQUE. La chaleur ressentie au tick courant, dans
         # [0,1], lue depuis le champ de rayonnement (bus_sensoriel.lire_thermoception).
         # Ce n'est PAS un sens de plus : le sens existe depuis la v41.11. C'est le
@@ -3187,8 +3291,31 @@ class BiologicalHomeostasisEngine:
         La valeur est donc ce qu'il faut manger pour couvrir une journée en
         REPAS_PAR_JOURNEE prises, pertes de conversion comprises. Si la dépense change,
         la nutrition suit — aucun des deux nombres ne peut plus dériver seul."""
-        besoin_journalier = DEPENSE_ENERGIE_JOUR / max(RENDEMENT_CONVERSION, 1e-6)
-        return besoin_journalier / REPAS_PAR_JOURNEE
+        # 🔴 v41.30-fix2 — LA PORTION EST UNE PROPRIÉTÉ DE LA RESSOURCE, PAS DU RYTHME.
+        #
+        # Décision utilisateur (20/08) : *« Une pomme ne quadruple pas de volume ni de valeur
+        # nutritive sous prétexte que l'animal qui la regarde a décidé de marcher plus
+        # lentement aujourd'hui. »*
+        #
+        # La v41.30 faisait dériver la portion du rythme vécu. Mesuré au banc, l'effet est
+        # une TAXE SUR LE VIDE — l'estomac étant plafonné à 1,0 et le coût de digestion
+        # facturé sur la portion ENTIÈRE :
+        #
+        #   rythme  portion   gain satiété   GASPILLÉ   coût digestion
+        #     1,00    3,175      1,000        2,175       0,476   ← ×4 le coût
+        #     4,00    0,794      0,794        0,000       0,119
+        #
+        # L'agent payait l'impôt digestif maximal sur des calories qu'il ne pouvait même pas
+        # faire entrer dans son estomac : 68 % de chaque repas jeté. C'est le défaut corrigé
+        # en v41.2-fix pour l'eau (0,889 sur une jauge à 1,0), reproduit à plus grande échelle.
+        #
+        # La portion est donc dérivée de la CONTENANCE DE L'ESTOMAC, une propriété du corps
+        # invariante au vécu — pas d'un agenda journalier. Le rythme vécu continue de régler
+        # la PHYSIOLOGIE (vitesse de vidange, seuil de faim), jamais la taille des objets.
+        #
+        # ⚠️ Ne jamais réindexer cette valeur sur `besoin_par_axe` : ce serait rendre le monde
+        # dépendant de la patience de l'agent, exactement ce que le fix1 vient de découpler.
+        return PART_ESTOMAC_PAR_PRISE * CONTENANCE_JAUGE
 
     def valeur_hydrique(self) -> float:
         """v41.2-fix — la portion d'UNE ressource HYDRIQUE, dérivée de la perte d'eau
@@ -3206,8 +3333,10 @@ class BiologicalHomeostasisEngine:
         Les deux axes ont des besoins journaliers différents (la soif se renouvelle plus
         vite que la faim, cf. RATIO_SOIF_SUR_FAIM) : leurs portions doivent donc être
         dérivées séparément, chacune de SA propre perte."""
-        perte_journaliere = TAUX_HYDRATATION_JOUR
-        return perte_journaliere / PRISES_HYDRIQUES_PAR_JOURNEE
+        # v41.30-fix2 — même correction que `valeur_nutritive` : une gorgée d'eau est une
+        # propriété du monde. La jauge d'hydratation partage la même échelle [0,1] que la
+        # satiété, donc la même fraction de contenance.
+        return PART_ESTOMAC_PAR_PRISE * CONTENANCE_JAUGE
 
     def consommer_ressource(self, type_ressource: str, quantite: float = None):
         """v41.2 — consommation sur PROFIL À TROIS AXES plutôt que « un type remplit sa
@@ -5052,8 +5181,40 @@ FACTEUR_ATTENUATION_LIBRE = 1.00         # déplacement libre : pénalité plein
 # journée) par un seuil de troncature volontaire recalculé chaque jour à partir de
 # l'historique de succès/vitesse, puis ÉTIRÉ par le facteur de complexité du sous-seuil
 # courant — voir ModuleAcceptationAbnegation et GestionnaireCursusAbnegation.
+# v41.30 — DEUX INTERRUPTEURS SÉPARÉS, un par constante supprimée.
+#
+# ⚠️ Ils DOIVENT rester distincts : patience et rythme métabolique sont COUPLÉS
+# (`épisodes/jour` est l'entrée du besoin). Les couper ensemble produirait une ablation
+# CONFONDUE — impossible de savoir laquelle des deux a agi. C'est la règle de mesure §4.
+ENDURANCE_DERIVEE_ACTIVE = True   # False = patience fossile (+10 plafonné, `--patience-fossile`)
+RYTHME_VECU_ACTIF = True          # False = besoin figé à 4 épisodes/jour (`--rythme-fossile`)
+
+# Le régime fossile exact d'avant v41.30, conservé pour que le témoin soit FIDÈLE et non
+# approximatif : mêmes chiffres, même plafond, même gain constant.
+PATIENCE_MAX_FOSSILE = 350
+BOOST_PATIENCE_FOSSILE = 10
+EPISODES_PAR_JOURNEE_FOSSILE = 4.0
+
 PATIENCE_MIN = 50
-PATIENCE_MAX = 350
+# v41.30 — `PATIENCE_MAX = 350` SUPPRIMÉE. C'était une CONSTANTE FOSSILE : un chiffre posé
+# qui décrivait l'agent d'août 2026, pas une propriété de l'espèce.
+#
+# 🔴 LA MESURE (campagne v41.29, 10 graines × 1500 jours) : **9 graines sur 10 finissent
+# à `patience_min = 350` — le plafond EXACT** (la 10ᵉ à 330). Le mécanisme accordait un
+# gain CONSTANT (+10 par victoire-sursaut) jusqu'au mur, puis RIEN : 30 victoires
+# suffisaient à saturer, et 1200 jours de plus ne changeaient plus rien. C'est l'inverse
+# d'une difficulté croissante.
+#
+# ⚠️ Le plafond n'a pas été remplacé par un autre chiffre : il est **dérivé du MONDE**.
+# `_budget_natif_carte` lit `max_steps`, que MiniGrid impose de toute façon — au-delà,
+# toute patience est inopérante puisque l'épisode est coupé. Les patiences relevées dans
+# la campagne (100 · 144 · 256 · 324) sont exactement les `max_steps` des cartes jouées :
+# le vrai plafond était déjà là, mesuré, et `PATIENCE_MAX` ne faisait que le doubler d'une
+# borne arbitraire. `PLAFOND_PATIENCE_HORS_MONDE` ne sert plus qu'aux contextes SANS carte
+# (vocal isolé, rêve), où `max_steps` n'existe pas.
+# La journée elle-même est le seul plafond qui ait un sens hors carte : au-delà,
+# l'épisode ne peut de toute façon pas continuer.
+PLAFOND_PATIENCE_HORS_MONDE = ticks_par_jour
 FENETRE_HISTORIQUE_PATIENCE = 20
 
 # --- v41.8 : LA PATIENCE SE DÉRIVE DU BUDGET DE LA CARTE, ET SE MUSCLE PAR L'ÉCHEC ---
@@ -5111,8 +5272,23 @@ POIDS_CHOC_CURIOSITE = 0.15
 
 SEUIL_DECLENCHEMENT_SURSAUT = 0.95  # % de la patience du jour consommée avant sursaut
 BOOST_SECOND_SOUFFLE = 0.5          # décharge dopaminergique ponctuelle liée à l'effort
-EXTENSION_PATIENCE_SURSAUT = 50     # ticks supplémentaires accordés, plafonnés à PATIENCE_MAX
-BOOST_PATIENCE_MIN_PAR_RECURRENCE = 10  # gain permanent de patience_min après une victoire par sursaut
+EXTENSION_PATIENCE_SURSAUT = 50     # ticks supplémentaires accordés, plafonnés au budget
+                                    # natif de la carte (`max_steps`), v41.30
+# v41.30 — `BOOST_PATIENCE_MIN_PAR_RECURRENCE = 10` SUPPRIMÉE. Le gain de patience était un
+# compteur d'événements (+10 par victoire-sursaut, quelle que soit sa difficulté) ; il est
+# désormais DÉRIVÉ de l'écart mesuré entre la durée des réussites et celle des abandons,
+# avec un rendement décroissant — voir `augmenter_patience_de_base_definitivement`.
+#
+# L'INERTIE DU TRAIT D'ENDURANCE. Décision utilisateur du 20/08/2026 : le lissage porte sur
+# la VIE ENTIÈRE de l'agent, sans réinitialisation au changement de carte — c'est ce qui
+# garantit la continuité ontogénétique (promu, l'agent garde son endurance acquise au lieu
+# de s'effondrer). Une inertie proche de 1 fait glisser la référence lentement vers le
+# récent : ni amnésie à chaque promotion, ni écrasement par les jours de la naissance.
+#
+# ⚠️ C'est une BORNE sur une VITESSE d'oubli, jamais une valeur de patience : elle survit à
+# tout changement de carte, de durée de journée ou de barème. Même nature que
+# `INERTIE_OUBLI_REFERENCE_CHOC` (v37.1-fix1).
+INERTIE_TRAIT_ENDURANCE = 0.02   # borne : part du récent dans l'EMA (≈50 épisodes de mémoire)
 
 # --- MOTEUR HOMÉOSTATIQUE BIOLOGIQUE (v18.0, générique, actif partout) ---
 # v41.2 — L'ÉCHELLE TEMPORELLE. Les taux ci-dessous étaient calibrés sur une journée de
@@ -5152,9 +5328,32 @@ TICKS_JOUR_REFERENCE = 3600.0   # borne : la journée nycthémérale de référe
 # CHAQUE occasion sans jamais en rater une. C'est une borne sur un RAPPORT, pas sur une
 # quantité — elle survit donc à tout changement de carte, de densité ou de durée de journée.
 MARGE_SUBSISTANCE = 2.0                  # borne : le monde doit offrir 2× le besoin
-EPISODES_PAR_JOURNEE_REFERENCE = 4.0     # borne : ordre de grandeur mesuré (patience ~95
-                                         # ticks sur 400). Sert d'échelle, pas de vérité —
-                                         # la patience réelle varie d'un jour à l'autre.
+# v41.30 — `EPISODES_PAR_JOURNEE_REFERENCE = 4.0` SUPPRIMÉE : le rythme est désormais LU
+# sur ce que l'agent a réellement vécu (`etat.episodes_jour`), lissé sur sa vie.
+#
+# 🔴 CE QUE VALAIT CE CHIFFRE. `4.0` = `400 ticks / patience ~95` — la patience d'un agent
+# NEUF, quand `patience_min` valait encore 50. Il était juste **le jour où il a été écrit**
+# (commit 0609beb, v41.2, 15/08/2026). Ce chantier-là a dérivé QUATRE grandeurs sur cinq,
+# et la formule a hérité d'un chiffre posé au milieu : c'était le résidu du chantier.
+#
+# 🔴 LA MESURE (campagne v41.29, 10 graines × 1500 jours) :
+#
+#     patience réelle    168 → 258 ticks   (t = +9,55, SIG)
+#     épisodes/jour     2,39 → 1,55        (−35 %)
+#     écart au 4.0      ×1,68 → ×2,58      ← l'écart SE CREUSE
+#
+# La patience monte par cliquet, donc les épisodes/jour ne peuvent que DIMINUER : le besoin
+# restait calibré pour 4 épisodes pendant que l'agent n'en jouait plus que 1,55. Corrélation
+# qui relie le tout : `maîtrise ~ énergie moyenne`, r = +0,710 (t = +2,85, SIG).
+#
+# ⚠️ Ce n'est pas une constante fausse : c'est une constante qui mesure la JEUNESSE d'un
+# agent et qu'on appliquait à sa VIEILLESSE.
+#
+# La valeur de naissance est PRUDENTE, jamais optimiste : un agent au jour 1 n'a rien vécu,
+# on suppose donc le cas le moins favorable (un seul épisode par journée, soit le maximum de
+# besoin par occasion). Même discipline que le plancher vital : on protège le cas défavorable
+# plutôt que de parier sur le confortable.
+EPISODES_PAR_JOURNEE_NAISSANCE = 1.0
 RATIO_SOIF_SUR_FAIM = 10.0 / 30.0        # borne : 3 jours sans eau contre 30 sans
                                          # nourriture — l'eau se vide 10x plus vite
 # Densité maximale de ressources, en fraction des cases libres. Définie ici parce que le
@@ -5168,7 +5367,35 @@ FRACTION_CASES_RESSOURCES_MAX = 0.35     # borne : au-delà, la carte devient un
 CASES_LIBRES_CARTE_MINIMALE = 8.0        # borne : `Empty-5x5`, la plus petite du cursus.
                                          # Mesurée, pas supposée (voir §8 du chantier).
 _BUDGET_CARTE_MINIMALE = max(2.0, CASES_LIBRES_CARTE_MINIMALE * FRACTION_CASES_RESSOURCES_MAX)
-_OPPORTUNITES_MIN_JOUR = _BUDGET_CARTE_MINIMALE * EPISODES_PAR_JOURNEE_REFERENCE
+
+
+def besoin_par_axe(episodes_par_journee: float) -> float:
+    """v41.30 — LE BESOIN MÉTABOLIQUE SUIT LE RYTHME RÉELLEMENT VÉCU.
+
+    Le calcul est celui de la v41.2, à ceci près que le nombre d'épisodes n'est plus posé :
+
+        opportunités_min = budget(carte la plus pauvre) × épisodes_par_journée
+        besoin/axe       = (opportunités_min / 2) / MARGE_SUBSISTANCE
+
+    ⚠️ Le SENS de la dérivation est inchangé et reste essentiel : c'est la carte la plus
+    PAUVRE du cursus qui fixe le rythme, jamais la carte courante — un métabolisme qui
+    changerait de nature en changeant de pièce ne serait pas une propriété de l'espèce
+    (sur `Empty-8x8` le calcul donnerait 24 repas/jour).
+
+    ⚠️ La marge doit tenir sur CHAQUE axe, pas sur leur somme : répartir le besoin total
+    selon `RATIO_SOIF_SUR_FAIM` donnait une marge food ×2,86 et une marge eau ×0,95 —
+    le défaut §8.6 reproduit par une FORMULE au lieu d'un chiffre. Chaque axe reçoit donc
+    la moitié des opportunités, divisée par la marge.
+    """
+    if not RYTHME_VECU_ACTIF:
+        # Témoin `--rythme-fossile` : le besoin figé de la v41.2, quel que soit le vécu.
+        episodes = EPISODES_PAR_JOURNEE_FOSSILE
+    else:
+        episodes = max(EPISODES_PAR_JOURNEE_NAISSANCE, float(episodes_par_journee))
+    return (_BUDGET_CARTE_MINIMALE * episodes / 2.0) / MARGE_SUBSISTANCE
+
+
+_OPPORTUNITES_MIN_JOUR = _BUDGET_CARTE_MINIMALE * EPISODES_PAR_JOURNEE_NAISSANCE
 _BESOIN_TOTAL_JOUR = _OPPORTUNITES_MIN_JOUR / MARGE_SUBSISTANCE
 
 # ⚠️ La marge doit tenir sur CHAQUE axe, pas sur leur somme. La carte offre autant d'eau
@@ -5181,7 +5408,10 @@ _BESOIN_TOTAL_JOUR = _OPPORTUNITES_MIN_JOUR / MARGE_SUBSISTANCE
 # Chaque axe reçoit donc la moitié des opportunités minimales, divisée par la marge. On boit
 # toujours plus souvent qu'on ne mange (la valeur hydrique d'une prise est plus petite, voir
 # `valeur_hydrique`), mais le NOMBRE de prises reste soutenable des deux côtés.
-_BESOIN_PAR_AXE = (_OPPORTUNITES_MIN_JOUR / 2.0) / MARGE_SUBSISTANCE
+# ⚠️ Ces trois noms sont désormais des VALEURS DE NAISSANCE, plus des constantes de régime :
+# ils décrivent l'agent au jour 1, qui n'a encore rien vécu. Le rythme réel est recalculé
+# chaque nuit par `besoin_par_axe(rythme vécu)` — voir `_rafraichir_rythme_metabolique`.
+_BESOIN_PAR_AXE = besoin_par_axe(EPISODES_PAR_JOURNEE_NAISSANCE)
 PRISES_HYDRIQUES_PAR_JOURNEE = _BESOIN_PAR_AXE
 REPAS_PAR_JOURNEE = _BESOIN_PAR_AXE
 
@@ -5251,6 +5481,19 @@ RENDEMENT_CONVERSION = 0.9       # borne : satiété → énergie (jamais 100 %)
 # L'agent ne perçoit que les conséquences sur ses jauges, et la valence de chaque type est
 # APPRISE par `empreinte_types` (v39.0). Ce tableau décrit le MONDE, pas la connaissance
 # qu'en a l'agent — même discipline que `DetecteurRessourcesBiologiques`.
+# v41.30-fix2 — LA CONTENANCE ET LA PART D'UNE PRISE.
+#
+# `CONTENANCE_JAUGE` n'est pas un réglage : c'est l'amplitude que le code borne déjà partout
+# (`np.clip(..., 0.0, 1.0)` sur satiété, hydratation et stimulation). Elle est écrite ici pour
+# que la portion s'y réfère explicitement au lieu de la supposer.
+CONTENANCE_JAUGE = 1.0
+# La part d'estomac que remplit UNE prise. Borne, jamais valeur de régime : elle dit qu'un
+# repas doit remplir l'essentiel d'un estomac vide SANS déborder — au-delà de 1,0 l'excédent
+# est perdu tandis que la digestion reste facturée en entier (la « taxe sur le vide », mesurée
+# à ×4 le coût pour 68 % du repas jeté). En-deçà, l'agent ne pourrait jamais se rassasier en
+# une prise. Le nombre de prises nécessaires, lui, reste dérivé du besoin métabolique.
+PART_ESTOMAC_PAR_PRISE = 0.80
+
 PROFILS_NUTRITIONNELS = {
     # L'eau : hydrate totalement, zéro calorie, digestion gratuite.
     "WATER": {"satiete": 0.0, "hydrique": 1.0, "energie": 0.0, "digestion": 0.0},
@@ -5327,10 +5570,43 @@ DERIVE_MAX_ABSOLUE = 1.0               # borne dure de sécurité (exp(1) ≈ 2,
 # La marge couvre l'échec de recherche : trouver la moitié des sources d'une carte doit
 # suffire à survivre, tout en laissant l'agent qui cherche mieux vivre mieux.
 MARGE_TROUVABILITE = 2.0
-NB_SOURCES_FOOD = max(2, int(round(REPAS_PAR_JOURNEE * MARGE_TROUVABILITE)))
-# L'eau se prend plus souvent que la nourriture (PRISES_HYDRIQUES_PAR_JOURNEE), donc sa
-# densité est dérivée de SON propre rythme — pas recopiée de celle de la nourriture.
-NB_SOURCES_WATER = max(2, int(round(PRISES_HYDRIQUES_PAR_JOURNEE * MARGE_TROUVABILITE)))
+
+# 🔴 v41.30-fix1 — LA DENSITÉ EST UNE PROPRIÉTÉ DU BIOTOPE, PAS DU MÉTABOLISME.
+#
+# Jusqu'ici `NB_SOURCES_* = besoin × marge`, donc la richesse du monde suivait l'appétit de
+# l'agent. Tant que le besoin était une constante (2,80), le couplage était invisible. La
+# v41.30 l'a rendu vivant — et destructeur : le besoin de naissance tombant à 0,70, la carte
+# ne recevait plus que **2 sources au lieu de 6** dès l'import.
+#
+# Mesuré (3 graines × 10 jours) : énergie **0,1968 contre 0,2651** au témoin fossile.
+# La cause est la FALAISE DE RENCONTRE — en début de vie la politique est quasi aléatoire,
+# donc la survie dépend de la densité spatiale (N_sources / surface), pas de la valeur
+# nutritive. Quadrupler la valeur d'une ressource (0,794 → 3,175) ne compense rien si l'agent
+# a mathématiquement moins de chances de poser le pied dessus.
+#
+# La densité est donc dérivée de la SURFACE de la carte la plus pauvre du cursus — la même
+# grandeur qui plafonne déjà le placement dans le détecteur (`FRACTION_CASES_RESSOURCES_MAX`).
+# Le monde est ainsi cohérent avec lui-même : ce qu'il SOUHAITE placer est exactement ce
+# qu'il PEUT placer, réparti entre les deux axes.
+#
+# ⚠️ Ne JAMAIS réindexer ces deux nombres sur `besoin_par_axe` : le monde n'a pas à faire
+# disparaître des ressources de la grille sous prétexte que l'agent prend son temps pour
+# réfléchir. Le rythme vécu ne règle que la PHYSIOLOGIE (`valeur_alimentaire`,
+# `valeur_hydrique`), jamais l'ÉCOSYSTÈME.
+# Le souhait est SATURANT : le détecteur plafonne déjà le placement à
+# `cases_libres × FRACTION_CASES_RESSOURCES_MAX` (v41.2-fix3), donc demander au moins ce
+# plafond fait que **la SURFACE seule** fixe la densité, sur chaque carte du cursus. Mesuré :
+# Empty-5x5 → 2 · Empty-Random-6x6 → 4 · Empty-8x8 → 11 · SimpleCrossingS9N1 → 14, soit une
+# densité par case constante (~0,29) d'un palier à l'autre. La carte la plus RICHE du cursus
+# borne le souhait — au-delà, le chiffre serait inopérant sur toutes les cartes.
+_CASES_LIBRES_CARTE_MAXIMALE = 41.0       # borne : `SimpleCrossingS9N1`, la plus vaste
+                                          # du cursus atteint à ce jour. Mesurée, pas supposée.
+_SOURCES_BIOTOPE = max(4, int(round(_CASES_LIBRES_CARTE_MAXIMALE * FRACTION_CASES_RESSOURCES_MAX)))
+# Répartition à parts égales : la carte offre autant d'eau que de nourriture (la densité suit
+# la même fraction de cases), et la marge doit tenir sur CHAQUE axe — répartir selon un ratio
+# biologique donnerait un axe confortable et l'autre sous la marge (défaut §8.6, v41.2).
+NB_SOURCES_FOOD = max(2, _SOURCES_BIOTOPE - _SOURCES_BIOTOPE // 2)
+NB_SOURCES_WATER = max(2, _SOURCES_BIOTOPE // 2)
 
 # ⚠️ v41.2-fix3 — CES NOMBRES SONT DES SOUHAITS, PAS DES GARANTIES : ils sont plafonnés
 # par la place réellement disponible sur la carte (voir `_budget_ressources`). Mesuré sur
@@ -5687,6 +5963,7 @@ HERITAGE_SEVRAGE_ACTIF = True
 # False : `travail = 0.0` dès que le monde n'a pas bougé — l'ancien barème, où le geste
 #         inutile était le MOINS CHER (1,09 contre 4,00 pour avancer).
 TRAVAIL_TENTE_ACTIF = True
+
 
 # v41.27 — interrupteur de l'option (b) : mourir coûte le reste de la journée.
 # True  : la journée s'arrête à la mort (décision utilisateur du 19/08).
@@ -6202,9 +6479,9 @@ class EtatCognitif:
             facteur_libre=FACTEUR_ATTENUATION_LIBRE,
         )  # générique, actif partout
         self.module_acceptation = ModuleAcceptationAbnegation(
-            patience_min=PATIENCE_MIN, patience_max=PATIENCE_MAX,
+            patience_min=PATIENCE_MIN,
+            plafond_hors_monde=PLAFOND_PATIENCE_HORS_MONDE,
             fenetre_historique=FENETRE_HISTORIQUE_PATIENCE,
-            boost_patience_min_par_recurrence=BOOST_PATIENCE_MIN_PAR_RECURRENCE,
         )
         self.gestionnaire_cursus = GestionnaireCursusAbnegation(
             succes_par_sous_seuil=SUCCES_PAR_SOUS_SEUIL,
@@ -6811,7 +7088,7 @@ def _reset_seede(etat):
     return etat.env.reset(seed=graine)
 
 
-def _budget_natif_carte(env, defaut: int = PATIENCE_MAX) -> int:
+def _budget_natif_carte(env, defaut: int = PLAFOND_PATIENCE_HORS_MONDE) -> int:
     """v41.8 — Le nombre de pas que l'ENVIRONNEMENT accorde réellement à un épisode.
 
     MiniGrid termine l'épisode à `max_steps` quoi qu'il arrive : toute patience
@@ -8294,8 +8571,12 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
     # de son second souffle. « L'envie de vivre pousse au maximum à essayer quand même » :
     # le sursaut est littéralement cette phrase, son intensité ne pouvait pas être binaire.
     _envie = etat.agent.envie_de_vivre
+    # v41.30 — le sursaut est plafonné par le budget RÉEL de la carte (`max_steps`), plus
+    # par la constante fossile `PATIENCE_MAX`. Étirer la patience au-delà de ce que
+    # l'environnement accorde n'a jamais eu d'effet : MiniGrid coupe l'épisode de toute façon.
     sursaut_declenche, etat.patience_jour = etat.sursaut_volonte.evaluer_tick(
-        etat.ticks_episode_courant, etat.patience_jour, PATIENCE_MAX, etat.fin_episode,
+        etat.ticks_episode_courant, etat.patience_jour,
+        _budget_natif_carte(etat.env), etat.fin_episode,
         facteur=_envie
     )
     if sursaut_declenche:
@@ -8822,6 +9103,87 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
     }
 
 
+def _rafraichir_rythme_metabolique(etat):
+    """v41.30 — Lisse le nombre d'épisodes RÉELLEMENT joués et en dérive la densité de
+    ressources du monde. Remplace `EPISODES_PAR_JOURNEE_REFERENCE = 4.0`.
+
+    ⚠️ **La grandeur était déjà mesurée** : `etat.episodes_jour` existe, est réarmé chaque
+    nuit par `_reinitialiser_buffers_journee` et logué en W&B sous `Episodes_Jour`. Il n'y
+    avait rien à instrumenter — seulement à le LIRE.
+
+    ⚠️ **L'inertie est celle du trait d'endurance**, et pour la même raison : promu, l'agent
+    ne doit pas voir son métabolisme se réinitialiser. Une carte neuve où les épisodes
+    s'allongent fait glisser le rythme vers le bas SANS RUPTURE, au lieu d'un saut.
+
+    ⚠️ **Boucle de rétroaction à surveiller** : moins d'épisodes → moins de sources → plus
+    de faim → patience modifiée → moins d'épisodes. C'est l'inertie qui l'amortit (~50
+    journées de mémoire), et c'est exactement ce que la campagne d'ablation doit mesurer.
+    """
+    moteur = getattr(etat, "moteur_bio", None)
+    if moteur is None:
+        return
+
+    vecu = float(max(0, getattr(etat, "episodes_jour", 0)))
+    if vecu <= 0.0:
+        # Journée sans aucun épisode clos : rien de mesuré, donc rien à apprendre. On ne
+        # tire PAS la référence vers zéro sur une absence de donnée (même discipline que
+        # « une journée stérile ne distille rien », v37.1).
+        return
+
+    ancien = getattr(moteur, "rythme_episodes", EPISODES_PAR_JOURNEE_NAISSANCE)
+    moteur.rythme_episodes = max(
+        EPISODES_PAR_JOURNEE_NAISSANCE,
+        ancien + (vecu - ancien) * INERTIE_TRAIT_ENDURANCE,
+    )
+
+    # v41.30-fix2 — CE QUE LE RYTHME RÈGLE DÉSORMAIS : LA VITESSE DE VIDANGE.
+    #
+    # Plus la portion (fix2 : propriété du monde), plus la densité du monde (fix1 : propriété
+    # de la surface). Le rythme vécu ne touche plus qu'à la PHYSIOLOGIE — l'allure à laquelle
+    # les jauges se vident, donc le nombre de prises qu'une journée exige.
+    #
+    # Le sens est celui du bon sens biologique : un agent qui ne joue qu'un épisode par jour
+    # n'a qu'UNE poignée d'occasions de manger, donc son corps doit tenir plus longtemps sur
+    # un estomac plein. Un agent qui enchaîne les épisodes en croise davantage et peut
+    # consommer plus vite. `besoin_par_axe` est exactement ce nombre de prises par journée.
+    if moteur.ticks_par_jour:
+        besoin = besoin_par_axe(moteur.rythme_episodes)
+        taux_satiete_jour = besoin * PART_ESTOMAC_PAR_PRISE * CONTENANCE_JAUGE
+        moteur.taux_satiete = taux_satiete_jour / float(moteur.ticks_par_jour)
+        moteur.taux_hydratation = (taux_satiete_jour * RATIO_SOIF_SUR_FAIM
+                                   / float(moteur.ticks_par_jour))
+
+    # 🔴 v41.30-fix1 — LE MONDE N'EST PAS INDEXÉ SUR LE MÉTABOLISME DE L'AGENT.
+    #
+    # La v41.30 recalculait ici `nb_sources_food/water` à partir du rythme vécu. C'était une
+    # CONFUSION ENTRE L'ESTOMAC ET L'ÉCOSYSTÈME, et le banc l'a payée : −0,068 d'énergie
+    # (0,1968 dérivé contre 0,2651 fossile, 3 graines × 10 jours), tout l'écart imputé au
+    # rythme, la patience n'y étant pour rien (runs bit-identiques avec `--rythme-fossile`).
+    #
+    # Le mécanisme de l'échec — LA FALAISE DE RENCONTRE :
+    #
+    #   persévérance ↑ → épisodes réels ↓ → besoin ↓ → sources ↓ (6 → 4)
+    #                                                → DENSITÉ SPATIALE ↓ (−33 %)
+    #                                                → famine par NON-RENCONTRE
+    #
+    # En début de vie la politique motrice est quasi aléatoire : la survie dépend presque
+    # uniquement de la densité spatiale (N_sources / surface). Quadrupler la valeur d'une
+    # ressource (0,794 → 3,175) ne compense RIEN si l'agent a mathématiquement moins de
+    # chances de poser le pied dessus. Le monde n'a pas à faire disparaître des pommes de la
+    # grille sous prétexte que l'agent prend son temps pour réfléchir.
+    #
+    # La séparation posée par cette correction, et qu'il ne faut plus jamais franchir :
+    #
+    #   • la DENSITÉ du monde est une propriété du BIOTOPE — dérivée de la SURFACE de la
+    #     carte (`FRACTION_CASES_RESSOURCES_MAX`), invariante au vécu de l'agent ;
+    #   • la QUANTITÉ requise pour vivre est une propriété du MÉTABOLISME — dérivée du
+    #     rythme vécu, et elle seule (`besoin_par_axe`, lue par `valeur_alimentaire` et
+    #     `valeur_hydrique`).
+    #
+    # Le rythme vécu ne touche donc PLUS au détecteur de ressources : il ne règle que la
+    # physiologie. Ne pas rebrancher `nb_sources_*` ici sans relire ce bloc.
+
+
 def executer_nuit(etat, plafond_reve=None):
     """Clôture la journée subjective en cours : bilan d'épisode incomplet, promotion de
     niveau, apprentissage (apprendre_journee), rêve adaptatif, ressort dopaminergique,
@@ -8850,6 +9212,14 @@ def executer_nuit(etat, plafond_reve=None):
             if promu:
                 etat.palier_cible += 1
                 print(f"   🎓 Palier {etat.palier_cible} visé : {DetecteurJalonsDoorKey.NOMS[etat.palier_cible - 1]}")
+
+    # v41.30 — LE RYTHME MÉTABOLIQUE SUIT LA VIE, plus une constante posée.
+    #
+    # Placé ICI, après la clôture de l'épisode incomplet : `episodes_jour` est alors
+    # définitif pour la journée. Une fois par NUIT, jamais par tick — un besoin qui
+    # fluctuerait en cours de journée rendrait la faim illisible (même discipline que
+    # `MemoireEpisodiqueSpatiale.ajuster_capacite`, v31.0).
+    _rafraichir_rythme_metabolique(etat)
 
     taux_maitrise = None
     if etat.doorkey_actif and etat.detecteur.actif and etat.episodes_jour > 0:
@@ -9407,6 +9777,20 @@ def executer_nuit(etat, plafond_reve=None):
     print(f"  ├─ Potentiomètre  : ⏳ Patience de base du jour: {etat.patience_base_jour} ticks/épisode "
           f"({etat.abandons_patience_jour} abandon(s) lucide(s){issue_txt}, "
           f"patience_min actuelle: {etat.module_acceptation.patience_min})")
+    # v41.30 — TÉLÉMÉTRIE DES TROIS CONSTANTES SUPPRIMÉES. Sans elle, la mécanique serait
+    # invisible sur un run long et son utilité indémontrable (leçon de la v29.1).
+    _ma = etat.module_acceptation
+    _reussite = _ma.duree_reussite_vie
+    _echec = _ma.duree_echec_vie
+    _txt_ecart = ("jamais mesuré" if (_reussite is None or _echec is None)
+                  else f"réussite {_reussite:.0f}t vs abandon {_echec:.0f}t")
+    print(f"  │                   🧬 Endurance de vie : patience dérivée "
+          f"{_ma.patience_de_vie():.0f} ticks (capital {_ma.capital_endurance:.3f}) — {_txt_ecart}")
+    _rythme = getattr(etat.moteur_bio, "rythme_episodes", EPISODES_PAR_JOURNEE_NAISSANCE)
+    print(f"  │                   🍽️ Rythme métabolique : {_rythme:.2f} épisode(s)/jour vécu(s) "
+          f"({etat.episodes_jour} aujourd'hui) → besoin {besoin_par_axe(_rythme):.2f}/axe, "
+          f"biotope {NB_SOURCES_FOOD}+{NB_SOURCES_WATER} source(s) [densité de la SURFACE, "
+          f"découplée du besoin — v41.30-fix1])")
     if etat.mode_libre and etat.sous_objectifs_curiosite_jour > 0:
         print(f"  ├─ Curiosité JEPA : ✨ {etat.sous_objectifs_curiosite_jour} sous-quête(s) intrinsèque(s) générée(s)")
     # v33.0-etape0 — CHRONOMÉTRIE DES JALONS (conditionnelle : rien à dire si aucun
@@ -9898,6 +10282,17 @@ def executer_nuit(etat, plafond_reve=None):
             / max(1, etat.effort_par_action_jour[ACTION_CONSOMMER][0])),
         "Sursauts_Volonte_Jour": etat.sursauts_jour,
         "Patience_Min_Actuelle": etat.module_acceptation.patience_min,
+        # v41.30 — les grandeurs qui remplacent les trois constantes fossiles.
+        "Endurance_Patience_De_Vie": etat.module_acceptation.patience_de_vie(),
+        "Endurance_Capital": etat.module_acceptation.capital_endurance,
+        "Endurance_Duree_Reussite": (etat.module_acceptation.duree_reussite_vie
+                                     if etat.module_acceptation.duree_reussite_vie is not None else 0.0),
+        "Endurance_Duree_Echec": (etat.module_acceptation.duree_echec_vie
+                                  if etat.module_acceptation.duree_echec_vie is not None else 0.0),
+        "Rythme_Episodes_Vecu": getattr(etat.moteur_bio, "rythme_episodes",
+                                        EPISODES_PAR_JOURNEE_NAISSANCE),
+        "Rythme_Besoin_Par_Axe": besoin_par_axe(
+            getattr(etat.moteur_bio, "rythme_episodes", EPISODES_PAR_JOURNEE_NAISSANCE)),
         "Bio_Satiete": etat.moteur_bio.satiete,
         "Bio_Hydratation": etat.moteur_bio.hydratation,
         "Bio_Stimulation": etat.moteur_bio.stimulation,
@@ -10285,6 +10680,11 @@ if __name__ == "__main__":
                     help="ABLATION : fige DIM_BUS_MAX à 96, l'ancienne valeur posée")
     # v41.25 — témoin de la nociception thermique (voir DOULEUR_THERMIQUE_ACTIVE).
     # v41.28 — témoin du travail tenté, voir TRAVAIL_TENTE_ACTIF.
+    # v41.30 — témoins des deux constantes supprimées, séparés.
+    _p.add_argument("--patience-fossile", action="store_true",
+                    help="témoin v41.29 : patience à gain constant (+10) plafonnée à 350")
+    _p.add_argument("--rythme-fossile", action="store_true",
+                    help="témoin v41.29 : besoin métabolique figé à 4,0 épisodes/jour")
     _p.add_argument("--travail-reussi", action="store_true",
                     help="ABLATION : un geste stérile ne coûte rien (barème v41.27)")
     # v41.27 — témoin de l'option (b), voir MORT_COUTE_LA_JOURNEE.
@@ -10356,6 +10756,25 @@ if __name__ == "__main__":
         print("🔬 [ABLATION] travail tenté v41.28 COUPÉ — geste stérile gratuit (v41.27)")
         from naulthene.cerveau.noyau import TRAVAIL_TENTE_ACTIF as _vt
         assert _vt is False, "l'ablation n'a pas atteint le module — campagne invalide"
+
+    # v41.30 — un drapeau PAR constante (jamais groupés : ablation confondue sinon).
+    _endur = not _args.patience_fossile
+    globals()["ENDURANCE_DERIVEE_ACTIVE"] = _endur
+    if _module_reel is not None:
+        _module_reel.ENDURANCE_DERIVEE_ACTIVE = _endur
+    if not _endur:
+        print("🔬 [ABLATION] endurance dérivée COUPÉE — patience fossile (+10, plafond 350)")
+        from naulthene.cerveau.noyau import ENDURANCE_DERIVEE_ACTIVE as _ve
+        assert _ve is False, "l'ablation n'a pas atteint le module — campagne invalide"
+
+    _rythme_actif = not _args.rythme_fossile
+    globals()["RYTHME_VECU_ACTIF"] = _rythme_actif
+    if _module_reel is not None:
+        _module_reel.RYTHME_VECU_ACTIF = _rythme_actif
+    if not _rythme_actif:
+        print("🔬 [ABLATION] rythme vécu COUPÉ — besoin figé à 4,0 épisodes/jour")
+        from naulthene.cerveau.noyau import RYTHME_VECU_ACTIF as _vr
+        assert _vr is False, "l'ablation n'a pas atteint le module — campagne invalide"
 
     # v41.27 — même discipline : écriture dans le module NOMMÉ + assertion runtime.
     _mort_cout = not _args.mort_sans_cout
