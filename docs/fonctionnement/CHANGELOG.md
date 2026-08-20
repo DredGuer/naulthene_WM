@@ -4,13 +4,85 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [purge-cosmologie] - 2026-08-20 — Réécriture de l'historique et remise à jour des hash
+
+### Les travaux de cosmologie sortent de git, et tous les hash cités sont recalculés
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | chore |
+| **Impact** | **Critique — tous les hash de commit du dépôt ont changé** |
+
+**Demande explicite de l'utilisateur.** Les 12 PDF de `docs/naulthene_cosmologie/` étaient
+**suivis et poussés sur GitHub** depuis le commit dont le hash valait alors `89ac5ad`
+(aujourd'hui `ddf26f5`).
+
+**Portée choisie : effacement COMPLET de l'historique.** Un simple `git rm --cached` les
+aurait laissés téléchargeables par hash de commit ; ils ne le sont plus.
+
+| vérification | résultat |
+|---|---|
+| trace dans l'historique local | **0** |
+| trace sur les branches distantes | **0** |
+| fichiers suivis | **0** |
+| commits préservés | **271** (aucun perdu) |
+| branches réécrites sur GitHub | **17**, plus 4 nouvelles poussées |
+
+Les PDF **restent sur le disque local** ; `.gitignore` empêche désormais qu'ils reviennent.
+Sauvegarde préalable : les 12 fichiers + un bundle complet du dépôt d'avant réécriture.
+
+### Conséquence n°1 — quatre liens devenus morts, corrigés
+
+`readme_fr.md`, ce CHANGELOG, le carnet `EXPANSION_17082026_le_frein_de_la_neurogenese.md`
+et un commentaire de `noyau.py` pointaient vers le dossier purgé : autant de 404 pour un
+lecteur GitHub. Remplacés par une mention textuelle — le contenu scientifique (potentiel de
+Landau, `C(c) > ln(N)`) reste exposé, seule la source cliquable disparaît.
+
+### Conséquence n°2 — TOUS les hash de commit ont changé
+
+C'est inhérent à `git filter-repo` : réécrire un commit change son hash, et donc celui de
+tous ses descendants. Sur les **76 hash cités** dans la documentation, **15 étaient périmés**
+et ont été remappés via la table `commit-map` produite par l'outil (**29 occurrences**
+corrigées) :
+
+| entrée du CHANGELOG | hash à jour |
+|---|---|
+| v41.19-v41.21 physique du coût | `ddf26f5` |
+| v41.23 frein d'expansion | `539dafa` |
+| v41.24 budget de neurogenèse | `62d7a4b` |
+| v41.25 nociception thermique | `197e17b` |
+| v41.25-fix1 douleur annulée | `efea6ae` |
+| v41.26 thermohoméostasie | `60d6809` |
+| v41.27 douleur unique | `5d17b3f` |
+| v41.28 travail tenté | `2775d24` |
+| v41.28 mesure | `c4e9953` |
+| v41.29 campagne | `2edcdc7` |
+| v41.29 résultats | `4e63dad` |
+| v41.30 constantes fossiles | `dd4216d` |
+| baseline aléatoire corrigée | `d946331` |
+| campagne nociception n=20 | `e03ac80` |
+| l'agent apprend mais plafonne | `91cf048` |
+
+Les anciens hash ne sont volontairement pas listés : ils ne désignent plus rien, et les
+faire figurer inviterait à les chercher. La table complète de correspondance reste dans
+`.git/filter-repo/commit-map`.
+
+⚠️ **Vérification faite** : sur les 76 hash cités dans toute la documentation, **0 périmé**
+subsiste.
+
+⚠️ **Tout clone existant du dépôt est cassé.** Un `git pull` échouera ou, pire,
+réintroduirait les PDF : il faut re-cloner.
+
+---
+
 ## [v41.30] - 2026-08-20 — Les trois constantes fossiles, supprimées
 
 ### La patience devient un trait de vie, et le métabolisme respire au rythme réel
 
 | Type | Details |
 |------|---------|
-| **Commit** | `fba66e0` |
+| **Commit** | `dd4216d` |
 | **Catégorie** | feat (expérimental, `noyau.py` uniquement) |
 | **Impact** | **Critique — trois constantes posées retirées du chemin cognitif** |
 
@@ -254,7 +326,7 @@ la naissance et sur les cartes où les victoires arrivent tard.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `2cbbb40` |
+| **Commit** | `4e63dad` |
 | **Catégorie** | docs (mesure) + idée non validée |
 | **Impact** | **Critique — invalide l'affirmation centrale des deux README** |
 
@@ -356,7 +428,7 @@ selon la grille du projet, contrairement à une comparaison appariée.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `75e062b` |
+| **Commit** | `2edcdc7` |
 | **Catégorie** | docs (campagne en cours) |
 | **Impact** | **Mesure — la question de fond** |
 
@@ -391,7 +463,7 @@ sur la profondeur atteinte, pas une comparaison concluante entre les deux bras.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `1962a07` |
+| **Commit** | `c4e9953` |
 | **Catégorie** | docs (résultat de mesure) |
 | **Impact** | **Mesure — ferme une piste** |
 
@@ -436,7 +508,7 @@ simplement pas la réponse au blocage.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `4deb9fc` |
+| **Commit** | `2775d24` |
 | **Catégorie** | fix critique (expérimental) |
 | **Impact** | **Fonctionnel — fonction de coût / incitation** |
 | **Carnet** | [`POURQUOI_20082026_l_agent_economise.md`](../recherche/POURQUOI_20082026_l_agent_economise.md) |
@@ -506,7 +578,7 @@ lancement : effort min **0,81 (NEW) vs 0,64 (OLD)**, gestes stériles **68 % vs 
 
 | Type | Details |
 |------|---------|
-| **Commit** | `7b8c77c` |
+| **Commit** | `d946331` |
 | **Catégorie** | docs (rectification + mesure) |
 | **Impact** | **Critique — inverse une conclusion publiée dans les deux README** |
 | **Carnet** | [`POURQUOI_20082026_l_agent_economise.md`](../recherche/POURQUOI_20082026_l_agent_economise.md) |
@@ -561,7 +633,7 @@ poids** — les retirer casserait tout `.brain` existant. Noté en tête de sect
 
 | Type | Details |
 |------|---------|
-| **Commit** | `632ae7f` |
+| **Commit** | `91cf048` |
 | **Catégorie** | docs (résultat de mesure) |
 | **Impact** | **Mesure — réoriente le chantier** |
 | **Carnet** | [`NAVIGATION_20082026_le_vrai_blocage.md`](../recherche/NAVIGATION_20082026_le_vrai_blocage.md) |
@@ -609,7 +681,7 @@ politique plafonne sous le hasard sur la tâche la plus simple du cursus. Conver
 
 | Type | Details |
 |------|---------|
-| **Commit** | `1b0ab5d` |
+| **Commit** | `5d17b3f` |
 | **Catégorie** | feat (expérimental) — **refonte** |
 | **Impact** | **Fonctionnel — homéostasie / nociception / récompense** |
 | **Carnet** | [`DOULEUR_UNIQUE_19082026_refonte.md`](../recherche/DOULEUR_UNIQUE_19082026_refonte.md) |
@@ -685,7 +757,7 @@ A vs B isole l'option (b). Vérifié : déficits distincts **1,641 / 2,758 / 2,0
 
 | Type | Details |
 |------|---------|
-| **Commit** | `a8c49b7` |
+| **Commit** | `60d6809` |
 | **Catégorie** | feat (expérimental) |
 | **Impact** | **Fonctionnel — homéostasie / nociception** |
 | **Carnet** | [`THERMOHOMEOSTASIE_18082026_...`](../recherche/THERMOHOMEOSTASIE_18082026_la_douleur_graduee.md) |
@@ -764,7 +836,7 @@ remonte-t-elle ?**
 
 | Type | Details |
 |------|---------|
-| **Commit** | `62210e7` |
+| **Commit** | `e03ac80` |
 | **Catégorie** | docs (résultat de mesure) |
 | **Impact** | **Mesure — aucun changement de code** |
 | **Carnet** | [`CAMPAGNE_18082026_...`](../recherche/CAMPAGNE_18082026_nociception_20_graines.md) |
@@ -821,7 +893,7 @@ Bilan général inchangé : **1 mécanique cognitive sur 13** a amélioré une m
 
 | Type | Details |
 |------|---------|
-| **Commit** | `b648e1f` |
+| **Commit** | `efea6ae` |
 | **Catégorie** | fix critique |
 | **Impact** | **Critique — la mécanique v41.25 était entièrement inopérante** |
 | **Banc** | [`banc_intra_tick_douleur.py`](../recherche/scripts/banc_intra_tick_douleur.py) |
@@ -897,7 +969,7 @@ campagne 20 graines × 2 bras est relancée pour mesurer la **survie**.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `5b361a7` |
+| **Commit** | `197e17b` |
 | **Catégorie** | feat (expérimental) |
 | **Impact** | **Fonctionnel — homéostasie / apprentissage du danger** |
 | **Carnet** | [`NOCICEPTION_18082026_...`](../recherche/NOCICEPTION_18082026_la_chaleur_qui_fait_mal.md) |
@@ -968,7 +1040,7 @@ sous 20 graines, et chaque taux sera donné **avec son intervalle de Wilson**.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `54f2f1b` |
+| **Commit** | `62d7a4b` |
 | **Catégorie** | feat (expérimental) |
 | **Impact** | **Fonctionnel — neurogenèse** |
 | **Carnet** | [`NUIT_18082026_...`](../recherche/NUIT_18082026_le_niveau_5_franchi_et_le_frein_qui_ne_borne_pas.md) |
@@ -1024,7 +1096,7 @@ repart avec un rendement vierge, sans greffe.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `bfc546f` |
+| **Commit** | `539dafa` |
 | **Catégorie** | fix (expérimental) — conformité au dogme |
 | **Impact** | **Fonctionnel — neurogenèse** |
 | **Carnet** | [`EXPANSION_17082026_le_frein_de_la_neurogenese.md`](../recherche/EXPANSION_17082026_le_frein_de_la_neurogenese.md) · [`NUIT_18082026_...`](../recherche/NUIT_18082026_le_niveau_5_franchi_et_le_frein_qui_ne_borne_pas.md) |
@@ -1085,7 +1157,7 @@ divisée par 11 (0,19 → 0,017) et un effort triplé.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `89ac5ad` |
+| **Commit** | `ddf26f5` |
 | **Catégorie** | fix (expérimental) — conformité au dogme |
 | **Impact** | **Fonctionnel — neurogenèse & métabolisme** |
 | **Carnet** | [`REVUE_DOGME_17082026_rien_en_dur.md`](../recherche/REVUE_DOGME_17082026_rien_en_dur.md) |
@@ -1159,7 +1231,7 @@ cette division, non écrite.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `89ac5ad` |
+| **Commit** | `ddf26f5` |
 | **Catégorie** | fix (expérimental) — conformité au dogme |
 | **Impact** | **Fonctionnel — métabolisme** |
 | **Carnet** | [`REVUE_DOGME_17082026_rien_en_dur.md`](../recherche/REVUE_DOGME_17082026_rien_en_dur.md) |
@@ -1418,7 +1490,7 @@ décroître).
 
 | Type | Details |
 |------|---------|
-| **Commit** | `89ac5ad` |
+| **Commit** | `ddf26f5` |
 | **Catégorie** | fix (expérimental) |
 | **Impact** | **Fonctionnel** |
 | **Carnet** | [`CORRECTIF_v4110_memoire_par_carte.md`](../recherche/CORRECTIF_v4110_memoire_par_carte.md) |
@@ -1923,7 +1995,7 @@ l'odorat mesuré **inerte** à l'ablation.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `89ac5ad` |
+| **Commit** | `ddf26f5` |
 | **Catégorie** | docs (**aucune ligne de `src/` modifiée**) |
 | **Impact** | Documentation — corrige une affirmation fausse de la vitrine publique |
 | **Branche** | `feat/v41-ligne-flottaison` |
@@ -1970,7 +2042,7 @@ corrigée en silence.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `89ac5ad` |
+| **Commit** | `ddf26f5` |
 | **Catégorie** | docs (campagne de mesure, **aucune ligne de `src/` modifiée**) |
 | **Impact** | Critique — infirme le résultat mis en avant en v41.0 |
 | **Branche** | `feat/v41-ligne-flottaison` |
@@ -2195,7 +2267,7 @@ reste modérée.*
 
 | Type | Details |
 |------|---------|
-| **Commit** | `89ac5ad` |
+| **Commit** | `ddf26f5` |
 | **Catégorie** | refactor + feat |
 | **Impact** | Critique — 3 interrupteurs cognitifs deviennent continus |
 | **Branche** | `feat/v40.1-envie-de-vivre` |
@@ -2257,7 +2329,7 @@ l'affichage. Neutralisé, pas supprimé.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `89ac5ad` |
+| **Commit** | `ddf26f5` |
 | **Catégorie** | feat |
 | **Impact** | Critique — module TOUTES les décisions |
 | **Branche** | `feat/v40.1-envie-de-vivre` |
@@ -2339,7 +2411,7 @@ envie à **1,000000** après 1 000 nuits sans la moindre réussite. **Correctif*
 
 | Type | Details |
 |------|---------|
-| **Commit** | `89ac5ad` |
+| **Commit** | `ddf26f5` |
 | **Catégorie** | feat |
 | **Impact** | Critique — change le chemin de décision |
 | **Branche** | `feat/v40-planification-emergente` |
@@ -2416,7 +2488,7 @@ réel est de ~70 %. **Défaut de mesure, pas de cognition** — aucune décision
 
 | Type | Details |
 |------|---------|
-| **Commit** | `89ac5ad` |
+| **Commit** | `ddf26f5` |
 | **Catégorie** | chore (versionnement) + fix (mémoire, audio, télémétrie) |
 | **Impact** | **Critique** — premier correctif issu d'une mesure directe, et fin du risque structurel n°1 |
 | **Branche** | `feat/v39-memoire-abstraite` |
@@ -2504,7 +2576,7 @@ avec et sans conservation de l'empreinte.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `89ac5ad` |
+| **Commit** | `ddf26f5` |
 | **Catégorie** | feat (expérimental) / docs |
 | **Impact** | **Documentation** — aucune ligne de `src/naulthene/` modifiée |
 
@@ -2699,7 +2771,7 @@ désigne comme principal.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `89ac5ad` |
+| **Commit** | `ddf26f5` |
 | **Catégorie** | docs (recherche expérimentale) |
 | **Impact** | **Documentation** — aucun changement de code |
 
@@ -2747,7 +2819,7 @@ agent *craintif*, pas *indifférent*.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `89ac5ad` |
+| **Commit** | `ddf26f5` |
 | **Catégorie** | docs (recherche expérimentale) |
 | **Impact** | **Documentation** — annule la conclusion des deux entrées précédentes |
 
@@ -2800,7 +2872,7 @@ réparation du cerveau et la cohérence du cursus — pas les raffinements d'app
 
 | Type | Details |
 |------|---------|
-| **Commit** | `89ac5ad` |
+| **Commit** | `ddf26f5` |
 | **Catégorie** | docs (recherche expérimentale) |
 | **Impact** | **Documentation** — annule la conclusion de l'entrée précédente |
 
@@ -2857,7 +2929,7 @@ répliquée sur ≥3 graines avec témoins appariés, avant publication et non a
 
 | Type | Details |
 |------|---------|
-| **Commit** | `89ac5ad` |
+| **Commit** | `ddf26f5` |
 | **Catégorie** | docs (recherche expérimentale) |
 | **Impact** | **Documentation** — aucun changement de code |
 
@@ -2930,7 +3002,7 @@ moment pour la grâce, fragilité mesurée de la compétence pour la révision).
 
 | Type | Details |
 |------|---------|
-| **Commit** | `89ac5ad` |
+| **Commit** | `ddf26f5` |
 | **Catégorie** | docs (recherche expérimentale) |
 | **Impact** | **Documentation** — aucun changement de code |
 
