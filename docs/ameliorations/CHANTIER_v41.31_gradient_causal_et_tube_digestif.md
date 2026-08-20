@@ -91,8 +91,40 @@ pour le buffer de distillation v37.1).
 
 ⚠️ La perte est une **moyenne** (`.mean()`). Masquer par multiplication laisserait le
 dénominateur inchangé, donc **diluerait** le gradient des gestes utiles au lieu de le
-préserver. Il faut diviser par le nombre de ticks **retenus**, pas par le total — même
-discipline que la moyenne pondérée de la distillation v37.1.
+préserver.
+
+**Formulation exacte à coder** (masque binaire `m_t ∈ {0,1}`, `m_t = 0` si non-transition) :
+
+```
+                    Σ_t  m_t · log π(a_t|s_t) · A_t
+perte_acteur = − ─────────────────────────────────────
+                         max(1, Σ_t m_t)
+```
+
+Le dénominateur est le nombre de ticks **retenus**, jamais `T`. À 61,7 % de masquage, un
+`.mean()` naïf amputerait le taux d'apprentissage effectif de **62 %** : l'agent mettrait
+**2,6× plus de temps** à consolider la moindre manœuvre. Même discipline que la moyenne
+pondérée de la distillation v37.1.
+
+**Cas limite vérifié — journée 100 % stérile** (agent bloqué contre un mur) : `Σ m_t = 0`,
+donc `max(1, 0) = 1` protège de la division par zéro et `perte_acteur = 0`. La politique
+n'apprend **rien** ce jour-là, et c'est voulu — une journée sans le moindre effet sur le monde
+n'enseigne rien sur *quoi faire*. Mais le critique, l'entropie et JEPA continuent : l'agent
+apprend quand même que cet état est mauvais, que pousser ce mur ne change rien, et il garde
+sa pression d'exploration.
+
+### 1.5bis ⚠️ Le masque ne porte QUE sur `perte_acteur`
+
+Trois pertes coexistent ligne 1660-1662. **Deux ne doivent PAS être masquées** :
+
+| perte | masquée ? | pourquoi |
+|---|---|---|
+| `perte_acteur` | ✅ **oui** | c'est la POLITIQUE : elle choisit l'action, et un geste sans effet ne doit rien créditer |
+| `perte_critique` | ❌ **non** | le critique estime la valeur d'un **état**, pas d'une action. Un état où l'agent vient de pousser un mur a bien une valeur. Le masquer rendrait le critique aveugle à 61,7 % des états — et les **avantages** qu'il fournit à l'acteur (`returns − valeurs`) seraient alors faux |
+| `perte_entropie` | ❌ **non** | l'entropie pousse à explorer sur **tous** les états visités. La masquer reviendrait à n'explorer que là où l'agent bouge déjà, soit l'inverse exact du but : sortir d'un blocage contre un mur |
+
+C'est le sens strict de « RL seul » : la **politique** est filtrée, la **valeur** et
+l'**exploration** ne le sont pas.
 
 ### 1.6 Risque à mesurer
 
@@ -105,6 +137,27 @@ sont plausibles et seule la mesure les départagera :
   signal — on aurait supprimé l'apprentissage au lieu de le focaliser.
 
 **Drapeau d'ablation obligatoire** : `--gradient-non-filtre`.
+
+### 1.7 ⚠️ Grille de lecture des résultats — variance ontogénétique ≠ bruit blanc
+
+Point méthodologique posé le 20/08, à appliquer dès la campagne v41.30.
+
+Dans une architecture où chaque agent construit sa propre trajectoire, deux populations
+cohabitent : celles qui butent sur une tâche simple gardent un **C1 prédominant** (réflexe
+économique), celles qui naviguent un espace complexe sollicitent **C2** massivement. Les
+mélanger dans un même test de Student produit une **bimodalité** qui fait chuter `t`
+mécaniquement, **sans que l'effet soit nul**.
+
+Mesuré sur la vague 1 : moyenne de l'écart C2/C1 **avec** un niveau 5 = **+0,909**, **sans**
+= **+0,184** — mais deux contre-exemples (g3 a son niveau 5 côté FOSSILE et reste positif ;
+g5 sans niveau 5 devance g3) montrent que la profondeur n'explique qu'une **partie** de la
+dispersion.
+
+👉 **À 20 graines, analyser conditionnellement au régime atteint** (comparer les C2/C1 sur
+les niveaux **partagés**, ou à vitesse de résolution comparable) avant de conclure. Si la
+variance reste forte, la lecture juste sera *« l'effet dépend de la trajectoire »* — une
+conclusion **différente** de *« l'effet n'existe pas »*, et à formuler comme telle plutôt
+qu'à ranger en NS.
 
 ---
 
