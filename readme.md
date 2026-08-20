@@ -134,11 +134,20 @@ Two caveats, both measurable rather than rhetorical:
 | What unlocked level 4 | **brain-sparing**: 0 % [0–16] → 80 % [58–92], 18 wins / 0 losses (p < 0.001) |
 | Effect of severing C2 on the score | **0.0 points across all 6 levels** (78 cells) — and on `LavaGap`, severing it **triples** the success rate |
 | Learned valence of lava | **+0.072 — POSITIVE**, barely distinct from water (+0.069). Nociception (v41.25) flips it to **−0.761 on 20/20 seeds** — but survival **drops** 8.6 % → 6.7 %, because pain was **non-zero everywhere** (77 % of cells) and the agent fled its own food supply (**−25 % harvest**, two maps). Graded pain (v41.26) under test |
-| Cognitive mechanisms that improved anything | **1 out of 14 tested** — brain-sparing (thermal nociception works, but *lowers* survival; unified pain v41.27 under test) |
+| Cognitive mechanisms that improved anything | **1 out of 14 tested** — brain-sparing. Three pain models (v41.25/26/27) changed behaviour by **0 pt** (`t = −1.51`, n=20) |
+| Navigation on an empty 5×5 room | **54.4 %** after 300 days vs **75.7 %** for a random policy — learns, but stays **21 pts below chance** |
 | Effect of growing the brain (96 → 160 → 512 dims) | **none** across 3 campaigns — and energy drops 11× |
 | Levers that did work | **3 — two properties of the world, one of the decision** |
 
 A standard PPO solves `Empty-8x8` in a few thousand episodes. **Naulthène currently does not.**
+
+> 🔴 **The clearest measurement in this repository (20 Aug 2026).** On `Empty-5x5` — an
+> empty room, no hazard, goal 4 cells away — the agent **does learn**: mastery climbs
+> 13.8 % → 26.7 % → 43.8 % → **54.4 %** over 300 days, on **10 seeds out of 10**, and the
+> gap between wins shrinks from 5.4 to 1.4 days. **But a random policy scores 75.7 %.**
+> The agent plateaus **21 points below chance** on the simplest task of the curriculum.
+> Learning is real; competence is not. This — not lava, not pain — is what blocks the
+> project. [Full measurement](docs/recherche/NAVIGATION_20082026_le_vrai_blocage.md).
 
 > ⚠️ **Every paired comparison predating v41.9 is inconclusive — including the "0 out of 9"
 > line above.** `env.reset()` was never seeded: MiniGrid draws its layouts from its own RNG,

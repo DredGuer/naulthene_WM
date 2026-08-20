@@ -4,6 +4,54 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.27-mesure] - 2026-08-20 — L'agent APPREND, mais plafonne sous le hasard
+
+### La baseline aléatoire révèle le vrai blocage — après trois nuits passées ailleurs
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | docs (résultat de mesure) |
+| **Impact** | **Mesure — réoriente le chantier** |
+| **Carnet** | [`NAVIGATION_20082026_le_vrai_blocage.md`](../recherche/NAVIGATION_20082026_le_vrai_blocage.md) |
+
+**L'agent apprend — 10 graines sur 10.** Sur `Empty-5x5` (aucun danger, but à 4 cases),
+maîtrise par quart : **13,8 % → 26,7 % → 43,8 % → 54,4 %**, sans plateau. Toutes les
+graines progressent, et l'intervalle entre victoires se raccourcit (5,4 j → 1,4 j) : la
+politique s'améliore, ce n'est pas de la chance.
+
+**Mais il plafonne 21 points SOUS une politique aléatoire** — 54,4 % contre **75,7 %**
+(baseline mesurée sur 2000 épisodes). **3/10 graines** dépassent le hasard, donc la
+compétence est atteignable par cette architecture, mais pas atteinte de façon fiable.
+
+⚠️ **Rectification d'une conclusion du 19/08 au soir** : j'avais annoncé « 15× moins bon
+que le hasard, 5 % de maîtrise ». C'était lu **au jour 23 d'un run de 300** — un
+transitoire pris pour un plateau. Deuxième erreur de la même famille en deux jours.
+
+**Campagne v41.27 (n=20, 3 bras)** — la douleur ne change rien, le coût de la mort si :
+
+| bras | approche du danger | récolte | survie |
+|---|---|---|---|
+| **A** (douleur + mort coûteuse) | **36,0 %** | 2,67 | 5,89 % [4,8–7,2] |
+| **B** (douleur seule) | 62,5 % | 11,56 | 8,98 % [8,5–9,4] |
+| **C** (témoin) | 63,0 % | 12,19 | 9,79 % [9,4–10,2] |
+
+```
+B vs C (douleur seule)  : approche −0,48 pt  t = −1,51   NON significatif
+A vs B (coût de la mort): approche −26,5 pts t = −15,21  SIGNIFICATIF
+```
+
+**La douleur informe ; la conséquence enseigne.** Trois versions de douleur (v41.25 brute,
+v41.26 graduée, v41.27 unifiée) : **aucune** ne modifie le comportement. ⚠️ L'option (b)
+reste inutilisable telle quelle — 275 ticks perdus/jour, récolte ÷4, et la **survie la plus
+basse des trois bras** : l'agent évite parce qu'il meurt de faim, pas parce qu'il comprend.
+
+**Conséquence pour la suite** : le blocage n'est ni la lave ni la douleur. C'est que la
+politique plafonne sous le hasard sur la tâche la plus simple du cursus. Converge avec
+« couper C2 = 0,0 point » et « grossir le cerveau n'apporte rien ».
+
+---
+
 ## [v41.27-experimental] - 2026-08-19 — La douleur unique : un seul état, deux signatures
 
 ### Il y avait DEUX douleurs sans rapport ; il n'y en a plus qu'une
