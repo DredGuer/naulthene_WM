@@ -532,6 +532,11 @@ DIM_VOCALE = 8                 # sortie de tete_vocale (la BOUCHE) : f0, F1, F2,
 # PortC3 ET disponible ce tick-là — sans quoi le comportement reste bit-identique à la
 # v27.6 (aucun plug ⇒ action 7 strictement inexistante, jamais échantillonnée).
 NUM_ACTIONS_BASE = 7
+# v41.28 — index de `forward` dans l'énumération MiniGrid (`unwrapped.actions`). Ce n'est
+# pas un réglage : c'est le contrat de l'API du monde, au même titre que les index déjà
+# utilisés pour `ACTION_CONSOMMER`. Sert à distinguer une locomotion TENTÉE (pousser un
+# mur) d'une manipulation tentée — les deux coûtent, mais pas le même travail.
+ACTION_AVANCER = 2
 ACTION_DEMANDER = 7        # index de la 8ème action dans actions_eye
 # v41.2-fix5 — l'action par laquelle l'agent CONSOMME une ressource. C'est le `pickup` de
 # MiniGrid (index 3), réutilisé plutôt qu'une 9ème action ajoutée : le geste « je saisis ce
@@ -2913,14 +2918,47 @@ class BiologicalHomeostasisEngine:
         # `0.5` qui figurait ici en dur n'était que cette division, non écrite.
         rayon = PAS_GRILLE / 2.0
 
+        # --- v41.28 : LE TRAVAIL TENTÉ, PAS LE TRAVAIL RÉUSSI ---
+        #
+        # 🔴 CE QUE ÇA CORRIGE (mesuré le 20/08 sur 10 runs × 300 jours). L'ancienne
+        # version facturait `travail = 0.0` dès que le monde n'avait pas bougé, si bien
+        # qu'un geste stérile ne coûtait plus que le basal cérébral : **1,09**, soit le
+        # geste LE MOINS CHER du barème, contre **4,00** pour avancer. Le seul geste qui
+        # rapproche du but coûtait donc **3,7× plus cher que ne rien faire**, alors que la
+        # récompense du but est rare et lointaine et que la punition de l'effort tombe à
+        # chaque tick. Résultat : **57,2 % des ticks** partis en gestes stériles, dont
+        # `poser`/`activer`/`parler` stériles à **100 %**. L'agent n'était pas irrationnel
+        # — il jouait optimalement sous cette fonction de coût.
+        #
+        # LA PHYSIQUE JUSTE : un geste stérile n'est pas un geste NON FAIT. L'agent a
+        # bien contracté ses muscles ; c'est le MONDE qui n'a pas bougé. **Pousser un mur
+        # coûte autant que pousser une porte qui s'ouvre.** Le rendement d'un geste change
+        # son RÉSULTAT, jamais sa DÉPENSE.
+        #
+        # ⚠️ RIEN N'EST POSÉ. La nature du geste est lue sur l'API MiniGrid
+        # (`unwrapped.actions`, l'énumération du monde lui-même) via les index déjà
+        # utilisés partout dans le fichier — pas une table de coûts réintroduite par la
+        # bande. Deux familles suffisent, et chacune réutilise un travail DÉJÀ dérivé :
+        #   • locomotion tentée (`forward`)      → le travail d'une translation
+        #   • manipulation tentée (pickup/drop/  → le travail d'une rotation : tendre le
+        #     toggle/done)                          bras déplace une masse sur un rayon
         if deplacement:
             travail = masse * PAS_GRILLE               # translation d'une case
         elif rotation:
             # Moment d'inertie d'un disque homogène : I = ½ M r². Le facteur ½ et le
             # rayon viennent de la géométrie du disque et de la grille — rien n'est réglé.
             travail = 0.5 * masse * rayon * rayon
+        elif not TRAVAIL_TENTE_ACTIF:
+            travail = 0.0                              # témoin v41.27 : geste stérile gratuit
+        elif action_item == ACTION_AVANCER:
+            # `forward` qui n'a rien déplacé : l'agent a poussé, le mur n'a pas cédé.
+            # Même travail musculaire qu'un pas réussi.
+            travail = masse * PAS_GRILLE
         else:
-            travail = 0.0                              # geste stérile : aucun travail
+            # Manipulation tentée (ramasser/poser/activer/`done`) : le bras se tend, qu'il
+            # attrape quelque chose ou non. Même ordre qu'une rotation, pour la même
+            # raison géométrique — une masse déplacée sur un rayon.
+            travail = 0.5 * masse * rayon * rayon
 
         # Le corps ne paie QUE le travail (le basal est déjà prélevé par les jauges).
         e_corps = travail
@@ -5643,6 +5681,12 @@ FENETRE_MAITRISE_GENERALE = 100   # borne : ~5 fenêtres de niveau, assez long p
 # sevrage retombe exactement sur v41.3. Il n'existe que pour disposer d'un témoin à
 # graine identique — voir `--sans-heritage`.
 HERITAGE_SEVRAGE_ACTIF = True
+
+# v41.28 — interrupteur du TRAVAIL TENTÉ (`--travail-reussi` = témoin v41.27).
+# True  : un geste stérile coûte le travail qu'il a TENTÉ (pousser un mur = prix d'un pas).
+# False : `travail = 0.0` dès que le monde n'a pas bougé — l'ancien barème, où le geste
+#         inutile était le MOINS CHER (1,09 contre 4,00 pour avancer).
+TRAVAIL_TENTE_ACTIF = True
 
 # v41.27 — interrupteur de l'option (b) : mourir coûte le reste de la journée.
 # True  : la journée s'arrête à la mort (décision utilisateur du 19/08).
@@ -10240,6 +10284,9 @@ if __name__ == "__main__":
     _p.add_argument("--plafond-bus-fixe", action="store_true",
                     help="ABLATION : fige DIM_BUS_MAX à 96, l'ancienne valeur posée")
     # v41.25 — témoin de la nociception thermique (voir DOULEUR_THERMIQUE_ACTIVE).
+    # v41.28 — témoin du travail tenté, voir TRAVAIL_TENTE_ACTIF.
+    _p.add_argument("--travail-reussi", action="store_true",
+                    help="ABLATION : un geste stérile ne coûte rien (barème v41.27)")
     # v41.27 — témoin de l'option (b), voir MORT_COUTE_LA_JOURNEE.
     _p.add_argument("--mort-sans-cout", action="store_true",
                     help="ABLATION : mourir ne coûte plus la journée (comportement < v41.27)")
@@ -10299,6 +10346,16 @@ if __name__ == "__main__":
         print(f"🔬 [BANC] environnement forcé sur {_args.env_force} — cursus court-circuité")
         from naulthene.cerveau.noyau import ENV_FORCE as _verif_env
         assert _verif_env == _args.env_force, "le forçage n'a pas atteint le module"
+
+    # v41.28 — même discipline : écriture dans le module NOMMÉ + assertion runtime.
+    _trav = not _args.travail_reussi
+    globals()["TRAVAIL_TENTE_ACTIF"] = _trav
+    if _module_reel is not None:
+        _module_reel.TRAVAIL_TENTE_ACTIF = _trav
+    if not _trav:
+        print("🔬 [ABLATION] travail tenté v41.28 COUPÉ — geste stérile gratuit (v41.27)")
+        from naulthene.cerveau.noyau import TRAVAIL_TENTE_ACTIF as _vt
+        assert _vt is False, "l'ablation n'a pas atteint le module — campagne invalide"
 
     # v41.27 — même discipline : écriture dans le module NOMMÉ + assertion runtime.
     _mort_cout = not _args.mort_sans_cout

@@ -136,7 +136,7 @@ Two caveats, both measurable rather than rhetorical:
 | Learned valence of lava | **+0.072 — POSITIVE**, barely distinct from water (+0.069). Nociception (v41.25) flips it to **−0.761 on 20/20 seeds** — but survival **drops** 8.6 % → 6.7 %, because pain was **non-zero everywhere** (77 % of cells) and the agent fled its own food supply (**−25 % harvest**, two maps). Graded pain (v41.26) under test |
 | Cognitive mechanisms that improved anything | **1 out of 14 tested** — brain-sparing. Three pain models (v41.25/26/27) changed behaviour by **0 pt** (`t = −1.51`, n=20) |
 | Navigation on an empty 5×5 room | **54.4 %** after 300 days vs **39.2 %** for a random policy *over the same 7 actions* — the agent **beats chance by 15 pts** |
-| Ticks spent on gestures that change nothing (`Empty-5x5`) | **57.2 %** — `poser`/`activer`/`parler` are sterile **100 %** of the time, and cost **1.09** against **4.00** for the one gesture that moves toward the goal |
+| Ticks spent on gestures that change nothing (`Empty-5x5`) | **57.2 %** — because a sterile gesture cost **1.09** against **4.00** for the one gesture that moves toward the goal. **v41.28** charges the work *attempted*: pushing a wall now costs a full step. Under test |
 | Effect of growing the brain (96 → 160 → 512 dims) | **none** across 3 campaigns — and energy drops 11× |
 | Levers that did work | **3 — two properties of the world, one of the decision** |
 

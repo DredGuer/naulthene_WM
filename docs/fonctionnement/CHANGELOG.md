@@ -4,6 +4,76 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.28-experimental] - 2026-08-20 — Le travail TENTÉ : pousser un mur coûte le prix d'un pas
+
+### Le geste inutile était le MOINS CHER du barème
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | fix critique (expérimental) |
+| **Impact** | **Fonctionnel — fonction de coût / incitation** |
+| **Carnet** | [`POURQUOI_20082026_l_agent_economise.md`](../recherche/POURQUOI_20082026_l_agent_economise.md) |
+
+**Le défaut mesuré.** `calculer_effort_metabolique` facturait `travail = 0.0` dès que le
+monde n'avait pas bougé. Un geste stérile ne coûtait donc que le basal cérébral :
+
+| geste | effort (v41.27) |
+|---|---|
+| **AVANCER** (le seul qui rapproche du but) | **4,0000** |
+| tourner | 1,4545 |
+| **STÉRILE** (mur, poser, activer, parler) | **1,0909** |
+
+> **Le seul geste utile coûtait 3,7× plus cher que ne rien faire.**
+
+La punition de l'effort tombe à **chaque tick** ; la récompense du but est **rare et
+lointaine**. Économiser en jouant des gestes stériles était donc la stratégie **optimale**.
+Mesuré sur `Empty-5x5` (10 runs × 300 j) : **57,2 % des ticks** en gestes stériles, dont
+`poser`/`activer`/`parler` stériles à **100 %**. **L'agent n'était pas irrationnel — il
+optimisait exactement ce qu'on lui demandait.**
+
+**La physique juste.** Un geste stérile n'est pas un geste NON FAIT : l'agent a contracté
+ses muscles, c'est le **monde** qui n'a pas bougé. **Pousser un mur coûte autant que
+pousser une porte qui s'ouvre.** Le rendement change le RÉSULTAT, jamais la DÉPENSE.
+
+```python
+elif action_item == ACTION_AVANCER:
+    travail = masse * PAS_GRILLE          # forward contre un mur = prix d'un pas
+else:
+    travail = 0.5 * masse * rayon**2      # manipulation tentée = le bras se tend
+```
+
+⚠️ **RIEN N'EST POSÉ.** La nature du geste est lue sur l'**API MiniGrid**
+(`unwrapped.actions`, l'énumération du monde), et chaque famille réutilise un travail
+**déjà dérivé** — translation pour la locomotion, moment d'inertie du disque pour la
+manipulation. Aucune table de coûts n'est réintroduite.
+
+| geste | avant | après |
+|---|---|---|
+| AVANCER (réussi) | 4,0000 | 4,0000 |
+| **AVANCER contre un mur** | **1,0909** | **4,0000** |
+| ramasser / poser / parler à vide | 1,0909 | 1,4545 |
+
+**Ratio AVANCER / geste stérile : 3,67× → 2,75×.**
+
+⚠️ **Le ratio ne tombe PAS à 1, et c'est volontaire.** Le rapport translation/rotation
+(8×) est **géométrique** — dérivé du disque et de la grille. Tendre un bras coûte
+réellement moins qu'avancer d'une case ; le forcer à l'égalité serait poser un chiffre,
+donc violer le dogme. Ce qui change est qu'on ne peut plus **faire semblant** d'avancer.
+
+**La question devient donc le BÉNÉFICE, plus le coût** : un geste qui ne change rien
+devrait rapporter zéro *et* n'apprendre rien. À mesurer avant d'empiler un correctif
+de plus.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | travail tenté dans `calculer_effort_metabolique` ; `ACTION_AVANCER` (index API) ; drapeau `TRAVAIL_TENTE_ACTIF` + `--travail-reussi` |
+
+**Campagne en cours** : 20 graines × 2 bras × 300 jours sur `Empty-5x5`. Vérifié avant
+lancement : effort min **0,81 (NEW) vs 0,64 (OLD)**, gestes stériles **68 % vs 73 %**.
+
+---
+
 ## [v41.27-mesure-fix1] - 2026-08-20 — La baseline était fausse ; et on sait POURQUOI l'agent économise
 
 ### Deux résultats : une rectification, et la cause du blocage
