@@ -4,6 +4,51 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.28-mesure] - 2026-08-20 — Le travail tenté ne suffit pas : le coût n'était pas le levier
+
+### Résultat NÉGATIF, documenté comme tel
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | docs (résultat de mesure) |
+| **Impact** | **Mesure — ferme une piste** |
+
+**Campagne** : 20 graines × 2 bras × 300 jours, `Empty-5x5`, témoin `--travail-reussi`.
+
+| bras | gestes stériles | maîtrise | énergie |
+|---|---|---|---|
+| **NEW** (travail tenté) | **61,0 %** | 60,6 % | 0,230 |
+| **OLD** (témoin v41.27) | 63,5 % | 59,2 % | 0,304 |
+
+```
+gestes stériles : −2,52 pts   t = −1,71   NON significatif
+maîtrise        : +1,40 pts   t = +0,29   NON significatif
+énergie         : −0,07       t = −2,93   SIGNIFICATIF
+```
+
+**Le correctif fait exactement ce qu'il promet — et ça ne change presque rien.** Seule
+l'**énergie** bouge significativement (l'agent paie enfin ses gestes), mais le
+**comportement** ne suit pas : 61,0 % contre 63,5 % de gaspillage, dans le bruit.
+
+**14/20 graines gaspillent moins**, ce qui est cohérent avec un petit effet réel — mais
+`t = −1,71` reste sous le seuil de 2,09, donc **on ne peut pas conclure**.
+
+**Ce que ça établit.** Le barème était bien faussé (un geste stérile coûtait 1,09 contre
+4,00 pour avancer, soit **3,7×**) et le correctif est juste physiquement. Mais **le coût
+n'était pas le levier du comportement** : l'agent ne joue pas des gestes stériles parce
+qu'ils sont bon marché.
+
+**Le levier suivant est le BÉNÉFICE, pas le coût** — comme prévu dans CLAUDE.md avant le
+lancement. Un geste qui ne change rien au monde devrait **n'apprendre rien** ; aujourd'hui
+il alimente le gradient exactement comme un geste utile.
+
+⚠️ **Le correctif est CONSERVÉ** : il corrige une erreur de physique réelle (pousser un
+mur coûtait 4× moins qu'avancer) et son effet, s'il existe, va dans le bon sens. Il n'est
+simplement pas la réponse au blocage.
+
+---
+
 ## [v41.28-experimental] - 2026-08-20 — Le travail TENTÉ : pousser un mur coûte le prix d'un pas
 
 ### Le geste inutile était le MOINS CHER du barème
