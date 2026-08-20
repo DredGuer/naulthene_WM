@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `fba66e0` |
 | **Catégorie** | feat (expérimental, `noyau.py` uniquement) |
 | **Impact** | **Critique — trois constantes posées retirées du chemin cognitif** |
 
