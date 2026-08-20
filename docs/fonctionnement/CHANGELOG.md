@@ -1089,7 +1089,7 @@ divisée par 11 (0,19 → 0,017) et un effort triplé.
 | **Catégorie** | fix (expérimental) — conformité au dogme |
 | **Impact** | **Fonctionnel — neurogenèse & métabolisme** |
 | **Carnet** | [`REVUE_DOGME_17082026_rien_en_dur.md`](../recherche/REVUE_DOGME_17082026_rien_en_dur.md) |
-| **Source** | [`docs/naulthene_cosmologie/`](../naulthene_cosmologie/) — modèle v5.0/v5.1 |
+| **Source** | travaux de **cosmologie Naulthène**, modèle v5.0/v5.1 (documents personnels, hors dépôt) |
 
 **Violation n°2 levée — le thermostat de neurogenèse.** L'ancienne condition était :
 

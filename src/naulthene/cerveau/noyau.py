@@ -9494,7 +9494,8 @@ def executer_nuit(etat, plafond_reve=None):
 
     # --- v41.21 : LE THERMOSTAT CRISTALLISE COMME UN RÉSEAU DE NAULTHÈNES ---
     #
-    # Source : `docs/naulthene_cosmologie/` (modèle v5.0/v5.1). Le potentiel de Landau
+    # Source : travaux de cosmologie Naulthène, modèle v5.0/v5.1 (documents personnels,
+    # hors dépôt). Le potentiel de Landau
     # `V(Q,K) = C(c)Q²/2 + K²ln(N)/2 − Q·K + Q⁴/4` fait émerger la CRISTALLISATION d'une
     # seule condition, la condition de survie :
     #

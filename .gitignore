@@ -85,3 +85,9 @@ brains/cas_isole_g22_v41/*.log.gz
 # v41.15 — logs de campagne archivés (275 Mo+), jamais versionnés : ce sont des
 # sorties de run, reproductibles depuis le code et la graine.
 brains/**/*.log
+
+# Travaux de cosmologie Naulthène — documents personnels, hors périmètre du dépôt public.
+# Purgés de tout l'historique git le 20/08/2026 (git filter-repo) à la demande explicite de
+# l'utilisateur : ils étaient suivis et poussés sur GitHub depuis le commit 89ac5ad.
+# Les fichiers RESTENT sur le disque local ; cette règle empêche seulement qu'ils y reviennent.
+docs/naulthene_cosmologie/

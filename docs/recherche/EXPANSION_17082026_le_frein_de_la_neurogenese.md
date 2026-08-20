@@ -62,7 +62,7 @@ Comptés dans le bloc du thermostat (40 lignes) : **9 branches** et **5 nombres 
 `cohésion > friction` — **un seuil par un autre seuil**, mieux habillé.
 
 Et la transposition cosmologique elle-même était incomplète. Dans le modèle
-[`naulthene_cosmologie/`](../naulthene_cosmologie/), `C(c) > ln(N)` n'est pas le mécanisme :
+de **cosmologie Naulthène** (documents personnels, hors dépôt), `C(c) > ln(N)` n'est pas le mécanisme :
 c'est la **conséquence** d'un potentiel dont le système descend le gradient. J'avais pris
 le résultat en jetant la machine.
 

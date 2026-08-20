@@ -528,7 +528,7 @@ victoire de *conformité*, pas de performance.
 neurogenèse comparait une variance **absolue** (`< 0.005`) à une erreur JEPA réelle de
 0,012 — **mille fois plus petite**, donc une condition toujours vraie qui ne discriminait
 rien. Le correctif reprend la condition de survie du potentiel de Landau de
-[`docs/naulthene_cosmologie/`](docs/naulthene_cosmologie/) — `C(c) > ln(N)`, **cohésion
+des **travaux de cosmologie Naulthène** (documents personnels, hors dépôt) — `C(c) > ln(N)`, **cohésion
 contre friction d'expansion** — où le seuil `c_min = 5` n'est pas posé mais *calculé* :
 
 | Cosmologie | Thermostat |
