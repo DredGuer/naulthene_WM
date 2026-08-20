@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `2cbbb40` |
 | **Catégorie** | docs (mesure) + idée non validée |
 | **Impact** | **Critique — invalide l'affirmation centrale des deux README** |
 
