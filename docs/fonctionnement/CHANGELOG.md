@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `632ae7f` |
 | **Catégorie** | docs (résultat de mesure) |
 | **Impact** | **Mesure — réoriente le chantier** |
 | **Carnet** | [`NAVIGATION_20082026_le_vrai_blocage.md`](../recherche/NAVIGATION_20082026_le_vrai_blocage.md) |
