@@ -99,7 +99,7 @@ Deux nuances, mesurées et non rhétoriques :
 
 | Métrique | Valeur |
 |---|---|
-| Niveau atteint | **4 sur 15** — 100 % des graines, IC 95 % **[84–100]** (n = 20 × 1500 jours, v41.23). Une nouvelle campagne cursus 1500 j tourne en v41.29 |
+| Niveau atteint | **4 sur 15** — 100 % des graines (n = 20 × 1500 jours, v41.23), **reproduit en v41.29** : 10/10 graines au niveau 4, 2/10 au niveau 5 (n=10, cursus complet) |
 | Niveau 5 | **4 graines sur 20** — 20 % [8–42], et le palier est **tenu** (jusqu'à 1078 nuits dessus) |
 | Ce qui a débloqué le niveau 4 | le **brain-sparing** : 0 % [0–16] → 80 % [58–92], 18 gagne / 0 perd (p < 0,001) |
 | Effet de couper C2 sur le score | **0,0 point sur les 6 niveaux** (78 cellules) — et sur `LavaGap`, le couper **triple** la réussite |
@@ -108,6 +108,7 @@ Deux nuances, mesurées et non rhétoriques :
 | Ticks passés en gestes qui ne changent rien (`Empty-5x5`) | **57,2 %** — parce qu'un geste stérile coûtait **1,09** contre **4,00** pour le seul geste qui rapproche du but. La **v41.28** facture le travail *tenté* : pousser un mur coûte désormais le prix d'un pas. **Mesuré (n=20) : −2,5 pts, `t = −1,71`, non significatif** — le coût n'était pas le levier |
 | Mécaniques cognitives ayant amélioré quoi que ce soit | **1 sur 12 testées** — le brain-sparing |
 | Effet d'agrandir le cerveau (96 → 160 → 512 dims) | **aucun** sur 3 campagnes — et l'énergie chute ×11 |
+| **Pourquoi ça plafonne au niveau 4** | **Pas cognitif — métabolique.** `maîtrise ~ énergie moyenne` : **r = +0,710**, `t = +2,85` (SIG, n=10). Trois **constantes posées** calibrent le rythme métabolique sur un agent *neuf* : le code suppose **4 épisodes/jour**, l'agent en joue **1,55**, et l'écart **se creuse** au fil du run (×1,68 → ×2,58). **9 graines sur 10 sont au plafond exact `PATIENCE_MAX = 350`** |
 | Leviers qui ont marché | **3 — deux propriétés du monde, une de la décision** |
 
 Un PPO standard résout `Empty-8x8` en quelques milliers d'épisodes. **Naulthène, non.**
@@ -339,6 +340,53 @@ logique devient un `max` continu. L'exigence dérive de la fenêtre d'observatio
 **Résultat (20 graines × 1500 jours)** : niveau 4 à **100 %** [84–100], niveau 5 à **20 %**
 [8–42], et le palier 5 est **tenu** — trois cerveaux y vivent de 521 à **1078 nuits** et y
 terminent leur run.
+
+### ⚠️ Le blocage n'a pas disparu — il s'est DÉPLACÉ, et sa cause est mesurée (20/08/2026)
+
+**La cause n'est pas cognitive.** `maîtrise ~ énergie moyenne` donne **r = +0,710**
+(`t = +2,85`, SIG, n=10) : les graines qui mangent sont celles qui maîtrisent. Et ce n'est
+**pas** la rareté des ressources — la densité **par case** est constante d'un niveau à
+l'autre (0,286 sur `Empty-5x5`, 0,293 sur `SimpleCrossingS9N1`).
+
+**Trois constantes posées décrivent le même agent d'août 2026 :**
+
+| constante | valeur | ce qu'elle vaut réellement |
+|---|---|---|
+| `EPISODES_PAR_JOURNEE_REFERENCE` | 4.0 | l'agent en joue **1,55** — écart ×2,58 en fin de run |
+| `PATIENCE_MAX` | 350 | **9 graines sur 10 au plafond exact** |
+| `BOOST_PATIENCE_MIN_PAR_RECURRENCE` | 10 | gain **constant** puis **nul** : 30 victoires saturent |
+
+Le `4.0` vaut `400 ticks / patience ~95` — la patience d'un agent **neuf**, quand
+`patience_min = 50`. Il était juste **le jour où il a été écrit** (commit `0609beb`, v41.2).
+Mesuré aujourd'hui, la patience réelle est de **258 ticks** (`t = +9,55`) et elle monte par
+un **cliquet définitif** (`patience_min += 10`, jamais repris). Le rythme métabolique reste
+donc calibré sur 4 épisodes/jour pendant que l'agent en joue 1,55, et **l'écart se creuse**.
+
+> **Ce n'est pas une constante fausse : c'est une constante qui mesure la jeunesse d'un agent
+> et qu'on applique à sa vieillesse.**
+
+**Remplacements prévus** (⚠️ **non implémentés**) : `episodes_jour` vécu à inertie ; un
+rendement de patience **exponentiellement décroissant et sans borne** — le motif que le projet
+emploie déjà pour la dérive métabolique (« une PENTE QUI DEVIENT VERTICALE, pas une
+barrière ») ; et un gain dérivé de l'**écart mesuré entre la durée des ratés et celle des
+réussites**. Bornes **conservées** : `MARGE_SUBSISTANCE`, `MARGE_TROUVABILITE`,
+`FRACTION_CASES_RESSOURCES_MAX` — ce sont des rapports, pas des valeurs.
+
+⚠️ **Le sens de la correction n'est PAS tranché.** Suivre la patience réelle ferait *baisser*
+le besoin (2,80 → ~1,1/axe), donc **moins** de sources — alors que l'énergie est déjà au
+plancher. Soit le besoin était trop haut, soit les occasions sont trop rares : **les deux
+corrections sont opposées et une seule est bonne**. Seule la mesure les départagera, avec un
+**bras d'ablation par constante** (patience et rythme métabolique sont couplés). Conception
+complète :
+[note de conception](docs/ameliorations/EPISODES_REFERENCE_20082026_la_derniere_constante_posee.md).
+
+**Reproduit le 20/08/2026 sur le cursus complet** (10 graines × 1500 jours, sans `--env-force`) :
+**10/10 au niveau 4**, 2/10 au niveau 5, par des chemins indépendants — le niveau 4 d'une graine
+antérieure n'était donc **pas** une « loterie natale ». ⚠️ **Mais rien n'est appris au palier
+atteint** : la tendance de maîtrise sur ~700 jours n'est **jamais positive** (−0,44 pt `t=−0,26` ;
+−4,57 `t=−2,85` SIG ; −4,78 `t=−1,95`), et les deux passages au niveau 5 sont passés par la voie
+« 2 victoires consécutives », **jamais** par les 60 % de maîtrise. n=10, sous le seuil des 20
+graines : une tendance, pas une conclusion.
 
 > ⚠️ **Ce que le frein ne fait pas.** Plafond relevé à 512 : `dim_bus` finit à **512/512**.
 > Le frein rattrape l'erreur, mais un gros cerveau prédit 3,6× mieux, donc son seuil descend

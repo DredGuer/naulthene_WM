@@ -4,6 +4,108 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.29-resultats] - 2026-08-20 — 10/10 au niveau 4, et la découverte des trois constantes posées
+
+### Le blocage au niveau 1 est levé — mais il s'est déplacé, et sa cause est identifiée
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | docs (mesure) + idée non validée |
+| **Impact** | **Critique — invalide l'affirmation centrale des deux README** |
+
+**Résultat brut** (10 graines × 1500 jours, cursus complet, sans `--env-force`) :
+
+| | valeur |
+|---|---|
+| Niveau 4/15 atteint | **10 graines sur 10** |
+| Niveau 5/15 atteint | **2 graines sur 10** (LIBRE_g2, MORT_g4) |
+| Victoires | **605 à 1072** par graine |
+| Chemin type | niv2 j071–j341 → niv3 (+10 j) → niv4 j177–j266 |
+
+⚠️ **L'affirmation « bloqué au niveau 1 sur 15 — 0 promotion sur 10 graines × 2000 jours »
+est CADUQUE.** Et ce n'est pas la loterie natale de g22 : le franchissement est reproductible
+sur 10 graines indépendantes, par des chemins différents.
+
+**Mais aucun apprentissage au palier atteint.** Tendance de maîtrise sur le séjour au niveau
+courant, mesurée trois fois :
+
+| moment | tendance | t | verdict |
+|---|---|---|---|
+| j960 | −0,44 pt | −0,26 | NS — plateau |
+| j1210 | −4,57 pts | −2,85 | **SIG — déclin** |
+| j1360 | −4,78 pts | −1,95 | NS |
+
+La tendance n'est **jamais positive**. L'hypothèse « il lui faut plus de temps » est
+contredite : 700 jours de plus ne font pas monter. Les deux passages au niveau 5 sont
+passés par la voie « 2 victoires consécutives », **jamais** par les 60 % de maîtrise —
+un tirage favorable, pas une compétence.
+
+### Le diagnostic — trois constantes posées, une seule cause
+
+**1. La corrélation.** `maîtrise ~ énergie moyenne` : **r = +0,710**, `t = +2,85` (SIG,
+n=10). Les graines qui mangent sont celles qui maîtrisent. MORT_g2 (maîtrise 0 %) :
+`énergie 0,013 · 400/400 ticks en basse énergie · satiété 0,00 · vigueur au plancher`.
+
+**2. La cause n'est PAS la rareté.** Vérifié : la densité de ressources **par case** est
+constante d'un niveau à l'autre (0,286 sur `Empty-5x5`, 0,293 sur `SimpleCrossingS9N1`).
+Le correctif v41.2-fix3 fait son travail ; le monde n'est pas plus pauvre au niveau 4.
+
+**3. La cause est une constante posée.** `EPISODES_PAR_JOURNEE_REFERENCE = 4.0`
+(noyau.py:5155) fixe tout le rythme métabolique. Origine tracée : commit `0609beb` (v41.2,
+15/08). Ce chantier a dérivé **quatre** grandeurs sur cinq — et la formule a hérité d'un
+chiffre posé au milieu. Le 4 vaut `400 ticks / patience ~95` : la patience d'un agent
+**neuf**, quand `patience_min = 50`. Il était juste **le jour où il a été écrit**.
+
+**4. L'écart se creuse.** Mesuré sur toute la durée des runs :
+
+| grandeur | 1er quart | dernier quart | |
+|---|---|---|---|
+| patience | 168 ticks | **258 ticks** | +54 % (`t = +9,55`) |
+| épisodes/jour | 2,39 | **1,55** | −35 % |
+| écart au `4.0` | ×1,68 | **×2,58** | **se creuse** |
+
+**5. Et la patience sature.** `patience_min` relevée à la fin : **9 graines sur 10 à 350 —
+le plafond `PATIENCE_MAX` exact** (la 10ᵉ à 330). Le mécanisme actuel est `+10` par
+victoire-sursaut, plafonné : gain **constant** jusqu'au mur puis **nul**. 30 victoires
+suffisent à saturer, puis plus rien ne bouge pendant 1200 jours.
+
+**Ce n'est pas une constante fausse : c'est une constante qui mesure la jeunesse d'un agent
+et qu'on applique à sa vieillesse.**
+
+### Décision — supprimer les trois constantes (non implémenté)
+
+| constante | valeur | remplacée par |
+|---|---|---|
+| `EPISODES_PAR_JOURNEE_REFERENCE` | 4.0 | `etat.episodes_jour` vécu, à inertie |
+| `PATIENCE_MAX` | 350 | rendement exponentiellement décroissant, **sans borne** |
+| `BOOST_PATIENCE_MIN_PAR_RECURRENCE` | 10 | écart mesuré **raté ↔ réussite** |
+
+Bornes **conservées** (ce sont des rapports, pas des valeurs) : `MARGE_SUBSISTANCE`,
+`MARGE_TROUVABILITE`, `FRACTION_CASES_RESSOURCES_MAX`.
+
+⚠️ **Trois risques à MESURER, pas à supposer** — voir
+[la note de conception](../ameliorations/EPISODES_REFERENCE_20082026_la_derniere_constante_posee.md) :
+(1) sans plafond rien n'empêche la patience de fuir vers moins d'un épisode par jour ;
+(2) patience et rythme métabolique sont **couplés**, donc **un bras d'ablation par
+constante** sous peine d'ablation confondue ; (3) **le sens de la correction n'est pas
+tranché** — suivre la patience réelle fait *baisser* le besoin (2,80 → ~1,1/axe) donc
+*moins* de sources, alors que l'énergie est déjà au plancher. Les deux lectures opposées
+restent ouvertes.
+
+### Vague 2 annulée
+
+Les graines 6-10 (2 h de calcul) n'ont **pas** été lancées : le résultat est négatif et
+stable, et porter n=10 à n=20 sur un taux de maîtrise déjà plat n'aurait rien apporté.
+Le résultat exploitable de cette campagne est le **diagnostic** — et `patience_min = 350`
+sur 9 graines sur 10 est une **mesure directe** (lecture d'état interne), fiable à n=10
+selon la grille du projet, contrairement à une comparaison appariée.
+
+⚠️ Les taux de maîtrise et la comparaison LIBRE vs MORT restent **à n=10, sous le seuil des
+20 graines** : ce sont des tendances, pas des conclusions.
+
+---
+
 ## [v41.29-campagne] - 2026-08-20 — Le cursus complet, 1500 jours : « jusqu'où va-t-il ? »
 
 ### Retour au cursus 15 niveaux après trois jours de bancs forcés

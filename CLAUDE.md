@@ -38,13 +38,19 @@ caméra, un micro et un bus moteur.
 Deux conséquences pour la rédaction de toute doc, tout commit, toute description :
 
 - Ne jamais présenter le projet comme un solveur MiniGrid, ni comme un système livré.
-- Ne jamais masquer l'état réel : l'agent est **bloqué au niveau 1 sur 15** — **0 promotion
-  sur 10 graines × 2000 jours**, maîtrise maximale 40 % pour un seuil à 60 %, et **couper C2
-  ne change le score de 0,0 point sur les 6 niveaux** (78 cellules d'ablation). Une graine
-  antérieure avait atteint le niveau 4 : c'était une **loterie natale**, non reproductible.
-  L'échec fait partie du carnet de recherche et se documente (voir
-  `docs/recherche/CAMPAGNE_v41_population_et_ablation_aout_2026.md` pour la mesure, et
-  `docs/recherche/dia_Aout_2026.md` pour le diagnostic).
+- Ne jamais masquer l'état réel. **Mise à jour du 20/08/2026 (campagne v41.29, 10 graines ×
+  1500 jours)** : l'agent n'est **plus bloqué au niveau 1** — il atteint le **niveau 4/15 sur
+  10 graines sur 10** et le niveau 5 sur 2, par des chemins indépendants. Ce n'était donc pas
+  la « loterie natale » de g22. **Mais le blocage s'est DÉPLACÉ au niveau 4** et il n'y a
+  toujours **aucun apprentissage au palier atteint** : la tendance de maîtrise, mesurée trois
+  fois sur ~700 jours, n'est **jamais positive** (−0,44 pt `t=−0,26` ; −4,57 `t=−2,85` SIG ;
+  −4,78 `t=−1,95`). Les 2 passages au niveau 5 sont passés par la voie « 2 victoires
+  consécutives », jamais par les 60 % de maîtrise. **Couper C2 ne change toujours le score de
+  0,0 point sur les 6 niveaux** (78 cellules d'ablation). ⚠️ Ces taux sont à **n=10, sous le
+  seuil des 20 graines** : ce sont des tendances, pas des conclusions. L'échec fait partie du
+  carnet de recherche et se documente (voir `docs/fonctionnement/CHANGELOG.md`
+  §[v41.29-resultats] pour la mesure, et `docs/recherche/dia_Aout_2026.md` pour le
+  diagnostic).
 
 ### La règle de miroir — `readme.md` (EN) ↔ `readme_fr.md` (FR)
 
@@ -397,10 +403,27 @@ Le travail en cours se fait sur **`feat/v41-ligne-flottaison`**. Ce qu'elle port
 - **v41.0** — la **ligne de flottaison métabolique** : le vécu se compte en saillances au-dessus du coût d'exister, plus en moyenne
 - **v41.2** *(en cours, non entrée au CHANGELOG)* — métabolisme à deux étages, `vigueur = énergie ** κ` comme modulateur global unique, profil nutritionnel à 3 axes
 
-⚠️ **Deux résultats de cette branche contredisent des affirmations antérieures** — les avoir en
-tête avant toute nouvelle piste : la campagne de 10 graines donne **0 promotion** (le niveau 4 de
-g22 était une **loterie natale**), et **couper C2 ne change le score de 0,0 point sur les 6
-niveaux**. Voir `docs/recherche/CAMPAGNE_v41_population_et_ablation_aout_2026.md`.
+⚠️ **Résultats de cette branche qui contredisent des affirmations antérieures** — les avoir en
+tête avant toute nouvelle piste. **Couper C2 ne change le score de 0,0 point sur les 6 niveaux**
+(toujours vrai). En revanche le « 0 promotion sur 10 graines » est **périmé depuis le
+20/08/2026** : la campagne v41.29 (10 graines × 1500 jours, cursus complet) donne **10/10 au
+niveau 4** et 2/10 au niveau 5 — le niveau 4 de g22 n'était donc pas une loterie natale. Voir
+`docs/fonctionnement/CHANGELOG.md` §[v41.29-resultats] et
+`docs/recherche/CAMPAGNE_v41_population_et_ablation_aout_2026.md`.
+
+⚠️ **TROIS CONSTANTES POSÉES à supprimer** (mesuré le 20/08/2026, non implémenté — voir
+`docs/ameliorations/EPISODES_REFERENCE_20082026_la_derniere_constante_posee.md`) :
+`EPISODES_PAR_JOURNEE_REFERENCE = 4.0`, `PATIENCE_MAX = 350`,
+`BOOST_PATIENCE_MIN_PAR_RECURRENCE = 10`. Elles décrivent toutes le **même agent d'août 2026**.
+Le `4.0` vaut `400 ticks / patience ~95` — la patience d'un agent **neuf** ; mesuré aujourd'hui,
+la patience réelle est de **258 ticks** (`t=+9,55`) et **9 graines sur 10 sont au plafond exact
+de 350**. Le rythme métabolique est donc calibré pour 4 épisodes/jour quand l'agent n'en joue
+que **1,55**, et l'écart **se creuse** au fil du run (×1,68 → ×2,58). Corrélation qui relie le
+tout : `maîtrise ~ énergie moyenne`, **r = +0,710** (`t=+2,85`, SIG). ⚠️ Le **sens** de la
+correction n'est **pas tranché** : suivre la patience réelle ferait *baisser* le besoin (2,80 →
+~1,1/axe) donc *moins* de sources, alors que l'énergie est déjà au plancher — deux lectures
+opposées restent ouvertes, seule la mesure les départagera. Un **bras d'ablation par constante**
+est obligatoire (patience et rythme métabolique sont couplés).
 
 Décisions structurantes toujours en vigueur depuis la v30 : `num_actions` **reste à 8** avec
 `ACTION_DEMANDER` masquée en permanence (ne jamais amputer un `.brain`), toute dimension du

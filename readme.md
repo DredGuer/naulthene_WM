@@ -129,7 +129,7 @@ Two caveats, both measurable rather than rhetorical:
 
 | Metric | Value |
 |---|---|
-| Level reached | **4 out of 15** — 100 % of seeds, 95 % CI **[84–100]** (n = 20 × 1500 days, v41.23). A fresh 1500-day curriculum campaign is running on v41.29 |
+| Level reached | **4 out of 15** — 100 % of seeds (n = 20 × 1500 days, v41.23), **reproduced on v41.29**: 10/10 seeds reach level 4, 2/10 reach level 5 (n=10, full curriculum) |
 | Level 5 | **4 seeds out of 20** — 20 % [8–42], and the level is **held** (up to 1078 nights on it) |
 | What unlocked level 4 | **brain-sparing**: 0 % [0–16] → 80 % [58–92], 18 wins / 0 losses (p < 0.001) |
 | Effect of severing C2 on the score | **0.0 points across all 6 levels** (78 cells) — and on `LavaGap`, severing it **triples** the success rate |
@@ -138,6 +138,7 @@ Two caveats, both measurable rather than rhetorical:
 | Navigation on an empty 5×5 room | **54.4 %** after 300 days vs **39.2 %** for a random policy *over the same 7 actions* — the agent **beats chance by 15 pts** |
 | Ticks spent on gestures that change nothing (`Empty-5x5`) | **57.2 %** — because a sterile gesture cost **1.09** against **4.00** for the one gesture that moves toward the goal. **v41.28** charges the work *attempted*: pushing a wall now costs a full step. **Measured (n=20): −2.5 pts, `t = −1.71`, not significant** — the cost was not the lever |
 | Effect of growing the brain (96 → 160 → 512 dims) | **none** across 3 campaigns — and energy drops 11× |
+| **Why it plateaus at level 4** | **Not cognitive — metabolic.** `mastery ~ mean energy`: **r = +0.710**, `t = +2.85` (SIG, n=10). Three **posed constants** calibrate the metabolic rhythm for a *newborn* agent: the code assumes **4 episodes/day**, the agent plays **1.55**, and the gap **widens** over the run (×1.68 → ×2.58). **9 seeds out of 10 sit at the exact `PATIENCE_MAX = 350` ceiling** |
 | Levers that did work | **3 — two properties of the world, one of the decision** |
 
 A standard PPO solves `Empty-8x8` in a few thousand episodes. **Naulthène currently does not.**
@@ -262,6 +263,12 @@ This is the table that would decide whether the architecture is *efficient* or m
 Across **20 seeds × 1500 simulated days** on a reproducible bench, **100 % [84–100]** of
 agents reach level 4 of the 15-level curriculum, and **20 % [8–42]** now hold level 5 — up
 to 1078 nights on it. Before the v41.16 fix, level 4 was reached by **0 % [0–16]**.
+**Reproduced on v41.29** (10 seeds × 1500 days, full curriculum, no forced env): 10/10 reach
+level 4, 2/10 reach level 5 — so the earlier "natal lottery" reading of a single lucky seed
+was wrong. ⚠️ **But nothing is learned on the level reached**: the mastery trend over ~700
+days is **never positive** (−0.44 pt `t=−0.26`; −4.57 `t=−2.85` SIG; −4.78 `t=−1.95`), and
+both level-5 crossings came through the "2 consecutive wins" route, never through the 60 %
+mastery gate. n=10, below the project's 20-seed bar — a tendency, not a conclusion.
 ⚠️ They hold `LavaGap` **without having learned what lava is**: its learned valence stays
 **positive** (+0.07), indistinguishable from water. `SimpleCrossing`
 and everything beyond remain unsolved.
@@ -482,7 +489,29 @@ What that means concretely:
 
 - The agent now reaches **level 4 of 15** on **100 %** of seeds [84–100] and **holds level
   5** on 20 % [8–42] (20 seeds × 1500 simulated days). Before the v41.16 brain-sparing fix,
-  level 4 was reached by **0 %** [0–16].
+  level 4 was reached by **0 %** [0–16]. **Reproduced 20 Aug 2026** on the full curriculum
+  (10 seeds × 1500 days): **10/10 reach level 4**, 2/10 reach level 5.
+- **⚠️ The blockage did not disappear — it MOVED to level 4, and its cause is now measured.**
+  Nothing is learned on the level reached: the mastery trend over ~700 days is **never
+  positive** (−0.44 pt `t=−0.26`; −4.57 `t=−2.85` SIG; −4.78 `t=−1.95`). More time does not
+  help — the "it just needs more days" hypothesis is contradicted by 700 days of data. And
+  the cause is **not cognitive**: `mastery ~ mean energy` gives **r = +0.710** (`t = +2.85`,
+  SIG). The seeds that eat are the seeds that master. Resource density is *not* the culprit
+  either — it is constant per cell across levels (0.286 → 0.293).
+- **⚠️ Three posed constants describe the same August-2026 agent, and must go.**
+  `EPISODES_PAR_JOURNEE_REFERENCE = 4.0` sets the entire metabolic rhythm; it equals
+  `400 ticks / patience ~95`, the patience of a **newborn** agent. Measured today: real
+  patience is **258 ticks** (`t = +9.55`), the agent plays **1.55 episodes/day** against the
+  4.0 assumed, and the gap **widens** over a run (×1.68 → ×2.58) because patience ratchets up
+  and never comes back down. Worse, **9 seeds out of 10 sit at the exact `PATIENCE_MAX = 350`
+  ceiling**: the current mechanism grants a **constant** +10 per willpower-win until the wall,
+  then **nothing** — 30 wins saturate it, and 1200 days change nothing after that. Planned
+  replacements: lived `episodes_jour` with inertia; an **unbounded** exponentially-decaying
+  return on patience; and a gain derived from the **measured gap between failure and success
+  durations**. ⚠️ **Not implemented, and the direction of the fix is not settled** — following
+  real patience would *lower* the need (2.80 → ~1.1/axis), hence *fewer* food sources, while
+  energy already sits at its floor. Two opposite readings remain open; only measurement will
+  decide. [Design note](docs/ameliorations/EPISODES_REFERENCE_20082026_la_derniere_constante_posee.md).
 - **But it has not learned danger.** On the four level-5 brains, the learned valence of
   lava is **positive** (+0.068 to +0.081) and indistinguishable from water (+0.060 to
   +0.088), after up to 1078 nights spent on `LavaGap`. MiniGrid punishes death with exactly

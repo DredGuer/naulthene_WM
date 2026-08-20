@@ -28,6 +28,7 @@
 | `old_V4127_douleur_unique/` | **douleur unique, 3 bras** (19/08) — 20 graines × 3 × 300 j. A (douleur + mort coûteuse) / B (douleur seule) / C (témoin). Établit que **la douleur seule ne change rien** (`t = −1,51`) et que **le coût de la mort, si** (`t = −15,21`) |
 | `old_V4128_navigation/` | **diagnostic navigation** (19-20/08) — 10 graines × 300 j sur `Empty-5x5`. Celle qui montre que **l'agent apprend** (13,8 % → 54,4 %, 10/10 graines) et **bat le hasard équitable** (39,2 %) |
 | `old_V4128_travail_tente/` | **travail tenté** (20/08) — 20 graines × 2 bras. ⚠️ **Résultat négatif** : −2,52 pts de gestes stériles, `t = −1,71`, non significatif. Le coût n'était pas le levier |
+| `old_V4129_cursus1500/` | **cursus complet 1500 jours** (20/08) — 10 graines × 2 bras (LIBRE/MORT), sans `--env-force`. **10/10 atteignent le niveau 4/15**, 2/10 le niveau 5 : le blocage au niveau 1 est levé et ce n'était PAS une loterie natale. ⚠️ Mais **rien n'est appris au palier** (tendance jamais positive) et la campagne a surtout servi à **découvrir les trois constantes posées** (`EPISODES_PAR_JOURNEE_REFERENCE`, `PATIENCE_MAX`, `BOOST_PATIENCE_MIN_PAR_RECURRENCE`) : 9 graines sur 10 au plafond exact de patience. Logs inclus |
 | `nuit_18082026_V4123_optionB/` | les 4 cerveaux qui **tiennent le niveau 5** (jusqu'à 1078 nuits dessus) + 1 témoin niveau 4, campagne Option B 20×1500 j |
 
 ## Convention de nommage
