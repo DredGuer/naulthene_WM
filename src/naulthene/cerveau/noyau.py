@@ -1626,7 +1626,7 @@ class AGI_Naulthene(nn.Module):
 
     def apprendre_journee(self, jepa_losses, log_probs, entropies, valeurs, rewards, dones,
                           gamma=0.95, coeff_entropie=0.02, pertes_vocales=None,
-                          chocs_dopamine=None):
+                          chocs_dopamine=None, transitions=None):
         self.optimizer.zero_grad(set_to_none=True)
         perte_totale = torch.zeros((), device=DEVICE)
 
@@ -1657,7 +1657,47 @@ class AGI_Naulthene(nn.Module):
             log_probs_tensor = torch.cat(log_probs).squeeze(-1)
             entropies_tensor = torch.cat(entropies).squeeze(-1)
 
-            perte_acteur = -(log_probs_tensor * avantages).mean()
+            # --- v41.31 : LE GRADIENT CAUSAL — la politique n'apprend que des gestes
+            # qui ont CHANGÉ QUELQUE CHOSE ---
+            #
+            # 🔴 CE QUE ÇA CORRIGE. REINFORCE propage le retour d'un épisode réussi sur
+            # TOUTES les actions de la trajectoire. Un agent qui a spammé `toggle` 25 fois
+            # dans le vide en marchant vers le but voit C1 renforcer ces gestes par simple
+            # contamination de voisinage. Mesuré (DERIVE_g1, dernier jour) :
+            #
+            #   a4 drop 9%/100st · a5 toggle 16%/100st · a6 done 7%/100st
+            #   a3 pickup 24%/85st · a2 avancer 26%/51st
+            #   => 32 % des ticks stériles à 100 %, 61,7 % au total.
+            #
+            # ⚠️ NEUTRALISER N'EST PAS PÉNALISER : gradient NUL, jamais de malus. Un malus
+            # serait une récompense en dur, ce que le dogme interdit. L'extinction des
+            # actions inutiles doit ÉMERGER de l'absence de crédit.
+            #
+            # ⚠️ LE DÉNOMINATEUR EST LE NOMBRE DE TICKS RETENUS, jamais le total. Un
+            # `.mean()` naïf laisserait `T` au dénominateur : à 61,7 % de masquage, le
+            # gradient des gestes UTILES serait divisé par ~2,6 — on aurait dilué
+            # l'apprentissage au lieu de le concentrer, l'inverse exact de l'intention.
+            # Même discipline que la moyenne pondérée de la distillation v37.1.
+            #
+            # ⚠️ LE MASQUE NE PORTE QUE SUR L'ACTEUR. Le critique estime la valeur d'un
+            # ÉTAT (un état où l'agent vient de pousser un mur en a une) : le masquer le
+            # rendrait aveugle à 61,7 % des états et fausserait les AVANTAGES qu'il
+            # fournit à l'acteur. L'entropie pousse à explorer sur TOUS les états : la
+            # masquer reviendrait à n'explorer que là où l'agent bouge déjà, soit
+            # l'inverse du but — sortir d'un blocage. JEPA non plus : l'immobilité face à
+            # un mur est une PRÉDICTION DÉTERMINISTE VALIDE, et C2 en a besoin pour
+            # planifier un contournement (« si j'avance ici, je ne bougerai pas »).
+            if GRADIENT_CAUSAL_ACTIF and transitions is not None and len(transitions) == log_probs_tensor.numel():
+                masque = torch.tensor([1.0 if t else 0.0 for t in transitions],
+                                      dtype=torch.float32, device=DEVICE)
+                # max(1, ·) : une journée 100 % stérile donne une perte NULLE sans jamais
+                # diviser par zéro — la politique n'apprend rien ce jour-là, et c'est
+                # voulu (« une journée stérile ne distille rien », v37.1). Le critique,
+                # l'entropie et JEPA continuent, eux, d'apprendre.
+                n_retenus = torch.clamp(masque.sum(), min=1.0)
+                perte_acteur = -((log_probs_tensor * avantages * masque).sum() / n_retenus)
+            else:
+                perte_acteur = -(log_probs_tensor * avantages).mean()
             perte_critique = F.mse_loss(valeurs_tensor, returns)
             perte_entropie = -coeff_entropie * entropies_tensor.mean()
 
@@ -5186,6 +5226,13 @@ FACTEUR_ATTENUATION_LIBRE = 1.00         # déplacement libre : pénalité plein
 # ⚠️ Ils DOIVENT rester distincts : patience et rythme métabolique sont COUPLÉS
 # (`épisodes/jour` est l'entrée du besoin). Les couper ensemble produirait une ablation
 # CONFONDUE — impossible de savoir laquelle des deux a agi. C'est la règle de mesure §4.
+# v41.31 — TROIS INTERRUPTEURS, un par axe. ⚠️ Ils DOIVENT rester séparés : le gradient
+# causal, le tube digestif et l'unification du détecteur sont trois mécaniques distinctes ;
+# les couper ensemble produirait une ablation CONFONDUE (règle de mesure §4).
+GRADIENT_CAUSAL_ACTIF = True        # False = `.mean()` d'avant v41.31 (`--gradient-non-filtre`)
+DEBIT_DIGESTIF_VECU_ACTIF = True    # False = débit figé à 3,0/jour (`--debit-fossile`)
+UNIFIER_DETECTEUR_STERILITE = True  # False = `mur_touche` sur l'observation (`--detecteur-observation`)
+
 ENDURANCE_DERIVEE_ACTIVE = True   # False = patience fossile (+10 plafonné, `--patience-fossile`)
 RYTHME_VECU_ACTIF = True          # False = besoin figé à 4 épisodes/jour (`--rythme-fossile`)
 
@@ -6719,6 +6766,10 @@ class EtatCognitif:
         self.p17_victoires_hors_reference_jour = 0
         self.memoire_moyen_terme = []
         self.jepa_losses, self.log_probs_journee, self.entropies_journee = [], [], []
+        # v41.31 — vidé ICI avec les autres buffers journaliers. S'il ne l'était pas, il
+        # grossirait d'un jour à l'autre et désalignerait le masque de `log_probs`
+        # (piège du compteur non réinitialisé, v27.0 et v37.1).
+        self.transitions_journee = []
         self.valeurs_journee, self.recompenses_journee, self.dones_journee = [], [], []
         # v37.1 — chocs dopaminergiques tick par tick, pour le crédit rétrograde de la
         # distillation sélective. Remis à zéro ici comme tout buffer journalier (piège du
@@ -8462,7 +8513,31 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
     _stats["portage_change"] += int(_a_manipule)
     # STÉRILE : rien n'a changé dans le monde. C'est la mesure qui manquait — elle dit
     # quelle fraction du barème actuel est facturée pour du travail qui n'existe pas.
-    _stats["sterile"] += int(not (_a_bouge or _a_tourne or _a_manipule))
+    # v41.31 — L'INVARIANT PHYSIQUE UNIQUE DE NON-TRANSITION.
+    #
+    #   transition = (pos changée) OU (dir changée) OU (portage changé)
+    #
+    # ⚠️ LA ROTATION EST UNE TRANSITION. Tourner ne déplace pas l'agent mais PIVOTE SON
+    # CHAMP DE VISION : c'est une acquisition d'information, la brique de base de
+    # l'exploration. L'exclure reviendrait à punir le fait de regarder.
+    #
+    # ⚠️ LE VECTEUR BIO EST EXCLU. Faim, soif, douleur et thermoception dérivent à CHAQUE
+    # tick par le seul métabolisme : un critère qui les inclurait ne détecterait JAMAIS de
+    # non-transition, la condition serait mathématiquement toujours fausse.
+    #
+    # C'est le détecteur de référence : `mur_touche` s'y aligne plus bas (v41.31), pour que
+    # la douleur et le gradient ne punissent plus deux ensembles différents (mesuré avant
+    # unification : 61,7 % contre 29,9 %, soit un facteur 2).
+    etat.transition_tick = bool(_a_bouge or _a_tourne or _a_manipule)
+    _stats["sterile"] += int(not etat.transition_tick)
+    # v41.31 — LE BUFFER DU MASQUE, aligné tick à tick sur `log_probs_journee`.
+    #
+    # ⚠️ L'ORDRE DES OPÉRATIONS IMPOSE UN BUFFER. `log_prob` est empilé AVANT `env.step`
+    # (l'agent doit choisir avant d'agir) ; la transition n'est connue qu'APRÈS. On ne
+    # peut donc pas masquer à l'empilement — seulement au calcul de la perte, où les deux
+    # séries se rejoignent. L'alignement est vérifié là-bas par une égalité de longueur :
+    # au moindre décalage, le masque est ignoré plutôt qu'appliqué de travers.
+    etat.transitions_journee.append(etat.transition_tick)
 
     # v41.20 — L'EFFET DU TICK COURANT, retenu pour la facturation plus bas. La sonde
     # v41.19 n'agrégeait que des compteurs journaliers ; ici on conserve le tick lui-même,
@@ -8550,7 +8625,22 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
     # v28.0 : l'action "done" substituée pour ACTION_DEMANDER laisse l'observation
     # inchangée PAR CONSTRUCTION (agent immobile) — ce n'est jamais un mur touché,
     # juste l'agent qui a choisi de tendre la main plutôt que de bouger.
-    mur_touche = (action_item != ACTION_DEMANDER) and torch.equal(etat.etat_courant, etat_suivant)
+    # v41.31 — `mur_touche` S'ALIGNE SUR L'INVARIANT PHYSIQUE, plus sur l'observation.
+    #
+    # 🔴 CE QUE ÇA CORRIGE. `torch.equal(etat_courant, etat_suivant)` ne lit que le champ
+    # visuel partiel encodé : il peut rester identique alors que le monde a changé (le
+    # changement est hors champ), ou différer alors que rien n'a bougé. Mesuré : ce
+    # détecteur voyait 29,9 % des ticks quand l'invariant physique en voit 61,7 % — un
+    # FACTEUR 2. Or `mur_touche` alimente la douleur (v41.27) et l'invariant alimente
+    # désormais le gradient (v41.31) : laisser les deux diverger ferait punir DEUX
+    # ENSEMBLES DIFFÉRENTS par deux mécaniques croyant parler du même geste.
+    #
+    # ⚠️ L'exclusion d'ACTION_DEMANDER reste : le `done` substitué laisse l'agent immobile
+    # PAR CONSTRUCTION (v28.0), ce n'est jamais un mur touché.
+    if UNIFIER_DETECTEUR_STERILITE:
+        mur_touche = (action_item != ACTION_DEMANDER) and not getattr(etat, "transition_tick", True)
+    else:
+        mur_touche = (action_item != ACTION_DEMANDER) and torch.equal(etat.etat_courant, etat_suivant)
     # v41.27 — LE CHOC EST UNE DOULEUR, pas un malus. Pic ∝ vitesse d'impact (v41.27),
     # récupération RAPIDE (DEMI_VIE_CHOC ≈ 12× plus courte que la brûlure) : ça pique fort
     # et ça passe. Encaissé AVANT `step_metabolisme`, donc le déficit du tick le voit.
@@ -9153,6 +9243,62 @@ def _rafraichir_rythme_metabolique(etat):
         moteur.taux_hydratation = (taux_satiete_jour * RATIO_SOIF_SUR_FAIM
                                    / float(moteur.ticks_par_jour))
 
+        # 🔴 v41.31 — LE TUBE DIGESTIF SUIT CE QUE L'AGENT MANGE RÉELLEMENT.
+        #
+        # `taux_satiete` ci-dessus est une VARIABLE MORTE : rien ne la soustrait depuis
+        # que la v41.2 a remplacé le prélèvement direct par la digestion (vérifié — un
+        # agent qui jeûne perd 0,083333 de satiété en 10 ticks, soit exactement
+        # `debit_digestif / RENDEMENT_CONVERSION`). Elle est conservée pour la
+        # rétrocompatibilité, mais elle ne pilote rien.
+        #
+        # LE VRAI RÉGULATEUR est `debit_digestif`, jusqu'ici figé à
+        # `DEPENSE_ENERGIE_JOUR × MARGE_DIGESTIVE = 3,0`, soit une vidange de
+        # **3,333 estomacs/jour IDENTIQUE dans les deux bras** de la campagne v41.30 —
+        # quel que soit le besoin. C'est l'explication complète de l'invariance
+        # énergétique mesurée (`t = +1,04`, NS, n=20) : aucun réglage en amont sur le
+        # besoin ne pouvait atteindre les jauges tant que la vanne restait verrouillée
+        # en aval. L'agent mangeait 5,4 fois par jour et restait à 0,22 d'énergie.
+        #
+        # ⚠️ `MARGE_DIGESTIVE` RESTE — c'est une borne sur un RAPPORT, pas une valeur :
+        # elle garantit que le débit DÉPASSE la dépense. Si le débit passait sous la
+        # dépense, la mort deviendrait certaine PAR CONSTRUCTION et la mécanique ne
+        # mesurerait plus rien.
+        #
+        # ⚠️ Le débit est donc dérivé de ce que le corps peut réellement absorber dans la
+        # journée — `besoin × portion` — et non d'une dépense posée. Un organisme qui
+        # mange peu n'a pas le tube digestif d'un organisme qui mange beaucoup.
+        # 🔴 v41.31-fix2 — L'AXE 2 EST RETIRÉ. La prémisse était fausse.
+        #
+        # L'idée : « un organisme qui mange peu n'a pas le tube digestif d'un organisme qui
+        # mange beaucoup », donc indexer `debit_digestif` sur le besoin vécu. Mesuré au banc,
+        # DEUX FOIS : −0,18 puis −0,17 d'énergie, sur 3/3 graines à chaque essai.
+        #
+        # LA RAISON EST STRUCTURELLE. `debit_digestif` a deux rôles opposés :
+        #
+        #   satiete -= conversion / RENDEMENT   ← il VIDE l'estomac      (suit l'ingestion)
+        #   energie += conversion × cofacteur   ← il FABRIQUE l'énergie  (doit suivre la DÉPENSE)
+        #
+        # Le premier jet l'a indexé sur l'INGESTION. Le second a ajouté un plancher au coût
+        # d'exister — mais ce plancher ne garantit que la survie À L'ARRÊT :
+        #
+        #   conversion plancher  0,003611/tick
+        #   dépense basale       0,003250     → +0,000361 ✅ (agent immobile)
+        #   dépense max          0,005000     → −0,001389 ❌ (agent qui agit)
+        #
+        # Or `MARGE_DIGESTIVE` s'applique, dans le régime historique, à la DÉPENSE — pas à
+        # l'ingestion. Borner sur la dépense max ramènerait exactement au fossile, rendant
+        # l'axe inopérant par construction.
+        #
+        # ⚠️ CE QUI RESTE VRAI : `DEPENSE_ENERGIE_JOUR = 2.0` EST un fossile (son propre
+        # commentaire dit « calibré à 3 repas/jour »), et `taux_satiete` EST une variable
+        # morte. Mais les corriger exige de dériver LA DÉPENSE — l'effort mécanique et
+        # cognitif réellement produit — pas le débit. C'est un chantier à part, à mener
+        # isolément de toute modification de l'apprentissage moteur.
+        #
+        # `DEBIT_DIGESTIF_VECU_ACTIF` et `--debit-fossile` sont conservés comme témoins
+        # inertes : le drapeau ne pilote plus rien, mais le retirer casserait les scripts
+        # de campagne existants.
+
     # 🔴 v41.30-fix1 — LE MONDE N'EST PAS INDEXÉ SUR LE MÉTABOLISME DE L'AGENT.
     #
     # La v41.30 recalculait ici `nb_sources_food/water` à partir du rythme vécu. C'était une
@@ -9387,6 +9533,9 @@ def executer_nuit(etat, plafond_reve=None):
         # QUAND l'agent a réellement vécu quelque chose. `getattr` pour rester tolérant
         # aux cursus qui n'auraient pas encore ce buffer (cuve, arène).
         chocs_dopamine=getattr(etat, "chocs_dopamine_journee", None),
+        # v41.31 — le masque du gradient causal. Même tolérance : un cursus qui n'aurait
+        # pas ce buffer (cuve, arène) retombe sur le `.mean()` d'avant v41.31.
+        transitions=getattr(etat, "transitions_journee", None),
     )
 
     # --- v40.0 : LE VÉCU NOURRIT LA FORCE DE PLANIFICATION (une fois par nuit) ---
@@ -9488,6 +9637,18 @@ def executer_nuit(etat, plafond_reve=None):
     etat.recompenses_journee.clear()
     etat.dones_journee.clear()
     etat.pertes_vocales.clear()  # v22.1 — 6e buffer, même raison que les 5 ci-dessus
+    # v41.31 — 7e buffer. S'il n'était pas vidé ICI (et pas seulement dans
+    # `_reinitialiser_buffers_journee`), il grossirait d'une nuit à l'autre dans la Cuve
+    # où plusieurs nuits s'enchaînent sans réinitialisation complète : le masque serait
+    # alors plus long que `log_probs` et l'égalité de longueur le ferait ignorer en
+    # silence — le gradient causal se désactiverait sans le moindre message.
+    if hasattr(etat, "transitions_journee"):
+        # La télémétrie est lue PLUS BAS, après ce vidage : on fige donc le compte ici,
+        # sinon la ligne du bilan afficherait un buffer vide (défaut attrapé au premier
+        # run de validation v41.31).
+        etat.gradient_ticks_credites = sum(1 for x in etat.transitions_journee if x)
+        etat.gradient_ticks_total = len(etat.transitions_journee)
+        etat.transitions_journee.clear()
 
     etat.teneur_dopamine += (DOPAMINE_NEUTRE - etat.teneur_dopamine) * TAUX_RESSORT
     etat.teneur_dopamine = float(np.clip(etat.teneur_dopamine, DOPAMINE_MIN, DOPAMINE_MAX))
@@ -10002,6 +10163,20 @@ def executer_nuit(etat, plafond_reve=None):
             for a, s in sorted(_cm.items()))
         print(f"  ├─ Coût moteur v41.19: ⚙️ {_st*100//_tot}% de gestes STÉRILES "
               f"({_st}/{_tot}) | par action (part/stérile) — {_detail}")
+        # v41.31 — CE QUE LE GRADIENT CAUSAL A RÉELLEMENT MASQUÉ. Sans cette ligne, la
+        # mécanique serait invisible sur un run long et son utilité indémontrable
+        # (leçon v29.1). Conditionnelle : rien à afficher si la branche est inactive.
+        _gt = getattr(etat, "gradient_ticks_total", 0)
+        if GRADIENT_CAUSAL_ACTIF and _gt:
+            _ret = getattr(etat, "gradient_ticks_credites", 0)
+            print(f"  │                   🎯 Gradient causal v41.31 : {_ret}/{_gt} tick(s) "
+                  f"crédité(s) ({100*_ret//max(1,_gt)}%) — dénominateur de l'acteur, "
+                  f"jamais {_gt}")
+        _dd = getattr(etat.moteur_bio, "debit_digestif", None)
+        if _dd is not None:
+            print(f"  │                   🫀 Tube digestif v41.31 : {_dd*ticks_par_jour:.2f} "
+                  f"estomac(s)/jour (fossile 3,00) — vidange réelle "
+                  f"{_dd*ticks_par_jour/max(RENDEMENT_CONVERSION,1e-6):.2f}/jour")
 
     # v41.10 — LES CARTES CONNUES. `len(souvenirs)` ne compte que la carte du moment :
     # sans cette ligne, la télémétrie sous-estimerait massivement le vécu spatial réel
@@ -10292,6 +10467,10 @@ def executer_nuit(etat, plafond_reve=None):
                                   if etat.module_acceptation.duree_echec_vie is not None else 0.0),
         "Rythme_Episodes_Vecu": getattr(etat.moteur_bio, "rythme_episodes",
                                         EPISODES_PAR_JOURNEE_NAISSANCE),
+        # v41.31 — les deux grandeurs des axes 1 et 2.
+        "Gradient_Ticks_Credites": getattr(etat, "gradient_ticks_credites", 0),
+        "Gradient_Ticks_Total": getattr(etat, "gradient_ticks_total", 0),
+        "Debit_Digestif_Jour": getattr(etat.moteur_bio, "debit_digestif", 0.0) * ticks_par_jour,
         "Rythme_Besoin_Par_Axe": besoin_par_axe(
             getattr(etat.moteur_bio, "rythme_episodes", EPISODES_PAR_JOURNEE_NAISSANCE)),
         "Bio_Satiete": etat.moteur_bio.satiete,
@@ -10681,6 +10860,13 @@ if __name__ == "__main__":
                     help="ABLATION : fige DIM_BUS_MAX à 96, l'ancienne valeur posée")
     # v41.25 — témoin de la nociception thermique (voir DOULEUR_THERMIQUE_ACTIVE).
     # v41.28 — témoin du travail tenté, voir TRAVAIL_TENTE_ACTIF.
+    # v41.31 — témoins des trois axes, séparés.
+    _p.add_argument("--gradient-non-filtre", action="store_true",
+                    help="témoin v41.30 : l'acteur apprend aussi sur les gestes stériles")
+    _p.add_argument("--debit-fossile", action="store_true",
+                    help="témoin v41.2 : débit digestif figé à 3,0 estomacs/jour")
+    _p.add_argument("--detecteur-observation", action="store_true",
+                    help="témoin pré-v41.31 : `mur_touche` lit l'observation, pas la physique")
     # v41.30 — témoins des deux constantes supprimées, séparés.
     _p.add_argument("--patience-fossile", action="store_true",
                     help="témoin v41.29 : patience à gain constant (+10) plafonnée à 350")
@@ -10757,6 +10943,25 @@ if __name__ == "__main__":
         print("🔬 [ABLATION] travail tenté v41.28 COUPÉ — geste stérile gratuit (v41.27)")
         from naulthene.cerveau.noyau import TRAVAIL_TENTE_ACTIF as _vt
         assert _vt is False, "l'ablation n'a pas atteint le module — campagne invalide"
+
+    # v41.31 — un drapeau PAR axe, même discipline : module NOMMÉ + assertion runtime.
+    for _flag, _arg, _msg in (
+        ("GRADIENT_CAUSAL_ACTIF", _args.gradient_non_filtre,
+         "gradient causal COUPÉ — l'acteur réapprend sur les gestes stériles"),
+        ("DEBIT_DIGESTIF_VECU_ACTIF", _args.debit_fossile,
+         "débit digestif FIGÉ à 3,0/jour (régime v41.2)"),
+        ("UNIFIER_DETECTEUR_STERILITE", _args.detecteur_observation,
+         "détecteur de stérilité sur l'OBSERVATION (régime pré-v41.31)"),
+    ):
+        _val = not _arg
+        globals()[_flag] = _val
+        if _module_reel is not None:
+            setattr(_module_reel, _flag, _val)
+        if not _val:
+            print(f"🔬 [ABLATION] {_msg}")
+            import naulthene.cerveau.noyau as _m
+            assert getattr(_m, _flag) is False, (
+                f"l'ablation {_flag} n'a pas atteint le module — campagne invalide")
 
     # v41.30 — un drapeau PAR constante (jamais groupés : ablation confondue sinon).
     _endur = not _args.patience_fossile

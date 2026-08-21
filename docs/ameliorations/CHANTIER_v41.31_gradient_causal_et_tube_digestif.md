@@ -161,6 +161,45 @@ qu'à ranger en NS.
 
 ---
 
+## Axe 2 — ❌ RETIRÉ le 21/08/2026, prémisse invalidée
+
+> 🔴 **Cet axe a été implémenté, mesuré DEUX FOIS, et retiré.** Le banc court l'a rejeté à
+> chaque essai : **−0,18 puis −0,17 d'énergie, sur 3/3 graines**, écart identique donc
+> structurel. La section ci-dessous est conservée telle qu'elle a été écrite — elle explique
+> ce qu'on cherchait — mais **sa conclusion est fausse**.
+>
+> **Pourquoi.** `debit_digestif` a **deux rôles opposés** :
+>
+> ```
+> satiete -= conversion / RENDEMENT   ← il VIDE l'estomac      (suit l'INGESTION)
+> energie += conversion × cofacteur   ← il FABRIQUE l'énergie  (doit suivre la DÉPENSE)
+> ```
+>
+> Le chantier l'a indexé sur l'**ingestion**. Un correctif a ensuite ajouté un plancher au
+> coût d'exister — mais ce plancher ne garantit que la survie **à l'arrêt** :
+>
+> | | conversion/tick | verdict |
+> |---|---|---|
+> | plancher (fix1) | 0,003611 | |
+> | dépense **basale** | 0,003250 | **+0,000361** ✅ agent immobile |
+> | dépense **max** | 0,005000 | **−0,001389** ❌ agent qui agit |
+> | fossile (3,00/j) | 0,007500 | +0,002500 ✅ |
+>
+> `MARGE_DIGESTIVE` s'applique, dans le régime historique, à la **DÉPENSE** — pas à
+> l'ingestion. Borner sur la dépense max ramènerait **exactement au fossile**, rendant l'axe
+> inopérant par construction.
+>
+> ⚠️ **Ce qui reste vrai** : `DEPENSE_ENERGIE_JOUR = 2.0` **est** un fossile (son propre
+> commentaire dit « calibré à 3 repas/jour ») et `taux_satiete` **est** une variable morte.
+> Mais les corriger exige de dériver **LA DÉPENSE** — l'effort mécanique et cognitif
+> réellement produit — pas le débit. **Chantier à part, à mener isolément de toute
+> modification de l'apprentissage moteur** (garder le signal du gradient causal pur).
+>
+> `DEBIT_DIGESTIF_VECU_ACTIF` et `--debit-fossile` restent comme témoins **inertes** : le
+> drapeau ne pilote plus rien, mais le retirer casserait les scripts de campagne existants.
+
+### Ce qui était cherché (conservé pour mémoire)
+
 ## Axe 2 — L'assainissement du tube digestif
 
 ### 2.1 Le fait

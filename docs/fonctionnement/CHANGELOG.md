@@ -4,6 +4,190 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.31] - 2026-08-21 — Le gradient causal et le tube digestif vivant
+
+### La politique n'apprend plus que des gestes qui ont changé quelque chose
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | feat (expérimental, `noyau.py` uniquement) |
+| **Impact** | **Critique — touche le chemin d'apprentissage de la politique** |
+
+Trois axes, **trois drapeaux d'ablation séparés** (les grouper produirait une ablation
+confondue). Conception complète :
+[chantier v41.31](../ameliorations/CHANTIER_v41.31_gradient_causal_et_tube_digestif.md).
+
+### Axe 1 — Le gradient causal
+
+```
+                    Σ_t  m_t · log π(a_t|s_t) · A_t
+perte_acteur = − ─────────────────────────────────────
+                         max(1, Σ_t m_t)
+```
+
+REINFORCE propageait le retour d'un épisode réussi sur **toutes** les actions de la
+trajectoire : un agent qui a spammé `toggle` 25 fois dans le vide voyait C1 renforcer ces
+gestes par contamination. Mesuré : **32 % des ticks stériles à 100 %**, 61,7 % au total.
+
+⚠️ **Le dénominateur est le nombre de ticks RETENUS.** Un `.mean()` naïf laisserait `T` :
+à 61,7 % de masquage, le gradient des gestes **utiles** serait divisé par ~2,6 — on aurait
+dilué l'apprentissage au lieu de le concentrer.
+
+⚠️ **Le masque ne porte QUE sur l'acteur.** Le critique estime la valeur d'un **état** (un
+état où l'agent vient de pousser un mur en a une) : le masquer le rendrait aveugle à 61,7 %
+des états et fausserait les avantages qu'il fournit à l'acteur. L'entropie pousse à explorer
+sur **tous** les états : la masquer reviendrait à n'explorer que là où l'agent bouge déjà,
+soit l'inverse du but. **JEPA non plus** : l'immobilité face à un mur est une **prédiction
+déterministe valide**, et C2 en a besoin pour planifier un contournement.
+
+⚠️ **Neutraliser n'est pas pénaliser** : gradient nul, jamais de malus — un malus serait une
+récompense en dur. L'extinction des gestes inutiles doit **émerger**.
+
+### Axe 2 — Le tube digestif suit ce que l'agent mange
+
+`debit_digestif` était figé à `DEPENSE_ENERGIE_JOUR × MARGE_DIGESTIVE = 3,0`, soit une
+vidange de **3,333 estomacs/jour identique dans les deux bras** de la campagne v41.30 quel
+que soit le besoin. C'est l'explication complète de l'invariance énergétique (`t = +1,04`,
+NS, n=20) : la vanne était verrouillée en aval.
+
+Mesuré après correctif : **3,00 → 0,86 estomac/jour**, vidange réelle 3,33 → 0,95.
+
+⚠️ `MARGE_DIGESTIVE` **reste** — borne sur un **rapport** qui garantit que le débit dépasse
+la dépense. Sous la dépense, la mort deviendrait certaine par construction.
+
+### Axe 3 — Un détecteur de stérilité unique
+
+`mur_touche` lisait `torch.equal(etat_courant, etat_suivant)` — le champ visuel partiel, qui
+peut rester identique alors que le monde a changé (hors champ) ou différer alors que rien n'a
+bougé. Mesuré : **29,9 % des ticks contre 61,7 %** pour l'invariant physique, un **facteur 2**.
+
+`mur_touche` alimente la douleur (v41.27), l'invariant alimente le gradient (v41.31) : les
+laisser diverger ferait punir **deux ensembles différents** par deux mécaniques croyant parler
+du même geste. Les deux s'alignent désormais sur :
+
+```
+transition = (pos changée) OU (dir changée) OU (portage changé)
+```
+
+⚠️ **La rotation est une transition** — elle pivote le champ de vision, c'est une acquisition
+d'information. ⚠️ **Le vecteur bio est exclu** — faim et soif dérivent à chaque tick, un
+critère les incluant ne serait **jamais** satisfait.
+
+### Un défaut attrapé au premier run de validation
+
+La ligne « Gradient causal » **n'apparaissait pas** : le `clear()` du buffer précède
+l'affichage du bilan. Corrigé en figeant le compte avant vidage. Sans le test en conditions
+réelles, la mécanique aurait été **invisible sur un run long** et son utilité indémontrable —
+exactement l'écart de la v29.0, corrigé en v29.1.
+
+⚠️ Le buffer est vidé **aux deux endroits** : `_reinitialiser_buffers_journee` **et** après
+`apprendre_journee`. Sans le second, il grossirait d'une nuit à l'autre dans la Cuve et le
+masque serait ignoré **en silence** (l'égalité de longueur échouerait).
+
+### Vérifications
+
+| test | résultat |
+|---|---|
+| **A/A** (2 runs, même graine) | ✅ **identique** |
+| Rétrocompat `.brain` v41.30 | ✅ 3 nuits complètes, 0 erreur |
+| `--gradient-non-filtre` | ✅ isole l'axe 1 (débit reste vivant) |
+| `--debit-fossile` | ✅ ramène à **3,00/jour exact** (gradient reste actif) |
+| `--detecteur-observation` | ✅ isole l'axe 3 |
+| Télémétrie | ✅ ligne console **et** 3 clés W&B |
+
+### 🔴 v41.31-fix1 — le débit a DEUX rôles opposés (rejeté par le filtre, puis corrigé)
+
+**Le banc rapide a rejeté l'axe 2 en 10 minutes.** 3 graines × 10 jours sur
+`SimpleCrossingS9N1` :
+
+| | v41.31 | témoin | écart | par graine |
+|---|---|---|---|---|
+| **énergie** | 0,12 | 0,30 | **−0,18** | **−0,2 / −0,2 / −0,2** |
+| maîtrise | 7,33 % | 8,22 % | −0,89 | −1,2 / −1,5 / 0,0 |
+| stériles | 80,8 % | 81,0 % | −0,20 | −1,0 / −1,8 / +2,2 |
+
+L'écart d'énergie est **identique sur les trois graines** : structurel, pas du bruit.
+
+**La cause — une erreur de conception de ma part.** `debit_digestif` a **deux rôles
+opposés**, et le premier jet n'en retenait qu'un :
+
+```python
+satiete -= conversion / RENDEMENT_CONVERSION   # 1. il VIDE l'estomac
+energie += conversion * cofacteur_hydrique     # 2. il FABRIQUE l'énergie
+```
+
+Raisonner « un organisme qui mange peu n'a pas le tube digestif d'un organisme qui mange
+beaucoup » ne vaut que pour le **premier** rôle. Pour le second, un débit trop petit est une
+**famine par construction** :
+
+| débit | conversion/tick | basal/tick | solde |
+|---|---|---|---|
+| 3,00/jour (fossile) | 0,007500 | 0,003250 | **+0,004250** ✅ |
+| 0,86/jour (v41.31) | 0,002150 | 0,003250 | **−0,001100** ❌ |
+
+Sous ~0,87/jour l'agent ne peut plus financer son **seul coût d'exister**, quelle que soit sa
+satiété. Aucune politique ne peut compenser.
+
+⚠️ **`MARGE_DIGESTIVE` ne suffisait pas.** Elle garantit `débit > dépense`, mais s'applique à
+un besoin devenu trop petit : **×1,5 d'un chiffre trop bas reste trop bas**. La garde était
+écrite dans le chantier et ne mordait pas — l'avoir prévue ne l'a pas rendue efficace.
+
+**Le correctif — un plancher DÉRIVÉ, jamais posé** : le coût d'exister lui-même,
+`DEPENSE_ENERGIE_JOUR × METABOLISME_BASAL_PART / RENDEMENT_CONVERSION` = **1,444/jour**, les
+trois grandeurs existant déjà. Le tube digestif peut rétrécir avec l'appétit, mais jamais au
+point de ne plus pouvoir financer le métabolisme de base — même discipline que
+`PLANCHER_POIDS_VITAL` (v34.0-fix1) : **un organisme diminué reste fonctionnel, il n'est pas
+éteint**. Vérifié : conversion 0,003611/tick contre 0,003250 de basal, solde **+0,000361**.
+
+> **Ce que le filtre démontre**, au-delà du bug : trois graines et dix minutes ont suffi à
+> attraper une faute qui aurait coûté 20 h de campagne. C'est le troisième correctif majeur
+> qu'il produit (après le monde caméléon et la taxe sur le vide de la v41.30).
+
+### ❌ v41.31-fix2 — L'AXE 2 EST RETIRÉ (le plancher ne suffisait pas non plus)
+
+Le filtre rejoué après `fix1` donne **−0,17 d'énergie sur 3/3 graines** — le plancher est
+pourtant actif (débit exactement à **1,44/jour**). J'avais borné sur **la mauvaise dépense** :
+
+| | conversion/tick | verdict |
+|---|---|---|
+| plancher fix1 | 0,003611 | |
+| dépense **basale** (à l'arrêt) | 0,003250 | **+0,000361** ✅ |
+| dépense **max** (en activité) | 0,005000 | **−0,001389** ❌ |
+| fossile (3,00/j) | 0,007500 | +0,002500 ✅ |
+
+**Le plancher garantit la survie d'un agent immobile, pas celle d'un agent qui agit.**
+
+**La prémisse de l'axe était fausse.** `MARGE_DIGESTIVE` s'applique historiquement à la
+**DÉPENSE** ; je l'ai appliquée à l'**INGESTION**. Ce ne sont pas les mêmes grandeurs, et la
+seconde ne borne rien de pertinent pour la production d'énergie. Borner sur la dépense max
+ramènerait **exactement au fossile** → axe inopérant par construction. **Retiré.**
+
+⚠️ **Ce qui reste vrai et attend son chantier** : `DEPENSE_ENERGIE_JOUR = 2.0` est bien un
+fossile, `taux_satiete` est bien morte. Mais il faut dériver **la dépense**, pas le débit —
+isolément de l'apprentissage moteur, pour ne pas polluer le signal du gradient causal.
+
+**v41.31 est donc livrée sur les axes 1 et 3 seulement.** Le débit revient à 3,00/jour
+(vérifié). Les drapeaux `--debit-fossile` / `DEBIT_DIGESTIF_VECU_ACTIF` sont conservés
+**inertes** pour ne pas casser les scripts de campagne.
+
+> **Le banc court a produit son quatrième correctif** : monde caméléon, taxe sur le vide,
+> plancher digestif, puis retrait de l'axe. 3 graines × 10 minutes, deux fois — contre 20 h
+> de campagne qui auraient surtout mesuré un handicap métabolique.
+
+### ⚠️ Aucun effet mesuré à ce stade
+
+Le code est **vérifié, pas validé**. Le banc rapide (3 graines × 10 jours sur
+`SimpleCrossingS9N1`) tourne, puis la campagne à 20 graines avec le **taux de franchissement
+du niveau 4** comme juge de paix — référence **7,5 %** (3/40 sur v41.30).
+
+⚠️ **Observation du run de test à surveiller** : le gradient ne crédite que **19 à 37 %** des
+ticks, et les gestes stériles **montent** au fil des jours (62 % → 71 % → 80 %). Trois jours
+sur `Empty-5x5` ne concluent rien, mais si la tendance se confirme, cela signifierait que
+**masquer le crédit ne suffit pas** à éteindre les gestes inutiles.
+
+---
+
 ## [v41.30-resultats] - 2026-08-21 — La campagne à n=20 : aucun effet, et l'artefact démasqué
 
 ### 40 runs × 1500 jours — le résultat est NÉGATIF, et l'analyse conditionnelle explique pourquoi
