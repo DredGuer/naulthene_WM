@@ -205,11 +205,46 @@ exactement le basal ; l'inaction coûte 65 % du tarif plein).
 
 ## Protocole
 
+### Le banc : `--env-force MiniGrid-SimpleCrossingS9N1-v0` (arbitré le 21/08)
+
+**Le mur est au niveau 4, pas au 5.** Mesuré sur la campagne v41.30 (40 runs) :
+
+| | niveau 3 | niveau 4 | **niveau 5** | niveau 6+ |
+|---|---|---|---|---|
+| DERIVE | 0 | 19 | **1** | **0** |
+| FOSSILE | 1 | 17 | **2** | **0** |
+
+**Aucun run n'a jamais dépassé le niveau 5**, et seules **3 graines sur 40 (7,5 %)** franchissent
+le 4. C'est donc le franchissement du **niveau 4** qui est le juge de paix, pas le 5.
+
+⚠️ **Le cursus complet diluerait la mesure.** Un agent passe ~300 jours à monter des paliers
+déjà acquis à 100 % (`Empty` 5×5, 6×6, 8×8) avant d'atteindre le mur : du temps de calcul qui
+rejoue du connu et ne teste rien du gradient causal. C'est exactement le défaut corrigé pour la
+nociception v41.25, où la lave n'apparaissait que sur 0,3 % des ticks du cursus.
+
+Sur banc forcé, `SimpleCrossing` est un problème **pur** de contournement d'obstacle et de
+collision avec les parois — le terrain d'épreuve exact du masquage des non-transitions, qui
+s'exerce alors sur **100 % des ticks**. Verdict en quelques heures au lieu de 20.
+
+⚠️ **Puissance statistique** : à un taux de base de 7,5 %, l'intervalle de Wilson à n=20 reste
+large. Il faudra que v41.31 **double ou triple** le taux pour être détectable — c'est la
+situation que la règle de mesure §2 décrit (« 20 graines détectent un effet qui double le
+taux »). Un effet plus fin exigerait 40 graines.
+
+### Les étapes
+
+0. **Clôture v41.30** : analyse n=20 (globale **puis** conditionnelle au régime atteint),
+   archivage des 40 cerveaux dans `brains/old_V4130_constantes_fossiles/`
 1. A/A avant tout A/B (règle de mesure §1)
 2. Banc d'isolation court (3 graines × 10 jours) comme filtre rapide — il a détecté la faute
    du monde caméléon en 20 minutes
-3. **Puis 20 graines**, un drapeau d'ablation **par axe** (les deux sont indépendants, mais
+3. **Puis 20 graines sur banc forcé**, juge de paix = **taux de franchissement du niveau 4**
+   (référence 7,5 %), avec le niveau atteint comme mesure directe. Un drapeau d'ablation
+   **par axe** (les deux sont indépendants, mais
    les grouper rendrait impossible d'attribuer un effet)
-4. ⚠️ **Ne jamais annoncer une significativité sur un run en cours** — leçon du 20/08 : le
+4. Si le banc forcé montre que le mur cède, **valider sur le cursus complet 1500 jours** —
+   le forçage prouve qu'une mécanique marche là où elle s'applique, pas qu'elle ne nuit pas
+   ailleurs.
+5. ⚠️ **Ne jamais annoncer une significativité sur un run en cours** — leçon du 20/08 : le
    ratio C2/C1 donnait `t = +3,68` sur 5/5 graines au jour 1046 et `t = +1,93` sur 3/5 au
    jour 1479
