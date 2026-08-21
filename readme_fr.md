@@ -7,7 +7,7 @@ La vue, l'ouïe, le toucher, l'odorat, le goût, le contrôle moteur, un modèle
 épisodique et la parole lisent et écrivent tous dans **un seul bus latent**. Ajouter un sens, c'est
 ajouter des dimensions à un vecteur — pas greffer un sous-système.
 
-**55 232 paramètres. 0,21 Mo.** Un seul `nn.Module`, douze couches, mille trois cents jours
+**55 552 paramètres. 0,21 Mo.** Un seul `nn.Module`, douze couches, mille trois cents jours
 simulés de vie continue.
 
 ### Ce que ce projet a vocation à devenir
@@ -65,7 +65,7 @@ datacenter.*
 | `porte_auditive` (130 → 64) | 8 320 |
 | `hippocampe` (128 → 64) | 8 192 |
 | `fusion_memoire` (128 → 64) | 8 192 |
-| `integrateur_bio` (100 → 64) — 5 sens + homéostasie | 6 400 |
+| `integrateur_bio` (105 → 64) — 5 sens + homéostasie | 6 720 |
 | `generateur_attente` (72 → 64) — modèle du monde JEPA | 4 608 |
 | `generateur_attente_audio` (72 → 64) | 4 608 |
 | `analyseur` (64 → 64) | 4 096 |
@@ -73,13 +73,25 @@ datacenter.*
 | `tete_vocale` (64 → 8) | 512 |
 | `tete_requete` (64 → 5) — routage C3 | 320 |
 | `cortex_prefrontal` (64 → 1) — C2 | 64 |
-| **Total** | **55 232** (0,21 Mo en fp32) |
+| **Total** | **55 552** (0,21 Mo en fp32) |
+
+> ⚠️ **Corrigé le 21/08/2026.** Ce tableau annonçait **55 232** avec `integrateur_bio` à
+> 100→64. La thermoception (v41.11) avait fait passer le vecteur bio de 36 à **41** dimensions,
+> donc la couche est **105→64** et le total **+320**. Le compte n'avait pas été refait depuis.
+> Recompté par `sum(p.numel() for p in agent.parameters())`, jamais estimé. Démontage complet :
+> [anatomie du noyau](docs/etat_des_lieux/21082026_anatomie_du_noyau.md).
+>
+> **Ce que la répartition révèle** : **C2 — la délibération — pèse 64 paramètres sur 55 552,
+> soit 0,1 % du cerveau.** Toute la délibération tient dans une projection 64→1. À rapprocher
+> du résultat d'ablation (« couper C2 ne change le score de 0,0 point ») : ce n'est peut-être
+> pas que C2 soit inutile, c'est qu'il est *minuscule*. À l'inverse, l'hémisphère audio pèse
+> **13 440 paramètres (24 %)** pour une faculté qu'aucun niveau du cursus n'exerce.
 
 ### Face aux baselines MiniGrid — **la thèse ne tient PAS sur la taille**
 
 | Architecture | Paramètres | Rapport |
 |---|---|---|
-| `rl-starter-files` CNN acteur-critique | 19 384 | Naulthène est **2,85× plus lourd** |
+| `rl-starter-files` CNN acteur-critique | 19 384 | Naulthène est **2,87× plus lourd** |
 | PPO `MlpPolicy` (défaut SB3) | 27 784 | Naulthène est **1,99× plus lourd** |
 | `rl-starter-files` CNN + LSTM | 52 664 | Naulthène est à **1,05×** — parité |
 
@@ -90,7 +102,7 @@ Deux nuances, mesurées et non rhétoriques :
 
 1. **La comparaison n'est pas à périmètre égal.** 24 768 de ces paramètres (45 %) achètent ce
    qu'aucun baseline MiniGrid n'a : un hémisphère audio/vocal (13 440), un modèle du monde JEPA
-   (4 608), un intégrateur biologique à 5 sens (6 400), un port exocortex (320). Le **cœur
+   (4 608), un intégrateur biologique à 5 sens (6 720), un port exocortex (320). Le **cœur
    strictement comparable pèse 30 464 paramètres** — 1,57× un CNN, 0,58× un CNN+LSTM.
 2. **Toute affirmation d'efficience exige une comparaison à budget égal**, et cette expérience
    n'a pas été menée.

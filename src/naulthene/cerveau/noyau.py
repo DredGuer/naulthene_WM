@@ -1696,6 +1696,31 @@ class AGI_Naulthene(nn.Module):
                 # l'entropie et JEPA continuent, eux, d'apprendre.
                 n_retenus = torch.clamp(masque.sum(), min=1.0)
                 perte_acteur = -((log_probs_tensor * avantages * masque).sum() / n_retenus)
+            elif GAIN_ACTEUR_CONTROLE != 1.0:
+                # v41.31-controle — LE BRAS DE FALSIFICATION.
+                #
+                # Le masque divise par `Σ m_t` au lieu de `T`, ce qui multiplie
+                # mécaniquement le gradient de l'acteur par ~T/Σm ≈ 2,6 à 61,7 % de
+                # masquage. La question : le gain mesuré (+2,57 pts de maîtrise, +48 % de
+                # victoires, SIG à n=20) vient-il du FILTRAGE ou de cette MULTIPLICATION ?
+                #
+                # Ce bras applique le facteur SANS filtrer : `.mean()` classique, gradient
+                # ×2,6. Si le score égale celui du bras causal, le filtrage n'y est pour
+                # rien — l'agent avait juste besoin d'apprendre plus vite.
+                #
+                # ⚠️ Le facteur porte sur la PERTE, pas sur `lr` : l'optimiseur est unique
+                # pour tout le réseau, donc changer `lr` accélérerait aussi JEPA, le
+                # critique et la tête vocale — on mesurerait « apprendre plus vite
+                # partout », pas « acteur ×2,6 ».
+                #
+                # ⚠️ Vérifié au banc : Adam ABSORBE un facteur constant sur un paramètre
+                # isolé (résultats identiques à la 4ᵉ décimale, 200 pas). Le facteur n'agit
+                # que parce que le TRONC est PARTAGÉ entre l'acteur et le critique : le
+                # gradient du tronc est la somme des deux, et le rapport entre elles change.
+                # Mesuré sur un réseau jouet à tronc partagé : normes 1,14937 contre
+                # 1,09665. Le contrôle est donc valide — mais il mesure un déplacement
+                # d'équilibre acteur/critique, pas un simple « learning rate ».
+                perte_acteur = -GAIN_ACTEUR_CONTROLE * (log_probs_tensor * avantages).mean()
             else:
                 perte_acteur = -(log_probs_tensor * avantages).mean()
             perte_critique = F.mse_loss(valeurs_tensor, returns)
@@ -5230,6 +5255,9 @@ FACTEUR_ATTENUATION_LIBRE = 1.00         # déplacement libre : pénalité plein
 # causal, le tube digestif et l'unification du détecteur sont trois mécaniques distinctes ;
 # les couper ensemble produirait une ablation CONFONDUE (règle de mesure §4).
 GRADIENT_CAUSAL_ACTIF = True        # False = `.mean()` d'avant v41.31 (`--gradient-non-filtre`)
+# v41.31-controle — bras de falsification : gradient acteur ×N SANS filtrage. 1.0 = inactif.
+# Le 2.6 n'est pas posé : c'est `T / Σm` mesuré (61,7 % de ticks stériles → 1/0,383 ≈ 2,6).
+GAIN_ACTEUR_CONTROLE = 1.0
 DEBIT_DIGESTIF_VECU_ACTIF = True    # False = débit figé à 3,0/jour (`--debit-fossile`)
 UNIFIER_DETECTEUR_STERILITE = True  # False = `mur_touche` sur l'observation (`--detecteur-observation`)
 
@@ -10861,6 +10889,9 @@ if __name__ == "__main__":
     # v41.25 — témoin de la nociception thermique (voir DOULEUR_THERMIQUE_ACTIVE).
     # v41.28 — témoin du travail tenté, voir TRAVAIL_TENTE_ACTIF.
     # v41.31 — témoins des trois axes, séparés.
+    _p.add_argument("--gain-acteur", type=float, default=1.0,
+                    help="bras de contrôle v41.31 : multiplie le gradient de l'acteur "
+                         "SANS filtrer (2.6 = l'effet du dénominateur réduit)")
     _p.add_argument("--gradient-non-filtre", action="store_true",
                     help="témoin v41.30 : l'acteur apprend aussi sur les gestes stériles")
     _p.add_argument("--debit-fossile", action="store_true",
@@ -10943,6 +10974,15 @@ if __name__ == "__main__":
         print("🔬 [ABLATION] travail tenté v41.28 COUPÉ — geste stérile gratuit (v41.27)")
         from naulthene.cerveau.noyau import TRAVAIL_TENTE_ACTIF as _vt
         assert _vt is False, "l'ablation n'a pas atteint le module — campagne invalide"
+
+    if _args.gain_acteur != 1.0:
+        globals()["GAIN_ACTEUR_CONTROLE"] = float(_args.gain_acteur)
+        if _module_reel is not None:
+            _module_reel.GAIN_ACTEUR_CONTROLE = float(_args.gain_acteur)
+        print(f"🔬 [CONTRÔLE] gradient acteur ×{_args.gain_acteur} SANS filtrage")
+        import naulthene.cerveau.noyau as _mg
+        assert _mg.GAIN_ACTEUR_CONTROLE == float(_args.gain_acteur), \
+            "le contrôle n'a pas atteint le module — campagne invalide"
 
     # v41.31 — un drapeau PAR axe, même discipline : module NOMMÉ + assertion runtime.
     for _flag, _arg, _msg in (

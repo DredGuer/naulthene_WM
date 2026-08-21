@@ -6,7 +6,7 @@ Vision, hearing, touch, smell, taste, motor control, a world model, episodic mem
 all read from and write to a **single latent bus**. Adding a sense means appending dimensions to
 one vector, not bolting on a subsystem.
 
-**55,232 parameters. 0.21 MB.** One `nn.Module`, twelve layers, twelve hundred simulated days of
+**55,552 parameters. 0.21 MB.** One `nn.Module`, twelve layers, twelve hundred simulated days of
 continuous life.
 
 ### What this is meant to become
@@ -96,7 +96,7 @@ This section exists because the thesis above is only worth stating if it can be 
 | `porte_auditive` (130 → 64) | 8,320 |
 | `hippocampe` (128 → 64) | 8,192 |
 | `fusion_memoire` (128 → 64) | 8,192 |
-| `integrateur_bio` (100 → 64) — 5 senses + homeostasis | 6,400 |
+| `integrateur_bio` (105 → 64) — 5 senses + homeostasis | 6,720 |
 | `generateur_attente` (72 → 64) — JEPA world model | 4,608 |
 | `generateur_attente_audio` (72 → 64) | 4,608 |
 | `analyseur` (64 → 64) | 4,096 |
@@ -104,14 +104,26 @@ This section exists because the thesis above is only worth stating if it can be 
 | `tete_vocale` (64 → 8) | 512 |
 | `tete_requete` (64 → 5) — C3 routing ⚠️ **dead at runtime** | 320 |
 | `cortex_prefrontal` (64 → 1) — C2 | 64 |
-| **Total** | **55,232** (0.21 MB fp32) |
+| **Total** | **55,552** (0.21 MB fp32) |
+
+> ⚠️ **Corrected 21 Aug 2026.** This table previously read **55,232** with `integrateur_bio`
+> at 100→64. Thermoception (v41.11) had grown the bio vector from 36 to **41** dimensions, so
+> the layer is **105→64** and the total is **+320**. The count had not been re-measured since.
+> Recounted with `sum(p.numel() for p in agent.parameters())`, never estimated. Full teardown:
+> [anatomy of the core](docs/etat_des_lieux/21082026_anatomie_du_noyau.md).
+>
+> **What the split reveals**: **C2 — the deliberative system — is 64 parameters out of 55,552,
+> i.e. 0.1 % of the brain.** All of deliberation is one 64→1 projection. Worth holding next to
+> the ablation result ("severing C2 changes the score by 0.0 points"): perhaps C2 is not
+> useless, it is *tiny*. Meanwhile the audio hemisphere weighs **13,440 parameters (24 %)** for
+> a faculty no MiniGrid level exercises.
 
 ### Versus MiniGrid baselines — **the thesis does not yet hold on size**
 
 | Architecture | Parameters | Ratio |
 |---|---|---|
-| `rl-starter-files` CNN actor-critic | 19,384 | Naulthène is **2.85× larger** |
-| PPO `MlpPolicy` (SB3 default) | 27,784 | Naulthène is **1.99× larger** |
+| `rl-starter-files` CNN actor-critic | 19,384 | Naulthène is **2.87× larger** |
+| PPO `MlpPolicy` (SB3 default) | 27,784 | Naulthène is **2.00× larger** |
 | `rl-starter-files` CNN + LSTM | 52,664 | Naulthène is **1.05×** — parity |
 
 **Naulthène is not smaller than a standard RL baseline.** Stated plainly, because the numbers are
@@ -119,9 +131,9 @@ one `grep` away for any reader.
 
 Two caveats, both measurable rather than rhetorical:
 
-1. **The comparison is not like-for-like.** 24,768 of those parameters (45 %) buy things no
+1. **The comparison is not like-for-like.** 25,088 of those parameters (45 %) buy things no
    MiniGrid baseline has: an audio/vocal hemisphere (13,440), a JEPA world model (4,608), a
-   5-sense biological integrator (6,400), an exocortex port (320). The **strictly comparable RL
+   5-sense biological integrator (6,720), an exocortex port (320). The **strictly comparable RL
    core is 30,464 parameters** — 1.57× a CNN baseline, 0.58× a CNN+LSTM.
 2. **Efficiency claims require equal-budget comparison**, and that experiment has not been run.
 
@@ -258,7 +270,7 @@ This is the table that would decide whether the architecture is *efficient* or m
 |---|---|---|---|---|
 | PPO CNN (`rl-starter-files`) | 19,384 | — | — | — |
 | PPO + LSTM | 52,664 | — | — | — |
-| **Naulthène** | **55,232** | **44.7 %** (v41 bench, 300 ep.) | — | **never reached** |
+| **Naulthène** | **55,552** | **44.7 %** (v41 bench, 300 ep.) | — | **never reached** |
 
 Across **20 seeds × 1500 simulated days** on a reproducible bench, **100 % [84–100]** of
 agents reach level 4 of the 15-level curriculum, and **20 % [8–42]** now hold level 5 — up
@@ -611,7 +623,7 @@ What that means concretely:
 - Two of three benchmark tables are filled; the one that matters most (equal-budget comparison
   against PPO) **has not been run**.
 - The thesis defended here is **unification**, which is measured. Lightness is *not* yet
-  demonstrated — Naulthène is currently 2.85× heavier than a PPO CNN baseline, and this README
+  demonstrated — Naulthène is currently 2.87× heavier than a PPO CNN baseline, and this README
   says so.
 
 Everything that is broken is written down, including the diagnostic errors made along the way.
