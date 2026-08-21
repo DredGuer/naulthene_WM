@@ -121,6 +121,7 @@ Deux nuances, mesurées et non rhétoriques :
 | Mécaniques cognitives ayant amélioré quoi que ce soit | **1 sur 12 testées** — le brain-sparing |
 | Effet d'agrandir le cerveau (96 → 160 → 512 dims) | **aucun** sur 3 campagnes — et l'énergie chute ×11 |
 | **Pourquoi ça plafonne au niveau 4** | **Pas cognitif — métabolique.** `maîtrise ~ énergie moyenne` : **r = +0,710**, `t = +2,85` (SIG, n=10). Trois **constantes posées** calibrent le rythme métabolique sur un agent *neuf* : le code suppose **4 épisodes/jour**, l'agent en joue **1,55**, et l'écart **se creuse** au fil du run (×1,68 → ×2,58). **9 graines sur 10 sont au plafond exact `PATIENCE_MAX = 350`** |
+| **Premier effet cognitif qui marche** | **v41.31 — le gradient causal.** Masquer le gradient de l'acteur sur les non-transitions (dénominateur `Σ m_t`, critique/entropie/JEPA intacts) : maîtrise **+2,57 pts** (`t = +2,68`), victoires **+48 %** (55,0 contre 37,3), n=20 sur banc forcé `SimpleCrossing`. **Bras de falsification rejeté** : amplifier le gradient de l'acteur ×2,70 *sans* filtrer ne donne **rien** (`p = 0,502`) — c'est bien le **filtrage**, pas le gain. ⚠️ Les gestes stériles ne baissent **pas**, et **0/20** graines atteignent le seuil des 60 % |
 | Leviers qui ont marché | **3 — deux propriétés du monde, une de la décision** |
 
 Un PPO standard résout `Empty-8x8` en quelques milliers d'épisodes. **Naulthène, non.**

@@ -4,6 +4,101 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.31-resultats] - 2026-08-21 — Le premier effet cognitif du projet, et sa falsification
+
+### Trois bras, n=20 : le gradient causal fonctionne, et ce n'est PAS un artefact
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | docs (mesure) |
+| **Impact** | **Majeur — premier effet cognitif positif et significatif du projet** |
+
+Banc forcé `SimpleCrossingS9N1`, 400 jours, **60 runs** (3 bras × 20 graines appariées).
+
+| | CAUSAL | CTRL ×2,7 | TEMOIN |
+|---|---|---|---|
+| **maîtrise** | **7,44 %** | 5,37 % | 4,87 % |
+| **victoires** | **55,0** | 40,0 | 37,3 |
+| stériles | 63,17 % | 65,15 % | 63,60 % |
+| énergie | 0,26 | 0,24 | 0,25 |
+
+### Le test de falsification — hypothèse REJETÉE
+
+Le masque divise par `Σ m_t` au lieu de `T`, ce qui multiplie mécaniquement le gradient de
+l'acteur par **T/Σm ≈ 2,70** (médiane mesurée sur 8000 jours). L'objection : le gain
+vient-il du **filtrage** ou de cette **multiplication** ?
+
+Le bras `CTRL` applique le facteur **sans filtrer** — `.mean()` classique, gradient ×2,70.
+
+| comparaison | maîtrise | t | permutation | verdict |
+|---|---|---|---|---|
+| **CAUSAL vs TEMOIN** | **+2,57** | **+2,68** | **p = 0,015** | **SIG** |
+| **CAUSAL vs CTRL** | **+2,06** | **+2,23** | **p = 0,036** | **SIG** |
+| CTRL vs TEMOIN | +0,50 | +0,69 | p = 0,502 | **NS** |
+
+| comparaison | victoires | t | verdict |
+|---|---|---|---|
+| **CAUSAL vs TEMOIN** | **+17,8** | **+2,61** | **SIG** |
+| **CAUSAL vs CTRL** | **+15,0** | **+2,22** | **SIG** |
+| CTRL vs TEMOIN | +2,8 | +0,51 | **NS** |
+
+> 🎯 **Le simple gain de gradient n'explique rien** (`CTRL ≈ TEMOIN`, `p = 0,502`). **C'est
+> bien le FILTRAGE de l'information qui produit l'effet.** L'hypothèse de l'artefact
+> mathématique est réfutée par la mesure.
+
+`IC95` de CAUSAL vs CTRL : **[+0,13 ; +4,00]** — zéro exclu, mais **de justesse**. Confirmé
+par un test de **permutation** (20 000 tirages, sans hypothèse de normalité) : `p = 0,0357`.
+
+⚠️ Le **test des signes** est NS (14/20, `p = 0,115`) : l'effet est porté par l'**amplitude**
+de quelques graines (g3 +11,2 · g11 +8,2 · g9 +7,0) plus que par une majorité écrasante.
+6 graines sur 20 vont dans l'autre sens. C'est un effet **réel mais hétérogène**.
+
+### Une vérification technique qui a changé la lecture
+
+Avant de lancer le contrôle, j'ai testé si un facteur constant sur la perte fait ce qu'on
+croit. **Adam l'ABSORBE entièrement** sur un paramètre isolé : `w` identique à la 4ᵉ décimale
+après 200 pas, facteur 1,0 ou 2,6. Un « learning rate ×2,6 » ne produit littéralement rien.
+
+Le facteur n'agit que parce que le **TRONC est PARTAGÉ** entre l'acteur et le critique : le
+gradient du tronc est la **somme** des deux, et amplifier l'un change leur **rapport**.
+Mesuré sur un réseau jouet à tronc partagé : normes 1,14937 contre 1,09665.
+
+Le contrôle mesure donc un **déplacement d'équilibre acteur/critique**, pas une accélération.
+C'est ce qui le rend pertinent — et son échec (`p = 0,502`) d'autant plus informatif.
+
+### ⚠️ Ce que l'effet n'est PAS
+
+**1. Les gestes stériles ne baissent pas.** 63,17 % contre 63,60 %, `t = −0,81`, 8/20. Le
+mécanisme améliore la performance **sans réduire les gestes inutiles**. Ce n'est pas ce que la
+théorie prédisait : le crédit se concentre mieux, mais l'agent ne joue pas moins de gestes
+vides. Cela confirme le diagnostic v41.28 — l'agent ne les joue pas *par choix*, mais par
+**bruit d'exploration résiduel**.
+
+**2. Le mur tient.** **0/20 graines** atteignent les 60 % de maîtrise, dans les trois bras. La
+tendance d'apprentissage est identique (CAUSAL +4,17 pts du 1er au 3e tiers, TEMOIN +4,21) :
+CAUSAL est **meilleur en niveau**, pas **plus rapide en progression**.
+
+**3. Le juge de paix prévu est inopérant.** `--env-force` court-circuite le cursus : le niveau
+reste à 1/15 **par construction** dans les trois bras. Vérifié que la carte était bien
+`SimpleCrossingS9N1` (ligne `[BANC]`, 42 ressources = grande carte) — c'est le libellé qui est
+cosmétique, pas le forçage. Le taux de franchissement **ne peut pas** être mesuré sur ce banc.
+Défaut de protocole non anticipé ; la maîtrise et les victoires y suppléent.
+
+### Ce que ça vaut
+
+**Premier effet cognitif positif et significatif du projet.** Sur 14 mécaniques cognitives
+testées, une seule avait jamais amélioré quoi que ce soit (le brain-sparing v41.16), et les
+deux seuls leviers qui marchaient étaient des propriétés du **monde**. Celui-ci est une
+propriété de **l'apprentissage**.
+
+⚠️ **Ce qu'il faut encore** : le banc forcé prouve qu'une mécanique marche **là où elle
+s'applique**, pas qu'elle ne nuit pas ailleurs (leçon v41.25, dont la nociception marchait sur
+`LavaGap` et coûtait 25 % de récolte partout). **Validation sur le cursus complet 1500 jours
+requise** avant toute affirmation générale.
+
+---
+
 ## [v41.31] - 2026-08-21 — Le gradient causal et le tube digestif vivant
 
 ### La politique n'apprend plus que des gestes qui ont changé quelque chose
