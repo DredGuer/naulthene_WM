@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `443dc32` |
 | **Catégorie** | feat (expérimental, `noyau.py` uniquement) |
 | **Impact** | **Critique — touche le chemin d'apprentissage de la politique** |
 
