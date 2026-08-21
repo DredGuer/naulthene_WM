@@ -544,12 +544,20 @@ What that means concretely:
   [Investigation](docs/recherche/METABOLISME_20082026_la_variable_morte.md).
 - **After both fixes the sign flips: +0.0567** (0.3567 derived vs 0.3000 fossil), **3 seeds out
   of 3** favourable. ⚠️ **`t = +1.64` at n=3 is NOT significant** (threshold 4.30).
-- **The 1500-day campaign then found nothing.** Over 1479 paired days × 5 seeds: energy
-  **+0.027 (`t = +1.40`, NS)**, mastery **+0.37 (NS)**, C2/C1 ratio **+0.474 (`t = +1.93`, NS,
-  3/5 seeds)**. ⚠️ A mid-run reading at day 1046 showed `t = +3.68` on 5/5 seeds and was
-  reported as significant — **it did not hold**: by day 1479 two seeds had flipped negative.
-  A `t` computed on a running job is a snapshot, not a measurement. Corrected here rather than
-  quietly dropped.
+- **The full campaign found nothing — n=20, 40 runs × 1500 days.** The project's first
+  measurement actually at its own 20-seed bar: energy **+0.011 (`t = +1.04`)**, vigour
+  **+0.003**, mastery **+0.33**, C2/C1 ratio **+0.088 (`t = +0.63`, 9/20 seeds)**. All NS.
+- **And the conditional analysis unmasked an artefact.** Splitting pairs by whether both arms
+  reached the *same* level: **at equal regime (16 pairs) the effect vanishes and turns slightly
+  negative — −0.065, `t = −0.44`, 5/16 favourable**. The four divergent pairs carry the entire
+  positive gap. **Proof by sign**: in 3 of those 4, it is FOSSIL that holds the higher level,
+  and the gap stays positive anyway — if the effect came from the arm, the sign would flip. It
+  never does. What raises the C2/C1 ratio is being on a *different level from your twin*, not
+  being in the derived arm. Level-4 crossing: **1/20 vs 2/20**, Fisher exact **p = 1.000**, and
+  **no run out of 40 ever passed level 5**.
+  ⚠️ At day 1046 on 5 seeds this same ratio showed `t = +3.68` on 5/5 and was reported as
+  significant. It did not hold. **A `t` computed on a running job is a snapshot, not a
+  measurement** — corrected here rather than quietly dropped.
   [Design note](docs/ameliorations/EPISODES_REFERENCE_20082026_la_derniere_constante_posee.md).
 - **But it has not learned danger.** On the four level-5 brains, the learned valence of
   lava is **positive** (+0.068 to +0.081) and indistinguishable from water (+0.060 to

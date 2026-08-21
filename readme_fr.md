@@ -414,12 +414,23 @@ promotion** : vérifié, vider la fenêtre glissante laisse la patience inchang�
 > `.brain` sans erreur.
 > ⚠️ **`t = +1,64` à n=3 — NON SIGNIFICATIF** (seuil 4,30).
 >
-> 🔴 **Et la campagne à 1500 jours n'a rien trouvé.** Sur 1479 jours appariés × 5 graines :
-> énergie **+0,027 (`t = +1,40`, NS)**, maîtrise **+0,37 (NS)**, ratio C2/C1 **+0,474
-> (`t = +1,93`, NS, 3/5 graines)**. ⚠️ Une lecture à mi-parcours (jour 1046) donnait
-> `t = +3,68` sur 5/5 graines et a été annoncée comme significative — **elle n'a pas tenu** :
-> au jour 1479, deux graines étaient repassées en négatif. Un `t` calculé sur un run EN COURS
-> est un instantané, pas une mesure. Corrigé ici plutôt que discrètement retiré.
+> 🔴 **Et la campagne complète n'a rien trouvé — n=20, 40 runs × 1500 jours.** Première mesure
+> du projet réellement au seuil des 20 graines : énergie **+0,011 (`t = +1,04`)**, vigueur
+> **+0,003**, maîtrise **+0,33**, ratio C2/C1 **+0,088 (`t = +0,63`, 9/20 graines)**. Tout NS.
+>
+> 🎯 **Et l'analyse conditionnelle démasque un ARTEFACT.** En séparant les paires selon que les
+> deux bras atteignent le **même** palier : **à régime égal (16 paires), l'effet disparaît et
+> devient légèrement négatif — −0,065, `t = −0,44`, 5/16 favorables**. Les 4 paires divergentes
+> portent **tout** l'écart positif. **Preuve par le signe** : dans 3 de ces 4 cas, c'est
+> **FOSSILE** qui détient le niveau supérieur, et l'écart reste positif quand même — si l'effet
+> venait du bras, le signe s'inverserait. Il ne s'inverse jamais. Ce qui fait monter le ratio
+> C2/C1, c'est d'être sur un palier **différent de son jumeau**, pas d'être dans le bras dérivé.
+> Franchissement du niveau 4 : **1/20 contre 2/20**, Fisher exact **p = 1,000**, et **aucun run
+> sur 40 n'a dépassé le niveau 5**.
+>
+> ⚠️ Au jour 1046 sur 5 graines, ce même ratio donnait `t = +3,68` sur 5/5 et a été annoncé
+> comme significatif. Il n'a pas tenu. **Un `t` calculé sur un run EN COURS est un instantané,
+> pas une mesure** — corrigé ici plutôt que discrètement retiré.
 
 ⚠️ **Le sens de la correction n'est PAS tranché.** Suivre la patience réelle ferait *baisser*
 le besoin (2,80 → ~1,1/axe), donc **moins** de sources — alors que l'énergie est déjà au

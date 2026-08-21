@@ -4,6 +4,97 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.30-resultats] - 2026-08-21 — La campagne à n=20 : aucun effet, et l'artefact démasqué
+
+### 40 runs × 1500 jours — le résultat est NÉGATIF, et l'analyse conditionnelle explique pourquoi
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | docs (mesure) |
+| **Impact** | **Mesure — n=20, au seuil du projet** |
+
+**Première campagne du projet réellement à n=20 par bras**, 40 runs terminés à j1500.
+
+| | DERIVE | FOSSILE | écart | t | graines+ |
+|---|---|---|---|---|---|
+| énergie | 0,236 | 0,225 | +0,011 | +1,04 NS | 14/20 |
+| vigueur | 0,186 | 0,183 | +0,003 | +0,62 NS | 12/20 |
+| accord C1/C2 | 15,39 % | 18,43 % | −3,04 | −1,10 NS | 10/20 |
+| ratio C2/C1 | 2,673 | 2,585 | +0,088 | +0,63 NS | **9/20** |
+| maîtrise | 15,16 % | 14,83 % | +0,33 | +0,25 NS | 10/20 |
+
+**Rien n'est significatif** (seuil 2,09). Le ratio C2/C1 — seul indicateur qui semblait porteur
+à mi-parcours — tombe à `t = +0,63` avec **9 graines favorables sur 20**, soit moins que le
+hasard.
+
+### 🎯 L'analyse conditionnelle démasque un ARTEFACT
+
+Grille de lecture posée avant la mesure (§1.7 du chantier v41.31) : séparer les paires selon
+que les deux bras atteignent le **même** palier ou non.
+
+| | n | écart | t | favorables |
+|---|---|---|---|---|
+| **À régime ÉGAL** | **16** | **−0,065** | **−0,44** | **5/16** |
+| Niveaux différents | 4 | +0,70 | — | 4/4 |
+
+**À palier identique, l'effet disparaît et devient même légèrement négatif.** Les 4 paires
+divergentes portent **tout** l'écart positif :
+
+```
+g1  : DERIVE niv5 vs FOSSILE niv4  →  +1,228
+g3  : DERIVE niv4 vs FOSSILE niv5  →  +0,602
+g19 : DERIVE niv4 vs FOSSILE niv5  →  +0,362
+g20 : DERIVE niv4 vs FOSSILE niv3  →  +0,612
+```
+
+**La preuve par le signe.** Dans **3 cas sur 4**, c'est **FOSSILE** qui détient le niveau
+supérieur — et l'écart reste **positif** quand même. Si l'effet venait du bras, le signe
+devrait s'inverser ; il ne s'inverse jamais.
+
+> Ce qui fait monter le ratio C2/C1, c'est d'être sur un palier **différent de son jumeau**,
+> pas d'être dans le bras DERIVE. Le `+0,088` global est un artefact de divergence de
+> trajectoire.
+
+La grille conditionnelle avait été conçue pour éventuellement **sauver** un effet noyé dans
+la variance ; elle a servi à en **écarter** un. C'est le bon usage.
+
+### Le franchissement du niveau 4 — mesure directe
+
+| | franchissent | IC95 (Wilson) |
+|---|---|---|
+| DERIVE | **1/20 = 5 %** | [1–24] |
+| FOSSILE | **2/20 = 10 %** | [3–30] |
+
+`Fisher exact p = 1,000` — aucune différence. **Aucun run n'a dépassé le niveau 5 sur 40.**
+
+⚠️ Le taux de référence pour la suite est donc **7,5 %** (3/40), avec des intervalles très
+larges : tout levier futur devra **doubler ou tripler** ce taux pour être détectable à n=20.
+
+### Ce que la v41.30 apporte malgré tout
+
+Le résultat est négatif **sur la performance**, mais la version n'est pas à jeter :
+
+1. **Trois constantes fossiles supprimées** — le dogme est respecté là où il ne l'était pas
+2. **Deux fautes de conception corrigées** : le *monde caméléon* (biotope indexé sur le
+   métabolisme) et la *taxe sur le vide* (portion dérivée du rythme : ×4 le coût digestif
+   pour 68 % du repas jeté)
+3. **La patience redevenue vivante** — elle atteint **360 ticks**, au-dessus de l'ancien
+   plafond de 350 que le régime fossile ne pouvait structurellement pas franchir
+4. **Une variable morte découverte** : `taux_satiete`, et avec elle le vrai régulateur
+   `DEBIT_DIGESTIF_JOUR`
+
+Ce dernier point explique le résultat nul sur l'énergie : **le levier n'était pas branché**.
+C'est l'axe 2 de la v41.31.
+
+### Leçon de méthode conservée
+
+À j1046 sur 5 graines, le ratio C2/C1 donnait `t = +3,68` sur **5/5** et a été annoncé comme
+« premier résultat significatif ». À j1479 : `t = +1,93` sur 3/5. À n=20 complet : `t = +0,63`
+sur 9/20. **Un `t` calculé sur un run en cours est un instantané, pas une mesure.**
+
+---
+
 ## [purge-cosmologie] - 2026-08-20 — Réécriture de l'historique et remise à jour des hash
 
 ### Les travaux de cosmologie sortent de git, et tous les hash cités sont recalculés
