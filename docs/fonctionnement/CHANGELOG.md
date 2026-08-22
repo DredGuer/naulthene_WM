@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `91a8005` |
 | **Catégorie** | docs (mesure) |
 | **Impact** | **Majeur — falsification du résultat v41.31 hors banc forcé** |
 
@@ -93,7 +93,7 @@ directement dans `brains/<campagne>/`.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `91a8005` |
 | **Catégorie** | docs (mesure) |
 | **Impact** | **Critique — crédibilité, vérifiable en une commande** |
 
