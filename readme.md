@@ -6,8 +6,10 @@ Vision, hearing, touch, smell, taste, motor control, a world model, episodic mem
 all read from and write to a **single latent bus**. Adding a sense means appending dimensions to
 one vector, not bolting on a subsystem.
 
-**55,552 parameters. 0.21 MB.** One `nn.Module`, twelve layers, twelve hundred simulated days of
-continuous life.
+**55,552 parameters at birth. 0.21 MB.** One `nn.Module`, twelve layers, twelve hundred
+simulated days of continuous life. ⚠️ **That figure is a NEWBORN brain**: neurogenesis grows it
+during life, and a brain at 1500 days averages **1,241,790 parameters — 22.4×** (measured over
+35 brains, see below).
 
 ### What this is meant to become
 
@@ -117,17 +119,36 @@ This section exists because the thesis above is only worth stating if it can be 
 > the ablation result ("severing C2 changes the score by 0.0 points"): perhaps C2 is not
 > useless, it is *tiny*. Meanwhile the audio hemisphere weighs **13,440 parameters (24 %)** for
 > a faculty no MiniGrid level exercises.
+>
+> 🔴 **And neurogenesis makes it worse — structurally.** Measured over 35 brains at 1500 days:
+> C2 *is* multiplied by 13 (64 → 833), yet its **share falls from 0.115 % to 0.067 %** because
+> the trunk grows **2.2× faster**. The cause is geometry, not a tunable: when `dim_bus` goes
+> 16 → 154, a `bus→bus` layer grows as **N²** while a `bus→1` head grows as **N**
+> (`hippocampe` ×28.9 vs `cortex_prefrontal` ×13.0). **Every neurogenesis event dilutes C2.**
+> There is no constant to fix — rebalancing would require *non-uniform* growth, letting what
+> the agent lived decide **where** the brain grows.
 
 ### Versus MiniGrid baselines — **the thesis does not yet hold on size**
 
 | Architecture | Parameters | Ratio |
 |---|---|---|
-| `rl-starter-files` CNN actor-critic | 19,384 | Naulthène is **2.87× larger** |
-| PPO `MlpPolicy` (SB3 default) | 27,784 | Naulthène is **2.00× larger** |
-| `rl-starter-files` CNN + LSTM | 52,664 | Naulthène is **1.05×** — parity |
+| `rl-starter-files` CNN actor-critic | 19,384 | **2.87×** at birth · **64.1×** at 1500 d |
+| PPO `MlpPolicy` (SB3 default) | 27,784 | **2.00×** at birth · **44.7×** at 1500 d |
+| `rl-starter-files` CNN + LSTM | 52,664 | **1.05×** at birth · **23.6×** at 1500 d |
 
 **Naulthène is not smaller than a standard RL baseline.** Stated plainly, because the numbers are
 one `grep` away for any reader.
+
+> 🔴 **And the birth figure flatters the architecture.** Measured 22 Aug 2026 over **35 brains at
+> 1500 days**: `dim_bus` grows from **16 to 139** on average (max 160) and the total reaches
+> **1,241,790 parameters**, i.e. **22.4×** its birth size. An RL baseline keeps the size it was
+> given. **The honest comparison on a trained agent is therefore 64×, not 2.87×** — and it comes
+> with a hard block at level 4/15.
+>
+> The cost buys nothing measurable: the heaviest brain in the campaign (1,570,648) and the
+> lightest (402,712) both end at **the same level**, size correlates with level at
+> **r = −0.17 (t = −1.01, n = 35, not significant)**, and neurogenesis has been extinct for
+> **882 days on average**.
 
 Two caveats, both measurable rather than rhetorical:
 
@@ -145,16 +166,32 @@ Two caveats, both measurable rather than rhetorical:
 | Level 5 | **4 seeds out of 20** — 20 % [8–42], and the level is **held** (up to 1078 nights on it) |
 | What unlocked level 4 | **brain-sparing**: 0 % [0–16] → 80 % [58–92], 18 wins / 0 losses (p < 0.001) |
 | Effect of severing C2 on the score | **0.0 points across all 6 levels** (78 cells) — and on `LavaGap`, severing it **triples** the success rate |
+| Learned valence of **water** | **+0.017 — below bare floor (+0.125)**, over ~7,800 confirmations, 10/10 brains. The agent drinks constantly and learns **nothing** from it. Same signature as the v41.7 bug (food valence stuck at zero over 4,004 meals): a suspiciously clean result on a high-volume channel. **Possibly a severed channel — unverified** |
+| Nights spent at **exactly zero satiety** | **82–87 %** in this campaign, and **78–100 % across every campaign in the repo**, all arms, all versions. ~38 % of ticks in the critical zone, `reserve = 0.000` on every brain measured. Yet surplus is arithmetically reachable (**+0.0025**/tick on a full stomach) — the stomach simply never stays full. To be read next to `mastery ~ energy`, **r = +0.710** |
 | Learned valence of lava | **+0.072 — POSITIVE**, barely distinct from water (+0.069). Nociception (v41.25) flips it to **−0.761 on 20/20 seeds** — but survival **drops** 8.6 % → 6.7 %, because pain was **non-zero everywhere** (77 % of cells) and the agent fled its own food supply (**−25 % harvest**, two maps). Graded pain (v41.26) under test |
 | Cognitive mechanisms that improved anything | **1 out of 14 tested** — brain-sparing. Three pain models (v41.25/26/27) changed behaviour by **0 pt** (`t = −1.51`, n=20) |
 | Navigation on an empty 5×5 room | **54.4 %** after 300 days vs **39.2 %** for a random policy *over the same 7 actions* — the agent **beats chance by 15 pts** |
 | Ticks spent on gestures that change nothing (`Empty-5x5`) | **57.2 %** — because a sterile gesture cost **1.09** against **4.00** for the one gesture that moves toward the goal. **v41.28** charges the work *attempted*: pushing a wall now costs a full step. **Measured (n=20): −2.5 pts, `t = −1.71`, not significant** — the cost was not the lever |
 | Effect of growing the brain (96 → 160 → 512 dims) | **none** across 3 campaigns — and energy drops 11× |
 | **Why it plateaus at level 4** | **Not cognitive — metabolic.** `mastery ~ mean energy`: **r = +0.710**, `t = +2.85` (SIG, n=10). Three **posed constants** calibrate the metabolic rhythm for a *newborn* agent: the code assumes **4 episodes/day**, the agent plays **1.55**, and the gap **widens** over the run (×1.68 → ×2.58). **9 seeds out of 10 sit at the exact `PATIENCE_MAX = 350` ceiling** |
-| **First cognitive effect that works** | **v41.31 — the causal gradient.** Masking the actor's gradient on non-transitions (`Σ m_t` denominator, critic/entropy/JEPA untouched): mastery **+2.57 pts** (`t = +2.68`), wins **+48 %** (55.0 vs 37.3), n=20 on a forced `SimpleCrossing` bench. **Falsification arm rejected**: amplifying the actor's gradient ×2.70 *without* filtering gives **nothing** (`p = 0.502`) — it is the **filtering**, not the gain. ⚠️ Sterile gestures do **not** drop, and **0/20** seeds reach the 60 % gate |
+| **v41.31 — the causal gradient** | Masking the actor's gradient on non-transitions gave mastery **+2.57 pts** (`t = +2.68`) on a **forced** `SimpleCrossing` bench, n=20. 🔴 **It does not survive the full curriculum.** 20 paired seeds × 1500 days, free curriculum (40 runs): level **+0.05 (`t = +0.37`)**, mastery **+1.09 (`t = +0.39`)**, energy **+0.001 (`t = +0.07`)** — all NS, and **0 of 40 runs pass level 5**. A forced bench proves a mechanic works *where it applies*, never that it helps elsewhere |
 | Levers that did work | **3 — two properties of the world, one of the decision** |
 
 A standard PPO solves `Empty-8x8` in a few thousand episodes. **Naulthène currently does not.**
+
+> 🔴 **The causal gradient falsified on the full curriculum (22 Aug 2026).** 20 paired seeds
+> × 1500 days, free 15-level curriculum, **40 runs all complete**. Level: **4.10 vs 4.05**
+> (`t = +0.37`, 4 wins / 13 ties / 3 losses). Mastery: **+1.09** (`t = +0.39`, 9/20 seeds).
+> Energy: **+0.001**. **Not one run out of 40 passes level 5.**
+>
+> ✅ **The "never report a `t` on a running job" rule paid off.** At 5 seeds mid-campaign the
+> mastery gap read **+4.95**; at 20 seeds it is **+1.09** — divided by 4.5. The figure was
+> never published, so nothing had to be retracted. Same shape as the C2/C1 ratio
+> (`t = +3.68` mid-run → `t = +0.63` final).
+>
+> The one metric above `t = 2` — minimum satiety, `Δ = +0.032`, `t = +2.17` — **fails
+> Bonferroni** across the 3 metrics tested (threshold `t ≈ 2.86`; corrected p ≈ 0.13).
+> [Full write-up](docs/etat_des_lieux/22082026_campagne_v41.31_cursus_complet.md).
 
 > 🔴 **The clearest measurement in this repository (20 Aug 2026).** On `Empty-5x5` — an
 > empty room, no hazard, goal 4 cells away — the agent **does learn**: mastery climbs

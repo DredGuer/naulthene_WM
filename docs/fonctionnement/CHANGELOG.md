@@ -4,6 +4,198 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.31-cursus] - 2026-08-22 — Le gradient causal NE SURVIT PAS au cursus complet
+
+### 40 runs, n=20 apparié, 1500 jours : effet nul sur le niveau
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | docs (mesure) |
+| **Impact** | **Majeur — falsification du résultat v41.31 hors banc forcé** |
+
+Le banc forcé v41.31 avait donné **+2,57 pts de maîtrise** (`t=+2,68`) sur
+`SimpleCrossingS9N1`. Mais un banc forcé bloque le niveau à 1/15 par construction : « niveau
+atteint » y est inopérant. Campagne de validation sur **cursus libre**, 15 niveaux.
+
+**CAUSAL** (v41.31 nominal) vs **TEMOIN** (`--gradient-non-filtre --detecteur-observation`),
+20 graines appariées × 1500 jours = **40 runs, tous complets**.
+
+| métrique | CAUSAL | TEMOIN | Δ | t | favorable |
+|---|---|---|---|---|---|
+| **niveau final** | **4,10** | 4,05 | +0,050 | **+0,37** | 4 gagne / 13 égal / 3 perd |
+| **maîtrise** (100 dern.) | 11,50 | 10,41 | +1,09 | **+0,39** | 9/20 |
+| **énergie** (100 dern.) | 0,228 | 0,227 | +0,001 | **+0,07** | 11/20 |
+| satiété min (100 dern.) | 0,061 | 0,029 | +0,032 | +2,17 | 14/20 |
+
+**Tout est non significatif.** Le seul `t > 2` (satiété) ne survit pas à la correction de
+Bonferroni : 3 métriques testées → seuil `t ≈ 2,86`, donc p brut 0,043 → **p corrigé ≈ 0,13**.
+
+### Le mur est intact — 0 run sur 40 dépasse le niveau 5
+
+| niveau | runs |
+|---|---|
+| 3 | 2 |
+| **4** | **33 (82 %)** |
+| 5 | 5 |
+| **> 5** | **0** |
+
+Le mur de la v41.29 est exactement là où il était.
+
+### ✅ La règle « jamais de `t` sur un run en cours » a fonctionné
+
+| n | Δ maîtrise | t |
+|---|---|---|
+| 5 graines (mi-campagne) | **+4,95** | *délibérément non calculé* |
+| 20 graines (final) | **+1,09** | +0,39 |
+
+**L'écart a été divisé par 4,5.** Scénario du ratio C2/C1 rejoué à l'identique
+(`t=+3,68` à mi-parcours → `t=+0,63` à l'arrivée). L'indice n'ayant jamais été annoncé,
+aucune rétractation n'a été nécessaire.
+
+### Verdict
+
+Le gradient causal reste **juste sur le fond** (réapprendre sur des gestes sans transition
+est une erreur), mais **ne débloque rien et ne nuit à rien** sur cursus complet. C'est le
+**piège v41.25 en sens inverse** : bon là où il s'applique, invisible ailleurs.
+
+⚠️ Signal faible : **2 graines CAUSAL régressent au niveau 3** (g11, g13), aucune côté
+TEMOIN. Dans le bruit à n=20, à re-vérifier si une campagne repart sur cette branche.
+
+### Intégrité vérifiée
+
+0 ablation côté CAUSAL · 40 côté TEMOIN (2/run) · 0 banc forcé · 0 crash · départ niveau 1/15
+· A/A bit-identique.
+
+⚠️ L'A/A a d'abord semblé **échouer** : les 52 lignes divergentes étaient le chemin du
+`.brain` recopié dans le log. Après normalisation, bit-identique. **C'était le témoin qui
+était faux, pas le code** — miroir du défaut v41.9.
+
+### 🔴 Les données brutes sont PERDUES
+
+Les **40 `.brain` et 40 `.log`** étaient dans le scratchpad de session, **purgé le 22/08 à
+23:38**. Erreur de méthode : la convention « toujours archiver, jamais supprimer » impose
+`brains/`, pas un répertoire temporaire. Les chiffres ci-dessus sont exacts (calculés avant
+la purge) mais **aucune réanalyse n'est possible**. Toute campagne future écrit
+directement dans `brains/<campagne>/`.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `docs/etat_des_lieux/22082026_campagne_v41.31_cursus_complet.md` | **nouveau** — compte rendu complet |
+| `readme.md` | paramètres réels (22,4×), ratio baselines à 1500 j, résultat cursus |
+| `readme_fr.md` | miroir |
+
+---
+
+## [v41.31-anatomie] - 2026-08-22 — Ce que 35 cerveaux à 1500 jours révèlent
+
+### Le compte de paramètres publié décrit un NOUVEAU-NÉ
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | docs (mesure) |
+| **Impact** | **Critique — crédibilité, vérifiable en une commande** |
+
+| | naissance | à 1500 jours | × |
+|---|---|---|---|
+| `dim_bus` | 16 | **139** (max 160) | 8,7 |
+| **paramètres** | **55 552** | **1 241 790** | **22,4** |
+
+| baseline | ratio naissance | **ratio réel** |
+|---|---|---|
+| CNN acteur-critique (19 384) | 2,87× | **64,1×** |
+| PPO MlpPolicy (27 784) | 2,00× | **44,7×** |
+| CNN + LSTM (52 664) | 1,05× | **23,6×** |
+
+Un baseline RL garde la taille qu'on lui donne. Les deux README annonçaient 2,87× sans
+préciser qu'il s'agit d'un cerveau neuf — **corrigé des deux côtés (règle de miroir)**.
+
+**Cette masse n'achète rien de mesurable** : le cerveau le plus lourd (1 570 648) et le plus
+léger (402 712) finissent **au même niveau (4)** ; corrélation taille ~ niveau
+**r = −0,172** (`t = −1,01`, n=35, NS, signe *négatif*) ; neurogenèse éteinte depuis
+**882 jours** en moyenne.
+
+### 🔴 La dilution structurelle de C2 — géométrique, pas un réglage
+
+| couche | naissance | à 1500 j | × | forme |
+|---|---|---|---|---|
+| `hippocampe` | 8 192 | 236 461 | **28,9** | (154, 308) |
+| `fusion_memoire` | 8 192 | 236 461 | **28,9** | (154, 308) |
+| `analyseur` | 4 096 | 118 231 | **28,9** | (154, 154) |
+| `tete_motrice` (C1) | 512 | 6 651 | 13,0 | (8, 154) |
+| **`cortex_prefrontal` (C2)** | **64** | **833** | **13,0** | **(1, 154)** |
+
+C2 **a bien** été multiplié par 13 par la neurogenèse — mais sa part **tombe de 0,115 % à
+0,067 %**, le tronc grossissant **2,2× plus vite**.
+
+> ⚠️ **Quand `dim_bus` passe de 16 à 154, une couche `bus→bus` croît en N² et une tête
+> `bus→1` croît en N. TOUTE neurogenèse dilue mécaniquement C2.** Il n'y a aucune constante
+> à corriger : c'est la structure. Un rééquilibrage fidèle au dogme passerait par une
+> **croissance non uniforme** (le vécu décide *où* le cerveau grandit), pas par un
+> élargissement posé de `cortex_prefrontal`.
+
+### 🔴 L'eau vaut 7× moins que le sol nu
+
+| type | valence | confirmations |
+|---|---|---|
+| `goal` | 0,6307 | 1 492 |
+| `FOOD` | 0,1750 | 8 434 |
+| `sol` | 0,1252 | 22 196 |
+| `lava` | **0,0727** ⚠️ positif | 8 |
+| **`WATER`** | **0,0171** | **7 809** |
+
+L'agent boit sans cesse et n'en apprend **rien**. Signature du bug **v41.7** (valence de la
+nourriture à zéro sur 4004 repas) : résultat trop propre sur un canal à fort volume.
+**Canal potentiellement débranché — à vérifier en priorité.**
+
+`lava` reste positif mais à **8 confirmations** (la lave est au niveau 5, l'agent bloque au
+4) : **ablation vide, pas négative.**
+
+### 🔴 La famine est le régime permanent du projet
+
+| campagne | nuits à satiété exactement 0 |
+|---|---|
+| v39 (p17) | **100 %** |
+| v41.29 | 81 – 91 % |
+| v41.30 | 78 – 93 % |
+| v41.31 | 82 – 87 % |
+
+Tous bras, toutes versions. **~38 % des ticks en zone critique**, `reserve = 0,000` partout.
+
+Or le surplus est **arithmétiquement atteignable** (+0,0025/tick à estomac plein et dépense
+pleine ; +0,00425 à l'inaction). La `RESERVE` v41.2-fix8 et ses trois coefficients ne sont
+pas structurellement impossibles — **l'estomac ne se remplit jamais assez longtemps**. Code
+mort *en pratique*. À rapprocher de **maîtrise ~ énergie, r = +0,710** (`t=+2,85`, SIG).
+
+### 🟡 Les 9 termes de récompense additionnés à poids 1
+
+Un **seul** point d'assemblage de la récompense (`noyau.py:9041`) :
+
+```python
+recompense_interne = (float(recompense_env) + dopamine_curiosite + micro_recompense
+                     + micro_recompense_porte + micro_recompense_progres
+                     + penalite_stagnation + sous_objectif_intrinseque + r_bio
+                     + micro_recompense_vocale - cout_requete_c3)
+```
+
+Le dogme est appliqué **à l'intérieur** de chaque terme, **jamais à leur pondération
+relative**.
+
+> **C'est la constante posée la plus structurante du fichier, et elle est invisible parce
+> qu'elle s'écrit `+`.**
+
+C2 apprend une valeur d'état depuis ce signal : s'il est incohérent, **aucune quantité de
+paramètres ne le fera converger**. D'où la recommandation d'instrumenter les 9 termes
+**avant** toute refonte de masse.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `docs/etat_des_lieux/22082026_campagne_v41.31_cursus_complet.md` | §6 — les 5 mesures directes |
+| `readme.md` / `readme_fr.md` | paramètres réels, ratios à 1500 j (miroir) |
+
+---
+
 ## [v41.31-resultats] - 2026-08-21 — Le premier effet cognitif du projet, et sa falsification
 
 ### Trois bras, n=20 : le gradient causal fonctionne, et ce n'est PAS un artefact
