@@ -411,7 +411,67 @@ niveau 4** et 2/10 au niveau 5 — le niveau 4 de g22 n'était donc pas une lote
 `docs/fonctionnement/CHANGELOG.md` §[v41.29-resultats] et
 `docs/recherche/CAMPAGNE_v41_population_et_ablation_aout_2026.md`.
 
-⚠️ **TROIS CONSTANTES POSÉES à supprimer** (mesuré le 20/08/2026, non implémenté — voir
+✅ **v41.30 — LES TROIS CONSTANTES POSÉES SONT SUPPRIMÉES** (20/08/2026). Quatre invariants.
+**(1) Le plafond de patience vient du MONDE, jamais d'une constante** : `_budget_natif_carte`
+lit `max_steps`, que MiniGrid impose de toute façon — les patiences relevées en v41.29
+(100 · 144 · 256 · 324) **sont** ces `max_steps`. `PLAFOND_PATIENCE_HORS_MONDE` ne sert
+qu'aux contextes SANS carte (vocal isolé, rêve) ; ne jamais le réintroduire comme plafond de
+jeu. **(2) Le trait d'endurance porte sur la VIE ENTIÈRE, jamais réinitialisé** (arbitrage
+utilisateur explicite contre la fenêtre glissante) : promu, l'agent conserve sa capacité à
+chercher longtemps — vérifié, vider `historique_succes` laisse `patience_de_vie()` inchangée
+(471,9 → 471,9). Vider ce trait à la promotion reproduirait exactement l'effondrement que la
+v41.30 corrige. **(3) Le gain de patience est un CONTRASTE, jamais un compteur** :
+`(durée_réussite − durée_abandon) / durée_abandon`, à rendement décroissant
+(`contraste / (1 + capital)`). Un agent qui réussit PLUS VITE qu'il n'abandonne ne gagne
+**rien** — c'est voulu : il a déjà assez de patience. ⚠️ `historique_vitesses` n'enregistrait
+que les RÉUSSITES avant la v41.30 ; les ratés doivent y rester, sans quoi l'écart se calcule
+avec une moitié manquante. **(4) Le rythme métabolique se rafraîchit UNE FOIS PAR NUIT**,
+jamais par tick (un besoin fluctuant en cours de journée rendrait la faim illisible, même
+discipline que `ajuster_capacite` v31.0), et une journée sans aucun épisode clos ne tire
+**pas** la référence vers zéro. ⚠️ **Les deux drapeaux d'ablation `--patience-fossile` et
+`--rythme-fossile` doivent rester SÉPARÉS** : patience et rythme sont couplés
+(`épisodes/jour` est l'entrée du besoin), les couper ensemble donne une ablation
+**confondue**. C'est cette séparation qui a permis d'établir que la patience dérivée ne
+change **rien** sur 10 jours (runs identiques) et que tout l'écart vient du rythme.
+
+✅ **v41.30-fix1/fix2 — LA SÉPARATION MONDE / CORPS.** La première mesure fut **défavorable**
+(−0,068 d'énergie) et a révélé une faute de conception : **le MONDE avait été indexé sur le
+MÉTABOLISME**. Trois frontières à ne plus jamais franchir. **(a) La DENSITÉ est une propriété
+du BIOTOPE**, dérivée de la SURFACE de la carte — jamais du besoin. Sinon un agent qui prend
+son temps fait *physiquement disparaître* la nourriture de la grille (mesuré : 2 sources au
+lieu de 6). En début de vie la politique est quasi aléatoire, donc la survie dépend de la
+**densité spatiale**, pas de la valeur nutritive : c'est la **falaise de rencontre**. **(b) La
+PORTION est une propriété de la RESSOURCE** (`PART_ESTOMAC_PAR_PRISE`), jamais du rythme —
+« une pomme ne quadruple pas de volume parce que l'animal marche plus lentement ». La satiété
+étant plafonnée à 1,0 avec excédent **jeté** mais digestion facturée sur la portion
+**entière**, une portion dérivée du rythme produit une **taxe sur le vide** : à rythme 1,0,
+2,175 gaspillé sur 3,175 pour un coût digestif **×4** (0,476 contre 0,119). **(c) Le RYTHME
+VÉCU ne devait régler QUE la vitesse de vidange** — ni la densité, ni la portion. 🔴 **MAIS
+`taux_satiete` EST UNE VARIABLE MORTE** (découvert le 20/08) : rien ne la soustrait depuis
+que la v41.2 l'a remplacée par la digestion. Le vrai régulateur est `DEBIT_DIGESTIF_JOUR`
+(= `DEPENSE_ENERGIE_JOUR × 1,5`), qui impose **3,333 estomacs/jour identiques dans les deux
+bras**. ⚠️ Le commentaire de `noyau.py:2991` (« `taux_satiete` … prélève déjà à chaque tick »)
+est **FAUX sur le POURQUOI**, mais ✅ **le basal EST bien facturé** — par
+`METABOLISME_BASAL_PART` dans la dépense énergétique (vérifié : un agent totalement inactif
+à l'estomac vide perd **0,325000** en 100 ticks, soit exactement le basal). L'inaction coûte
+65 % du tarif plein, elle n'est **pas** subventionnée. C'est le TEXTE du commentaire qu'il
+faut réparer, pas le comportement. Chantier v41.31 —
+indexer la digestion sur la dépense RÉELLE, voir
+`docs/recherche/METABOLISME_20082026_la_variable_morte.md`.
+
+Après les deux correctifs, le signe s'inverse au banc : **+0,0567**, 3 graines sur 3. ⚠️ Mais
+**la campagne à 1500 jours ne trouve RIEN** : énergie +0,027 (`t=+1,40` NS), maîtrise +0,37
+(NS), ratio C2/C1 +0,474 (`t=+1,93` NS, 3/5 graines) — sur 1479 jours appariés × 5 graines.
+
+🔴 **LEÇON DE MÉTHODE (20/08/2026) : NE JAMAIS ANNONCER UNE SIGNIFICATIVITÉ SUR UN RUN EN
+COURS.** Le ratio C2/C1 mesuré à mi-parcours donnait `t = +3,68` sur **5/5 graines** au jour
+1046 — annoncé comme « premier résultat significatif de la campagne ». Au jour 1479 il valait
+`t = +1,93` sur **3/5** : deux graines étaient repassées en négatif. L'écart moyen avait
+pourtant AUGMENTÉ (+0,378 → +0,474) — c'est la dispersion qui a explosé. Un `t` calculé sur un
+run inachevé est un **instantané**, pas une mesure : il choisit implicitement sa fenêtre. La
+règle des 20 graines ne suffit pas ; il faut aussi attendre la FIN des runs.
+
+⚠️ **Historique de ces TROIS CONSTANTES** (mesuré le 20/08/2026 — voir
 `docs/ameliorations/EPISODES_REFERENCE_20082026_la_derniere_constante_posee.md`) :
 `EPISODES_PAR_JOURNEE_REFERENCE = 4.0`, `PATIENCE_MAX = 350`,
 `BOOST_PATIENCE_MIN_PAR_RECURRENCE = 10`. Elles décrivent toutes le **même agent d'août 2026**.

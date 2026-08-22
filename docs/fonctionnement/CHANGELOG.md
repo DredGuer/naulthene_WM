@@ -4,13 +4,891 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.31-cursus] - 2026-08-22 — Le gradient causal NE SURVIT PAS au cursus complet
+
+### 40 runs, n=20 apparié, 1500 jours : effet nul sur le niveau
+
+| Type | Details |
+|------|---------|
+| **Commit** | `91a8005` |
+| **Catégorie** | docs (mesure) |
+| **Impact** | **Majeur — falsification du résultat v41.31 hors banc forcé** |
+
+Le banc forcé v41.31 avait donné **+2,57 pts de maîtrise** (`t=+2,68`) sur
+`SimpleCrossingS9N1`. Mais un banc forcé bloque le niveau à 1/15 par construction : « niveau
+atteint » y est inopérant. Campagne de validation sur **cursus libre**, 15 niveaux.
+
+**CAUSAL** (v41.31 nominal) vs **TEMOIN** (`--gradient-non-filtre --detecteur-observation`),
+20 graines appariées × 1500 jours = **40 runs, tous complets**.
+
+| métrique | CAUSAL | TEMOIN | Δ | t | favorable |
+|---|---|---|---|---|---|
+| **niveau final** | **4,10** | 4,05 | +0,050 | **+0,37** | 4 gagne / 13 égal / 3 perd |
+| **maîtrise** (100 dern.) | 11,50 | 10,41 | +1,09 | **+0,39** | 9/20 |
+| **énergie** (100 dern.) | 0,228 | 0,227 | +0,001 | **+0,07** | 11/20 |
+| satiété min (100 dern.) | 0,061 | 0,029 | +0,032 | +2,17 | 14/20 |
+
+**Tout est non significatif.** Le seul `t > 2` (satiété) ne survit pas à la correction de
+Bonferroni : 3 métriques testées → seuil `t ≈ 2,86`, donc p brut 0,043 → **p corrigé ≈ 0,13**.
+
+### Le mur est intact — 0 run sur 40 dépasse le niveau 5
+
+| niveau | runs |
+|---|---|
+| 3 | 2 |
+| **4** | **33 (82 %)** |
+| 5 | 5 |
+| **> 5** | **0** |
+
+Le mur de la v41.29 est exactement là où il était.
+
+### ✅ La règle « jamais de `t` sur un run en cours » a fonctionné
+
+| n | Δ maîtrise | t |
+|---|---|---|
+| 5 graines (mi-campagne) | **+4,95** | *délibérément non calculé* |
+| 20 graines (final) | **+1,09** | +0,39 |
+
+**L'écart a été divisé par 4,5.** Scénario du ratio C2/C1 rejoué à l'identique
+(`t=+3,68` à mi-parcours → `t=+0,63` à l'arrivée). L'indice n'ayant jamais été annoncé,
+aucune rétractation n'a été nécessaire.
+
+### Verdict
+
+Le gradient causal reste **juste sur le fond** (réapprendre sur des gestes sans transition
+est une erreur), mais **ne débloque rien et ne nuit à rien** sur cursus complet. C'est le
+**piège v41.25 en sens inverse** : bon là où il s'applique, invisible ailleurs.
+
+⚠️ Signal faible : **2 graines CAUSAL régressent au niveau 3** (g11, g13), aucune côté
+TEMOIN. Dans le bruit à n=20, à re-vérifier si une campagne repart sur cette branche.
+
+### Intégrité vérifiée
+
+0 ablation côté CAUSAL · 40 côté TEMOIN (2/run) · 0 banc forcé · 0 crash · départ niveau 1/15
+· A/A bit-identique.
+
+⚠️ L'A/A a d'abord semblé **échouer** : les 52 lignes divergentes étaient le chemin du
+`.brain` recopié dans le log. Après normalisation, bit-identique. **C'était le témoin qui
+était faux, pas le code** — miroir du défaut v41.9.
+
+### 🔴 Les données brutes sont PERDUES
+
+Les **40 `.brain` et 40 `.log`** étaient dans le scratchpad de session, **purgé le 22/08 à
+23:38**. Erreur de méthode : la convention « toujours archiver, jamais supprimer » impose
+`brains/`, pas un répertoire temporaire. Les chiffres ci-dessus sont exacts (calculés avant
+la purge) mais **aucune réanalyse n'est possible**. Toute campagne future écrit
+directement dans `brains/<campagne>/`.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `docs/etat_des_lieux/22082026_campagne_v41.31_cursus_complet.md` | **nouveau** — compte rendu complet |
+| `readme.md` | paramètres réels (22,4×), ratio baselines à 1500 j, résultat cursus |
+| `readme_fr.md` | miroir |
+
+---
+
+## [v41.31-anatomie] - 2026-08-22 — Ce que 35 cerveaux à 1500 jours révèlent
+
+### Le compte de paramètres publié décrit un NOUVEAU-NÉ
+
+| Type | Details |
+|------|---------|
+| **Commit** | `91a8005` |
+| **Catégorie** | docs (mesure) |
+| **Impact** | **Critique — crédibilité, vérifiable en une commande** |
+
+| | naissance | à 1500 jours | × |
+|---|---|---|---|
+| `dim_bus` | 16 | **139** (max 160) | 8,7 |
+| **paramètres** | **55 552** | **1 241 790** | **22,4** |
+
+| baseline | ratio naissance | **ratio réel** |
+|---|---|---|
+| CNN acteur-critique (19 384) | 2,87× | **64,1×** |
+| PPO MlpPolicy (27 784) | 2,00× | **44,7×** |
+| CNN + LSTM (52 664) | 1,05× | **23,6×** |
+
+Un baseline RL garde la taille qu'on lui donne. Les deux README annonçaient 2,87× sans
+préciser qu'il s'agit d'un cerveau neuf — **corrigé des deux côtés (règle de miroir)**.
+
+**Cette masse n'achète rien de mesurable** : le cerveau le plus lourd (1 570 648) et le plus
+léger (402 712) finissent **au même niveau (4)** ; corrélation taille ~ niveau
+**r = −0,172** (`t = −1,01`, n=35, NS, signe *négatif*) ; neurogenèse éteinte depuis
+**882 jours** en moyenne.
+
+### 🔴 La dilution structurelle de C2 — géométrique, pas un réglage
+
+| couche | naissance | à 1500 j | × | forme |
+|---|---|---|---|---|
+| `hippocampe` | 8 192 | 236 461 | **28,9** | (154, 308) |
+| `fusion_memoire` | 8 192 | 236 461 | **28,9** | (154, 308) |
+| `analyseur` | 4 096 | 118 231 | **28,9** | (154, 154) |
+| `tete_motrice` (C1) | 512 | 6 651 | 13,0 | (8, 154) |
+| **`cortex_prefrontal` (C2)** | **64** | **833** | **13,0** | **(1, 154)** |
+
+C2 **a bien** été multiplié par 13 par la neurogenèse — mais sa part **tombe de 0,115 % à
+0,067 %**, le tronc grossissant **2,2× plus vite**.
+
+> ⚠️ **Quand `dim_bus` passe de 16 à 154, une couche `bus→bus` croît en N² et une tête
+> `bus→1` croît en N. TOUTE neurogenèse dilue mécaniquement C2.** Il n'y a aucune constante
+> à corriger : c'est la structure. Un rééquilibrage fidèle au dogme passerait par une
+> **croissance non uniforme** (le vécu décide *où* le cerveau grandit), pas par un
+> élargissement posé de `cortex_prefrontal`.
+
+### 🔴 L'eau vaut 7× moins que le sol nu
+
+| type | valence | confirmations |
+|---|---|---|
+| `goal` | 0,6307 | 1 492 |
+| `FOOD` | 0,1750 | 8 434 |
+| `sol` | 0,1252 | 22 196 |
+| `lava` | **0,0727** ⚠️ positif | 8 |
+| **`WATER`** | **0,0171** | **7 809** |
+
+L'agent boit sans cesse et n'en apprend **rien**. Signature du bug **v41.7** (valence de la
+nourriture à zéro sur 4004 repas) : résultat trop propre sur un canal à fort volume.
+**Canal potentiellement débranché — à vérifier en priorité.**
+
+`lava` reste positif mais à **8 confirmations** (la lave est au niveau 5, l'agent bloque au
+4) : **ablation vide, pas négative.**
+
+### 🔴 La famine est le régime permanent du projet
+
+| campagne | nuits à satiété exactement 0 |
+|---|---|
+| v39 (p17) | **100 %** |
+| v41.29 | 81 – 91 % |
+| v41.30 | 78 – 93 % |
+| v41.31 | 82 – 87 % |
+
+Tous bras, toutes versions. **~38 % des ticks en zone critique**, `reserve = 0,000` partout.
+
+Or le surplus est **arithmétiquement atteignable** (+0,0025/tick à estomac plein et dépense
+pleine ; +0,00425 à l'inaction). La `RESERVE` v41.2-fix8 et ses trois coefficients ne sont
+pas structurellement impossibles — **l'estomac ne se remplit jamais assez longtemps**. Code
+mort *en pratique*. À rapprocher de **maîtrise ~ énergie, r = +0,710** (`t=+2,85`, SIG).
+
+### 🟡 Les 9 termes de récompense additionnés à poids 1
+
+Un **seul** point d'assemblage de la récompense (`noyau.py:9041`) :
+
+```python
+recompense_interne = (float(recompense_env) + dopamine_curiosite + micro_recompense
+                     + micro_recompense_porte + micro_recompense_progres
+                     + penalite_stagnation + sous_objectif_intrinseque + r_bio
+                     + micro_recompense_vocale - cout_requete_c3)
+```
+
+Le dogme est appliqué **à l'intérieur** de chaque terme, **jamais à leur pondération
+relative**.
+
+> **C'est la constante posée la plus structurante du fichier, et elle est invisible parce
+> qu'elle s'écrit `+`.**
+
+C2 apprend une valeur d'état depuis ce signal : s'il est incohérent, **aucune quantité de
+paramètres ne le fera converger**. D'où la recommandation d'instrumenter les 9 termes
+**avant** toute refonte de masse.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `docs/etat_des_lieux/22082026_campagne_v41.31_cursus_complet.md` | §6 — les 5 mesures directes |
+| `readme.md` / `readme_fr.md` | paramètres réels, ratios à 1500 j (miroir) |
+
+---
+
+## [v41.31-resultats] - 2026-08-21 — Le premier effet cognitif du projet, et sa falsification
+
+### Trois bras, n=20 : le gradient causal fonctionne, et ce n'est PAS un artefact
+
+| Type | Details |
+|------|---------|
+| **Commit** | `ead8288` |
+| **Catégorie** | docs (mesure) |
+| **Impact** | **Majeur — premier effet cognitif positif et significatif du projet** |
+
+Banc forcé `SimpleCrossingS9N1`, 400 jours, **60 runs** (3 bras × 20 graines appariées).
+
+| | CAUSAL | CTRL ×2,7 | TEMOIN |
+|---|---|---|---|
+| **maîtrise** | **7,44 %** | 5,37 % | 4,87 % |
+| **victoires** | **55,0** | 40,0 | 37,3 |
+| stériles | 63,17 % | 65,15 % | 63,60 % |
+| énergie | 0,26 | 0,24 | 0,25 |
+
+### Le test de falsification — hypothèse REJETÉE
+
+Le masque divise par `Σ m_t` au lieu de `T`, ce qui multiplie mécaniquement le gradient de
+l'acteur par **T/Σm ≈ 2,70** (médiane mesurée sur 8000 jours). L'objection : le gain
+vient-il du **filtrage** ou de cette **multiplication** ?
+
+Le bras `CTRL` applique le facteur **sans filtrer** — `.mean()` classique, gradient ×2,70.
+
+| comparaison | maîtrise | t | permutation | verdict |
+|---|---|---|---|---|
+| **CAUSAL vs TEMOIN** | **+2,57** | **+2,68** | **p = 0,015** | **SIG** |
+| **CAUSAL vs CTRL** | **+2,06** | **+2,23** | **p = 0,036** | **SIG** |
+| CTRL vs TEMOIN | +0,50 | +0,69 | p = 0,502 | **NS** |
+
+| comparaison | victoires | t | verdict |
+|---|---|---|---|
+| **CAUSAL vs TEMOIN** | **+17,8** | **+2,61** | **SIG** |
+| **CAUSAL vs CTRL** | **+15,0** | **+2,22** | **SIG** |
+| CTRL vs TEMOIN | +2,8 | +0,51 | **NS** |
+
+> 🎯 **Le simple gain de gradient n'explique rien** (`CTRL ≈ TEMOIN`, `p = 0,502`). **C'est
+> bien le FILTRAGE de l'information qui produit l'effet.** L'hypothèse de l'artefact
+> mathématique est réfutée par la mesure.
+
+`IC95` de CAUSAL vs CTRL : **[+0,13 ; +4,00]** — zéro exclu, mais **de justesse**. Confirmé
+par un test de **permutation** (20 000 tirages, sans hypothèse de normalité) : `p = 0,0357`.
+
+⚠️ Le **test des signes** est NS (14/20, `p = 0,115`) : l'effet est porté par l'**amplitude**
+de quelques graines (g3 +11,2 · g11 +8,2 · g9 +7,0) plus que par une majorité écrasante.
+6 graines sur 20 vont dans l'autre sens. C'est un effet **réel mais hétérogène**.
+
+### Une vérification technique qui a changé la lecture
+
+Avant de lancer le contrôle, j'ai testé si un facteur constant sur la perte fait ce qu'on
+croit. **Adam l'ABSORBE entièrement** sur un paramètre isolé : `w` identique à la 4ᵉ décimale
+après 200 pas, facteur 1,0 ou 2,6. Un « learning rate ×2,6 » ne produit littéralement rien.
+
+Le facteur n'agit que parce que le **TRONC est PARTAGÉ** entre l'acteur et le critique : le
+gradient du tronc est la **somme** des deux, et amplifier l'un change leur **rapport**.
+Mesuré sur un réseau jouet à tronc partagé : normes 1,14937 contre 1,09665.
+
+Le contrôle mesure donc un **déplacement d'équilibre acteur/critique**, pas une accélération.
+C'est ce qui le rend pertinent — et son échec (`p = 0,502`) d'autant plus informatif.
+
+### ⚠️ Ce que l'effet n'est PAS
+
+**1. Les gestes stériles ne baissent pas.** 63,17 % contre 63,60 %, `t = −0,81`, 8/20. Le
+mécanisme améliore la performance **sans réduire les gestes inutiles**. Ce n'est pas ce que la
+théorie prédisait : le crédit se concentre mieux, mais l'agent ne joue pas moins de gestes
+vides. Cela confirme le diagnostic v41.28 — l'agent ne les joue pas *par choix*, mais par
+**bruit d'exploration résiduel**.
+
+**2. Le mur tient.** **0/20 graines** atteignent les 60 % de maîtrise, dans les trois bras. La
+tendance d'apprentissage est identique (CAUSAL +4,17 pts du 1er au 3e tiers, TEMOIN +4,21) :
+CAUSAL est **meilleur en niveau**, pas **plus rapide en progression**.
+
+**3. Le juge de paix prévu est inopérant.** `--env-force` court-circuite le cursus : le niveau
+reste à 1/15 **par construction** dans les trois bras. Vérifié que la carte était bien
+`SimpleCrossingS9N1` (ligne `[BANC]`, 42 ressources = grande carte) — c'est le libellé qui est
+cosmétique, pas le forçage. Le taux de franchissement **ne peut pas** être mesuré sur ce banc.
+Défaut de protocole non anticipé ; la maîtrise et les victoires y suppléent.
+
+### Ce que ça vaut
+
+**Premier effet cognitif positif et significatif du projet.** Sur 14 mécaniques cognitives
+testées, une seule avait jamais amélioré quoi que ce soit (le brain-sparing v41.16), et les
+deux seuls leviers qui marchaient étaient des propriétés du **monde**. Celui-ci est une
+propriété de **l'apprentissage**.
+
+⚠️ **Ce qu'il faut encore** : le banc forcé prouve qu'une mécanique marche **là où elle
+s'applique**, pas qu'elle ne nuit pas ailleurs (leçon v41.25, dont la nociception marchait sur
+`LavaGap` et coûtait 25 % de récolte partout). **Validation sur le cursus complet 1500 jours
+requise** avant toute affirmation générale.
+
+---
+
+## [v41.31] - 2026-08-21 — Le gradient causal et le tube digestif vivant
+
+### La politique n'apprend plus que des gestes qui ont changé quelque chose
+
+| Type | Details |
+|------|---------|
+| **Commit** | `443dc32` |
+| **Catégorie** | feat (expérimental, `noyau.py` uniquement) |
+| **Impact** | **Critique — touche le chemin d'apprentissage de la politique** |
+
+Trois axes, **trois drapeaux d'ablation séparés** (les grouper produirait une ablation
+confondue). Conception complète :
+[chantier v41.31](../ameliorations/CHANTIER_v41.31_gradient_causal_et_tube_digestif.md).
+
+### Axe 1 — Le gradient causal
+
+```
+                    Σ_t  m_t · log π(a_t|s_t) · A_t
+perte_acteur = − ─────────────────────────────────────
+                         max(1, Σ_t m_t)
+```
+
+REINFORCE propageait le retour d'un épisode réussi sur **toutes** les actions de la
+trajectoire : un agent qui a spammé `toggle` 25 fois dans le vide voyait C1 renforcer ces
+gestes par contamination. Mesuré : **32 % des ticks stériles à 100 %**, 61,7 % au total.
+
+⚠️ **Le dénominateur est le nombre de ticks RETENUS.** Un `.mean()` naïf laisserait `T` :
+à 61,7 % de masquage, le gradient des gestes **utiles** serait divisé par ~2,6 — on aurait
+dilué l'apprentissage au lieu de le concentrer.
+
+⚠️ **Le masque ne porte QUE sur l'acteur.** Le critique estime la valeur d'un **état** (un
+état où l'agent vient de pousser un mur en a une) : le masquer le rendrait aveugle à 61,7 %
+des états et fausserait les avantages qu'il fournit à l'acteur. L'entropie pousse à explorer
+sur **tous** les états : la masquer reviendrait à n'explorer que là où l'agent bouge déjà,
+soit l'inverse du but. **JEPA non plus** : l'immobilité face à un mur est une **prédiction
+déterministe valide**, et C2 en a besoin pour planifier un contournement.
+
+⚠️ **Neutraliser n'est pas pénaliser** : gradient nul, jamais de malus — un malus serait une
+récompense en dur. L'extinction des gestes inutiles doit **émerger**.
+
+### Axe 2 — Le tube digestif suit ce que l'agent mange
+
+`debit_digestif` était figé à `DEPENSE_ENERGIE_JOUR × MARGE_DIGESTIVE = 3,0`, soit une
+vidange de **3,333 estomacs/jour identique dans les deux bras** de la campagne v41.30 quel
+que soit le besoin. C'est l'explication complète de l'invariance énergétique (`t = +1,04`,
+NS, n=20) : la vanne était verrouillée en aval.
+
+Mesuré après correctif : **3,00 → 0,86 estomac/jour**, vidange réelle 3,33 → 0,95.
+
+⚠️ `MARGE_DIGESTIVE` **reste** — borne sur un **rapport** qui garantit que le débit dépasse
+la dépense. Sous la dépense, la mort deviendrait certaine par construction.
+
+### Axe 3 — Un détecteur de stérilité unique
+
+`mur_touche` lisait `torch.equal(etat_courant, etat_suivant)` — le champ visuel partiel, qui
+peut rester identique alors que le monde a changé (hors champ) ou différer alors que rien n'a
+bougé. Mesuré : **29,9 % des ticks contre 61,7 %** pour l'invariant physique, un **facteur 2**.
+
+`mur_touche` alimente la douleur (v41.27), l'invariant alimente le gradient (v41.31) : les
+laisser diverger ferait punir **deux ensembles différents** par deux mécaniques croyant parler
+du même geste. Les deux s'alignent désormais sur :
+
+```
+transition = (pos changée) OU (dir changée) OU (portage changé)
+```
+
+⚠️ **La rotation est une transition** — elle pivote le champ de vision, c'est une acquisition
+d'information. ⚠️ **Le vecteur bio est exclu** — faim et soif dérivent à chaque tick, un
+critère les incluant ne serait **jamais** satisfait.
+
+### Un défaut attrapé au premier run de validation
+
+La ligne « Gradient causal » **n'apparaissait pas** : le `clear()` du buffer précède
+l'affichage du bilan. Corrigé en figeant le compte avant vidage. Sans le test en conditions
+réelles, la mécanique aurait été **invisible sur un run long** et son utilité indémontrable —
+exactement l'écart de la v29.0, corrigé en v29.1.
+
+⚠️ Le buffer est vidé **aux deux endroits** : `_reinitialiser_buffers_journee` **et** après
+`apprendre_journee`. Sans le second, il grossirait d'une nuit à l'autre dans la Cuve et le
+masque serait ignoré **en silence** (l'égalité de longueur échouerait).
+
+### Vérifications
+
+| test | résultat |
+|---|---|
+| **A/A** (2 runs, même graine) | ✅ **identique** |
+| Rétrocompat `.brain` v41.30 | ✅ 3 nuits complètes, 0 erreur |
+| `--gradient-non-filtre` | ✅ isole l'axe 1 (débit reste vivant) |
+| `--debit-fossile` | ✅ ramène à **3,00/jour exact** (gradient reste actif) |
+| `--detecteur-observation` | ✅ isole l'axe 3 |
+| Télémétrie | ✅ ligne console **et** 3 clés W&B |
+
+### 🔴 v41.31-fix1 — le débit a DEUX rôles opposés (rejeté par le filtre, puis corrigé)
+
+**Le banc rapide a rejeté l'axe 2 en 10 minutes.** 3 graines × 10 jours sur
+`SimpleCrossingS9N1` :
+
+| | v41.31 | témoin | écart | par graine |
+|---|---|---|---|---|
+| **énergie** | 0,12 | 0,30 | **−0,18** | **−0,2 / −0,2 / −0,2** |
+| maîtrise | 7,33 % | 8,22 % | −0,89 | −1,2 / −1,5 / 0,0 |
+| stériles | 80,8 % | 81,0 % | −0,20 | −1,0 / −1,8 / +2,2 |
+
+L'écart d'énergie est **identique sur les trois graines** : structurel, pas du bruit.
+
+**La cause — une erreur de conception de ma part.** `debit_digestif` a **deux rôles
+opposés**, et le premier jet n'en retenait qu'un :
+
+```python
+satiete -= conversion / RENDEMENT_CONVERSION   # 1. il VIDE l'estomac
+energie += conversion * cofacteur_hydrique     # 2. il FABRIQUE l'énergie
+```
+
+Raisonner « un organisme qui mange peu n'a pas le tube digestif d'un organisme qui mange
+beaucoup » ne vaut que pour le **premier** rôle. Pour le second, un débit trop petit est une
+**famine par construction** :
+
+| débit | conversion/tick | basal/tick | solde |
+|---|---|---|---|
+| 3,00/jour (fossile) | 0,007500 | 0,003250 | **+0,004250** ✅ |
+| 0,86/jour (v41.31) | 0,002150 | 0,003250 | **−0,001100** ❌ |
+
+Sous ~0,87/jour l'agent ne peut plus financer son **seul coût d'exister**, quelle que soit sa
+satiété. Aucune politique ne peut compenser.
+
+⚠️ **`MARGE_DIGESTIVE` ne suffisait pas.** Elle garantit `débit > dépense`, mais s'applique à
+un besoin devenu trop petit : **×1,5 d'un chiffre trop bas reste trop bas**. La garde était
+écrite dans le chantier et ne mordait pas — l'avoir prévue ne l'a pas rendue efficace.
+
+**Le correctif — un plancher DÉRIVÉ, jamais posé** : le coût d'exister lui-même,
+`DEPENSE_ENERGIE_JOUR × METABOLISME_BASAL_PART / RENDEMENT_CONVERSION` = **1,444/jour**, les
+trois grandeurs existant déjà. Le tube digestif peut rétrécir avec l'appétit, mais jamais au
+point de ne plus pouvoir financer le métabolisme de base — même discipline que
+`PLANCHER_POIDS_VITAL` (v34.0-fix1) : **un organisme diminué reste fonctionnel, il n'est pas
+éteint**. Vérifié : conversion 0,003611/tick contre 0,003250 de basal, solde **+0,000361**.
+
+> **Ce que le filtre démontre**, au-delà du bug : trois graines et dix minutes ont suffi à
+> attraper une faute qui aurait coûté 20 h de campagne. C'est le troisième correctif majeur
+> qu'il produit (après le monde caméléon et la taxe sur le vide de la v41.30).
+
+### ❌ v41.31-fix2 — L'AXE 2 EST RETIRÉ (le plancher ne suffisait pas non plus)
+
+Le filtre rejoué après `fix1` donne **−0,17 d'énergie sur 3/3 graines** — le plancher est
+pourtant actif (débit exactement à **1,44/jour**). J'avais borné sur **la mauvaise dépense** :
+
+| | conversion/tick | verdict |
+|---|---|---|
+| plancher fix1 | 0,003611 | |
+| dépense **basale** (à l'arrêt) | 0,003250 | **+0,000361** ✅ |
+| dépense **max** (en activité) | 0,005000 | **−0,001389** ❌ |
+| fossile (3,00/j) | 0,007500 | +0,002500 ✅ |
+
+**Le plancher garantit la survie d'un agent immobile, pas celle d'un agent qui agit.**
+
+**La prémisse de l'axe était fausse.** `MARGE_DIGESTIVE` s'applique historiquement à la
+**DÉPENSE** ; je l'ai appliquée à l'**INGESTION**. Ce ne sont pas les mêmes grandeurs, et la
+seconde ne borne rien de pertinent pour la production d'énergie. Borner sur la dépense max
+ramènerait **exactement au fossile** → axe inopérant par construction. **Retiré.**
+
+⚠️ **Ce qui reste vrai et attend son chantier** : `DEPENSE_ENERGIE_JOUR = 2.0` est bien un
+fossile, `taux_satiete` est bien morte. Mais il faut dériver **la dépense**, pas le débit —
+isolément de l'apprentissage moteur, pour ne pas polluer le signal du gradient causal.
+
+**v41.31 est donc livrée sur les axes 1 et 3 seulement.** Le débit revient à 3,00/jour
+(vérifié). Les drapeaux `--debit-fossile` / `DEBIT_DIGESTIF_VECU_ACTIF` sont conservés
+**inertes** pour ne pas casser les scripts de campagne.
+
+> **Le banc court a produit son quatrième correctif** : monde caméléon, taxe sur le vide,
+> plancher digestif, puis retrait de l'axe. 3 graines × 10 minutes, deux fois — contre 20 h
+> de campagne qui auraient surtout mesuré un handicap métabolique.
+
+### ⚠️ Aucun effet mesuré à ce stade
+
+Le code est **vérifié, pas validé**. Le banc rapide (3 graines × 10 jours sur
+`SimpleCrossingS9N1`) tourne, puis la campagne à 20 graines avec le **taux de franchissement
+du niveau 4** comme juge de paix — référence **7,5 %** (3/40 sur v41.30).
+
+⚠️ **Observation du run de test à surveiller** : le gradient ne crédite que **19 à 37 %** des
+ticks, et les gestes stériles **montent** au fil des jours (62 % → 71 % → 80 %). Trois jours
+sur `Empty-5x5` ne concluent rien, mais si la tendance se confirme, cela signifierait que
+**masquer le crédit ne suffit pas** à éteindre les gestes inutiles.
+
+---
+
+## [v41.30-resultats] - 2026-08-21 — La campagne à n=20 : aucun effet, et l'artefact démasqué
+
+### 40 runs × 1500 jours — le résultat est NÉGATIF, et l'analyse conditionnelle explique pourquoi
+
+| Type | Details |
+|------|---------|
+| **Commit** | `87ca731` |
+| **Catégorie** | docs (mesure) |
+| **Impact** | **Mesure — n=20, au seuil du projet** |
+
+**Première campagne du projet réellement à n=20 par bras**, 40 runs terminés à j1500.
+
+| | DERIVE | FOSSILE | écart | t | graines+ |
+|---|---|---|---|---|---|
+| énergie | 0,236 | 0,225 | +0,011 | +1,04 NS | 14/20 |
+| vigueur | 0,186 | 0,183 | +0,003 | +0,62 NS | 12/20 |
+| accord C1/C2 | 15,39 % | 18,43 % | −3,04 | −1,10 NS | 10/20 |
+| ratio C2/C1 | 2,673 | 2,585 | +0,088 | +0,63 NS | **9/20** |
+| maîtrise | 15,16 % | 14,83 % | +0,33 | +0,25 NS | 10/20 |
+
+**Rien n'est significatif** (seuil 2,09). Le ratio C2/C1 — seul indicateur qui semblait porteur
+à mi-parcours — tombe à `t = +0,63` avec **9 graines favorables sur 20**, soit moins que le
+hasard.
+
+### 🎯 L'analyse conditionnelle démasque un ARTEFACT
+
+Grille de lecture posée avant la mesure (§1.7 du chantier v41.31) : séparer les paires selon
+que les deux bras atteignent le **même** palier ou non.
+
+| | n | écart | t | favorables |
+|---|---|---|---|---|
+| **À régime ÉGAL** | **16** | **−0,065** | **−0,44** | **5/16** |
+| Niveaux différents | 4 | +0,70 | — | 4/4 |
+
+**À palier identique, l'effet disparaît et devient même légèrement négatif.** Les 4 paires
+divergentes portent **tout** l'écart positif :
+
+```
+g1  : DERIVE niv5 vs FOSSILE niv4  →  +1,228
+g3  : DERIVE niv4 vs FOSSILE niv5  →  +0,602
+g19 : DERIVE niv4 vs FOSSILE niv5  →  +0,362
+g20 : DERIVE niv4 vs FOSSILE niv3  →  +0,612
+```
+
+**La preuve par le signe.** Dans **3 cas sur 4**, c'est **FOSSILE** qui détient le niveau
+supérieur — et l'écart reste **positif** quand même. Si l'effet venait du bras, le signe
+devrait s'inverser ; il ne s'inverse jamais.
+
+> Ce qui fait monter le ratio C2/C1, c'est d'être sur un palier **différent de son jumeau**,
+> pas d'être dans le bras DERIVE. Le `+0,088` global est un artefact de divergence de
+> trajectoire.
+
+La grille conditionnelle avait été conçue pour éventuellement **sauver** un effet noyé dans
+la variance ; elle a servi à en **écarter** un. C'est le bon usage.
+
+### Le franchissement du niveau 4 — mesure directe
+
+| | franchissent | IC95 (Wilson) |
+|---|---|---|
+| DERIVE | **1/20 = 5 %** | [1–24] |
+| FOSSILE | **2/20 = 10 %** | [3–30] |
+
+`Fisher exact p = 1,000` — aucune différence. **Aucun run n'a dépassé le niveau 5 sur 40.**
+
+⚠️ Le taux de référence pour la suite est donc **7,5 %** (3/40), avec des intervalles très
+larges : tout levier futur devra **doubler ou tripler** ce taux pour être détectable à n=20.
+
+### Ce que la v41.30 apporte malgré tout
+
+Le résultat est négatif **sur la performance**, mais la version n'est pas à jeter :
+
+1. **Trois constantes fossiles supprimées** — le dogme est respecté là où il ne l'était pas
+2. **Deux fautes de conception corrigées** : le *monde caméléon* (biotope indexé sur le
+   métabolisme) et la *taxe sur le vide* (portion dérivée du rythme : ×4 le coût digestif
+   pour 68 % du repas jeté)
+3. **La patience redevenue vivante** — elle atteint **360 ticks**, au-dessus de l'ancien
+   plafond de 350 que le régime fossile ne pouvait structurellement pas franchir
+4. **Une variable morte découverte** : `taux_satiete`, et avec elle le vrai régulateur
+   `DEBIT_DIGESTIF_JOUR`
+
+Ce dernier point explique le résultat nul sur l'énergie : **le levier n'était pas branché**.
+C'est l'axe 2 de la v41.31.
+
+### Leçon de méthode conservée
+
+À j1046 sur 5 graines, le ratio C2/C1 donnait `t = +3,68` sur **5/5** et a été annoncé comme
+« premier résultat significatif ». À j1479 : `t = +1,93` sur 3/5. À n=20 complet : `t = +0,63`
+sur 9/20. **Un `t` calculé sur un run en cours est un instantané, pas une mesure.**
+
+---
+
+## [purge-cosmologie] - 2026-08-20 — Réécriture de l'historique et remise à jour des hash
+
+### Les travaux de cosmologie sortent de git, et tous les hash cités sont recalculés
+
+| Type | Details |
+|------|---------|
+| **Commit** | `fd08537` |
+| **Catégorie** | chore |
+| **Impact** | **Critique — tous les hash de commit du dépôt ont changé** |
+
+**Demande explicite de l'utilisateur.** Les 12 PDF de `docs/naulthene_cosmologie/` étaient
+**suivis et poussés sur GitHub** depuis le commit dont le hash valait alors `89ac5ad`
+(aujourd'hui `ddf26f5`).
+
+**Portée choisie : effacement COMPLET de l'historique.** Un simple `git rm --cached` les
+aurait laissés téléchargeables par hash de commit ; ils ne le sont plus.
+
+| vérification | résultat |
+|---|---|
+| trace dans l'historique local | **0** |
+| trace sur les branches distantes | **0** |
+| fichiers suivis | **0** |
+| commits préservés | **271** (aucun perdu) |
+| branches réécrites sur GitHub | **17**, plus 4 nouvelles poussées |
+
+Les PDF **restent sur le disque local** ; `.gitignore` empêche désormais qu'ils reviennent.
+Sauvegarde préalable : les 12 fichiers + un bundle complet du dépôt d'avant réécriture.
+
+### Conséquence n°1 — quatre liens devenus morts, corrigés
+
+`readme_fr.md`, ce CHANGELOG, le carnet `EXPANSION_17082026_le_frein_de_la_neurogenese.md`
+et un commentaire de `noyau.py` pointaient vers le dossier purgé : autant de 404 pour un
+lecteur GitHub. Remplacés par une mention textuelle — le contenu scientifique (potentiel de
+Landau, `C(c) > ln(N)`) reste exposé, seule la source cliquable disparaît.
+
+### Conséquence n°2 — TOUS les hash de commit ont changé
+
+C'est inhérent à `git filter-repo` : réécrire un commit change son hash, et donc celui de
+tous ses descendants. Sur les **76 hash cités** dans la documentation, **15 étaient périmés**
+et ont été remappés via la table `commit-map` produite par l'outil (**29 occurrences**
+corrigées) :
+
+| entrée du CHANGELOG | hash à jour |
+|---|---|
+| v41.19-v41.21 physique du coût | `ddf26f5` |
+| v41.23 frein d'expansion | `539dafa` |
+| v41.24 budget de neurogenèse | `62d7a4b` |
+| v41.25 nociception thermique | `197e17b` |
+| v41.25-fix1 douleur annulée | `efea6ae` |
+| v41.26 thermohoméostasie | `60d6809` |
+| v41.27 douleur unique | `5d17b3f` |
+| v41.28 travail tenté | `2775d24` |
+| v41.28 mesure | `c4e9953` |
+| v41.29 campagne | `2edcdc7` |
+| v41.29 résultats | `4e63dad` |
+| v41.30 constantes fossiles | `dd4216d` |
+| baseline aléatoire corrigée | `d946331` |
+| campagne nociception n=20 | `e03ac80` |
+| l'agent apprend mais plafonne | `91cf048` |
+
+Les anciens hash ne sont volontairement pas listés : ils ne désignent plus rien, et les
+faire figurer inviterait à les chercher. La table complète de correspondance reste dans
+`.git/filter-repo/commit-map`.
+
+⚠️ **Vérification faite** : sur les 76 hash cités dans toute la documentation, **0 périmé**
+subsiste.
+
+⚠️ **Tout clone existant du dépôt est cassé.** Un `git pull` échouera ou, pire,
+réintroduirait les PDF : il faut re-cloner.
+
+---
+
+## [v41.30] - 2026-08-20 — Les trois constantes fossiles, supprimées
+
+### La patience devient un trait de vie, et le métabolisme respire au rythme réel
+
+| Type | Details |
+|------|---------|
+| **Commit** | `dd4216d` |
+| **Catégorie** | feat (expérimental, `noyau.py` uniquement) |
+| **Impact** | **Critique — trois constantes posées retirées du chemin cognitif** |
+
+**Décision utilisateur du 20/08/2026**, après la mesure v41.29. Les trois constantes
+décrivaient toutes **le même agent d'août 2026** — elles mesuraient sa jeunesse et on les
+appliquait à sa vieillesse.
+
+| constante | valeur | remplacée par |
+|---|---|---|
+| `EPISODES_PAR_JOURNEE_REFERENCE` | 4.0 | `etat.episodes_jour` **vécu**, lissé |
+| `PATIENCE_MAX` | 350 | le **budget natif de la carte** (`max_steps`) |
+| `BOOST_PATIENCE_MIN_PAR_RECURRENCE` | 10 | l'**écart mesuré** raté ↔ réussite |
+
+**Bornes CONSERVÉES** (ce sont des rapports, jamais des valeurs) : `MARGE_SUBSISTANCE`,
+`MARGE_TROUVABILITE`, `FRACTION_CASES_RESSOURCES_MAX`, `PATIENCE_MIN`.
+
+### 1. La patience — un trait de vie, sans plafond
+
+Formulation utilisateur : *« un genre d'exponentielle qui part de 1 jusqu'à l'infini, mais
+exponentiel : plus tu gagnes en patience, plus c'est dur d'en gagner à nouveau »*, et
+*« le gain est lié à l'écart entre le raté et la réussite »*.
+
+```
+patience = patience_min × exp(capital)
+capital += contraste / (1 + capital)          ← rendement décroissant, sans borne
+contraste = max(0, (durée_réussite − durée_abandon) / durée_abandon)
+```
+
+Le gain ne dépend plus d'un **compteur d'événements** (+10 par victoire-sursaut, quelle que
+soit sa difficulté) mais d'une **grandeur mesurée**. Sens : si l'agent réussit en 80 ticks
+et abandonne à 100, attendre plus ne sert à rien → gain nul. S'il réussit à 300 alors qu'il
+coupe à 150, il tranche trop tôt → gain fort. Vérifié au banc : le capital progresse de
++1,00 → +0,50 → +0,40 → +0,34 → +0,31 sur cinq gains successifs.
+
+**Le plafond n'a pas été remplacé par un autre chiffre : il vient du MONDE.**
+`_budget_natif_carte` lit `max_steps`, que MiniGrid impose de toute façon. Les patiences
+relevées dans la campagne v41.29 (100 · 144 · 256 · 324) sont exactement les `max_steps`
+des cartes jouées : le vrai plafond était **déjà là**, et `PATIENCE_MAX` ne faisait que le
+doubler d'une borne arbitraire. `PLAFOND_PATIENCE_HORS_MONDE = ticks_par_jour` ne sert plus
+qu'aux contextes SANS carte (vocal isolé, rêve).
+
+### 2. Le trait porte sur la VIE ENTIÈRE — jamais réinitialisé
+
+Arbitrage utilisateur explicite entre la fenêtre glissante et la vie de l'agent :
+**la vie**, par lissage exponentiel (EMA), **sans réinitialisation au changement de carte**.
+
+- **Pas d'amnésie** — promu, l'agent conserve son endurance acquise. Vérifié : vider la
+  fenêtre glissante ne change **pas** `patience_de_vie()` (471,9 → 471,9).
+- **Pas d'écrasement par le passé** — l'EMA pèse le récent ; quand les durées s'étirent sur
+  une carte neuve, la référence glisse vers le haut **sans rupture**.
+- **Zéro division par zéro** — 20 échecs d'affilée ne détruisent pas la mémoire des
+  réussites : vérifié, `capital = 0.0000` et aucun crash.
+
+`INERTIE_TRAIT_ENDURANCE = 0.02` est une borne sur une **vitesse d'oubli** (~50 épisodes de
+mémoire), jamais une valeur de patience — même nature que `INERTIE_OUBLI_REFERENCE_CHOC`.
+
+⚠️ **`historique_vitesses` n'enregistrait que les RÉUSSITES** : mesurer un écart avec une
+seule moitié était impossible. Les ratés sont désormais enregistrés eux aussi.
+
+### 3. Le métabolisme suit le rythme réellement vécu
+
+`besoin_par_axe(rythme)` remplace la constante. Le rythme est lu sur `etat.episodes_jour` —
+**grandeur qui existait déjà**, réarmée chaque nuit et loguée en W&B : il n'y avait rien à
+instrumenter, seulement à la LIRE. Rafraîchi **une fois par nuit**, jamais par tick (un
+besoin fluctuant en cours de journée rendrait la faim illisible, discipline v31.0).
+
+La valeur de naissance est **prudente, jamais optimiste** : `EPISODES_PAR_JOURNEE_NAISSANCE
+= 1.0`. Un agent au jour 1 n'a rien vécu — on suppose le cas défavorable, comme le plancher
+vital.
+
+### Vérifications
+
+| test | résultat |
+|---|---|
+| **A/A** (2 runs, même graine, 5 jours) | ✅ **identique** — reproductible |
+| Rétrocompatibilité `.brain` v41.29 | ✅ **3 nuits complètes**, endurance vierge, aucune greffe |
+| Contraste faible (80t vs 100t) | ✅ capital 0,0000 — aucun gain, comme voulu |
+| Que des échecs (30 épisodes) | ✅ capital 0,0000, pas de crash |
+| Continuité à la promotion | ✅ patience **inchangée** (471,9 → 471,9) |
+| Témoin `--rythme-fossile` | ✅ besoin **2,80/axe, 6 sources** (régime v41.2 exact) |
+| Témoin `--patience-fossile` | ✅ +10 plafonné à 350 |
+
+⚠️ **La validation d'un `.brain` inclut une NUIT COMPLÈTE** (règle v32.0) : un crash de
+greffe ne survient ni au chargement ni pendant la journée, mais à la première
+`executer_nuit`.
+
+### Deux drapeaux d'ablation SÉPARÉS — obligatoire
+
+`--patience-fossile` et `--rythme-fossile`, jamais groupés : patience et rythme métabolique
+sont **couplés** (`épisodes/jour` est l'entrée du besoin), donc les couper ensemble
+produirait une **ablation confondue**. Chacun écrit dans le module NOMMÉ avec assertion
+runtime (discipline v41.4).
+
+### ⚠️ Ce que cette version ne démontre PAS
+
+**Aucune mesure d'effet.** Le code est vérifié, pas validé : il faut une campagne à
+**20 graines** avec les deux témoins.
+
+⚠️ **Le SENS de la correction n'est pas tranché.** Suivre le rythme réel fait *baisser* le
+besoin (2,80 → ~1,1/axe), donc **moins** de sources — alors que l'énergie est déjà au
+plancher. Soit le besoin était trop haut, soit les occasions sont trop rares : **les deux
+corrections sont opposées et une seule est bonne.**
+
+⚠️ **Boucle de rétroaction à surveiller** : moins d'épisodes → moins de sources → plus de
+faim → patience modifiée → moins d'épisodes. L'inertie l'amortit (~50 journées) ; c'est
+précisément ce que la campagne doit mesurer.
+
+### ✅ v41.30-fix1 / fix2 — le monde et le corps, séparés
+
+La première mesure était **défavorable** (voir plus bas). Deux correctifs, tous deux issus de
+la même faute de conception : **avoir indexé le MONDE sur le MÉTABOLISME de l'agent**.
+
+#### fix1 — la densité est une propriété du BIOTOPE
+
+Formulation utilisateur : *« Le monde n'a pas à faire disparaître des ressources physiques de
+la grille sous prétexte que l'agent prend son temps pour réfléchir. »*
+
+La v41.30 recalculait `nb_sources_*` à partir du rythme vécu — à deux endroits, dont un à
+l'import (`NB_SOURCES_FOOD = REPAS_PAR_JOURNEE × MARGE_TROUVABILITE`). Le besoin de naissance
+tombant de 2,80 à 0,70, la carte ne recevait plus que **2 sources au lieu de 6** dès le jour 1.
+
+**La falaise de rencontre** : en début de vie la politique motrice est quasi aléatoire, donc la
+survie dépend de la **densité spatiale** (N_sources / surface), pas de la valeur nutritive.
+Quadrupler la valeur d'une ressource ne compense rien si l'agent a moins de chances de poser
+le pied dessus.
+
+La densité est désormais dérivée de la **surface**, le souhait étant rendu *saturant* pour que
+le plafond de placement (`FRACTION_CASES_RESSOURCES_MAX`, déjà dans le détecteur) fasse seul la
+loi. Mesuré, densité par case : `Empty-5x5` 0,286 · `Empty-8x8` 0,324 · `SimpleCrossingS9N1`
+0,341. Vérifié en run : **les deux bras placent exactement le même nombre de ressources**.
+
+#### fix2 — la portion est une propriété de la RESSOURCE
+
+Le fix1 seul n'a **rien changé** (−0,0709 contre −0,0683). La cause principale était ailleurs.
+
+Décision utilisateur : *« Une pomme ne quadruple pas de volume ni de valeur nutritive sous
+prétexte que l'animal qui la regarde a décidé de marcher plus lentement aujourd'hui. »*
+
+**La taxe sur le vide.** `valeur_nutritive` dérivait la portion du rythme. Or la satiété est
+plafonnée (`np.clip(..., 0, 1)`) et l'excédent **perdu**, tandis que le coût de digestion est
+facturé sur la portion **entière** :
+
+| rythme | portion | gain satiété | **gaspillé** | **coût digestion** |
+|---|---|---|---|---|
+| 1,00 | 3,175 | 1,000 | **2,175** | **0,476** |
+| 4,00 (fossile) | 0,794 | 0,794 | 0,000 | 0,119 |
+
+L'agent payait l'impôt digestif **maximal** (×4) sur des calories qu'il ne pouvait pas faire
+entrer dans son estomac — 68 % de chaque repas jeté. C'est le défaut corrigé en v41.2-fix pour
+l'eau (0,889 sur une jauge à 1,0), reproduit à plus grande échelle.
+
+La portion dérive donc de la **contenance de l'estomac** (`PART_ESTOMAC_PAR_PRISE = 0.80`,
+borne : remplir l'essentiel d'un estomac vide **sans déborder**). Mesuré après correctif :
+gain 0,800 · gaspillé **0,000** · coût **0,120**.
+
+#### Ce que le rythme vécu règle désormais — et lui seul
+
+Ni la densité (fix1), ni la portion (fix2) : la **vitesse de vidange des jauges**.
+
+> 🔴 **RECTIFICATION du 20/08/2026 — cette écriture n'a AUCUN EFFET.** `taux_satiete` n'est
+> **soustrait nulle part** : la v41.2 l'a remplacé par la digestion et il est resté sans
+> consommateur. Vérifié empiriquement (agent qui ne mange pas, 10 ticks) : la baisse de
+> satiété vaut **0,083333**, soit exactement `debit_digestif / RENDEMENT_CONVERSION`, et non
+> les 0,017500 qu'un prélèvement par `taux_satiete` produirait.
+>
+> Le vrai régulateur est **`DEBIT_DIGESTIF_JOUR`** (= `DEPENSE_ENERGIE_JOUR × 1,5 = 3,0`),
+> qui impose une vidange de **3,333 estomacs/jour identique dans les deux bras** — d'où
+> l'invariance énergétique mesurée (`t = +1,40`, NS). Le tableau ci-dessous décrit donc une
+> intention, pas un comportement.
+>
+> Enquête complète, avec le chantier v41.31 qui en découle :
+> [la variable morte](../recherche/METABOLISME_20082026_la_variable_morte.md).
+
+| rythme | prises/journée | vidange/jour | autonomie d'un estomac plein |
+|---|---|---|---|
+| 1,00 | 0,70 | 0,560 | **1,79 jour** |
+| 4,00 | 2,80 | 2,240 | **0,45 jour** |
+
+Sémantique de bon sens : un agent qui ne joue qu'un épisode par jour n'a qu'une poignée
+d'occasions de manger, donc son corps doit tenir plus longtemps sur un estomac plein.
+
+#### Résultat du banc rejoué (3 graines × 10 jours)
+
+| version | écart dérivé − fossile |
+|---|---|
+| v41.30 brut | **−0,0683** |
+| + fix1 (biotope) | −0,0709 |
+| **+ fix2 (portion)** | **+0,0567** |
+
+Énergie **0,3567 dérivé contre 0,3000 fossile**, **3 graines sur 3 favorables**, et le seuil
+posé par l'utilisateur (≥ 0,26) est franchi. A/A identique, rétrocompat `.brain` sans erreur.
+
+⚠️ **`t = +1,64` à n=3 — NON SIGNIFICATIF.** Le signe s'est inversé et le critère est atteint,
+mais trois graines ne concluent rien (seuil 4,30 à n=3). C'est un feu vert pour la campagne à
+20 graines, **pas** une démonstration d'effet.
+
+### 🔴 PREMIÈRE MESURE — le rythme dérivé COÛTE de l'énergie (banc court, n=3)
+
+Banc d'isolation lancé immédiatement après l'implémentation : 3 graines × 3 bras × 10 jours,
+**seuls les drapeaux changent**.
+
+| bras | énergie moyenne | ticks critiques |
+|---|---|---|
+| **v41.30 dérivé** | **0,1968** | 288/400 |
+| rythme fossile seul | 0,2651 | 324/400 |
+| tout fossile | **0,2651** | 324/400 |
+
+**Écart dérivé − fossile : −0,068 d'énergie** (graines : +0,005 · −0,089 · −0,121).
+
+**Deux faits que ce banc établit :**
+
+1. **Couper la patience dérivée ne change RIEN.** `--rythme-fossile` seul et
+   `--rythme-fossile --patience-fossile` produisent des runs **rigoureusement identiques**
+   sur les 3 graines (énergie au dixième de millième près). Sur 10 jours, la nouvelle
+   patience n'a aucun effet mesurable — cohérent avec l'observation du contraste (voir
+   ci-dessous) : le gain ne se déclenche presque jamais.
+2. **Tout l'écart vient donc du RYTHME métabolique**, isolé sans ambiguïté. C'est
+   exactement ce que la séparation des deux drapeaux devait permettre.
+
+⚠️ **C'est la lecture défavorable des deux qui est pour l'instant soutenue** (§5 de la note
+de conception) : baisser le besoin ne soulage pas l'agent, il le prive. Moins de besoin ⇒
+moins de sources souhaitées (6 → 4) ⇒ moins d'occasions sur la carte, alors que la *valeur*
+de chaque ressource monte pourtant (0,794 → 3,175). L'agent ne compense pas.
+
+⚠️ **n=3, 10 jours — c'est un banc, PAS une conclusion.** Sous le seuil des 20 graines, et
+sur une durée où la maîtrise n'existe pas encore. Ce résultat oriente la campagne ; il ne la
+remplace pas. Il est consigné ici parce qu'un résultat défavorable trouvé en 20 minutes vaut
+mieux qu'une campagne de 20 h lancée sur une hypothèse fausse.
+
+⚠️ **Observation du banc** : sur les cerveaux v41.29 rechargés, le contraste est **négatif**
+(réussite 70t contre abandon 221t) — l'agent réussit bien plus vite qu'il n'abandonne, donc
+**ne gagne aucune patience**. C'est le comportement voulu (il en a déjà assez), mais cela
+signifie que le nouveau gain sera **rare** sur les cerveaux existants ; il jouera surtout à
+la naissance et sur les cartes où les victoires arrivent tard.
+
+---
+
 ## [v41.29-resultats] - 2026-08-20 — 10/10 au niveau 4, et la découverte des trois constantes posées
 
 ### Le blocage au niveau 1 est levé — mais il s'est déplacé, et sa cause est identifiée
 
 | Type | Details |
 |------|---------|
-| **Commit** | `2cbbb40` |
+| **Commit** | `4e63dad` |
 | **Catégorie** | docs (mesure) + idée non validée |
 | **Impact** | **Critique — invalide l'affirmation centrale des deux README** |
 
@@ -112,7 +990,7 @@ selon la grille du projet, contrairement à une comparaison appariée.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `75e062b` |
+| **Commit** | `2edcdc7` |
 | **Catégorie** | docs (campagne en cours) |
 | **Impact** | **Mesure — la question de fond** |
 
@@ -147,7 +1025,7 @@ sur la profondeur atteinte, pas une comparaison concluante entre les deux bras.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `1962a07` |
+| **Commit** | `c4e9953` |
 | **Catégorie** | docs (résultat de mesure) |
 | **Impact** | **Mesure — ferme une piste** |
 
@@ -192,7 +1070,7 @@ simplement pas la réponse au blocage.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `4deb9fc` |
+| **Commit** | `2775d24` |
 | **Catégorie** | fix critique (expérimental) |
 | **Impact** | **Fonctionnel — fonction de coût / incitation** |
 | **Carnet** | [`POURQUOI_20082026_l_agent_economise.md`](../recherche/POURQUOI_20082026_l_agent_economise.md) |
@@ -262,7 +1140,7 @@ lancement : effort min **0,81 (NEW) vs 0,64 (OLD)**, gestes stériles **68 % vs 
 
 | Type | Details |
 |------|---------|
-| **Commit** | `7b8c77c` |
+| **Commit** | `d946331` |
 | **Catégorie** | docs (rectification + mesure) |
 | **Impact** | **Critique — inverse une conclusion publiée dans les deux README** |
 | **Carnet** | [`POURQUOI_20082026_l_agent_economise.md`](../recherche/POURQUOI_20082026_l_agent_economise.md) |
@@ -317,7 +1195,7 @@ poids** — les retirer casserait tout `.brain` existant. Noté en tête de sect
 
 | Type | Details |
 |------|---------|
-| **Commit** | `632ae7f` |
+| **Commit** | `91cf048` |
 | **Catégorie** | docs (résultat de mesure) |
 | **Impact** | **Mesure — réoriente le chantier** |
 | **Carnet** | [`NAVIGATION_20082026_le_vrai_blocage.md`](../recherche/NAVIGATION_20082026_le_vrai_blocage.md) |
@@ -365,7 +1243,7 @@ politique plafonne sous le hasard sur la tâche la plus simple du cursus. Conver
 
 | Type | Details |
 |------|---------|
-| **Commit** | `1b0ab5d` |
+| **Commit** | `5d17b3f` |
 | **Catégorie** | feat (expérimental) — **refonte** |
 | **Impact** | **Fonctionnel — homéostasie / nociception / récompense** |
 | **Carnet** | [`DOULEUR_UNIQUE_19082026_refonte.md`](../recherche/DOULEUR_UNIQUE_19082026_refonte.md) |
@@ -441,7 +1319,7 @@ A vs B isole l'option (b). Vérifié : déficits distincts **1,641 / 2,758 / 2,0
 
 | Type | Details |
 |------|---------|
-| **Commit** | `a8c49b7` |
+| **Commit** | `60d6809` |
 | **Catégorie** | feat (expérimental) |
 | **Impact** | **Fonctionnel — homéostasie / nociception** |
 | **Carnet** | [`THERMOHOMEOSTASIE_18082026_...`](../recherche/THERMOHOMEOSTASIE_18082026_la_douleur_graduee.md) |
@@ -520,7 +1398,7 @@ remonte-t-elle ?**
 
 | Type | Details |
 |------|---------|
-| **Commit** | `62210e7` |
+| **Commit** | `e03ac80` |
 | **Catégorie** | docs (résultat de mesure) |
 | **Impact** | **Mesure — aucun changement de code** |
 | **Carnet** | [`CAMPAGNE_18082026_...`](../recherche/CAMPAGNE_18082026_nociception_20_graines.md) |
@@ -577,7 +1455,7 @@ Bilan général inchangé : **1 mécanique cognitive sur 13** a amélioré une m
 
 | Type | Details |
 |------|---------|
-| **Commit** | `b648e1f` |
+| **Commit** | `efea6ae` |
 | **Catégorie** | fix critique |
 | **Impact** | **Critique — la mécanique v41.25 était entièrement inopérante** |
 | **Banc** | [`banc_intra_tick_douleur.py`](../recherche/scripts/banc_intra_tick_douleur.py) |
@@ -653,7 +1531,7 @@ campagne 20 graines × 2 bras est relancée pour mesurer la **survie**.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `5b361a7` |
+| **Commit** | `197e17b` |
 | **Catégorie** | feat (expérimental) |
 | **Impact** | **Fonctionnel — homéostasie / apprentissage du danger** |
 | **Carnet** | [`NOCICEPTION_18082026_...`](../recherche/NOCICEPTION_18082026_la_chaleur_qui_fait_mal.md) |
@@ -724,7 +1602,7 @@ sous 20 graines, et chaque taux sera donné **avec son intervalle de Wilson**.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `54f2f1b` |
+| **Commit** | `62d7a4b` |
 | **Catégorie** | feat (expérimental) |
 | **Impact** | **Fonctionnel — neurogenèse** |
 | **Carnet** | [`NUIT_18082026_...`](../recherche/NUIT_18082026_le_niveau_5_franchi_et_le_frein_qui_ne_borne_pas.md) |
@@ -780,7 +1658,7 @@ repart avec un rendement vierge, sans greffe.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `bfc546f` |
+| **Commit** | `539dafa` |
 | **Catégorie** | fix (expérimental) — conformité au dogme |
 | **Impact** | **Fonctionnel — neurogenèse** |
 | **Carnet** | [`EXPANSION_17082026_le_frein_de_la_neurogenese.md`](../recherche/EXPANSION_17082026_le_frein_de_la_neurogenese.md) · [`NUIT_18082026_...`](../recherche/NUIT_18082026_le_niveau_5_franchi_et_le_frein_qui_ne_borne_pas.md) |
@@ -841,11 +1719,11 @@ divisée par 11 (0,19 → 0,017) et un effort triplé.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `89ac5ad` |
+| **Commit** | `ddf26f5` |
 | **Catégorie** | fix (expérimental) — conformité au dogme |
 | **Impact** | **Fonctionnel — neurogenèse & métabolisme** |
 | **Carnet** | [`REVUE_DOGME_17082026_rien_en_dur.md`](../recherche/REVUE_DOGME_17082026_rien_en_dur.md) |
-| **Source** | [`docs/naulthene_cosmologie/`](../naulthene_cosmologie/) — modèle v5.0/v5.1 |
+| **Source** | travaux de **cosmologie Naulthène**, modèle v5.0/v5.1 (documents personnels, hors dépôt) |
 
 **Violation n°2 levée — le thermostat de neurogenèse.** L'ancienne condition était :
 
@@ -915,7 +1793,7 @@ cette division, non écrite.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `89ac5ad` |
+| **Commit** | `ddf26f5` |
 | **Catégorie** | fix (expérimental) — conformité au dogme |
 | **Impact** | **Fonctionnel — métabolisme** |
 | **Carnet** | [`REVUE_DOGME_17082026_rien_en_dur.md`](../recherche/REVUE_DOGME_17082026_rien_en_dur.md) |
@@ -1174,7 +2052,7 @@ décroître).
 
 | Type | Details |
 |------|---------|
-| **Commit** | `89ac5ad` |
+| **Commit** | `ddf26f5` |
 | **Catégorie** | fix (expérimental) |
 | **Impact** | **Fonctionnel** |
 | **Carnet** | [`CORRECTIF_v4110_memoire_par_carte.md`](../recherche/CORRECTIF_v4110_memoire_par_carte.md) |
@@ -1679,7 +2557,7 @@ l'odorat mesuré **inerte** à l'ablation.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `89ac5ad` |
+| **Commit** | `ddf26f5` |
 | **Catégorie** | docs (**aucune ligne de `src/` modifiée**) |
 | **Impact** | Documentation — corrige une affirmation fausse de la vitrine publique |
 | **Branche** | `feat/v41-ligne-flottaison` |
@@ -1726,7 +2604,7 @@ corrigée en silence.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `89ac5ad` |
+| **Commit** | `ddf26f5` |
 | **Catégorie** | docs (campagne de mesure, **aucune ligne de `src/` modifiée**) |
 | **Impact** | Critique — infirme le résultat mis en avant en v41.0 |
 | **Branche** | `feat/v41-ligne-flottaison` |
@@ -1951,7 +2829,7 @@ reste modérée.*
 
 | Type | Details |
 |------|---------|
-| **Commit** | `89ac5ad` |
+| **Commit** | `ddf26f5` |
 | **Catégorie** | refactor + feat |
 | **Impact** | Critique — 3 interrupteurs cognitifs deviennent continus |
 | **Branche** | `feat/v40.1-envie-de-vivre` |
@@ -2013,7 +2891,7 @@ l'affichage. Neutralisé, pas supprimé.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `89ac5ad` |
+| **Commit** | `ddf26f5` |
 | **Catégorie** | feat |
 | **Impact** | Critique — module TOUTES les décisions |
 | **Branche** | `feat/v40.1-envie-de-vivre` |
@@ -2095,7 +2973,7 @@ envie à **1,000000** après 1 000 nuits sans la moindre réussite. **Correctif*
 
 | Type | Details |
 |------|---------|
-| **Commit** | `89ac5ad` |
+| **Commit** | `ddf26f5` |
 | **Catégorie** | feat |
 | **Impact** | Critique — change le chemin de décision |
 | **Branche** | `feat/v40-planification-emergente` |
@@ -2172,7 +3050,7 @@ réel est de ~70 %. **Défaut de mesure, pas de cognition** — aucune décision
 
 | Type | Details |
 |------|---------|
-| **Commit** | `89ac5ad` |
+| **Commit** | `ddf26f5` |
 | **Catégorie** | chore (versionnement) + fix (mémoire, audio, télémétrie) |
 | **Impact** | **Critique** — premier correctif issu d'une mesure directe, et fin du risque structurel n°1 |
 | **Branche** | `feat/v39-memoire-abstraite` |
@@ -2260,7 +3138,7 @@ avec et sans conservation de l'empreinte.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `89ac5ad` |
+| **Commit** | `ddf26f5` |
 | **Catégorie** | feat (expérimental) / docs |
 | **Impact** | **Documentation** — aucune ligne de `src/naulthene/` modifiée |
 
@@ -2455,7 +3333,7 @@ désigne comme principal.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `89ac5ad` |
+| **Commit** | `ddf26f5` |
 | **Catégorie** | docs (recherche expérimentale) |
 | **Impact** | **Documentation** — aucun changement de code |
 
@@ -2503,7 +3381,7 @@ agent *craintif*, pas *indifférent*.
 
 | Type | Details |
 |------|---------|
-| **Commit** | `89ac5ad` |
+| **Commit** | `ddf26f5` |
 | **Catégorie** | docs (recherche expérimentale) |
 | **Impact** | **Documentation** — annule la conclusion des deux entrées précédentes |
 
@@ -2556,7 +3434,7 @@ réparation du cerveau et la cohérence du cursus — pas les raffinements d'app
 
 | Type | Details |
 |------|---------|
-| **Commit** | `89ac5ad` |
+| **Commit** | `ddf26f5` |
 | **Catégorie** | docs (recherche expérimentale) |
 | **Impact** | **Documentation** — annule la conclusion de l'entrée précédente |
 
@@ -2613,7 +3491,7 @@ répliquée sur ≥3 graines avec témoins appariés, avant publication et non a
 
 | Type | Details |
 |------|---------|
-| **Commit** | `89ac5ad` |
+| **Commit** | `ddf26f5` |
 | **Catégorie** | docs (recherche expérimentale) |
 | **Impact** | **Documentation** — aucun changement de code |
 
@@ -2686,7 +3564,7 @@ moment pour la grâce, fragilité mesurée de la compétence pour la révision).
 
 | Type | Details |
 |------|---------|
-| **Commit** | `89ac5ad` |
+| **Commit** | `ddf26f5` |
 | **Catégorie** | docs (recherche expérimentale) |
 | **Impact** | **Documentation** — aucun changement de code |
 

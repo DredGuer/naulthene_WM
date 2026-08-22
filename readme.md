@@ -6,8 +6,10 @@ Vision, hearing, touch, smell, taste, motor control, a world model, episodic mem
 all read from and write to a **single latent bus**. Adding a sense means appending dimensions to
 one vector, not bolting on a subsystem.
 
-**55,232 parameters. 0.21 MB.** One `nn.Module`, twelve layers, twelve hundred simulated days of
-continuous life.
+**55,552 parameters at birth. 0.21 MB.** One `nn.Module`, twelve layers, twelve hundred
+simulated days of continuous life. ⚠️ **That figure is a NEWBORN brain**: neurogenesis grows it
+during life, and a brain at 1500 days averages **1,241,790 parameters — 22.4×** (measured over
+35 brains, see below).
 
 ### What this is meant to become
 
@@ -96,7 +98,7 @@ This section exists because the thesis above is only worth stating if it can be 
 | `porte_auditive` (130 → 64) | 8,320 |
 | `hippocampe` (128 → 64) | 8,192 |
 | `fusion_memoire` (128 → 64) | 8,192 |
-| `integrateur_bio` (100 → 64) — 5 senses + homeostasis | 6,400 |
+| `integrateur_bio` (105 → 64) — 5 senses + homeostasis | 6,720 |
 | `generateur_attente` (72 → 64) — JEPA world model | 4,608 |
 | `generateur_attente_audio` (72 → 64) | 4,608 |
 | `analyseur` (64 → 64) | 4,096 |
@@ -104,24 +106,55 @@ This section exists because the thesis above is only worth stating if it can be 
 | `tete_vocale` (64 → 8) | 512 |
 | `tete_requete` (64 → 5) — C3 routing ⚠️ **dead at runtime** | 320 |
 | `cortex_prefrontal` (64 → 1) — C2 | 64 |
-| **Total** | **55,232** (0.21 MB fp32) |
+| **Total** | **55,552** (0.21 MB fp32) |
+
+> ⚠️ **Corrected 21 Aug 2026.** This table previously read **55,232** with `integrateur_bio`
+> at 100→64. Thermoception (v41.11) had grown the bio vector from 36 to **41** dimensions, so
+> the layer is **105→64** and the total is **+320**. The count had not been re-measured since.
+> Recounted with `sum(p.numel() for p in agent.parameters())`, never estimated. Full teardown:
+> [anatomy of the core](docs/etat_des_lieux/21082026_anatomie_du_noyau.md).
+>
+> **What the split reveals**: **C2 — the deliberative system — is 64 parameters out of 55,552,
+> i.e. 0.1 % of the brain.** All of deliberation is one 64→1 projection. Worth holding next to
+> the ablation result ("severing C2 changes the score by 0.0 points"): perhaps C2 is not
+> useless, it is *tiny*. Meanwhile the audio hemisphere weighs **13,440 parameters (24 %)** for
+> a faculty no MiniGrid level exercises.
+>
+> 🔴 **And neurogenesis makes it worse — structurally.** Measured over 35 brains at 1500 days:
+> C2 *is* multiplied by 13 (64 → 833), yet its **share falls from 0.115 % to 0.067 %** because
+> the trunk grows **2.2× faster**. The cause is geometry, not a tunable: when `dim_bus` goes
+> 16 → 154, a `bus→bus` layer grows as **N²** while a `bus→1` head grows as **N**
+> (`hippocampe` ×28.9 vs `cortex_prefrontal` ×13.0). **Every neurogenesis event dilutes C2.**
+> There is no constant to fix — rebalancing would require *non-uniform* growth, letting what
+> the agent lived decide **where** the brain grows.
 
 ### Versus MiniGrid baselines — **the thesis does not yet hold on size**
 
 | Architecture | Parameters | Ratio |
 |---|---|---|
-| `rl-starter-files` CNN actor-critic | 19,384 | Naulthène is **2.85× larger** |
-| PPO `MlpPolicy` (SB3 default) | 27,784 | Naulthène is **1.99× larger** |
-| `rl-starter-files` CNN + LSTM | 52,664 | Naulthène is **1.05×** — parity |
+| `rl-starter-files` CNN actor-critic | 19,384 | **2.87×** at birth · **64.1×** at 1500 d |
+| PPO `MlpPolicy` (SB3 default) | 27,784 | **2.00×** at birth · **44.7×** at 1500 d |
+| `rl-starter-files` CNN + LSTM | 52,664 | **1.05×** at birth · **23.6×** at 1500 d |
 
 **Naulthène is not smaller than a standard RL baseline.** Stated plainly, because the numbers are
 one `grep` away for any reader.
 
+> 🔴 **And the birth figure flatters the architecture.** Measured 22 Aug 2026 over **35 brains at
+> 1500 days**: `dim_bus` grows from **16 to 139** on average (max 160) and the total reaches
+> **1,241,790 parameters**, i.e. **22.4×** its birth size. An RL baseline keeps the size it was
+> given. **The honest comparison on a trained agent is therefore 64×, not 2.87×** — and it comes
+> with a hard block at level 4/15.
+>
+> The cost buys nothing measurable: the heaviest brain in the campaign (1,570,648) and the
+> lightest (402,712) both end at **the same level**, size correlates with level at
+> **r = −0.17 (t = −1.01, n = 35, not significant)**, and neurogenesis has been extinct for
+> **882 days on average**.
+
 Two caveats, both measurable rather than rhetorical:
 
-1. **The comparison is not like-for-like.** 24,768 of those parameters (45 %) buy things no
+1. **The comparison is not like-for-like.** 25,088 of those parameters (45 %) buy things no
    MiniGrid baseline has: an audio/vocal hemisphere (13,440), a JEPA world model (4,608), a
-   5-sense biological integrator (6,400), an exocortex port (320). The **strictly comparable RL
+   5-sense biological integrator (6,720), an exocortex port (320). The **strictly comparable RL
    core is 30,464 parameters** — 1.57× a CNN baseline, 0.58× a CNN+LSTM.
 2. **Efficiency claims require equal-budget comparison**, and that experiment has not been run.
 
@@ -133,15 +166,32 @@ Two caveats, both measurable rather than rhetorical:
 | Level 5 | **4 seeds out of 20** — 20 % [8–42], and the level is **held** (up to 1078 nights on it) |
 | What unlocked level 4 | **brain-sparing**: 0 % [0–16] → 80 % [58–92], 18 wins / 0 losses (p < 0.001) |
 | Effect of severing C2 on the score | **0.0 points across all 6 levels** (78 cells) — and on `LavaGap`, severing it **triples** the success rate |
+| Learned valence of **water** | **+0.017 — below bare floor (+0.125)**, over ~7,800 confirmations, 10/10 brains. The agent drinks constantly and learns **nothing** from it. Same signature as the v41.7 bug (food valence stuck at zero over 4,004 meals): a suspiciously clean result on a high-volume channel. **Possibly a severed channel — unverified** |
+| Nights spent at **exactly zero satiety** | **82–87 %** in this campaign, and **78–100 % across every campaign in the repo**, all arms, all versions. ~38 % of ticks in the critical zone, `reserve = 0.000` on every brain measured. Yet surplus is arithmetically reachable (**+0.0025**/tick on a full stomach) — the stomach simply never stays full. To be read next to `mastery ~ energy`, **r = +0.710** |
 | Learned valence of lava | **+0.072 — POSITIVE**, barely distinct from water (+0.069). Nociception (v41.25) flips it to **−0.761 on 20/20 seeds** — but survival **drops** 8.6 % → 6.7 %, because pain was **non-zero everywhere** (77 % of cells) and the agent fled its own food supply (**−25 % harvest**, two maps). Graded pain (v41.26) under test |
 | Cognitive mechanisms that improved anything | **1 out of 14 tested** — brain-sparing. Three pain models (v41.25/26/27) changed behaviour by **0 pt** (`t = −1.51`, n=20) |
 | Navigation on an empty 5×5 room | **54.4 %** after 300 days vs **39.2 %** for a random policy *over the same 7 actions* — the agent **beats chance by 15 pts** |
 | Ticks spent on gestures that change nothing (`Empty-5x5`) | **57.2 %** — because a sterile gesture cost **1.09** against **4.00** for the one gesture that moves toward the goal. **v41.28** charges the work *attempted*: pushing a wall now costs a full step. **Measured (n=20): −2.5 pts, `t = −1.71`, not significant** — the cost was not the lever |
 | Effect of growing the brain (96 → 160 → 512 dims) | **none** across 3 campaigns — and energy drops 11× |
 | **Why it plateaus at level 4** | **Not cognitive — metabolic.** `mastery ~ mean energy`: **r = +0.710**, `t = +2.85` (SIG, n=10). Three **posed constants** calibrate the metabolic rhythm for a *newborn* agent: the code assumes **4 episodes/day**, the agent plays **1.55**, and the gap **widens** over the run (×1.68 → ×2.58). **9 seeds out of 10 sit at the exact `PATIENCE_MAX = 350` ceiling** |
+| **v41.31 — the causal gradient** | Masking the actor's gradient on non-transitions gave mastery **+2.57 pts** (`t = +2.68`) on a **forced** `SimpleCrossing` bench, n=20. 🔴 **It does not survive the full curriculum.** 20 paired seeds × 1500 days, free curriculum (40 runs): level **+0.05 (`t = +0.37`)**, mastery **+1.09 (`t = +0.39`)**, energy **+0.001 (`t = +0.07`)** — all NS, and **0 of 40 runs pass level 5**. A forced bench proves a mechanic works *where it applies*, never that it helps elsewhere |
 | Levers that did work | **3 — two properties of the world, one of the decision** |
 
 A standard PPO solves `Empty-8x8` in a few thousand episodes. **Naulthène currently does not.**
+
+> 🔴 **The causal gradient falsified on the full curriculum (22 Aug 2026).** 20 paired seeds
+> × 1500 days, free 15-level curriculum, **40 runs all complete**. Level: **4.10 vs 4.05**
+> (`t = +0.37`, 4 wins / 13 ties / 3 losses). Mastery: **+1.09** (`t = +0.39`, 9/20 seeds).
+> Energy: **+0.001**. **Not one run out of 40 passes level 5.**
+>
+> ✅ **The "never report a `t` on a running job" rule paid off.** At 5 seeds mid-campaign the
+> mastery gap read **+4.95**; at 20 seeds it is **+1.09** — divided by 4.5. The figure was
+> never published, so nothing had to be retracted. Same shape as the C2/C1 ratio
+> (`t = +3.68` mid-run → `t = +0.63` final).
+>
+> The one metric above `t = 2` — minimum satiety, `Δ = +0.032`, `t = +2.17` — **fails
+> Bonferroni** across the 3 metrics tested (threshold `t ≈ 2.86`; corrected p ≈ 0.13).
+> [Full write-up](docs/etat_des_lieux/22082026_campagne_v41.31_cursus_complet.md).
 
 > 🔴 **The clearest measurement in this repository (20 Aug 2026).** On `Empty-5x5` — an
 > empty room, no hazard, goal 4 cells away — the agent **does learn**: mastery climbs
@@ -258,7 +308,7 @@ This is the table that would decide whether the architecture is *efficient* or m
 |---|---|---|---|---|
 | PPO CNN (`rl-starter-files`) | 19,384 | — | — | — |
 | PPO + LSTM | 52,664 | — | — | — |
-| **Naulthène** | **55,232** | **44.7 %** (v41 bench, 300 ep.) | — | **never reached** |
+| **Naulthène** | **55,552** | **44.7 %** (v41 bench, 300 ep.) | — | **never reached** |
 
 Across **20 seeds × 1500 simulated days** on a reproducible bench, **100 % [84–100]** of
 agents reach level 4 of the 15-level curriculum, and **20 % [8–42]** now hold level 5 — up
@@ -505,13 +555,60 @@ What that means concretely:
   4.0 assumed, and the gap **widens** over a run (×1.68 → ×2.58) because patience ratchets up
   and never comes back down. Worse, **9 seeds out of 10 sit at the exact `PATIENCE_MAX = 350`
   ceiling**: the current mechanism grants a **constant** +10 per willpower-win until the wall,
-  then **nothing** — 30 wins saturate it, and 1200 days change nothing after that. Planned
-  replacements: lived `episodes_jour` with inertia; an **unbounded** exponentially-decaying
-  return on patience; and a gain derived from the **measured gap between failure and success
-  durations**. ⚠️ **Not implemented, and the direction of the fix is not settled** — following
-  real patience would *lower* the need (2.80 → ~1.1/axis), hence *fewer* food sources, while
-  energy already sits at its floor. Two opposite readings remain open; only measurement will
-  decide. [Design note](docs/ameliorations/EPISODES_REFERENCE_20082026_la_derniere_constante_posee.md).
+  then **nothing** — 30 wins saturate it, and 1200 days change nothing after that.
+- **v41.30 removes all three.** Patience becomes a **trait of the agent's whole life**:
+  `patience = patience_min × exp(capital)`, each gain adding `contrast / (1 + capital)` —
+  **unbounded, with a decaying return** (measured: +1.00 → +0.50 → +0.40 → +0.34 → +0.31).
+  The gain no longer counts *events* (+10 per win regardless of difficulty) but measures the
+  **gap between how long success takes and how long the agent waits before quitting**: succeed
+  in 80 ticks while quitting at 100 and more patience buys nothing, so nothing is granted. The
+  ceiling is not another number — it comes from the **world** (`max_steps`, which MiniGrid
+  enforces anyway; the patiences observed in v41.29 — 100 · 144 · 256 · 324 — *are* those
+  `max_steps`). The metabolic need now reads `episodes_jour`, a quantity the code already
+  measured and logged. The life-long EMA is **never reset on promotion**: verified, clearing
+  the sliding window leaves patience unchanged (471.9 → 471.9).
+- **🔴 The first measurement was unfavourable — and it found a real design fault.** A 3-seed ×
+  3-arm × 10-day isolation bench, run immediately: energy **0.1968 derived vs 0.2651 fossil**
+  (−0.068). Cutting the new patience changed **literally nothing** (bit-identical runs), so the
+  whole gap came from the **metabolic rhythm** — which is exactly what keeping the two ablation
+  flags separate was for.
+- **The fault: the WORLD had been indexed on the agent's METABOLISM.** Two corrections.
+  **(fix1)** Resource density was derived from the need, so a slower agent made food
+  *physically vanish* from the grid — 2 sources instead of 6 from day one. Early on the policy
+  is near-random, so survival depends on **spatial density**, not nutritional value: quadrupling
+  what an apple is worth compensates nothing if you are less likely to step on one. Density now
+  derives from **surface area** alone (measured per cell: 0.286 · 0.324 · 0.341 across levels),
+  and both arms place identical resources. **(fix2)** The portion itself derived from the
+  rhythm — but satiety is capped at 1.0 and the overflow **discarded**, while digestion is
+  charged on the **whole** portion: at rhythm 1.0 a meal was 3.175, of which **2.175 was thrown
+  away** for a **×4 digestive cost** (0.476 vs 0.119). A portion is a property of the *resource*,
+  not of the agent's schedule; it now derives from stomach capacity (waste: **0.000**). The
+  lived rhythm was meant to set only what remains physiological — the **drain rate**.
+  ⚠️ **It does not: `taux_satiete` is a dead variable.** Nothing subtracts it — v41.2 replaced
+  it with digestion and left it without a consumer (verified: a fasting agent loses 0.083333
+  of satiety over 10 ticks, exactly `debit_digestif / RENDEMENT_CONVERSION`, not the 0.017500
+  that rate would produce). The real regulator is **`DEBIT_DIGESTIF_JOUR`**, forcing a drain of
+  **3.333 stomachs/day identical in both arms** — which fully explains why energy does not move
+  (`t = +1.40`, NS). The agent eats **5.4 times a day** and still sits at 0.22 energy: its gut
+  is calibrated for a hyper-expensive life it no longer leads.
+  [Investigation](docs/recherche/METABOLISME_20082026_la_variable_morte.md).
+- **After both fixes the sign flips: +0.0567** (0.3567 derived vs 0.3000 fossil), **3 seeds out
+  of 3** favourable. ⚠️ **`t = +1.64` at n=3 is NOT significant** (threshold 4.30).
+- **The full campaign found nothing — n=20, 40 runs × 1500 days.** The project's first
+  measurement actually at its own 20-seed bar: energy **+0.011 (`t = +1.04`)**, vigour
+  **+0.003**, mastery **+0.33**, C2/C1 ratio **+0.088 (`t = +0.63`, 9/20 seeds)**. All NS.
+- **And the conditional analysis unmasked an artefact.** Splitting pairs by whether both arms
+  reached the *same* level: **at equal regime (16 pairs) the effect vanishes and turns slightly
+  negative — −0.065, `t = −0.44`, 5/16 favourable**. The four divergent pairs carry the entire
+  positive gap. **Proof by sign**: in 3 of those 4, it is FOSSIL that holds the higher level,
+  and the gap stays positive anyway — if the effect came from the arm, the sign would flip. It
+  never does. What raises the C2/C1 ratio is being on a *different level from your twin*, not
+  being in the derived arm. Level-4 crossing: **1/20 vs 2/20**, Fisher exact **p = 1.000**, and
+  **no run out of 40 ever passed level 5**.
+  ⚠️ At day 1046 on 5 seeds this same ratio showed `t = +3.68` on 5/5 and was reported as
+  significant. It did not hold. **A `t` computed on a running job is a snapshot, not a
+  measurement** — corrected here rather than quietly dropped.
+  [Design note](docs/ameliorations/EPISODES_REFERENCE_20082026_la_derniere_constante_posee.md).
 - **But it has not learned danger.** On the four level-5 brains, the learned valence of
   lava is **positive** (+0.068 to +0.081) and indistinguishable from water (+0.060 to
   +0.088), after up to 1078 nights spent on `LavaGap`. MiniGrid punishes death with exactly
@@ -564,7 +661,7 @@ What that means concretely:
 - Two of three benchmark tables are filled; the one that matters most (equal-budget comparison
   against PPO) **has not been run**.
 - The thesis defended here is **unification**, which is measured. Lightness is *not* yet
-  demonstrated — Naulthène is currently 2.85× heavier than a PPO CNN baseline, and this README
+  demonstrated — Naulthène is currently 2.87× heavier than a PPO CNN baseline, and this README
   says so.
 
 Everything that is broken is written down, including the diagnostic errors made along the way.

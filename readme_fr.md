@@ -7,8 +7,10 @@ La vue, l'ouïe, le toucher, l'odorat, le goût, le contrôle moteur, un modèle
 épisodique et la parole lisent et écrivent tous dans **un seul bus latent**. Ajouter un sens, c'est
 ajouter des dimensions à un vecteur — pas greffer un sous-système.
 
-**55 232 paramètres. 0,21 Mo.** Un seul `nn.Module`, douze couches, mille trois cents jours
-simulés de vie continue.
+**55 552 paramètres à la naissance. 0,21 Mo.** Un seul `nn.Module`, douze couches, mille trois
+cents jours simulés de vie continue. ⚠️ **Ce chiffre est celui d'un cerveau NEUF** : la
+neurogenèse le fait grossir en cours de vie, et un cerveau à 1500 jours pèse en moyenne
+**1 241 790 paramètres — 22,4×** (mesuré sur 35 cerveaux, voir plus bas).
 
 ### Ce que ce projet a vocation à devenir
 
@@ -65,7 +67,7 @@ datacenter.*
 | `porte_auditive` (130 → 64) | 8 320 |
 | `hippocampe` (128 → 64) | 8 192 |
 | `fusion_memoire` (128 → 64) | 8 192 |
-| `integrateur_bio` (100 → 64) — 5 sens + homéostasie | 6 400 |
+| `integrateur_bio` (105 → 64) — 5 sens + homéostasie | 6 720 |
 | `generateur_attente` (72 → 64) — modèle du monde JEPA | 4 608 |
 | `generateur_attente_audio` (72 → 64) | 4 608 |
 | `analyseur` (64 → 64) | 4 096 |
@@ -73,24 +75,55 @@ datacenter.*
 | `tete_vocale` (64 → 8) | 512 |
 | `tete_requete` (64 → 5) — routage C3 | 320 |
 | `cortex_prefrontal` (64 → 1) — C2 | 64 |
-| **Total** | **55 232** (0,21 Mo en fp32) |
+| **Total** | **55 552** (0,21 Mo en fp32) |
+
+> ⚠️ **Corrigé le 21/08/2026.** Ce tableau annonçait **55 232** avec `integrateur_bio` à
+> 100→64. La thermoception (v41.11) avait fait passer le vecteur bio de 36 à **41** dimensions,
+> donc la couche est **105→64** et le total **+320**. Le compte n'avait pas été refait depuis.
+> Recompté par `sum(p.numel() for p in agent.parameters())`, jamais estimé. Démontage complet :
+> [anatomie du noyau](docs/etat_des_lieux/21082026_anatomie_du_noyau.md).
+>
+> **Ce que la répartition révèle** : **C2 — la délibération — pèse 64 paramètres sur 55 552,
+> soit 0,1 % du cerveau.** Toute la délibération tient dans une projection 64→1. À rapprocher
+> du résultat d'ablation (« couper C2 ne change le score de 0,0 point ») : ce n'est peut-être
+> pas que C2 soit inutile, c'est qu'il est *minuscule*. À l'inverse, l'hémisphère audio pèse
+> **13 440 paramètres (24 %)** pour une faculté qu'aucun niveau du cursus n'exerce.
+>
+> 🔴 **Et la neurogenèse aggrave la chose — structurellement.** Mesuré sur 35 cerveaux à
+> 1500 jours : C2 *est bien* multiplié par 13 (64 → 833), mais sa **part tombe de 0,115 % à
+> 0,067 %** parce que le tronc grossit **2,2× plus vite**. La cause est géométrique, pas un
+> réglage : quand `dim_bus` passe de 16 à 154, une couche `bus→bus` croît en **N²** et une
+> tête `bus→1` croît en **N** (`hippocampe` ×28,9 contre `cortex_prefrontal` ×13,0).
+> **Toute neurogenèse dilue C2.** Il n'y a aucune constante à corriger — un rééquilibrage
+> exigerait une croissance *non uniforme*, laissant le vécu décider **où** le cerveau grandit.
 
 ### Face aux baselines MiniGrid — **la thèse ne tient PAS sur la taille**
 
 | Architecture | Paramètres | Rapport |
 |---|---|---|
-| `rl-starter-files` CNN acteur-critique | 19 384 | Naulthène est **2,85× plus lourd** |
-| PPO `MlpPolicy` (défaut SB3) | 27 784 | Naulthène est **1,99× plus lourd** |
-| `rl-starter-files` CNN + LSTM | 52 664 | Naulthène est à **1,05×** — parité |
+| `rl-starter-files` CNN acteur-critique | 19 384 | **2,87×** à la naissance · **64,1×** à 1500 j |
+| PPO `MlpPolicy` (défaut SB3) | 27 784 | **1,99×** à la naissance · **44,7×** à 1500 j |
+| `rl-starter-files` CNN + LSTM | 52 664 | **1,05×** à la naissance · **23,6×** à 1500 j |
 
 **Naulthène n'est pas plus léger qu'un baseline RL standard.** C'est écrit noir sur blanc parce
 que le calcul est à un `grep` de n'importe quel lecteur.
+
+> 🔴 **Et le chiffre de naissance flatte l'architecture.** Mesuré le 22/08/2026 sur **35 cerveaux
+> à 1500 jours** : `dim_bus` passe de **16 à 139** en moyenne (max 160) et le total atteint
+> **1 241 790 paramètres**, soit **22,4×** la taille de naissance. Un baseline RL, lui, garde la
+> taille qu'on lui a donnée. **La comparaison honnête sur un agent entraîné est donc 64×, pas
+> 2,87×** — et elle s'accompagne d'un blocage au niveau 4/15.
+>
+> Le coût n'achète rien de mesurable : le cerveau le plus lourd de la campagne (1 570 648) et le
+> plus léger (402 712) finissent **au même niveau**, la taille corrèle au niveau à
+> **r = −0,17 (t = −1,01, n = 35, non significatif)**, et la neurogenèse est éteinte depuis
+> **882 jours en moyenne**.
 
 Deux nuances, mesurées et non rhétoriques :
 
 1. **La comparaison n'est pas à périmètre égal.** 24 768 de ces paramètres (45 %) achètent ce
    qu'aucun baseline MiniGrid n'a : un hémisphère audio/vocal (13 440), un modèle du monde JEPA
-   (4 608), un intégrateur biologique à 5 sens (6 400), un port exocortex (320). Le **cœur
+   (4 608), un intégrateur biologique à 5 sens (6 720), un port exocortex (320). Le **cœur
    strictement comparable pèse 30 464 paramètres** — 1,57× un CNN, 0,58× un CNN+LSTM.
 2. **Toute affirmation d'efficience exige une comparaison à budget égal**, et cette expérience
    n'a pas été menée.
@@ -103,15 +136,32 @@ Deux nuances, mesurées et non rhétoriques :
 | Niveau 5 | **4 graines sur 20** — 20 % [8–42], et le palier est **tenu** (jusqu'à 1078 nuits dessus) |
 | Ce qui a débloqué le niveau 4 | le **brain-sparing** : 0 % [0–16] → 80 % [58–92], 18 gagne / 0 perd (p < 0,001) |
 | Effet de couper C2 sur le score | **0,0 point sur les 6 niveaux** (78 cellules) — et sur `LavaGap`, le couper **triple** la réussite |
+| Valence apprise de l'**eau** | **+0,017 — sous le sol nu (+0,125)**, sur ~7 800 confirmations, 10/10 cerveaux. L'agent boit sans cesse et n'en apprend **rien**. Même signature que le bug v41.7 (valence de la nourriture à zéro sur 4 004 repas) : un résultat trop propre sur un canal à fort volume. **Canal potentiellement débranché — non vérifié** |
+| Nuits à satiété **exactement zéro** | **82–87 %** sur cette campagne, et **78–100 % sur toutes les campagnes du dépôt**, tous bras, toutes versions. ~38 % des ticks en zone critique, `reserve = 0,000` sur tous les cerveaux mesurés. Or le surplus est arithmétiquement atteignable (**+0,0025**/tick à estomac plein) — l'estomac ne reste simplement jamais plein. À lire avec `maîtrise ~ énergie`, **r = +0,710** |
 | Valence apprise de la lave | **+0,072 — POSITIVE**, à peine distincte de l'eau (+0,069). La nociception (v41.25) la fait basculer à **−0,761 sur 20/20 graines** — mais la survie **BAISSE** : 8,6 % → 6,7 %, parce que la douleur était **non nulle partout** (77 % des cases) et que l'agent fuyait son propre garde-manger (**−25 % de récolte**, deux cartes). Douleur graduée (v41.26) **mesurée : échec** ; douleur **unique** (v41.27) : **0 pt d'effet** sur le comportement (`t = −1,51`, n=20) |
 | Navigation sur une pièce vide 5×5 | **54,4 %** après 300 jours contre **39,2 %** pour une politique aléatoire *sur les mêmes 7 actions* — l'agent **bat le hasard de 15 pts**. ⚠️ Une version antérieure de cette ligne affirmait l'inverse (« 21 pts sous le hasard »), en comparant un agent à 7 actions à un hasard à 3 actions |
 | Ticks passés en gestes qui ne changent rien (`Empty-5x5`) | **57,2 %** — parce qu'un geste stérile coûtait **1,09** contre **4,00** pour le seul geste qui rapproche du but. La **v41.28** facture le travail *tenté* : pousser un mur coûte désormais le prix d'un pas. **Mesuré (n=20) : −2,5 pts, `t = −1,71`, non significatif** — le coût n'était pas le levier |
 | Mécaniques cognitives ayant amélioré quoi que ce soit | **1 sur 12 testées** — le brain-sparing |
 | Effet d'agrandir le cerveau (96 → 160 → 512 dims) | **aucun** sur 3 campagnes — et l'énergie chute ×11 |
 | **Pourquoi ça plafonne au niveau 4** | **Pas cognitif — métabolique.** `maîtrise ~ énergie moyenne` : **r = +0,710**, `t = +2,85` (SIG, n=10). Trois **constantes posées** calibrent le rythme métabolique sur un agent *neuf* : le code suppose **4 épisodes/jour**, l'agent en joue **1,55**, et l'écart **se creuse** au fil du run (×1,68 → ×2,58). **9 graines sur 10 sont au plafond exact `PATIENCE_MAX = 350`** |
+| **v41.31 — le gradient causal** | Masquer le gradient de l'acteur sur les non-transitions donnait maîtrise **+2,57 pts** (`t = +2,68`) sur banc **forcé** `SimpleCrossing`, n=20. 🔴 **Il ne survit PAS au cursus complet.** 20 graines appariées × 1500 jours, cursus libre (40 runs) : niveau **+0,05 (`t = +0,37`)**, maîtrise **+1,09 (`t = +0,39`)**, énergie **+0,001 (`t = +0,07`)** — tout NS, et **0 run sur 40 ne dépasse le niveau 5**. Un banc forcé prouve qu'une mécanique marche *là où elle s'applique*, jamais qu'elle aide ailleurs |
 | Leviers qui ont marché | **3 — deux propriétés du monde, une de la décision** |
 
 Un PPO standard résout `Empty-8x8` en quelques milliers d'épisodes. **Naulthène, non.**
+
+> 🔴 **Le gradient causal falsifié sur cursus complet (22/08/2026).** 20 graines appariées
+> × 1500 jours, cursus libre à 15 niveaux, **40 runs tous complets**. Niveau : **4,10 contre
+> 4,05** (`t = +0,37`, 4 gagne / 13 égal / 3 perd). Maîtrise : **+1,09** (`t = +0,39`, 9/20).
+> Énergie : **+0,001**. **Aucun run sur 40 ne dépasse le niveau 5.**
+>
+> ✅ **La règle « jamais de `t` sur un run en cours » a payé.** À 5 graines en mi-campagne,
+> l'écart de maîtrise valait **+4,95** ; à 20 graines il vaut **+1,09** — divisé par 4,5. Le
+> chiffre n'ayant jamais été publié, il n'y a rien eu à rétracter. Même forme que le ratio
+> C2/C1 (`t = +3,68` à mi-parcours → `t = +0,63` final).
+>
+> La seule métrique au-dessus de `t = 2` — satiété minimale, `Δ = +0,032`, `t = +2,17` —
+> **ne survit pas à Bonferroni** sur les 3 métriques testées (seuil `t ≈ 2,86` ; p corrigé
+> ≈ 0,13). [Compte rendu complet](docs/etat_des_lieux/22082026_campagne_v41.31_cursus_complet.md).
 
 > ⚠️ **Toute comparaison appariée antérieure à la v41.9 est non concluante — y compris la
 > ligne « 0 sur 9 » ci-dessus.** `env.reset()` n'était jamais seedé : MiniGrid tire ses cartes
@@ -365,12 +415,72 @@ donc calibré sur 4 épisodes/jour pendant que l'agent en joue 1,55, et **l'éca
 > **Ce n'est pas une constante fausse : c'est une constante qui mesure la jeunesse d'un agent
 > et qu'on applique à sa vieillesse.**
 
-**Remplacements prévus** (⚠️ **non implémentés**) : `episodes_jour` vécu à inertie ; un
-rendement de patience **exponentiellement décroissant et sans borne** — le motif que le projet
-emploie déjà pour la dérive métabolique (« une PENTE QUI DEVIENT VERTICALE, pas une
-barrière ») ; et un gain dérivé de l'**écart mesuré entre la durée des ratés et celle des
-réussites**. Bornes **conservées** : `MARGE_SUBSISTANCE`, `MARGE_TROUVABILITE`,
+**✅ v41.30 — les trois sont SUPPRIMÉES.** La patience devient un **trait de vie** :
+`patience = patience_min × exp(capital)`, chaque gain ajoutant `contraste / (1 + capital)` —
+**sans borne, à rendement décroissant** (mesuré : +1,00 → +0,50 → +0,40 → +0,34 → +0,31).
+Le gain ne compte plus des *événements* (+10 par victoire, quelle que soit sa difficulté)
+mais mesure l'**écart entre le temps qu'il faut pour réussir et celui au bout duquel l'agent
+abandonne** : réussir en 80 ticks en coupant à 100 ⇒ plus de patience n'apporte rien ⇒ aucun
+gain. Le plafond n'est pas un autre chiffre : il vient du **monde** (`max_steps`, que
+MiniGrid impose de toute façon — les patiences relevées en v41.29, 100 · 144 · 256 · 324,
+**sont** ces `max_steps`). Le besoin métabolique lit `episodes_jour`, grandeur que le code
+mesurait et loguait déjà. L'EMA porte sur la **vie entière, jamais réinitialisée à la
+promotion** : vérifié, vider la fenêtre glissante laisse la patience inchangée
+(471,9 → 471,9). Bornes **conservées** : `MARGE_SUBSISTANCE`, `MARGE_TROUVABILITE`,
 `FRACTION_CASES_RESSOURCES_MAX` — ce sont des rapports, pas des valeurs.
+
+> 🔴 **La première mesure fut DÉFAVORABLE — et elle a trouvé une vraie faute de conception.**
+> Banc d'isolation (3 graines × 3 bras × 10 jours) : énergie **0,1968 dérivé contre 0,2651
+> fossile** (−0,068). Couper la nouvelle patience ne changeait **rien** (runs identiques), donc
+> tout l'écart venait du **rythme métabolique** — c'est précisément à cela que servait la
+> séparation des deux drapeaux.
+>
+> **La faute : avoir indexé le MONDE sur le MÉTABOLISME de l'agent.** Deux correctifs.
+> **(fix1)** La densité de ressources dérivait du besoin, donc un agent plus lent faisait
+> *physiquement disparaître* la nourriture de la grille — 2 sources au lieu de 6 dès le jour 1.
+> En début de vie la politique est quasi aléatoire : la survie dépend de la **densité spatiale**,
+> pas de la valeur nutritive. Quadrupler ce que vaut une pomme ne compense rien si l'agent a
+> moins de chances de poser le pied dessus. La densité dérive désormais de la **surface** seule
+> (par case : 0,286 · 0,324 · 0,341 selon les paliers), et les deux bras placent des ressources
+> identiques. **(fix2)** La portion elle-même dérivait du rythme — or la satiété est plafonnée à
+> 1,0 et l'excédent **jeté**, tandis que la digestion est facturée sur la portion **entière** :
+> à rythme 1,0 un repas valait 3,175, dont **2,175 gaspillés** pour un coût digestif **×4**
+> (0,476 contre 0,119). Une portion est une propriété de la **ressource**, pas de l'agenda de
+> l'agent : elle dérive maintenant de la contenance de l'estomac (gaspillage **0,000**).
+>
+> **Ce que le rythme vécu devait régler, et lui seul : la vitesse de vidange.**
+> 🔴 **RECTIFICATION — il ne règle rien : `taux_satiete` est une VARIABLE MORTE.** Rien ne la
+> soustrait ; la v41.2 l'a remplacée par la digestion et l'a laissée sans consommateur
+> (vérifié : un agent qui jeûne perd **0,083333** de satiété en 10 ticks, soit exactement
+> `debit_digestif / RENDEMENT_CONVERSION`, et non les 0,017500 qu'un prélèvement produirait).
+> Le vrai régulateur est **`DEBIT_DIGESTIF_JOUR`**, qui impose une vidange de **3,333
+> estomacs/jour IDENTIQUE dans les deux bras** — ce qui explique entièrement l'invariance
+> énergétique. L'agent mange **5,4 fois par jour** et reste à 0,22 d'énergie : son tube
+> digestif est calibré pour une vie hyper-dépensière qui n'est plus la sienne.
+> [Enquête complète](docs/recherche/METABOLISME_20082026_la_variable_morte.md).
+>
+> ✅ **Après les deux correctifs le signe s'inverse : +0,0567** (0,3567 dérivé contre 0,3000
+> fossile), **3 graines sur 3** favorables, seuil de 0,26 franchi. A/A identique, rétrocompat
+> `.brain` sans erreur.
+> ⚠️ **`t = +1,64` à n=3 — NON SIGNIFICATIF** (seuil 4,30).
+>
+> 🔴 **Et la campagne complète n'a rien trouvé — n=20, 40 runs × 1500 jours.** Première mesure
+> du projet réellement au seuil des 20 graines : énergie **+0,011 (`t = +1,04`)**, vigueur
+> **+0,003**, maîtrise **+0,33**, ratio C2/C1 **+0,088 (`t = +0,63`, 9/20 graines)**. Tout NS.
+>
+> 🎯 **Et l'analyse conditionnelle démasque un ARTEFACT.** En séparant les paires selon que les
+> deux bras atteignent le **même** palier : **à régime égal (16 paires), l'effet disparaît et
+> devient légèrement négatif — −0,065, `t = −0,44`, 5/16 favorables**. Les 4 paires divergentes
+> portent **tout** l'écart positif. **Preuve par le signe** : dans 3 de ces 4 cas, c'est
+> **FOSSILE** qui détient le niveau supérieur, et l'écart reste positif quand même — si l'effet
+> venait du bras, le signe s'inverserait. Il ne s'inverse jamais. Ce qui fait monter le ratio
+> C2/C1, c'est d'être sur un palier **différent de son jumeau**, pas d'être dans le bras dérivé.
+> Franchissement du niveau 4 : **1/20 contre 2/20**, Fisher exact **p = 1,000**, et **aucun run
+> sur 40 n'a dépassé le niveau 5**.
+>
+> ⚠️ Au jour 1046 sur 5 graines, ce même ratio donnait `t = +3,68` sur 5/5 et a été annoncé
+> comme significatif. Il n'a pas tenu. **Un `t` calculé sur un run EN COURS est un instantané,
+> pas une mesure** — corrigé ici plutôt que discrètement retiré.
 
 ⚠️ **Le sens de la correction n'est PAS tranché.** Suivre la patience réelle ferait *baisser*
 le besoin (2,80 → ~1,1/axe), donc **moins** de sources — alors que l'énergie est déjà au
@@ -479,7 +589,7 @@ victoire de *conformité*, pas de performance.
 neurogenèse comparait une variance **absolue** (`< 0.005`) à une erreur JEPA réelle de
 0,012 — **mille fois plus petite**, donc une condition toujours vraie qui ne discriminait
 rien. Le correctif reprend la condition de survie du potentiel de Landau de
-[`docs/naulthene_cosmologie/`](docs/naulthene_cosmologie/) — `C(c) > ln(N)`, **cohésion
+des **travaux de cosmologie Naulthène** (documents personnels, hors dépôt) — `C(c) > ln(N)`, **cohésion
 contre friction d'expansion** — où le seuil `c_min = 5` n'est pas posé mais *calculé* :
 
 | Cosmologie | Thermostat |
