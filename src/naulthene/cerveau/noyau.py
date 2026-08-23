@@ -6855,6 +6855,12 @@ class EtatCognitif:
         # Mesure la CONJONCTION « être en face d'une ressource » ET « jouer le geste ».
         # Voir `_sonder_fourrage` pour le détail de ce que chaque compteur distingue.
         # Réarmés ici comme tout buffer journalier (piège `score_vocal_jour` v27.0).
+        # --- v41.32-etape4 : LA SONDE DE DISCRIMINATION (télémétrie PURE) ---
+        # Distribution des 7 actions quand `contact_frontal = 1`, séparément selon que la
+        # case frontale porte un MUR ou une RESSOURCE. Voir `_sonder_discrimination`.
+        self.discrim_actions_mur = {}
+        self.discrim_actions_ressource = {}
+
         self.fourrage_occasions_jour = 0
         self.fourrage_saisies_jour = 0
         self.fourrage_tentatives_jour = 0
@@ -7746,6 +7752,96 @@ def _sonder_fourrage(etat, action_item) -> None:
             etat.fourrage_faim_aux_occasions += float(etat.moteur_bio.faim())
     except Exception:
         return    # une sonde ne doit JAMAIS interrompre un tick
+
+
+def _sonder_discrimination(etat, action_item) -> None:
+    """v41.32-etape4 — LA SONDE DE DISCRIMINATION. Télémétrie PURE.
+
+    Question mesurée : **l'agent distingue-t-il une ressource d'un mur ?**
+
+    `contact_frontal` (bus_sensoriel, DIM_TOUCHER) est UN SEUL BIT, dérivé de
+    `can_overlap()`. Or `Ball.can_overlap() == False` comme `Wall.can_overlap() == False` :
+    le même bit vaut 1.0 pour un mur ET pour une ressource. Mesuré sur `Empty-5x5`
+    (3000 ticks) : quand le bit vaut 1, c'est un mur dans **81,5 %** des cas.
+
+    Un réflexe appris sur ce seul bit apprendrait donc majoritairement à SE DÉTOURNER —
+    et se détourner devant une ressource est exactement l'anti-corrélation mesurée à
+    l'étape 2 (ratio observé/attendu = 0,67, 49 nuits sur 60 sous le hasard).
+
+    ⚠️ MAIS L'INFORMATION EXISTE AILLEURS : la vue voit la couleur et le type, l'odorat
+    donne un gradient topologique. Le bit ambigu n'est donc une cause que si l'agent
+    s'appuie dessus PLUTÔT QUE sur ces canaux. C'est ce que cette sonde tranche.
+
+    Le test : comparer la distribution des 7 actions quand `contact_frontal = 1`,
+    séparément selon ce que porte la case frontale.
+      - distributions IDENTIQUES  -> l'agent ne discrimine pas : le bit aveugle
+      - distributions DIFFÉRENTES -> il discrimine par un autre canal : hypothèse tombée
+
+    La distance entre les deux distributions est mesurée par la **distance de variation
+    totale** (½·Σ|p−q|, dans [0,1]) : 0 = indiscernables, 1 = disjointes. Aucune
+    hypothèse de forme, aucun seuil posé — c'est une lecture, pas un test.
+
+    ⚠️ Compteurs réarmés dans `_reinitialiser_buffers_journee` (piège `score_vocal_jour`
+    v27.0). Aucune écriture hors de `discrim_*`.
+    """
+    det = getattr(etat, "detecteur_ressources_bio", None)
+    if det is None or not getattr(det, "actif", False):
+        return
+    if not (isinstance(action_item, (int, np.integer)) and 0 <= int(action_item) < 7):
+        return
+    try:
+        env = etat.env
+        e = env.unwrapped
+        fx, fy = (int(v) for v in e.front_pos)
+        grille = e.grid
+        # ⚠️ v41.32-etape4-fix1 — L'APPARTENANCE AUX ENSEMBLES DU DÉTECTEUR EST TESTÉE
+        # EN PREMIER, jamais `can_overlap()` sur la grille.
+        #
+        # Défaut mesuré : `env.step` s'exécute ~370 lignes plus haut, donc quand la sonde
+        # regarde, MiniGrid a DÉJÀ exécuté `pickup` — la Ball est dans `carrying` et la
+        # case est VIDE. `grille.get(fx,fy)` retournait None, `bloquant` valait False, et
+        # la sonde sortait sans rien compter. Résultat : « consommer sur ressource » à
+        # **0,0 % sur 60/60 nuits**, alors que le même run enregistrait **295 saisies**
+        # réelles. Les deux étaient incompatibles — c'était l'artefact, pas une découverte.
+        #
+        # `positions_food`/`positions_water` sont maintenus par le détecteur lui-même et
+        # ne sont vidés qu'à `evaluer_tick`, APRÈS cette sonde : ils restent donc valides.
+        # C'est exactement la raison pour laquelle la sonde de fourrage, qui les utilise
+        # déjà, n'a jamais eu ce biais.
+        est_ressource = (fx, fy) in det.positions_food or (fx, fy) in det.positions_water
+        if not est_ressource:
+            if not (0 <= fx < grille.width and 0 <= fy < grille.height):
+                bloquant = True                   # bord de grille = mur
+            else:
+                objet = grille.get(fx, fy)
+                bloquant = objet is not None and not objet.can_overlap()
+            if not bloquant:
+                return                             # contact_frontal = 0, hors sujet
+        a = int(action_item)
+        if est_ressource:
+            etat.discrim_actions_ressource[a] = etat.discrim_actions_ressource.get(a, 0) + 1
+        else:
+            etat.discrim_actions_mur[a] = etat.discrim_actions_mur.get(a, 0) + 1
+    except Exception:
+        return    # une sonde ne doit JAMAIS interrompre un tick
+
+
+def _resumer_discrimination(etat) -> tuple:
+    """v41.32-etape4 — distance de variation totale entre les deux distributions.
+
+    Retourne (distance, n_mur, n_ressource, p_mur, p_ressource) ou None si l'un des deux
+    échantillons est vide — auquel cas il n'y a rien à comparer, et publier un zéro ferait
+    passer une sonde INACTIVE pour une mesure NULLE (règle de mesure §4).
+    """
+    mur = getattr(etat, "discrim_actions_mur", {}) or {}
+    res = getattr(etat, "discrim_actions_ressource", {}) or {}
+    n_mur, n_res = sum(mur.values()), sum(res.values())
+    if n_mur == 0 or n_res == 0:
+        return None
+    p_mur = [mur.get(a, 0) / n_mur for a in range(7)]
+    p_res = [res.get(a, 0) / n_res for a in range(7)]
+    distance = 0.5 * sum(abs(p_mur[a] - p_res[a]) for a in range(7))
+    return distance, n_mur, n_res, p_mur, p_res
 
 
 def _resumer_mixage(etat) -> dict:
@@ -9046,6 +9142,9 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
     # ressource de la grille en cas de succès, donc mesurer après ferait disparaître
     # l'occasion qu'on veut compter.
     _sonder_fourrage(etat, action_item)
+    # v41.32-etape4 — même position que la sonde de fourrage, et pour la même raison :
+    # `evaluer_tick` retire la ressource de la grille en cas de succès.
+    _sonder_discrimination(etat, action_item)
     mange_food, mange_water = etat.detecteur_ressources_bio.evaluer_tick(etat.env, action_item)
     # v41.2-fix7 — LE SOULAGEMENT EST CRÉDITÉ AU GESTE QUI L'A PRODUIT.
     #
@@ -10254,6 +10353,21 @@ def executer_nuit(etat, plafond_reve=None):
     print(f"  ├─ Métabolisme    : r_bio cumulé {etat.r_bio_jour:+.3f} — {etat.food_consommes_jour} Nourriture(s), "
           f"{etat.water_consommes_jour} Eau(x) consommée(s) — effort moyen (20% cerveau/80% corps): {effort_moyen_jour:.3f}")
 
+    # --- v41.32-etape4 : LA DISCRIMINATION — mur ou ressource ? ---
+    # Distance de variation totale entre les deux distributions d'actions, à
+    # `contact_frontal = 1`. Proche de 0 : l'agent réagit IDENTIQUEMENT à un mur et à une
+    # pomme, donc il ne discrimine pas. Ligne conditionnelle (règle v29.1).
+    _disc = _resumer_discrimination(etat)
+    if _disc is not None:
+        _d, _nm, _nr, _pm, _pr = _disc
+        print(f"  ├─ Discrim v41.32 : 🧱 {_nm} tick(s) face à un MUR | "
+              f"🍎 {_nr} face à une RESSOURCE | distance des politiques {_d:.4f} "
+              f"(0 = indiscernables)")
+        _noms = {0: "gauche", 1: "droite", 2: "avancer", 3: "consommer",
+                 4: "poser", 5: "activer", 6: "parler"}
+        _det = " ".join(f"{_noms[a][:4]} {100*_pm[a]:.0f}/{100*_pr[a]:.0f}" for a in range(7))
+        print(f"  │                   ↳ % mur/ressource — {_det}")
+
     # --- v41.32-etape2 : LE FOURRAGE — la conjonction, décomposée ---
     # Manger exige DEUX conditions simultanées (v41.2-fix5/fix6) : faire FACE à la
     # ressource, et jouer le geste. Cette ligne dit laquelle des deux manque.
@@ -10978,6 +11092,18 @@ def executer_nuit(etat, plafond_reve=None):
         log_wandb["Empreinte_Valence_Max"] = max(_vals)
         log_wandb["Empreinte_Valence_Min"] = min(_vals)
         log_wandb["Empreinte_Valence_Etendue"] = max(_vals) - min(_vals)
+
+    # --- v41.32-etape4 : LA DISCRIMINATION en W&B ---
+    # `Discrim_Distance` est la courbe décisive. Si elle reste plate près de 0 au fil des
+    # jours, l'agent n'apprend jamais à distinguer une ressource d'un obstacle.
+    _disc_w = _resumer_discrimination(etat)
+    if _disc_w is not None:
+        _dw, _nmw, _nrw, _pmw, _prw = _disc_w
+        log_wandb["Discrim_Distance"] = _dw
+        log_wandb["Discrim_Ticks_Mur"] = _nmw
+        log_wandb["Discrim_Ticks_Ressource"] = _nrw
+        log_wandb["Discrim_Consommer_Sur_Mur"] = _pmw[ACTION_CONSOMMER]
+        log_wandb["Discrim_Consommer_Sur_Ressource"] = _prw[ACTION_CONSOMMER]
 
     # --- v41.32-etape2 : LE FOURRAGE en W&B ---
     # `Fourrage_Taux_Saisie` est la courbe décisive : sachant que l'agent est EN FACE

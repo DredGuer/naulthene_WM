@@ -630,6 +630,93 @@ runs mesurent des **dispersions**, jamais des performances.
 
 ---
 
+## 4sexies. La sonde de discrimination — hypothèse confirmée, mécanisme réfuté
+
+### 🔴 D'abord : un artefact de MA sonde, attrapé par la règle du « résultat trop propre »
+
+Le premier run donnait `consommer sur ressource = 0,0 %` sur **60/60 nuits**. Le même run
+enregistrait **295 saisies réelles** — incompatible.
+
+**Cause** : `env.step` s'exécute ~370 lignes **avant** la sonde. MiniGrid a déjà exécuté
+`pickup`, la Ball est dans `carrying`, la case est vide — `can_overlap()` ne voyait plus
+rien. Même défaut temporel qu'en v41.25-fix1 (chaleur) et v41.5 (maturité) : *une grandeur
+lue après un `env.step` qui l'a périmée*.
+
+**Correctif** : tester `positions_food`/`positions_water`, les ensembles du détecteur, vidés
+seulement à `evaluer_tick` — donc **après** la sonde. C'est exactement pourquoi la sonde de
+fourrage, qui les utilisait déjà, n'avait pas ce biais.
+
+⚠️ Sans le recoupement « 295 saisies contre 0 compté », ce zéro aurait été publié comme une
+découverte. C'est le troisième artefact du projet attrapé par cette règle (après v41.4 et
+v41.7).
+
+### Les résultats corrigés (graine 11, 60 jours, 2 cartes)
+
+| ACTION | `Empty-5x5` mur/ressource | Niveau 4 mur/ressource |
+|---|---|---|
+| gauche | 7,9 / 9,6 | 8,4 / 11,3 |
+| droite | 6,4 / 9,3 | 4,9 / 10,3 |
+| avancer | 23,3 / 24,7 | 21,1 / 21,9 |
+| **consommer** | **12,1 / 9,8** | **16,0 / 16,0** |
+| poser | 16,6 / 14,9 | 7,2 / 6,5 |
+| activer | 16,0 / 12,3 | 35,5 / 25,3 |
+| parler | 17,7 / 19,5 | 6,7 / 8,8 |
+| **DISTANCE** | **0,1943** | **0,2640** |
+
+### Le témoin de bruit — sans lui ces chiffres sont illisibles
+
+Deux échantillons tirés de la **même** distribution, aux mêmes tailles, 4000 tirages :
+
+| Carte | Mesure | Bruit p50 | Bruit p95 | Verdict |
+|---|---|---|---|---|
+| `Empty-5x5` | **0,194** | 0,127 | **0,213** | **sous le p95 — indistinguable du bruit** |
+| Niveau 4 | **0,264** | 0,150 | **0,249** | à peine au-dessus |
+
+### Verdict
+
+🟢 **L'hypothèse « les distributions sont identiques » est CONFIRMÉE.** La distance mesurée
+est au niveau du bruit d'échantillonnage : **l'agent ne discrimine pas** une ressource d'un
+mur.
+
+🔴 **Mais le mécanisme proposé est réfuté.** L'hypothèse prédisait que l'agent **se détourne**
+devant une ressource (plus de rotations, moins de `consommer`). Les écarts vont dans ce sens
+mais **restent dans le bruit**, et au niveau 4 `consommer` est **rigoureusement identique**
+(16,0 / 16,0).
+
+Ce n'est pas que l'agent **fuit** la ressource. C'est qu'il fait **exactement la même chose**
+dans les deux cas : il ne voit pas la différence, et ne l'exploite pas.
+
+### Le fait le plus net — la distance DÉCROÎT
+
+| Carte | 1er tiers | 2ᵉ tiers | 3ᵉ tiers |
+|---|---|---|---|
+| `Empty-5x5` | 0,253 | 0,186 | **0,144** |
+| Niveau 4 | 0,255 | 0,263 | 0,274 |
+
+Sur `Empty-5x5`, l'agent devient **avec le temps moins discriminant**. Il n'apprend pas à
+distinguer : il apprend à **uniformiser** sa réponse.
+
+### ⚠️ Sur le correctif envisagé — attention au dogme
+
+Scinder `contact_frontal` en `contact_obstacle` / `contact_interactif` **nommerait une
+catégorie** — déclarer au cerveau ce qu'est une ressource, ce que l'invariant v36.0 interdit
+(*« il ne doit exister nulle part de table du type lave = danger »*).
+
+La forme propre existe : `can_overlap()` est déjà une propriété **lue de l'API**, jamais
+déclarée. On peut exposer une seconde propriété lue — `can_pickup()` — sans nommer ce qu'elle
+désigne. Le cerveau recevrait **deux bits mesurés** au lieu d'un et apprendrait seul ce qu'ils
+valent. Même discipline que `lava` en v41.11 : le nom vit dans `bus_sensoriel.py`, jamais
+dans `noyau.py`.
+
+⚠️ **Et ce n'est pas encore justifié** : rien ne prouve que la non-discrimination vienne du
+bit plutôt que de la politique elle-même. La vue et l'odorat portent déjà l'information. Un
+second bit qui ne serait pas plus exploité que le premier ne changerait rien.
+
+⚠️ **Bancs forcés, une seule graine.** Le témoin de bruit rend la lecture honnête, il ne
+remplace pas n ≥ 20.
+
+---
+
 ## 5. Ce que la journée établit — et ce qu'elle ne dit pas
 
 ### Établi (mesures directes, banc déterministe δ_A/A = 0)
@@ -650,6 +737,8 @@ runs mesurent des **dispersions**, jamais des performances.
 | **`Env` s'effondre au niveau 4** | **0,1 % du signal** — facteur **240** vs niveau 1 |
 | `Bio` y monte à | **52,1 %** |
 | `Jalons` est un vrai signal quand il existe | **33,9 %**, σ = 0,029 |
+| L'agent ne discrimine PAS mur / ressource | distance **0,194** vs bruit p95 **0,213** |
+| Et il devient MOINS discriminant | 0,253 → **0,144** sur `Empty-5x5` |
 | C2 pèse | **0,110 %** de 384 808 params |
 | C2 croît en N, le tronc en N² | rapport **×312** à 16 dims |
 
