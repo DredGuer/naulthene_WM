@@ -1,0 +1,118 @@
+{
+  "graine": 11,
+  "jours": 80,
+  "niveau4_SimpleCrossingS9N1": {
+    "Bio": {
+      "moyenne": 0.003615,
+      "sigma": 0.04140875,
+      "part_signal_pct": 52.14304827564496
+    },
+    "Curiosite": {
+      "moyenne": 0.0125525,
+      "sigma": 0.00856,
+      "part_signal_pct": 10.778989784514646
+    },
+    "Stagnation": {
+      "moyenne": -0.0138275,
+      "sigma": 0.01387875,
+      "part_signal_pct": 17.47650753175615
+    },
+    "Progres": {
+      "moyenne": 0.00064625,
+      "sigma": 0.004225,
+      "part_signal_pct": 5.320237364436259
+    },
+    "Env": {
+      "moyenne": 5e-06,
+      "sigma": 9.25e-05,
+      "part_signal_pct": 0.11647856951724354
+    },
+    "Jalons": {
+      "moyenne": 0.0,
+      "sigma": 0.0,
+      "part_signal_pct": 0.0
+    },
+    "Portes": {
+      "moyenne": 0.0,
+      "sigma": 0.0,
+      "part_signal_pct": 0.0
+    },
+    "SousObjectif": {
+      "moyenne": 0.00436625,
+      "sigma": 0.01124875,
+      "part_signal_pct": 14.16473847413074
+    },
+    "Vocal": {
+      "moyenne": 0.0,
+      "sigma": 0.0,
+      "part_signal_pct": 0.0
+    },
+    "CoutC3": {
+      "moyenne": 0.0,
+      "sigma": 0.0,
+      "part_signal_pct": 0.0
+    },
+    "Guidage": {
+      "moyenne": 0.0,
+      "sigma": 0.0,
+      "part_signal_pct": 0.0
+    }
+  },
+  "DoorKey5x5": {
+    "Jalons": {
+      "moyenne": 0.002555,
+      "sigma": 0.02925625,
+      "part_signal_pct": 33.88934740743959
+    },
+    "Curiosite": {
+      "moyenne": 0.00726625,
+      "sigma": 0.00385625,
+      "part_signal_pct": 4.466935985983812
+    },
+    "Stagnation": {
+      "moyenne": -0.01108875,
+      "sigma": 0.0122125,
+      "part_signal_pct": 14.146503916713725
+    },
+    "Bio": {
+      "moyenne": 0.00248125,
+      "sigma": 0.031405,
+      "part_signal_pct": 36.378379161055854
+    },
+    "Progres": {
+      "moyenne": 3.7499999999999997e-06,
+      "sigma": 3.7500000000000003e-05,
+      "part_signal_pct": 0.04343859953955085
+    },
+    "Env": {
+      "moyenne": 4.25e-05,
+      "sigma": 0.0008399999999999999,
+      "part_signal_pct": 0.9730246296859388
+    },
+    "Portes": {
+      "moyenne": 5.125e-05,
+      "sigma": 0.00113125,
+      "part_signal_pct": 1.3103977527764505
+    },
+    "SousObjectif": {
+      "moyenne": 0.001695,
+      "sigma": 0.0055575,
+      "part_signal_pct": 6.437600451761435
+    },
+    "Vocal": {
+      "moyenne": 0.0,
+      "sigma": 0.0,
+      "part_signal_pct": 0.0
+    },
+    "CoutC3": {
+      "moyenne": 0.0,
+      "sigma": 0.0,
+      "part_signal_pct": 0.0
+    },
+    "Guidage": {
+      "moyenne": 0.00017125,
+      "sigma": 0.0020325,
+      "part_signal_pct": 2.354372095043656
+    }
+  }
+}
