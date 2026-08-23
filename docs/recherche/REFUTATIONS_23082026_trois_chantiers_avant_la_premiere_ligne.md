@@ -717,6 +717,66 @@ remplace pas n ≥ 20.
 
 ---
 
+## 4septies. Réfutation n°9 — « la politique s'aplatit vers l'uniforme »
+
+### L'hypothèse
+
+L'extinction de `Env` priverait le gradient de signal ; les 7 logits se rapprocheraient ;
+l'entropie monterait vers son maximum **ln(7) = 1,94591**, et l'agent deviendrait un marcheur
+aléatoire. C'était la synthèse unifiant les trois symptômes (indifférence tactile,
+anti-corrélation du fourrage, `Env` éteint).
+
+### Aucun run nécessaire — la mesure était déjà dans les données
+
+La sonde de discrimination enregistre la **distribution des 7 actions**. L'entropie de la
+politique réellement jouée s'en reconstruit directement.
+
+| Carte | H début | H fin | % du max | Tendance |
+|---|---|---|---|---|
+| `Empty-5x5` | 1,7695 | **1,7034** | 88,1 % | **baisse** |
+| Niveau 4 | 1,7130 | **1,6565** | 82,0 % | **baisse** |
+
+🔴 **L'entropie NE MONTE PAS — elle BAISSE sur les deux cartes.** L'écart au maximum se
+**creuse** : 0,176 → 0,243 et 0,233 → 0,289.
+
+### Comparaison au bug historique — l'échelle du contraste
+
+La v34.0-fix1 documente le cas réel d'un cerveau **éteint** (8 couches sur 11 à zéro après
+1500 nuits) : entropie **1,94587** pour un max de 1,94591, soit un écart de **0,00004**.
+
+| | Écart au maximum |
+|---|---|
+| Cerveau éteint (v34.0, août) | **0,00004** |
+| Agent mesuré ce jour | **0,34961** |
+
+L'agent d'aujourd'hui est **~8700× plus décidé** qu'un cerveau réellement aplati. Il n'est pas
+près de l'uniforme, il s'en éloigne.
+
+### Ce que cela change au diagnostic
+
+**« Il n'a plus d'opinion » est faux. Il en a une — elle est simplement LA MÊME quel que soit
+le contexte.**
+
+La distinction n'est pas cosmétique :
+
+| | Aplatissement stochastique | Politique non conditionnelle |
+|---|---|---|
+| Signature | entropie → ln(7) | entropie basse, **distance mur/ressource ≈ bruit** |
+| Mesuré | ❌ réfuté | ✅ **c'est ce qu'on observe** |
+| Cause | manque de signal | défaut de **représentation** — l'état n'entre pas dans la décision |
+| Correctif | rendre du signal | faire entrer le contexte dans la politique |
+
+Un aplatissement se corrige en rendant du signal. Une politique **concentrée mais non
+conditionnelle** est un défaut plus profond : l'agent a des préférences stables qu'il applique
+partout **sans lire l'état**. Ajouter du signal de récompense ne l'aiderait pas — il ne
+conditionne déjà pas sur ce qu'il perçoit.
+
+⚠️ **Une seule graine, bancs forcés, entropie reconstruite depuis des pourcentages arrondis à
+l'entier** (donc précise à ~±0,01). Le fait qualitatif — la tendance baisse, l'écart au max
+est de 4 ordres de grandeur au-dessus du cas éteint — ne dépend pas de cette précision.
+
+---
+
 ## 5. Ce que la journée établit — et ce qu'elle ne dit pas
 
 ### Établi (mesures directes, banc déterministe δ_A/A = 0)
@@ -739,6 +799,8 @@ remplace pas n ≥ 20.
 | `Jalons` est un vrai signal quand il existe | **33,9 %**, σ = 0,029 |
 | L'agent ne discrimine PAS mur / ressource | distance **0,194** vs bruit p95 **0,213** |
 | Et il devient MOINS discriminant | 0,253 → **0,144** sur `Empty-5x5` |
+| L'entropie de la politique BAISSE | 1,7695 → **1,7034** (max ln7 = 1,946) |
+| L'agent n'est PAS aplati | écart au max **0,350** contre **0,00004** pour un cerveau éteint |
 | C2 pèse | **0,110 %** de 384 808 params |
 | C2 croît en N, le tronc en N² | rapport **×312** à 16 dims |
 
@@ -756,7 +818,7 @@ remplace pas n ≥ 20.
 
 ## 6. La leçon de méthode
 
-**Sept propositions, sept réfutations, zéro ligne de correctif écrite.** Le coût total :
+**Neuf propositions, neuf réfutations, zéro ligne de correctif écrite.** Le coût total :
 une sonde (~180 lignes de télémétrie pure), deux runs de 40 jours, et trois scripts de
 mesure. Ce qui a été évité :
 
