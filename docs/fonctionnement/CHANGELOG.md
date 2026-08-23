@@ -4,6 +4,91 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.32-etape1] - 2026-08-23 — La sonde de mixage, et trois chantiers réfutés
+
+### Instrumenter les 11 termes de la récompense — puis réfuter trois propositions avant de les coder
+
+| Type | Details |
+|------|---------|
+| **Commit** | `ab66f81` (sonde) · `893d7f5` (réfutations) |
+| **Catégorie** | feat (télémétrie) + docs (mesure) |
+| **Impact** | **Majeur — trois chantiers annulés sur mesure, zéro correctif inutile livré** |
+
+**La sonde.** Le point d'assemblage de la récompense est **unique** dans tout `noyau.py` :
+onze termes y sont sommés à **poids 1**. `_sonder_mixage` / `_resumer_mixage` mesurent
+désormais, pour chacun, sa **moyenne** et son **écart-type** — trois scalaires par terme
+(`n`, `Σx`, `Σx²`), reconstruits la nuit. Aucune liste tick par tick : 1500 j × 400 ticks ×
+12 termes auraient fait 7,2 M de flottants pour un résultat en O(1) mémoire. Coût par tick
+mesuré négligeable (11 additions + 11 multiplications contre un forward réseau et un rollout
+C2). **Télémétrie pure** : vérifié statiquement, `_sonder_mixage` n'écrit que dans `mix_*`.
+
+**Test A/A : δ = 0.** Deux runs bit-identiques sur 40 nuits, même taille de `.brain` à
+l'octet. Le banc est déterministe.
+
+**Pourquoi l'écart-type et pas la moyenne** : le gradient n'apprend pas d'une constante. Un
+terme qui vaut toujours −0,015 est un décalage d'origine, pas un signal. Rien ne mesurait la
+dispersion avant cette sonde.
+
+#### La mesure (g11, 40 jours, cursus complet)
+
+| TERME | MOYENNE | σ | PART DU SIGNAL |
+|---|---|---|---|
+| **Bio** | +0,00346 | **0,04357** | **44,0 %** |
+| **Env** | +0,00136 | 0,02163 | 21,8 % |
+| Stagnation | −0,01611 | 0,01359 | 13,7 % |
+| Curiosite | **+0,02091** | 0,00889 | 9,0 % |
+| SousObjectif | +0,00171 | 0,00679 | 6,8 % |
+| Progres | +0,00090 | 0,00462 | 4,7 % |
+| *5 autres* | 0,00000 | **0,00000** | 0,0 % |
+
+#### Trois réfutations
+
+**(1) « le signal vital est écrasé » — FAUX.** `Bio` **domine** à 44 % de la dispersion, le
+double d'`Env`. Le vrai défaut est inversé : `Curiosite` a la plus forte **moyenne** de la
+table (6× celle de `Bio`) pour la 4ᵉ dispersion — un **décalage d'origine** qui n'apprend
+rien mais gonfle la valeur de tous les états. `Stagnation` est sa taxe symétrique.
+
+**(2) « boire ne procure aucun soulagement » — FAUX.** Ni le déficit (`(1−satiete)²` vs
+`(1−hydratation)²`) ni les profils (`FOOD.satiete=1.0` vs `WATER.hydrique=1.0`) ne sont
+asymétriques. L'écart vient de l'**état des jauges** : satiété au plancher **40/40 nuits**,
+hydratation à 0,53. `r_bio` étant la **dérivée** du déficit, une jauge pleine ne peut rien
+soulager. Ratio prédit **5,14×**, ratio des valences apprises **4,93×** — **4,4 % d'écart**.
+Les valences mesurent *exactement* le soulagement réel. Le correctif v41.7 est confirmé :
+`FOOD` est passé de `+0.000 (×4004)` à **+0,575**.
+
+**(3) « la densité est le goulot » — FAUX.** Témoin marcheur **aléatoire** sur la carte
+réelle, distribution d'actions identique : **3,33 FOOD/jour** contre **1,68** pour l'agent
+entraîné, seuil de viabilité **2,78**. Le hasard pur franchit le seuil que l'agent ne
+franchit pas. **La famine est comportementale, pas géométrique.** ⚠️ Corrige au passage un
+diagnostic erroné de la veille : le plafond v41.2-fix3 fonctionne (`Empty-5x5` place 1 FOOD
+sur 6 cases libres) ; le « 7+7 » des logs est le **souhait**, jamais le placé.
+
+**(4) « répartir la neurogenèse selon le stress » — IMPOSSIBLE, et sans objet.** `a` est à la
+fois l'ajout en entrée **et** en sortie, et huit couches sont chaînées sur le même bus : un
+`a` différent par couche casse la chaîne au premier `forward`. Et l'objectif est hors de
+portée — `cortex_prefrontal` pèse **422 params sur 384 808 (0,110 %)** parce qu'il n'a
+**qu'une seule sortie**. Il croît en **N**, toute matrice carrée en **N²** : même à 100 % du
+budget il gagnerait **96** params quand `hippocampe` en gagne **29 952** (**×312**).
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `_sonder_mixage`, `_resumer_mixage`, buffers `mix_*`, ligne console `Mixage v41.32`, clés `Mix_Moy_*` / `Mix_Ecart_*` / `Mix_PartSignal_*` conditionnelles |
+| `CLAUDE.md` | 4 sections ajoutées à la règle de mesure : protocole A/A, protocole A/B, gestion des données, copies de cerveaux |
+| `docs/recherche/REFUTATIONS_23082026_…md` | **nouveau** — les trois enquêtes complètes |
+| `docs/ameliorations/PLAN_v41.32_…md` | plan vivant, état d'avancement |
+| `brains/23082026_v4132_mixage/` | protocole + agrégat JSON versionnés |
+
+⚠️ **Cinq termes à σ = 0,00000 sont des ablations VIDES, pas négatives** : l'agent est resté
+au niveau 1/15 (`Empty-5x5`), donc ni porte, ni DoorKey, ni tuteur vocal, ni plug C3. La
+table de mixage ne pourra être arbitrée qu'après un run au **niveau 4**.
+
+⚠️ **Une seule graine** (g11, 40 jours) : les chiffres exacts lui sont propres. Seuls les
+faits qualitatifs (σ = 0 exact, `Bio` dominant, C2 à 0,110 %) sont robustes. Le témoin
+aléatoire est à **3 graines**, sous le seuil des 20 — il établit un ordre de grandeur, pas
+une mesure d'effet.
+
+---
+
 ## [v41.31-cursus] - 2026-08-22 — Le gradient causal NE SURVIT PAS au cursus complet
 
 ### 40 runs, n=20 apparié, 1500 jours : effet nul sur le niveau

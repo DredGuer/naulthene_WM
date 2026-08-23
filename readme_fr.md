@@ -94,8 +94,18 @@ datacenter.*
 > 0,067 %** parce que le tronc grossit **2,2× plus vite**. La cause est géométrique, pas un
 > réglage : quand `dim_bus` passe de 16 à 154, une couche `bus→bus` croît en **N²** et une
 > tête `bus→1` croît en **N** (`hippocampe` ×28,9 contre `cortex_prefrontal` ×13,0).
-> **Toute neurogenèse dilue C2.** Il n'y a aucune constante à corriger — un rééquilibrage
-> exigerait une croissance *non uniforme*, laissant le vécu décider **où** le cerveau grandit.
+> **Toute neurogenèse dilue C2.** Il n'y a aucune constante à corriger.
+>
+> 🔴 **Et une croissance non uniforme n'y changerait rien non plus — mesuré le 23/08/2026.**
+> Le remède évident (répartir les nouveaux neurones selon le stress par couche) échoue deux
+> fois. Il est *structurellement impossible* sous cette forme — `a` est à la fois l'ajout en
+> **entrée** et en **sortie**, et huit couches sont chaînées sur le même bus : un `a`
+> différent par couche casse la chaîne au premier `forward`. Et son objectif est de toute
+> façon hors de portée : sur un cerveau réel de 384 808 paramètres, `cortex_prefrontal` pèse
+> **422 params (0,110 %)** *parce qu'il n'a qu'une seule sortie*. Même avec **100 % du
+> budget**, il gagnerait **96** paramètres quand `hippocampe` en gagne **29 952** (**×312**).
+> Le levier n'est pas le nombre de dimensions que C2 reçoit — c'est qu'il n'a **qu'une
+> sortie**.
 
 ### Face aux baselines MiniGrid — **la thèse ne tient PAS sur la taille**
 

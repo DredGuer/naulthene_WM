@@ -125,8 +125,17 @@ This section exists because the thesis above is only worth stating if it can be 
 > the trunk grows **2.2× faster**. The cause is geometry, not a tunable: when `dim_bus` goes
 > 16 → 154, a `bus→bus` layer grows as **N²** while a `bus→1` head grows as **N**
 > (`hippocampe` ×28.9 vs `cortex_prefrontal` ×13.0). **Every neurogenesis event dilutes C2.**
-> There is no constant to fix — rebalancing would require *non-uniform* growth, letting what
-> the agent lived decide **where** the brain grows.
+> There is no constant to fix.
+>
+> 🔴 **And non-uniform growth would not fix it either — measured 2026-08-23.** The obvious
+> remedy (distribute new neurons by per-layer stress) fails twice. It is *structurally
+> impossible* as stated — the growth step `a` is both the input **and** the output widening,
+> and eight layers are chained on the same bus, so a per-layer `a` breaks the chain at the
+> first forward. And its goal is out of reach anyway: on a real 384,808-parameter brain,
+> `cortex_prefrontal` weighs **422 params (0.110 %)** *because it has a single output*. Even
+> given **100 % of the budget** it would gain **96** parameters where `hippocampe` gains
+> **29,952** (**×312**). The lever is not how many dimensions C2 receives — it is that C2
+> has **one output**.
 
 ### Versus MiniGrid baselines — **the thesis does not yet hold on size**
 
