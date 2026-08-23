@@ -1,0 +1,66 @@
+{
+  "delta_AA": 0.0,
+  "nuits": 40,
+  "graine": 11,
+  "termes": {
+    "Bio": {
+      "moyenne": 0.0034575,
+      "sigma": 0.04357,
+      "part_signal_pct": 43.972346974819594
+    },
+    "Env": {
+      "moyenne": 0.00136,
+      "sigma": 0.02163,
+      "part_signal_pct": 21.829742140586365
+    },
+    "Stagnation": {
+      "moyenne": -0.0161075,
+      "sigma": 0.0135925,
+      "part_signal_pct": 13.718019881919565
+    },
+    "Curiosite": {
+      "moyenne": 0.0209075,
+      "sigma": 0.00889,
+      "part_signal_pct": 8.97209466619569
+    },
+    "SousObjectif": {
+      "moyenne": 0.0017125,
+      "sigma": 0.006785,
+      "part_signal_pct": 6.847656052883888
+    },
+    "Progres": {
+      "moyenne": 0.000905,
+      "sigma": 0.0046175,
+      "part_signal_pct": 4.6601402835948935
+    },
+    "Jalons": {
+      "moyenne": 0.0,
+      "sigma": 0.0,
+      "part_signal_pct": 0.0
+    },
+    "Portes": {
+      "moyenne": 0.0,
+      "sigma": 0.0,
+      "part_signal_pct": 0.0
+    },
+    "Vocal": {
+      "moyenne": 0.0,
+      "sigma": 0.0,
+      "part_signal_pct": 0.0
+    },
+    "CoutC3": {
+      "moyenne": 0.0,
+      "sigma": 0.0,
+      "part_signal_pct": 0.0
+    },
+    "Guidage": {
+      "moyenne": 0.0,
+      "sigma": 0.0,
+      "part_signal_pct": 0.0
+    }
+  },
+  "total": {
+    "moyenne": 0.0122325,
+    "sigma": 0.0595525
+  }
+}

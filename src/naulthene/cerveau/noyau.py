@@ -6821,6 +6821,35 @@ class EtatCognitif:
         self.sous_objectifs_curiosite_jour = 0
         self.r_bio_jour = 0.0
         self.effort_metabolique_jour = 0.0
+
+        # --- v41.32-etape1 : LA SONDE DE MIXAGE (télémétrie PURE, aucun effet) ---
+        # Le point d'assemblage de la récompense est UNIQUE dans tout le fichier : les
+        # onze termes y sont sommés à poids 1 (voir `recompense_interne`). C'est le
+        # dernier gros coefficient posé du projet — mais avant de le remplacer par quoi
+        # que ce soit, il faut savoir ce que chaque terme PÈSE et surtout ce qu'il
+        # VARIE. Un terme constant, si gros soit-il, n'apprend rien au gradient : c'est
+        # la dispersion qui porte le signal, pas la moyenne.
+        #
+        # ⚠️ Cinq des onze termes avaient déjà un cumul (`r_bio_jour`,
+        # `penalite_stagnation_jour`, `guidage_but_journee`…), mais TROIS autres
+        # comptaient des ÉVÉNEMENTS et non des AMPLITUDES : `portes_franchies_jour`,
+        # `progres_personnel_jour` et `sous_objectifs_curiosite_jour` répondent à
+        # « combien de fois ? », jamais à « combien de récompense ? ». Un terme fréquent
+        # à trois fois rien et un terme rare mais massif avaient donc le même compteur.
+        #
+        # Méthode : trois scalaires par terme (n, Σx, Σx²), moyenne ET écart-type
+        # reconstruits la nuit. Surtout PAS de liste tick par tick — 1500 jours × 400
+        # ticks × 11 termes = 6,6 M de flottants Python pour un résultat obtenable en
+        # O(1) mémoire. Coût mesuré par tick : 11 additions + 11 multiplications, contre
+        # un forward réseau + un rollout C2 sur 7 actions (< 0,01 % du tick).
+        #
+        # Remis à zéro ICI comme tout buffer journalier — piège `score_vocal_jour` v27.0,
+        # rappelé en tête de cette méthode : un compteur créé à la volée par getattr()
+        # sans réarmement cumulerait depuis la NAISSANCE du cerveau, et la « moyenne du
+        # jour » serait en réalité la moyenne de toute la vie.
+        self.mix_n = 0
+        self.mix_somme = {}
+        self.mix_somme_carres = {}
         self.food_consommes_jour = 0
         self.water_consommes_jour = 0
 
@@ -7611,6 +7640,73 @@ def _compter_ressources_grille(etat) -> int:
         return total
     except Exception:
         return 0
+
+
+def _sonder_mixage(etat, **termes) -> None:
+    """v41.32-etape1 — LA SONDE DE MIXAGE. Télémétrie PURE, aucun effet sur la décision.
+
+    Accumule, pour chaque terme de la récompense, les trois scalaires qui suffisent à
+    reconstruire moyenne et écart-type la nuit venue : n, Σx, Σx². Rien n'est stocké
+    tick par tick.
+
+    POURQUOI L'ÉCART-TYPE ET PAS SEULEMENT LA MOYENNE
+    -------------------------------------------------
+    Le gradient n'apprend pas d'une constante. Un terme qui vaut toujours −0,015 est un
+    décalage d'origine : il déplace la valeur de tous les états sans jamais distinguer
+    une action d'une autre. Un terme rare mais massif, lui, porte tout le signal. Les
+    deux peuvent avoir la MÊME moyenne. C'est donc la dispersion qui départage, et c'est
+    elle qu'il faut mesurer avant de toucher à la moindre pondération.
+
+    POURQUOI PAS DE LISTE
+    ---------------------
+    1500 jours × 400 ticks × 12 termes = 7,2 M de flottants Python, pour un résultat
+    obtenable en O(1) mémoire. Ici : 3 scalaires par terme, constants, aucune croissance.
+    Coût par tick : une addition et une multiplication par terme — contre un forward
+    réseau et un rollout C2 sur 7 actions. Mesuré négligeable (< 0,01 % du tick).
+
+    ⚠️ La variance est calculée par Σx²/n − (Σx/n)², sensible à l'annulation
+    catastrophique quand la moyenne est grande devant l'écart-type. Ce n'est PAS le cas
+    ici : les termes de récompense sont tous d'ordre 1e-3 à 1e0, et la variance est
+    clampée à 0 avant la racine (voir `executer_nuit`). Si un jour un terme sortait de
+    cette plage, passer à l'algorithme de Welford en ligne (moyenne courante + M2).
+
+    ⚠️ Les trois dictionnaires sont réarmés dans `_reinitialiser_buffers_journee`, comme
+    TOUT buffer journalier. Ne jamais les créer à la volée par getattr() sans les y
+    ajouter : c'est le bug `score_vocal_jour` v27.0, où la « moyenne du jour » cumulait
+    depuis la naissance du cerveau.
+    """
+    etat.mix_n += 1
+    somme = etat.mix_somme
+    carres = etat.mix_somme_carres
+    for nom, valeur in termes.items():
+        v = float(valeur)
+        somme[nom] = somme.get(nom, 0.0) + v
+        carres[nom] = carres.get(nom, 0.0) + v * v
+
+
+def _resumer_mixage(etat) -> dict:
+    """v41.32-etape1 — reconstruit (moyenne, écart-type) par terme depuis les 3 scalaires.
+
+    Appelée UNE FOIS PAR NUIT, jamais par tick : le coût est de ~2 divisions et 1 racine
+    par terme, soit une douzaine d'opérations pour toute la journée.
+
+    ⚠️ `max(0.0, var)` avant la racine : Σx²/n − moy² peut sortir très légèrement négatif
+    par arrondi flottant quand un terme est rigoureusement constant (typiquement un terme
+    jamais déclenché de la journée, donc à 0.0 partout). Sans ce clamp, `sqrt` lèverait
+    une `ValueError` en pleine nuit — et une exception ici ferait perdre la journée
+    entière, alors que la sonde est censée n'avoir AUCUN effet.
+
+    Retourne {nom: (moyenne, ecart_type)}. Un terme absent du dictionnaire est un terme
+    qui n'a jamais été sondé — pas un terme à zéro.
+    """
+    n = max(1, getattr(etat, "mix_n", 0))
+    carres = getattr(etat, "mix_somme_carres", {}) or {}
+    resultats = {}
+    for nom, somme in (getattr(etat, "mix_somme", {}) or {}).items():
+        moyenne = somme / n
+        variance = carres.get(nom, 0.0) / n - moyenne * moyenne
+        resultats[nom] = (moyenne, math.sqrt(max(0.0, variance)))
+    return resultats
 
 
 def _quete_auto_active(etat) -> bool:
@@ -9051,6 +9147,32 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
     # décrété par un seuil de palier. ⚠️ Changement de comportement réel : un agent
     # au-delà du palier 5 qui NE maîtrise PAS garde son aide — c'est le but.
     recompense_interne += recompense_continue
+
+    # --- v41.32-etape1 : SONDE DE MIXAGE (lecture seule, aucun effet sur la décision) ---
+    # Placée ICI, juste après l'assemblage, pour trois raisons :
+    #   - c'est le SEUL point du fichier où les onze termes coexistent ;
+    #   - c'est APRÈS le guidage dégressif `_g` (l. ~8760), donc on mesure l'aide
+    #     RÉELLEMENT versée et non l'aide brute — même précaution que le noyau prend
+    #     déjà explicitement pour `guidage_but_journee` ;
+    #   - c'est APRÈS l'atténuation par `acceptation()` sur la curiosité.
+    # Mesurer avant l'un ou l'autre donnerait des chiffres qui ne sont pas ceux que le
+    # gradient reçoit — donc inutilisables pour arbitrer une pondération.
+    _sonder_mixage(
+        etat,
+        Env=recompense_env,
+        Curiosite=dopamine_curiosite,
+        Jalons=micro_recompense,
+        Portes=micro_recompense_porte,
+        Progres=micro_recompense_progres,
+        Stagnation=penalite_stagnation,
+        SousObjectif=sous_objectif_intrinseque,
+        Bio=r_bio,
+        Vocal=micro_recompense_vocale,
+        CoutC3=-cout_requete_c3,
+        Guidage=recompense_continue,
+        Total=recompense_interne,
+    )
+
     # v41.27 — `MALUS_DOULEUR` SUPPRIMÉ. Le choc mural n'est plus une pénalité posée dans
     # la récompense (−0,01, l'une des 4 récompenses en dur que l'audit du dogme signalait,
     # et celle-là même qui produisait l'inversion « mourir coûte moins cher que se
@@ -10064,6 +10186,33 @@ def executer_nuit(etat, plafond_reve=None):
     print(f"  ├─ Métabolisme    : r_bio cumulé {etat.r_bio_jour:+.3f} — {etat.food_consommes_jour} Nourriture(s), "
           f"{etat.water_consommes_jour} Eau(x) consommée(s) — effort moyen (20% cerveau/80% corps): {effort_moyen_jour:.3f}")
 
+    # --- v41.32-etape1 : LA TABLE DE MIXAGE, mesurée ---
+    # Ce que chaque terme de la récompense PÈSE (moyenne) et ce qu'il VARIE (écart-type).
+    # Les termes sont triés par écart-type DÉCROISSANT, pas par moyenne : c'est la
+    # dispersion qui porte le signal d'apprentissage, une constante ne distingue aucune
+    # action d'une autre. Un terme en tête de liste est un terme que le gradient entend ;
+    # un terme en queue est un décalage d'origine, si gros soit-il.
+    #
+    # ⚠️ Ligne CONDITIONNELLE (règle v29.1) : sur un jour sans aucun tick — vocal isolé,
+    # journée avortée — ne rien afficher plutôt que des zéros trompeurs, qui feraient
+    # passer une sonde INACTIVE pour une mesure NULLE (distinction ablation vide /
+    # ablation négative de la règle de mesure).
+    _mix_n = getattr(etat, "mix_n", 0)
+    if _mix_n > 0:
+        _stats_mix = _resumer_mixage(etat)
+        # `Total` est la récompense assemblée : c'est le dénominateur de lecture, pas un
+        # terme. Affiché à part pour qu'on puisse rapporter chaque part au tout.
+        _tot = _stats_mix.pop("Total", None)
+        _classe = sorted(_stats_mix.items(), key=lambda kv: -kv[1][1])
+        _tete = " | ".join(f"{nom} {moy:+.4f}±{ec:.4f}" for nom, (moy, ec) in _classe[:4])
+        print(f"  ├─ Mixage v41.32  : 🎚️  {_mix_n} tick(s) | par σ décroissant → {_tete}")
+        _queue = " | ".join(f"{nom} {moy:+.4f}±{ec:.4f}" for nom, (moy, ec) in _classe[4:])
+        if _queue:
+            print(f"  │                   ↳ {_queue}")
+        if _tot is not None:
+            print(f"  │                   ↳ TOTAL assemblé {_tot[0]:+.4f}±{_tot[1]:.4f} "
+                  f"(les 11 termes sont sommés à poids 1)")
+
     # --- v34.0-etape0 : les mesures préalables au chantier Fatigue/Mortalité/Soin ---
     # Ligne unique et dense : c'est un cadran de calibrage, pas une métrique de suivi.
     # Elle disparaîtra quand les constantes de la v34 auront été calibrées.
@@ -10506,6 +10655,9 @@ def executer_nuit(etat, plafond_reve=None):
         "Bio_Stimulation": etat.moteur_bio.stimulation,
         "Bio_Deficit": etat.moteur_bio.calculer_deficit(),
         "Bio_R_Bio_Jour": etat.r_bio_jour,
+        # v41.32-etape1 — la sonde de mixage n'entre PAS ici : ses clés sont ajoutées
+        # plus bas de façon CONDITIONNELLE (une par terme réellement observé), pour ne
+        # pas publier des zéros sur un jour sans tick. Voir le bloc `Mix_*`.
         "Bio_Food_Consommes_Jour": etat.food_consommes_jour,
         "Bio_Water_Consommes_Jour": etat.water_consommes_jour,
         "Bio_Quete_Active": etat.moteur_bio.quete_active["type"] if etat.moteur_bio.quete_active else "Aucune",
@@ -10739,6 +10891,38 @@ def executer_nuit(etat, plafond_reve=None):
         log_wandb["Empreinte_Valence_Max"] = max(_vals)
         log_wandb["Empreinte_Valence_Min"] = min(_vals)
         log_wandb["Empreinte_Valence_Etendue"] = max(_vals) - min(_vals)
+
+    # --- v41.32-etape1 : LA TABLE DE MIXAGE en W&B ---
+    # Deux courbes par terme : `Mix_Moy_*` (ce qu'il pèse) et `Mix_Ecart_*` (ce qu'il
+    # varie). C'est la SECONDE qui décide : un terme constant ne distingue aucune action
+    # d'une autre, quelle que soit son amplitude.
+    #
+    # ⚠️ Clés CONDITIONNELLES (règle v29.1, blocs `Sens_*` et C3) : un terme jamais sondé
+    # doit être ABSENT des courbes, pas à zéro. Publier un zéro ferait passer un canal
+    # débranché pour un canal mesuré nul — exactement la confusion « ablation vide /
+    # ablation négative » que la règle de mesure interdit, et le piège dans lequel le
+    # projet est déjà tombé deux fois (v41.4, v41.7).
+    #
+    # Ce que ces courbes doivent montrer :
+    #   - quel terme domine RÉELLEMENT la récompense, par sa dispersion ;
+    #   - si `Mix_Ecart_Bio` est du même ordre que `Mix_Ecart_Env` — auquel cas la
+    #     survie et le but parlent au gradient à voix comparable ;
+    #   - si un terme a un écart-type quasi nul : il ne sert alors à rien, quelle que
+    #     soit sa moyenne, et c'est un candidat au retrait plutôt qu'à la pondération.
+    if getattr(etat, "mix_n", 0) > 0:
+        log_wandb["Mix_Ticks"] = etat.mix_n
+        _stats_w = _resumer_mixage(etat)
+        for _nom, (_moy, _ec) in _stats_w.items():
+            log_wandb[f"Mix_Moy_{_nom}"] = _moy
+            log_wandb[f"Mix_Ecart_{_nom}"] = _ec
+        # Part de dispersion : quelle fraction du signal total chaque terme porte.
+        # C'est la lecture DIRECTE de la table de mixage — la seule qui réponde à
+        # « le soulagement de l'eau est-il noyé sous le bruit de fond ? ».
+        _somme_ec = sum(_ec for _nom, (_moy, _ec) in _stats_w.items() if _nom != "Total")
+        if _somme_ec > 0:
+            for _nom, (_moy, _ec) in _stats_w.items():
+                if _nom != "Total":
+                    log_wandb[f"Mix_PartSignal_{_nom}"] = _ec / _somme_ec
     log_wandb["Reve_Facteur_Richesse"] = facteur_richesse
     log_wandb["Reve_Empreinte_Enfance"] = etat.empreinte_enfance
     # v31.1 — santé de la mémoire spatiale : la déduplication travaille-t-elle, et la
