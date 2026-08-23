@@ -6850,6 +6850,15 @@ class EtatCognitif:
         self.mix_n = 0
         self.mix_somme = {}
         self.mix_somme_carres = {}
+
+        # --- v41.32-etape2 : LA SONDE DE FOURRAGE (télémétrie PURE) ---
+        # Mesure la CONJONCTION « être en face d'une ressource » ET « jouer le geste ».
+        # Voir `_sonder_fourrage` pour le détail de ce que chaque compteur distingue.
+        # Réarmés ici comme tout buffer journalier (piège `score_vocal_jour` v27.0).
+        self.fourrage_occasions_jour = 0
+        self.fourrage_saisies_jour = 0
+        self.fourrage_tentatives_jour = 0
+        self.fourrage_faim_aux_occasions = 0.0
         self.food_consommes_jour = 0
         self.water_consommes_jour = 0
 
@@ -7682,6 +7691,61 @@ def _sonder_mixage(etat, **termes) -> None:
         v = float(valeur)
         somme[nom] = somme.get(nom, 0.0) + v
         carres[nom] = carres.get(nom, 0.0) + v * v
+
+
+def _sonder_fourrage(etat, action_item) -> None:
+    """v41.32-etape2 — LA SONDE DE FOURRAGE. Télémétrie PURE, aucun effet sur la décision.
+
+    Question mesurée : **pourquoi un agent entraîné récolte-t-il 1,68 FOOD/jour quand un
+    marcheur aléatoire en récolte 3,33 ?** (mesuré le 23/08, 3 graines, même distribution
+    d'actions). L'agent fait donc MOINS BIEN que l'absence de politique.
+
+    Manger exige une CONJONCTION depuis la v41.2-fix5/fix6 :
+      (1) l'agent doit FAIRE FACE à la ressource (case frontale `agent_pos + dir_vec`),
+      (2) et jouer `ACTION_CONSOMMER` (le `pickup` de MiniGrid).
+
+    Une conjonction se casse de deux façons, et il faut savoir LAQUELLE :
+      - l'agent ne se met jamais en position (défaut de NAVIGATION) ;
+      - il s'y met mais ne tente pas le geste (défaut de DÉCISION).
+
+    Les compteurs distinguent exactement ces deux cas :
+      `occasions`        — ticks où une ressource est dans la case frontale
+      `saisies`          — occasions où `ACTION_CONSOMMER` a effectivement été joué
+      `tentatives`       — `ACTION_CONSOMMER` joué, avec ou sans ressource en face
+      `tentatives_vides` — geste joué dans le vide (dérivé : tentatives − saisies)
+
+    Le rapport `saisies / occasions` est le **taux de saisie** : sachant que l'agent est
+    en position, tente-t-il de manger ? C'est LA grandeur qui manque au diagnostic.
+
+    ⚠️ Lue AVANT `env.step` du tick suivant, donc la case frontale est bien celle que
+    l'agent voyait quand il a décidé. Lire après périmerait la mesure — même défaut que
+    la chaleur en v41.25-fix1, où une grandeur lue en tête et consommée en queue
+    traversait un `env.step` qui l'avait invalidée.
+
+    ⚠️ Compteurs réarmés dans `_reinitialiser_buffers_journee` comme TOUT buffer
+    journalier (piège `score_vocal_jour` v27.0).
+    """
+    det = getattr(etat, "detecteur_ressources_bio", None)
+    if det is None or not getattr(det, "actif", False):
+        return
+    try:
+        env = etat.env
+        devant = tuple(np.array(env.unwrapped.agent_pos) + env.unwrapped.dir_vec)
+        sur_food = devant in det.positions_food
+        sur_water = devant in det.positions_water
+        tente = (action_item == ACTION_CONSOMMER)
+
+        if tente:
+            etat.fourrage_tentatives_jour += 1
+        if sur_food or sur_water:
+            etat.fourrage_occasions_jour += 1
+            if tente:
+                etat.fourrage_saisies_jour += 1
+            # La faim au moment de l'occasion : un agent repu qui passe son tour a
+            # raison, un agent affamé qui passe son tour est le défaut cherché.
+            etat.fourrage_faim_aux_occasions += float(etat.moteur_bio.faim())
+    except Exception:
+        return    # une sonde ne doit JAMAIS interrompre un tick
 
 
 def _resumer_mixage(etat) -> dict:
@@ -8978,6 +9042,10 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
 
     # v41.2-fix5 — l'action du tick est transmise : manger n'est plus un effet de bord du
     # déplacement mais un geste volontaire (voir DetecteurRessourcesBiologiques.evaluer_tick).
+    # v41.32-etape2 — sonde de fourrage, AVANT `evaluer_tick` : celui-ci retire la
+    # ressource de la grille en cas de succès, donc mesurer après ferait disparaître
+    # l'occasion qu'on veut compter.
+    _sonder_fourrage(etat, action_item)
     mange_food, mange_water = etat.detecteur_ressources_bio.evaluer_tick(etat.env, action_item)
     # v41.2-fix7 — LE SOULAGEMENT EST CRÉDITÉ AU GESTE QUI L'A PRODUIT.
     #
@@ -10186,6 +10254,25 @@ def executer_nuit(etat, plafond_reve=None):
     print(f"  ├─ Métabolisme    : r_bio cumulé {etat.r_bio_jour:+.3f} — {etat.food_consommes_jour} Nourriture(s), "
           f"{etat.water_consommes_jour} Eau(x) consommée(s) — effort moyen (20% cerveau/80% corps): {effort_moyen_jour:.3f}")
 
+    # --- v41.32-etape2 : LE FOURRAGE — la conjonction, décomposée ---
+    # Manger exige DEUX conditions simultanées (v41.2-fix5/fix6) : faire FACE à la
+    # ressource, et jouer le geste. Cette ligne dit laquelle des deux manque.
+    #   - `occasions` bas  -> défaut de NAVIGATION (l'agent ne se met pas en position)
+    #   - `saisie` bas     -> défaut de DÉCISION (il y est, mais ne tente pas)
+    # ⚠️ Ligne CONDITIONNELLE (règle v29.1) : sans détecteur actif, ne rien afficher
+    # plutôt que des zéros qui feraient passer une sonde inactive pour une mesure nulle.
+    _occ = getattr(etat, "fourrage_occasions_jour", 0)
+    _tent = getattr(etat, "fourrage_tentatives_jour", 0)
+    if _occ > 0 or _tent > 0:
+        _sais = getattr(etat, "fourrage_saisies_jour", 0)
+        _taux = 100.0 * _sais / _occ if _occ else 0.0
+        _faim = (getattr(etat, "fourrage_faim_aux_occasions", 0.0) / _occ) if _occ else 0.0
+        _vides = _tent - _sais
+        print(f"  ├─ Fourrage v41.32: 🍽️  {_occ} occasion(s) (face à une ressource) | "
+              f"{_sais} saisie(s) → taux {_taux:.1f}% | faim moyenne aux occasions {_faim:.3f}")
+        print(f"  │                   ↳ {_tent} geste(s) `consommer` joué(s), dont "
+              f"{_vides} dans le vide")
+
     # --- v41.32-etape1 : LA TABLE DE MIXAGE, mesurée ---
     # Ce que chaque terme de la récompense PÈSE (moyenne) et ce qu'il VARIE (écart-type).
     # Les termes sont triés par écart-type DÉCROISSANT, pas par moyenne : c'est la
@@ -10891,6 +10978,26 @@ def executer_nuit(etat, plafond_reve=None):
         log_wandb["Empreinte_Valence_Max"] = max(_vals)
         log_wandb["Empreinte_Valence_Min"] = min(_vals)
         log_wandb["Empreinte_Valence_Etendue"] = max(_vals) - min(_vals)
+
+    # --- v41.32-etape2 : LE FOURRAGE en W&B ---
+    # `Fourrage_Taux_Saisie` est la courbe décisive : sachant que l'agent est EN FACE
+    # d'une ressource, tente-t-il de la prendre ? Si elle DÉCROÎT au fil des jours, le
+    # gradient réprime activement le geste — c'est l'hypothèse à falsifier.
+    # Clés conditionnelles (règle v29.1) : un détecteur inactif ne doit rien publier.
+    _occ_w = getattr(etat, "fourrage_occasions_jour", 0)
+    _tent_w = getattr(etat, "fourrage_tentatives_jour", 0)
+    if _occ_w > 0 or _tent_w > 0:
+        _sais_w = getattr(etat, "fourrage_saisies_jour", 0)
+        log_wandb["Fourrage_Occasions"] = _occ_w
+        log_wandb["Fourrage_Saisies"] = _sais_w
+        log_wandb["Fourrage_Tentatives"] = _tent_w
+        log_wandb["Fourrage_Tentatives_Vides"] = _tent_w - _sais_w
+        if _occ_w > 0:
+            log_wandb["Fourrage_Taux_Saisie"] = _sais_w / _occ_w
+            log_wandb["Fourrage_Faim_Aux_Occasions"] = (
+                getattr(etat, "fourrage_faim_aux_occasions", 0.0) / _occ_w)
+        if _tent_w > 0:
+            log_wandb["Fourrage_Efficacite_Geste"] = _sais_w / _tent_w
 
     # --- v41.32-etape1 : LA TABLE DE MIXAGE en W&B ---
     # Deux courbes par terme : `Mix_Moy_*` (ce qu'il pèse) et `Mix_Ecart_*` (ce qu'il

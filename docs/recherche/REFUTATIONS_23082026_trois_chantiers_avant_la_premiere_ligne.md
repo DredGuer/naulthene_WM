@@ -319,6 +319,82 @@ correction de la croissance ne s'appliquerait qu'aux premières centaines de jou
 
 ---
 
+## 4bis. Réfutation n°4 — « le gradient a appris à ne plus manger »
+
+### L'hypothèse
+
+Le fil laissé ouvert : **l'agent entraîné récolte 1,68 FOOD/jour, le hasard 3,33.**
+Hypothèse retenue pour la nuit : `ACTION_CONSOMMER` étant coûteux et sa récompense mal
+attribuée, le gradient aurait appris à **ne plus tenter** — l'agent choisirait l'agonie
+lente plutôt que l'effort.
+
+### L'instrument
+
+`_sonder_fourrage`, télémétrie **pure** (vérifiée statiquement : n'écrit que dans
+`fourrage_*`). Manger exige une **conjonction** depuis la v41.2-fix5/fix6 :
+
+1. faire **face** à la ressource (case frontale `agent_pos + dir_vec`),
+2. **et** jouer `ACTION_CONSOMMER`.
+
+Une conjonction se casse de deux façons, et il fallait savoir laquelle : défaut de
+**navigation** (jamais en position) ou défaut de **décision** (en position, pas de geste).
+
+**Test A/A : δ = 0**, 60 nuits bit-identiques, graine 11.
+
+### La mesure
+
+| Grandeur | Valeur |
+|---|---|
+| Occasions (face à une ressource) | **52,2/jour** |
+| Gestes `consommer` joués | **52,5/jour** |
+| **Saisies (conjonction réussie)** | **4,2/jour** |
+| **Taux de saisie** | **8,1 %** |
+| Gestes dans le vide | **92,0 %** |
+| Faim moyenne aux occasions | **0,961** |
+
+### 🔴 L'hypothèse est réfutée — les tentatives TRIPLENT
+
+| | 1er tiers | 2ᵉ tiers | 3ᵉ tiers |
+|---|---|---|---|
+| Gestes `consommer`/jour | 27,2 | 56,0 | **74,2** |
+| Taux de saisie | 4,2 % | 8,1 % | **13,0 %** |
+
+Le geste n'est **pas réprimé, il est renforcé** — et le taux de saisie monte aussi. **L'agent
+n'est pas anorexique** : il essaie de manger 52 fois par jour, de plus en plus souvent, en
+famine quasi totale (0,961).
+
+### Ce que la sonde trouve à la place — l'anti-corrélation
+
+Les deux termes de la conjonction marchent **séparément** : 52,2 occasions et 52,5 gestes
+par jour sur 400 ticks. **C'est leur intersection qui échoue.**
+
+| | |
+|---|---|
+| Saisies attendues si les deux étaient **indépendants** | **378,9** |
+| Saisies **observées** | **253** |
+| **Ratio observé/attendu** | **0,67** |
+| Nuits sous le hasard | **49/60 (82 %)** |
+
+🔴 **L'agent fait moins bien que le hasard sur la conjonction.** Ses deux comportements ne
+sont pas décorrélés : ils sont **anti-corrélés**. Il joue le geste quand il n'est pas en
+face, et se trouve en face quand il ne joue pas le geste.
+
+C'est cohérent avec le fait initial (1,68 contre 3,33 pour le hasard) : le marcheur aléatoire
+n'a **aucune** anti-corrélation à surmonter, donc il ferme la conjonction au taux nominal.
+
+### Pistes ouvertes (non tranchées, aucune mesure)
+
+| Piste | Question |
+|---|---|
+| **Perception frontale** | la ressource est-elle perceptible dans la case frontale au moment de décider ? La vue est un cône, l'odorat topologique — le contact frontal a-t-il un canal dédié ? |
+| **Crédit temporel** | le soulagement (v41.2-fix7) atteint-il le tick du geste, ou le suivant ? |
+| **Geste piloté par l'état interne** | `ACTION_CONSOMMER` répond-il à la **faim** plutôt qu'à la **présence** ? Un geste piloté par la faim seule serait *exactement* anti-corrélé à l'occasion — c'est l'hypothèse la plus économique |
+
+⚠️ **Une seule graine.** Le fait qualitatif (ratio < 1, tentatives croissantes) est net, mais
+le chiffre exact lui est propre.
+
+---
+
 ## 5. Ce que la journée établit — et ce qu'elle ne dit pas
 
 ### Établi (mesures directes, banc déterministe δ_A/A = 0)
@@ -330,6 +406,8 @@ correction de la croissance ne s'appliquerait qu'aux premières centaines de jou
 | Satiété au plancher | **40/40 nuits** |
 | Valences ≡ soulagement réel | écart **4,4 %** |
 | Le hasard récolte mieux que l'agent | **3,33 vs 1,68 FOOD/jour** |
+| L'agent TENTE de manger, de plus en plus | 27,2 → **74,2** gestes/jour |
+| Mais la conjonction échoue | taux de saisie **8,1 %**, ratio vs hasard **0,67** |
 | C2 pèse | **0,110 %** de 384 808 params |
 | C2 croît en N, le tronc en N² | rapport **×312** à 16 dims |
 
@@ -347,7 +425,7 @@ correction de la croissance ne s'appliquerait qu'aux premières centaines de jou
 
 ## 6. La leçon de méthode
 
-**Trois propositions, trois réfutations, zéro ligne de correctif écrite.** Le coût total :
+**Quatre propositions, quatre réfutations, zéro ligne de correctif écrite.** Le coût total :
 une sonde (~180 lignes de télémétrie pure), deux runs de 40 jours, et trois scripts de
 mesure. Ce qui a été évité :
 

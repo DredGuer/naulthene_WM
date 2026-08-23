@@ -1,0 +1,24 @@
+{
+  "nuits": 60,
+  "graine": 11,
+  "delta_AA": 0.0,
+  "occasions_jour": 52.18333333333333,
+  "saisies_jour": 4.216666666666667,
+  "taux_saisie_pct": 8.080485467901628,
+  "gestes_jour": 52.516666666666666,
+  "gestes_vides_pct": 91.97080291970804,
+  "faim_aux_occasions": 0.96085,
+  "saisies_attendues_si_independants": 378.9425,
+  "ratio_observe_sur_attendu": 0.6676474663042546,
+  "nuits_sous_le_hasard": 49,
+  "tendance_gestes": [
+    27.25,
+    56.05,
+    74.25
+  ],
+  "tendance_taux_saisie_pct": [
+    4.159869494290375,
+    8.102345415778252,
+    13.029989658738366
+  ]
+}

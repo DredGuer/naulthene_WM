@@ -4,6 +4,67 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.32-etape2] - 2026-08-23 — La sonde de fourrage : l'agent n'est pas anorexique
+
+### Il tente de manger 52 fois par jour — c'est la CONJONCTION qui échoue
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | feat (télémétrie) |
+| **Impact** | **Majeur — réfute l'hypothèse du geste réprimé, isole une anti-corrélation** |
+
+Fil laissé ouvert par l'étape 1 : **l'agent entraîné récolte 1,68 FOOD/jour, un marcheur
+aléatoire 3,33.** Hypothèse testée : `ACTION_CONSOMMER` étant coûteux, le gradient aurait
+appris à **ne plus tenter**.
+
+`_sonder_fourrage` — télémétrie **pure** (vérifiée statiquement : n'écrit que dans
+`fourrage_*`). Manger exige une **conjonction** (v41.2-fix5/fix6) : faire **face** à la
+ressource **et** jouer `ACTION_CONSOMMER`. Les compteurs distinguent le défaut de
+**navigation** (jamais en position) du défaut de **décision** (en position, pas de geste).
+
+**Test A/A : δ = 0**, 60 nuits bit-identiques, graine 11.
+
+| Grandeur | Valeur |
+|---|---|
+| Occasions (face à une ressource) | **52,2/jour** |
+| Gestes `consommer` joués | **52,5/jour** |
+| **Saisies (conjonction réussie)** | **4,2/jour** |
+| **Taux de saisie** | **8,1 %** |
+| Gestes dans le vide | **92,0 %** |
+| Faim moyenne aux occasions | **0,961** |
+
+**🔴 L'hypothèse est réfutée.** Les tentatives **triplent** au fil du run (27,2 → 56,0 →
+74,2 gestes/jour) et le taux de saisie monte aussi (4,2 % → 8,1 % → 13,0 %). Le geste n'est
+pas réprimé, il est **renforcé**. L'agent n'est pas anorexique : il essaie de manger 52 fois
+par jour, de plus en plus, en famine quasi totale.
+
+**Ce que la sonde trouve à la place — l'anti-corrélation.** Les deux termes marchent
+séparément (52,2 occasions et 52,5 gestes sur 400 ticks) ; c'est leur **intersection** qui
+échoue. Sous hypothèse d'indépendance, on attendrait **378,9** saisies ; on en observe
+**253**, soit un ratio de **0,67**, et **49 nuits sur 60** sous le hasard. Les deux
+comportements ne sont pas décorrélés : ils sont **anti-corrélés**. L'agent joue le geste
+quand il n'est pas en face, et se trouve en face quand il ne joue pas le geste.
+
+Cohérent avec le fait initial : le marcheur aléatoire n'a aucune anti-corrélation à
+surmonter, donc il ferme la conjonction au taux nominal.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `_sonder_fourrage`, buffers `fourrage_*`, ligne console `Fourrage v41.32`, clés `Fourrage_*` conditionnelles (dont `Fourrage_Taux_Saisie`) |
+| `docs/recherche/REFUTATIONS_23082026_…md` | enquête n°4 |
+| `brains/23082026_v4132_fourrage/` | protocole + agrégat JSON versionnés |
+
+⚠️ **Une seule graine** (g11, 60 jours). Le fait qualitatif (ratio < 1, tentatives
+croissantes) est net ; le chiffre exact lui est propre.
+
+⚠️ **Pistes ouvertes, aucune mesurée** : la ressource est-elle perceptible dans la case
+frontale au moment de décider ? Le crédit du soulagement (v41.2-fix7) atteint-il le tick du
+geste ? `ACTION_CONSOMMER` répond-il à la **faim** (état interne) plutôt qu'à la **présence**
+(état externe) — ce qui produirait *exactement* cette anti-corrélation ?
+
+---
+
 ## [v41.32-etape1] - 2026-08-23 — La sonde de mixage, et trois chantiers réfutés
 
 ### Instrumenter les 11 termes de la récompense — puis réfuter trois propositions avant de les coder
