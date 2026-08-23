@@ -777,6 +777,95 @@ est de 4 ordres de grandeur au-dessus du cas éteint — ne dépend pas de cette
 
 ---
 
+## 4octies. CHANTIER 0 — la perméabilité : le goulot n'est pas où on le cherchait
+
+### L'hypothèse
+
+*Representation collapse* : pendant des centaines de nuits sans `Env`, ignorer le monde
+serait devenu la stratégie la plus économe ; l'information se perdrait dans les couches
+profondes. **Signature attendue** : `bus_latent` distinct, **logits identiques**.
+
+### L'instrument
+
+`src/naulthene/instruments/sonde_permeabilite.py` — instrument **en lecture seule**, même
+discipline qu'`irm_cerveau.py`. Deux protocoles, délibérément :
+
+- **(A) états FORGÉS** (jauges aux extrêmes) — contraste maximal, donc **borne supérieure**
+  de sensibilité. Mais **hors distribution** : une réponse plate y prouverait beaucoup, une
+  réponse vive n'y prouve rien du comportement réel.
+- **(B) états RÉELS capturés en jeu** — ce qui compte, contraste plus faible.
+
+### 🔴 La signature mesurée est L'INVERSE EXACT de l'hypothèse
+
+| ÉTAGE | (A) forgé | (B) réel | Lecture |
+|---|---|---|---|
+| `bus_latent` | 0,000000 | **0,0721** | quasi identique |
+| `pensee_bio` | 0,0911 | 0,0936 | léger écart |
+| **`logits_C1`** | **0,6667** | **0,8607** | **très différent** |
+
+**L'information n'est pas perdue : elle est AMPLIFIÉE.** 0,07 au bus → 0,09 après fusion →
+**0,86** aux logits, un facteur **×12**. Les couches profondes font exactement leur travail.
+
+⚠️ Le `0,000000` en (A) est un **test de sanité réussi**, pas un défaut : les jauges
+n'entrent pas dans `bus_latent` (invariant v29.0 — les sens faibles passent par
+`integrateur_bio`, hors cible JEPA). Même image ⇒ même bus.
+
+⚠️ **Correction d'une métrique de ma sonde** : `valeur_C2` est un **scalaire**
+(`cortex_prefrontal.out_features == 1`), donc une distance cosinus n'y vaut que 0 ou 2 — elle
+ne mesure que le **signe**. Le « 2,000000 » du premier tirage était un artefact de métrique,
+pas une découverte. La sonde publie désormais les deux valeurs brutes : **+0,176 face à une
+ressource, −0,082 face à un mur**. C2 *distingue*, et dans le bon sens.
+
+### Ce que cela déplace — le goulot est l'AMPLITUDE, pas la représentation
+
+Le réseau **discrimine** (logits à 0,86 de distance). Mais la politique **jouée** ne
+discrimine pas (0,194, sous le bruit p95 de 0,213). L'écart est donc dans
+l'**échantillonnage**, pas dans la représentation.
+
+La politique est tirée par `multinomial` sur le softmax, **jamais** `argmax` (choix explicite
+du projet — l'agent est entraîné par REINFORCE). Or les logits ont une norme de **0,65** face
+à une ressource et **0,26** face à un mur :
+
+| Norme des logits | Proba de l'action préférée |
+|---|---|
+| **0,26** (mur, mesuré) | **17,8 %** |
+| **0,65** (ressource, mesuré) | **24,2 %** |
+| 2,0 | 55,2 % |
+| 5,0 | 96,1 % |
+| *uniforme* | *14,3 %* |
+
+**L'agent sait quelle action préférer — mais il ne la joue qu'une fois sur quatre.** Sa
+préférence est réelle et correcte ; elle est simplement **trop faible pour survivre au
+tirage**.
+
+### La chaîne complète, enfin cohérente
+
+Cela réconcilie les mesures qui semblaient se contredire :
+
+| Mesure | Explication |
+|---|---|
+| Entropie **basse** et qui baisse (1,70) | l'agent A des préférences |
+| Distance des politiques **au bruit** (0,194) | elles sont trop faibles pour se voir dans les actions tirées |
+| Anti-corrélation du fourrage (ratio 0,67) | le geste correct est préféré mais rarement tiré |
+| `Env` à **0,1 %** au niveau 4 | trop peu de succès pour renforcer l'amplitude |
+
+**Ce n'est ni un capteur, ni une récompense, ni une géométrie, ni un effondrement de
+représentation. C'est un problème d'AMPLITUDE de la politique.**
+
+### ⚠️ Ce qui reste NON établi
+
+- **Une seule graine, un seul `.brain`.** Le fait qualitatif (logits distincts, norme
+  faible) est net ; les chiffres exacts lui sont propres.
+- **La cause de la faible amplitude n'est PAS établie.** Trois candidats, aucun mesuré :
+  le coefficient d'entropie (`COEFF_ENTROPIE_GUIDE = 0,02`) qui pousse activement vers
+  l'uniforme ; l'érosion nocturne qui rabote `tete_motrice` ; le manque de succès qui ne
+  consolide aucune préférence forte.
+- ⚠️ **Ne pas « corriger » en passant à `argmax`** : le projet documente que l'agent, entraîné
+  par REINFORCE, n'a jamais expérimenté son mode déterministe — le forcer produit des boucles
+  infinies et un diagnostic faux (leçon du banc d'ablation, en tête de `sonde_c1_c2.py`).
+
+---
+
 ## 5. Ce que la journée établit — et ce qu'elle ne dit pas
 
 ### Établi (mesures directes, banc déterministe δ_A/A = 0)
@@ -801,6 +890,8 @@ est de 4 ordres de grandeur au-dessus du cas éteint — ne dépend pas de cette
 | Et il devient MOINS discriminant | 0,253 → **0,144** sur `Empty-5x5` |
 | L'entropie de la politique BAISSE | 1,7695 → **1,7034** (max ln7 = 1,946) |
 | L'agent n'est PAS aplati | écart au max **0,350** contre **0,00004** pour un cerveau éteint |
+| Le réseau DISCRIMINE | distance des logits **0,861** (bus 0,072 → ×12) |
+| Mais ses logits sont FAIBLES | norme **0,65** ⇒ l'action préférée tirée **24 %** du temps |
 | C2 pèse | **0,110 %** de 384 808 params |
 | C2 croît en N, le tronc en N² | rapport **×312** à 16 dims |
 

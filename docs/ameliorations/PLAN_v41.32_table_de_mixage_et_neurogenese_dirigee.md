@@ -614,10 +614,88 @@ qui ne tourne pas.
 
 ---
 
+## 🔴 CHANTIER 0 — LE DIAGNOSTIC RACINE (23/08/2026, en tête de tout le reste)
+
+> **Ce chantier précède les cinq autres.** Il ne les remplace pas : il conditionne leur
+> utilité. Ouvert après neuf réfutations dans la même journée, dont la dernière a renversé
+> le diagnostic.
+
+### Le constat
+
+L'agent n'est **ni apathique ni aléatoire** — c'est ce que l'entropie a établi :
+
+| | Écart au maximum `ln(7)` |
+|---|---|
+| Cerveau réellement éteint (v34.0-fix1, août) | **0,00004** |
+| Agent mesuré le 23/08 | **0,34961** |
+
+Il est **~8700× plus décidé** qu'un cerveau aplati, et son entropie **baisse** (1,7695 →
+1,7034). Il a donc des certitudes.
+
+Mais sa réponse est **la même face à un mur et face à une pomme** — distance des politiques
+**0,194** contre un bruit d'échantillonnage à **0,213** (p95).
+
+**Ses certitudes ne dépendent pas de ce qu'il perçoit.**
+
+### L'implication — pourquoi ce chantier passe devant
+
+| Chantier | Présupposait |
+|---|---|
+| Famine / métabolisme | que le corps atteint la décision |
+| Table de mixage | que la récompense façonne une politique **conditionnelle** |
+| Neurogenèse | que plus de capacité serait exploitée |
+
+Si l'état n'entre pas dans la décision, **les trois réparent des signaux qui viendront
+s'écraser sur la même porte close.** Aucun n'est faux ; tous sont prématurés.
+
+### L'action — mesurer la PERMÉABILITÉ du réseau
+
+Trouver **à quel étage** l'état cesse d'influencer la décision. Télémétrie pure, hors
+entraînement, sur les `.brain` existants.
+
+**A. Deux états contrastés**
+- *Survie* : face à une ressource, satiété 0,0 · hydratation 0,0 · énergie au plancher
+- *Confort* : face à un mur, satiété 1,0 · hydratation 1,0 · énergie au maximum
+
+⚠️ **Forger les jauges à la main produit un état que l'agent n'a JAMAIS vécu** — un point
+hors distribution, où la réponse du réseau ne dit rien de son comportement réel. Le protocole
+doit donc mesurer **les deux** : états forgés (contraste maximal, borne supérieure de la
+sensibilité) **et** états réellement capturés en jeu (ce qui compte).
+
+**B. Remonter la chaîne, étage par étage**
+
+| Étage | Ce qu'on compare |
+|---|---|
+| `bus_latent` | les portes sensorielles envoient-elles des signaux distincts ? |
+| `pensee_bio` | la fusion bus + corps produit-elle des vecteurs distincts ? |
+| logits `tete_motrice` (C1) | la décision change-t-elle ? |
+| valeur `cortex_prefrontal` (C2) | l'évaluation d'état change-t-elle ? |
+
+**C. Le diagnostic**
+
+| Signature | Verdict |
+|---|---|
+| `bus_latent` distinct, logits identiques | **effondrement de représentation** dans les couches profondes |
+| `bus_latent` déjà identique | les **portes sensorielles** sont éteintes (cf. extinction v34.0) |
+| tout distinct | la politique lit l'état — la non-discrimination vient d'ailleurs |
+
+### L'hypothèse de travail
+
+Pendant des centaines de nuits où `Env` était introuvable (0,1 % de la dispersion au
+niveau 4), **ignorer le monde a pu devenir la stratégie la plus économe** — l'érosion
+nocturne ne préserve que ce que le gradient myélinise, et un capteur qui ne prédit aucune
+récompense ne myélinise rien. C'est le mécanisme exact de l'extinction synaptique v34.0,
+mais appliqué à la **conditionnalité** plutôt qu'à l'amplitude.
+
+⚠️ **Hypothèse, pas conclusion.** Elle se teste par le protocole ci-dessus.
+
+---
+
 ## 5. Ce qu'il reste à faire — l'ordre et le pourquoi
 
 | # | Action | Pourquoi à ce rang | Bloque | Coût |
 |---|---|---|---|---|
+| **0** | 🔴 **PERMÉABILITÉ DU RÉSEAU** (Chantier 0) | conditionne l'utilité des cinq autres : si l'état n'entre pas dans la décision, réparer les signaux ne sert à rien | **tous** | 1 nuit |
 | **1** | **Sonde de mixage** (§2) + vérification WATER (§3) | décide si 4.1 est un correctif ou un pansement. Mesure **avant** refonte — doctrine v30.1. | 4.1 | 1 nuit |
 | **2** | **Neurogenèse dirigée** (§4.2) | seule des trois **sans dépendance**, dogmatiquement propre, cause géométrique | — | ~1 j + campagne |
 | **3** | **Dépense énergétique réelle** (§6) | débloque le métabolisme **et** rend 4.3 mesurable | 4.3 | chantier v41.32 |
