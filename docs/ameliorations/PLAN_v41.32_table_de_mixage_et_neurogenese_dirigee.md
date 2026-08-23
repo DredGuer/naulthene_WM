@@ -309,6 +309,69 @@ arithmétique** d'un biotope à parts égales sur deux axes aux besoins inégaux
 plus structurant du monde : la v41.25 a montré qu'un changement métabolique bon sur une
 carte coûtait **−25 % de récolte** partout ailleurs.
 
+### 1quinquies. 🔴 LE TÉMOIN RÉFUTE L'OPTION (a) — la densité n'est pas le goulot
+
+> **Décision utilisateur du 23/08** : appliquer l'option (a) — dériver la densité des cases
+> libres réelles. **Le témoin lancé avant de coder l'a réfutée.** Elle est **abandonnée**.
+
+#### Ce que le témoin mesure
+
+Un **marcheur aléatoire** sur la carte réelle (`Empty-5x5`, 3 graines, 400 ticks), avec la
+même distribution d'actions que l'agent (uniforme sur les 7 actions réelles) :
+
+| | FOOD/jour | WATER/jour |
+|---|---|---|
+| **Marcheur aléatoire** | **3,33** | 4,00 |
+| **Agent entraîné** (mesuré, 40 nuits) | **1,68** | 1,50 |
+| *Seuil de viabilité énergétique* | *2,78* | *—* |
+
+🔴 **Le hasard pur récolte 2,0× plus de nourriture que l'agent entraîné — et le hasard, lui,
+franchit le seuil de viabilité (3,33 > 2,78).**
+
+#### Les trois conséquences
+
+**(1) Le monde PEUT nourrir l'agent.** À densité inchangée, un comportement aléatoire suffit
+à survivre. Le biotope n'est donc **pas** sous-doté.
+
+**(2) L'agent récolte 50 % de ce qu'un hasard obtiendrait.** Son apprentissage le rend
+**activement moins bon** à se nourrir qu'aucune politique du tout. C'est le fait à expliquer,
+et aucune modification du monde ne le touchera.
+
+**(3) L'option (a) aurait été le QUATRIÈME calibrage inopérant.** Le code l'annonce déjà
+(v41.2-fix3) : *« trois calibrages successifs restés sans le moindre effet »*. Ils réglaient
+un paramètre qui n'était pas le facteur limitant. Ajouter des sources à un agent qui
+n'exploite pas celles qui existent aurait produit un quatrième résultat nul — et cette fois
+après avoir modifié le monde sur **toutes** les cartes.
+
+#### ⚠️ Correction d'une erreur de mon diagnostic précédent
+
+J'avais écrit que « le biotope demande 14 sources sur une carte qui en tient 8 ». **C'est
+faux** : le plafond `v41.2-fix3` fonctionne parfaitement. Mesuré sur les environnements
+réels :
+
+| Carte | Cases libres | FOOD placées | WATER placées |
+|---|---|---|---|
+| `Empty-5x5` | 6 | **1** | 1 |
+| `Empty-6x6` | 11 | 2 | 2 |
+| `Empty-8x8` | 24 | 6 | 5 |
+
+Le « 7+7 » lu dans les logs est le **souhait**, jamais le placé. Le monde clampe déjà
+correctement. Ma lecture confondait les deux.
+
+#### Où va le chantier maintenant
+
+La cause est **comportementale**, donc dans la boucle apprentissage — pas dans le monde.
+Trois pistes, par ordre de ce que la mesure justifie :
+
+| Piste | À mesurer d'abord |
+|---|---|
+| **L'agent ne cherche pas la nourriture** | la politique privilégie-t-elle `avancer` vers le but au détriment du fourrage ? Comparer la distribution d'actions agent vs. aléatoire |
+| **`pickup` n'est pas appris** | v41.2-fix5 a rendu manger un ACTE volontaire. Quelle fraction des passages sur une source déclenche un `pickup` ? |
+| **Le gradient ne récompense pas assez le fourrage** | `Bio` porte 44 % de la dispersion — mais est-elle concentrée sur les 1,68 prises, ou diluée sur les 400 ticks ? |
+
+⚠️ Ces trois pistes se mesurent **sans modifier une ligne du monde**. C'est la leçon de ce
+témoin : la prochaine action est encore une mesure.
+
 ### Ce que la mesure impose au plan
 
 | Décision | Avant la mesure | Après |
@@ -454,6 +517,71 @@ rêve adaptatif ou la porosité nocturne — une proportion émergente, pas un p
 | **`segments_in` doit rester exact** | `assert total_ancien == self.in_features` (CLAUDE.md). Si les couches grandissent de montants **différents**, la concaténation de `forward()`/`penser()` se désaligne **silencieusement**. C'est le vrai travail, et le seul endroit qui peut casser sans bruit. |
 | **Lire le stress sur la myéline rafraîchie** | la v41.0-fix a établi que la myéline doit être relue **en tête de `cycle_sommeil`** — sinon elle ignore tout ce que la couche vient d'apprendre (mesuré : `0.000000` exact sur `tete_motrice` après 600 jours). Réutiliser l'existant plutôt qu'ajouter un capteur. |
 | **Toute couche doit être dans les 3 endroits** | `__init__`, `cycle_sommeil_global()`, `declencher_neurogenese()`. En oublier un casse silencieusement le sommeil **ou** la neurogenèse pour cette couche. |
+
+### 🔴 4.2bis — LA NEUROGENÈSE DIRIGÉE NE PEUT PAS CORRIGER LA DILUTION (23/08/2026)
+
+> **Décision utilisateur du 23/08** : coder la répartition de `agrandir()` selon le stress
+> de la myéline. **Lecture du code faite avant d'écrire : la mécanique est structurellement
+> impossible sous cette forme, et son objectif est hors de portée.** Deux résultats.
+
+#### (1) Un `a` différent par couche est IMPOSSIBLE — le bus est partagé
+
+Dans `declencher_neurogenese`, `a` apparaît **deux fois** par couche du tronc :
+
+```python
+self.analyseur.agrandir([(d, a)], a)
+#                        ^^^^^^   ^
+#                        entrée   SORTIE
+```
+
+La **sortie** de `analyseur` **est** l'entrée de `integrateur_bio`, qui alimente
+`tete_motrice`, etc. Huit couches sont chaînées sur le **même** bus de largeur `dim_bus` :
+
+| Couche | Sortie |
+|---|---|
+| `porte_visuelle`, `hippocampe`, `fusion_memoire`, `analyseur`, `integrateur_bio`, `generateur_attente`, `porte_auditive`, `generateur_attente_audio` | **`+a` — contrainte** |
+| `tete_motrice`, `cortex_prefrontal`, `tete_vocale`, `tete_requete` | fixe (8, 1, 8, `DIM_ROUTAGE_C3`) |
+
+Donner 8 dims à `analyseur` et 24 à `integrateur_bio` produirait un `RuntimeError` au
+premier `forward` : le tenseur qui sort de l'un ne rentre plus dans l'autre. **`dim_bus`
+n'est pas un budget répartissable, c'est une largeur commune.**
+
+#### (2) Même à 100 % du budget, C2 resterait dilué — mesuré
+
+Répartition réelle d'un `.brain` à `dim_bus = 70` (384 808 paramètres) :
+
+| COUCHE | PARAMS | PART |
+|---|---|---|
+| `porte_visuelle` | 61 742 | 16,05 % |
+| `hippocampe` | 58 802 | 15,28 % |
+| `fusion_memoire` | 58 802 | 15,28 % |
+| `porte_auditive` | 54 602 | 14,19 % |
+| `integrateur_bio` | 46 622 | 12,12 % |
+| … | | |
+| **`cortex_prefrontal` (C2)** | **422** | **0,110 %** |
+
+**La cause n'est pas dans `agrandir()`** : `cortex_prefrontal` a **une seule sortie** (une
+valeur scalaire). Il croît donc en **N**, quoi qu'on lui donne, pendant que toute matrice
+carrée croît en **N²** :
+
+| Ajout | C2 gagne | `hippocampe` gagne | Rapport |
+|---|---|---|---|
+| 8 dims | 48 | 14 208 | **×296** |
+| 16 dims | 96 | 29 952 | **×312** |
+| 32 dims | 192 | 66 048 | **×344** |
+
+🔴 **Le budget de neurogenèse n'est pas le levier.** Le problème n'est pas *combien de
+dimensions C2 reçoit en entrée*, c'est qu'il **n'a qu'une sortie**. Une répartition
+proportionnelle au stress aurait déplacé des miettes en laissant le rapport intact — et
+elle aurait donné l'illusion d'avoir traité la dilution.
+
+#### Ce qui resterait possible (non tranché, à ne pas coder sans décision)
+
+| Piste | Nature | Réserve |
+|---|---|---|
+| **Élargir la SORTIE de C2** (une tête de valeur multi-dimensionnelle, agrégée ensuite) | change l'architecture, pas le budget | ⚠️ modifie la sémantique de la valeur ; greffe `persistance` obligatoire ; aucun appui de mesure (r = −0,172) |
+| **Donner à C2 une couche cachée** (`bus → h → 1` au lieu de `bus → 1`) | croissance en N·h, plus en N | ⚠️ nouvelle couche ⇒ à ajouter dans `__init__`, `cycle_sommeil_global()` **et** `declencher_neurogenese()` |
+| **Ne rien faire** | — | la corrélation taille~niveau est **négative** ; rien ne dit qu'un C2 plus gros aiderait |
 
 ⚠️ **Réserve sur l'ambition, pas sur le mécanisme** : la neurogenèse est **éteinte depuis
 882 jours** en moyenne. Une croissance mieux répartie ne s'applique qu'aux premières
