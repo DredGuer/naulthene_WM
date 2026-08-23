@@ -395,6 +395,93 @@ le chiffre exact lui est propre.
 
 ---
 
+## 4ter. Réfutations n°5 et n°6 — les deux explications de l'anti-corrélation
+
+Deux hypothèses proposées pour expliquer l'anti-corrélation du §4bis. **Les deux sont
+réfutées** — la première par lecture du code, la seconde par l'API MiniGrid. Mais la
+seconde laisse un fait mesuré qui, lui, tient.
+
+### Réfutation n°5 — « le soulagement n'atteint pas le gradient »
+
+**L'hypothèse** : `consommer_ressource()` remplirait la satiété **avant** que
+`step_metabolisme()` ne calcule `deficit_avant`, donc `r_bio` serait quasi nul. Le réseau
+moteur ne serait jamais récompensé pour avoir mangé — même défaut temporel que la chaleur
+en v41.25-fix1.
+
+🔴 **Réfutée : l'ordre est l'inverse, et le correctif existe déjà (v41.2-fix7).**
+
+| Ligne | Ce qui s'exécute |
+|---|---|
+| 8993 | `step_metabolisme()` → `r_bio` ordinaire |
+| 9049 | `evaluer_tick()` → la consommation a lieu |
+| 9064 | `deficit_avant_repas = calculer_deficit()` |
+| 9090 | `soulagement = deficit_avant_repas − calculer_deficit()` |
+| **9092** | **`r_bio += soulagement`** ← le rattrapage |
+| 9207 | `recompense_interne = … + r_bio + …` |
+
+Le soulagement est mesuré **autour** de l'ingestion, puis **ajouté au `r_bio` du même
+tick**. C'est exactement le correctif proposé — il a été livré en v41.2-fix7.
+
+**Et il est énorme, mesuré sur 60 nuits :**
+
+| | |
+|---|---|
+| Soulagement cumulé | **+1,263/jour** |
+| Saisies | 4,22/jour |
+| **Soulagement par repas** | **+0,300** |
+| σ du canal `Bio` (étape 1) | 0,0436 |
+| **Un repas vaut** | **≈ 7 écarts-types de `Bio`** |
+
+Le signal n'est pas écrasé : c'est **le plus gros événement de récompense de la vie de
+l'agent**. L'hypothèse « il n'est jamais récompensé pour avoir mangé » est fausse.
+
+### Réfutation n°6 — « le toucher fantôme »
+
+**L'hypothèse** : une ressource étant ramassable, elle serait traversable
+(`can_overlap() == True`), donc `contact_frontal` resterait à 0 — aucun signal tactile ne
+justifierait de s'arrêter.
+
+🔴 **Réfutée par l'API MiniGrid :**
+
+| Objet | `can_overlap()` |
+|---|---|
+| `Ball` (= FOOD/WATER) | **False** |
+| `Wall` | False |
+| `Goal` | True |
+
+`Ball.can_overlap() == False` : la ressource **est** bloquante, donc `contact_frontal = 1.0`
+quand elle est devant. Le canal existe et il s'active.
+
+### 🟡 Mais la mesure laisse un fait — le bit de contact est AMBIGU
+
+`contact_frontal` est **un seul bit**, et il ne distingue pas ce qui bloque. Mesuré sur
+3000 ticks (`Empty-5x5`, marcheur uniforme sur 7 actions) :
+
+| Quand `contact_frontal = 1.0` | Occurrences | Part |
+|---|---|---|
+| c'est un **MUR** | 1 498 | **81,5 %** |
+| c'est une **RESSOURCE** | 339 | 18,5 % |
+
+**Le même signal dit « obstacle à contourner » (82 %) et « nourriture à saisir » (18 %).**
+Un réflexe tactile appris sur ce bit apprendrait donc majoritairement à **se détourner** —
+et se détourner devant une ressource est *exactement* l'anti-corrélation mesurée au §4bis.
+
+⚠️ **Ce n'est PAS une conclusion.** La vue voit la ressource (couleur, type), l'odorat
+donne un gradient topologique : l'information de discrimination **existe ailleurs**. Le bit
+ambigu est une hypothèse plausible, pas une cause démontrée. Ce qui est établi :
+
+| Établi | Non établi |
+|---|---|
+| `contact_frontal` est à 1 pour un mur **et** pour une ressource | que l'agent s'en serve plutôt que de la vue |
+| Le ratio est de **82 % / 18 %** en faveur du mur | que ce soit la cause de l'anti-corrélation |
+
+**Ce qu'il faudrait mesurer pour trancher** : l'action jouée quand `contact_frontal = 1`,
+séparément selon que la case frontale porte un mur ou une ressource. Si la distribution est
+**identique** dans les deux cas, l'agent ne discrimine pas — et le bit ambigu est confirmé
+comme cause. Si elle diffère, il discrimine par un autre canal et l'hypothèse tombe.
+
+---
+
 ## 5. Ce que la journée établit — et ce qu'elle ne dit pas
 
 ### Établi (mesures directes, banc déterministe δ_A/A = 0)
@@ -408,6 +495,8 @@ le chiffre exact lui est propre.
 | Le hasard récolte mieux que l'agent | **3,33 vs 1,68 FOOD/jour** |
 | L'agent TENTE de manger, de plus en plus | 27,2 → **74,2** gestes/jour |
 | Mais la conjonction échoue | taux de saisie **8,1 %**, ratio vs hasard **0,67** |
+| Le soulagement d'un repas | **+0,300**, soit **≈7 σ** du canal `Bio` |
+| `contact_frontal` est ambigu | **82 % mur / 18 % ressource** |
 | C2 pèse | **0,110 %** de 384 808 params |
 | C2 croît en N, le tronc en N² | rapport **×312** à 16 dims |
 
@@ -425,7 +514,7 @@ le chiffre exact lui est propre.
 
 ## 6. La leçon de méthode
 
-**Quatre propositions, quatre réfutations, zéro ligne de correctif écrite.** Le coût total :
+**Six propositions, six réfutations, zéro ligne de correctif écrite.** Le coût total :
 une sonde (~180 lignes de télémétrie pure), deux runs de 40 jours, et trois scripts de
 mesure. Ce qui a été évité :
 
