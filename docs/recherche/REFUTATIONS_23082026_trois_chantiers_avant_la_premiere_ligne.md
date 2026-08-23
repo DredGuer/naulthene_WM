@@ -482,6 +482,82 @@ comme cause. Si elle diffère, il discrimine par un autre canal et l'hypothèse 
 
 ---
 
+## 4quater. Réfutation n°7 — « les cartes du Doctorat sont stériles »
+
+### L'hypothèse
+
+Les cartes `MultiRoom` (niveaux 14-15) n'auraient **ni nourriture ni eau**. Trois sens
+réduits au silence, homéostasie tournant à vide, neurogenèse anesthésiée. Correctif
+proposé : injecter `DetecteurRessourcesBiologiques` dans `MultiRoom`.
+
+### 🔴 Réfutée — le détecteur est générique et peuple TOUTE carte
+
+Test direct, instanciation des environnements réels :
+
+| CARTE | LIBRES | FOOD | WATER |
+|---|---|---|---|
+| `Empty-5x5` | 6 | 1 | 1 |
+| `SimpleCrossingS9N1` | 28 | 7 | 7 |
+| `DoorKey-8x8` | 19 | 4 | 5 |
+| `MemoryS7` | 9 | 2 | 1 |
+| **`MultiRoom-N2-S4`** | **494** | **7** | **7** |
+| **`MultiRoom-N4-S5`** | **450** | **7** | **7** |
+
+`MultiRoom` reçoit **7 FOOD + 7 WATER**, comme les autres. Le détecteur ne connaît aucun nom
+de carte : il lit les cases vides et place. Il n'y a rien à « injecter ».
+
+### 🟡 Mais le test révèle un vrai défaut — la densité s'effondre
+
+| CARTE | LIBRES | SOURCES | **DENSITÉ** |
+|---|---|---|---|
+| `Empty-5x5` | 6 | 2 | **0,333** |
+| `SimpleCrossingS9N1` | 28 | 14 | 0,500 |
+| `DoorKey-8x8` | 19 | 9 | 0,474 |
+| **`MultiRoom-N2-S4`** | **494** | **14** | **0,028** |
+| **`MultiRoom-N4-S5`** | **450** | **14** | **0,031** |
+
+**1 source toutes les 3 cases sur `Empty-5x5`, 1 toutes les 35 sur `MultiRoom` — la densité
+chute d'un facteur 11,8.**
+
+### La cause : une CINQUIÈME constante fossile
+
+Sur `MultiRoom`, le plafond `budget = max(2, int(libres × 0,35))` **ne mord pas**
+(0,35 × 494 = 172 ≫ 14). C'est le **souhait** qui borne — et il est dérivé de :
+
+```python
+_CASES_LIBRES_CARTE_MAXIMALE = 41.0   # « SimpleCrossingS9N1, la plus vaste
+                                      #   du cursus ATTEINT À CE JOUR »
+```
+
+Le commentaire l'admet lui-même. La constante décrit le cursus **tel qu'il était quand elle
+a été écrite** — `MultiRoom` a **494** cases libres, soit **12×** ce chiffre.
+
+| Constante fossile | Écart mesuré |
+|---|---|
+| `EPISODES_PAR_JOURNEE_REFERENCE = 4.0` | ×2,58 |
+| `DEPENSE_ENERGIE_JOUR` (calibré à 3 repas/j) | ×1,79 |
+| **`_CASES_LIBRES_CARTE_MAXIMALE = 41`** | **×12,0** |
+
+### ⚠️ Ce n'est PAS l'option (a) réfutée au §3 — et ce n'est pas actionnable
+
+**Sur `Empty-5x5`** : le plafond mord déjà (0,35 × 6 = 2) et le témoin aléatoire y récolte
+3,33 FOOD/jour, au-dessus du seuil de viabilité. Ajouter des sources n'y changerait rien —
+la réfutation du §3 **tient**.
+
+**Sur `MultiRoom`** : la situation est inversée, c'est le souhait fossile qui borne, et la
+même correction y aurait un effet **réel**.
+
+🔴 **Mais l'agent n'atteint jamais le niveau 14.** Maximum mesuré : **5/15**, et **0 sur 40**
+brains au-delà du niveau 5 (campagne n=20 du 22/08). Corriger la densité de `MultiRoom`
+aujourd'hui serait **optimiser une carte que l'agent ne verra jamais** — une ablation
+**vide** au sens de la règle de mesure, exactement comme la nociception mesurée sur un
+cursus où la lave n'apparaît pas.
+
+**À corriger le jour où l'agent franchit le niveau 13.** Consigné ici pour que la cause soit
+connue à ce moment-là, plutôt que rediagnostiquée.
+
+---
+
 ## 5. Ce que la journée établit — et ce qu'elle ne dit pas
 
 ### Établi (mesures directes, banc déterministe δ_A/A = 0)
@@ -497,6 +573,8 @@ comme cause. Si elle diffère, il discrimine par un autre canal et l'hypothèse 
 | Mais la conjonction échoue | taux de saisie **8,1 %**, ratio vs hasard **0,67** |
 | Le soulagement d'un repas | **+0,300**, soit **≈7 σ** du canal `Bio` |
 | `contact_frontal` est ambigu | **82 % mur / 18 % ressource** |
+| `MultiRoom` EST peuplé | 7 FOOD + 7 WATER, comme les autres |
+| Mais sa densité s'effondre | **0,028 contre 0,333** — facteur **11,8** |
 | C2 pèse | **0,110 %** de 384 808 params |
 | C2 croît en N, le tronc en N² | rapport **×312** à 16 dims |
 
@@ -514,7 +592,7 @@ comme cause. Si elle diffère, il discrimine par un autre canal et l'hypothèse 
 
 ## 6. La leçon de méthode
 
-**Six propositions, six réfutations, zéro ligne de correctif écrite.** Le coût total :
+**Sept propositions, sept réfutations, zéro ligne de correctif écrite.** Le coût total :
 une sonde (~180 lignes de télémétrie pure), deux runs de 40 jours, et trois scripts de
 mesure. Ce qui a été évité :
 
