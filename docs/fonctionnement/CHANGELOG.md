@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `350d6ed` |
 | **Catégorie** | feat (télémétrie) |
 | **Impact** | **Majeur — réfute l'hypothèse du geste réprimé, isole une anti-corrélation** |
 
