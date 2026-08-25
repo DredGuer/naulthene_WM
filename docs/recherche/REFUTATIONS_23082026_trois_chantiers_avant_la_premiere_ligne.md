@@ -866,6 +866,95 @@ représentation. C'est un problème d'AMPLITUDE de la politique.**
 
 ---
 
+## 4nonies. Les quatre suspects de la faible amplitude — deux disculpés (25/08/2026)
+
+La sonde de perméabilité a établi que le goulot est **l'amplitude des logits** (norme 0,65 ⇒
+l'action préférée n'est tirée que **24 %** du temps). Quatre causes candidates étaient
+ouvertes. Deux tombent, une est réfutée, une reste.
+
+### Suspect 1 — `COEFF_ENTROPIE` — 🟢 DISCULPÉ
+
+Le bonus d'entropie est *littéralement conçu* pour pénaliser les logits trop grands. Si le
+gradient de tâche s'effondre, il n'aurait plus de contre-pouvoir.
+
+**Mesure analytique** (les deux gradients sont en forme fermée, aucune approximation) :
+
+| Norme des logits | coeff | ‖grad ACTEUR‖ | ‖grad ENTROPIE‖ | ratio |
+|---|---|---|---|---|
+| 0,263 (mur, mesuré) | 0,02 | 0,8985 | 0,0007 | **0,0008** |
+| 0,651 (ressource, mesuré) | 0,02 | 0,9122 | 0,0016 | **0,0018** |
+| 0,651 | **0,06** (maximum) | 0,9122 | 0,0049 | **0,0053** |
+
+Même au coefficient **maximum**, l'entropie pèse **0,5 %** du gradient de l'acteur. Le seuil
+de bascule est un avantage de **0,0019** ; l'avantage réel est de l'ordre de **0,2**
+(σ = 0,049 par tick × √20 ticks cumulés à γ=0,95), soit **~100×** au-dessus.
+
+**Pourquoi le raisonnement ne se déclenche pas** : `Env` s'est effondré, mais **pas la
+récompense totale**. `Bio` en porte 52,1 % et fournit toujours un avantage exploitable. Le
+contre-pouvoir existe — il vient du corps, plus du but.
+
+🟡 **Un point relevé en lisant le code, non mesuré** : la perte d'acteur est **masquée** par
+le gradient causal (v41.31, ~38 % des ticks retenus), l'entropie **ne l'est pas** — c'est
+documenté comme voulu. Sur les ticks stériles, l'entropie est donc le **seul** gradient
+atteignant `tete_motrice`. Ça ne renverse pas le verdict global, mais mérite une mesure
+séparée.
+
+### Suspect 2 — L'érosion nocturne — 🟢 DISCULPÉ
+
+| COUCHE | ‖base‖ | ‖naissance‖ | % |
+|---|---|---|---|
+| **`tete_motrice`** | 3,4078 | 3,4077 | **100,0 %** |
+| `hippocampe` | 4,6430 | 4,6483 | 99,9 % |
+| `cortex_prefrontal` | 1,4390 | 1,4624 | 98,4 % |
+| `fusion_memoire` | 4,4597 | 4,6258 | 96,4 % |
+| `analyseur` | 3,6555 | 4,0885 | 89,4 % |
+| `porte_visuelle` | 4,4952 | 5,2593 | 85,5 % |
+| `integrateur_bio` | 4,1319 | 5,1722 | 79,9 % |
+
+**`tete_motrice` est à 100,0 % de sa norme de naissance** — pas érodée du tout. Le plancher
+vital (10 %) n'est atteint par **aucune** couche. Le bug d'extinction v34.0 est bien corrigé.
+
+⚠️ **Correction d'une sur-lecture de ma part** : j'avais noté `annexe_weight = 0,000000` comme
+une découverte (« la tête motrice n'a rien appris »). **C'est attendu** :
+`annexe_weight.zero_()` (l. 343) fait partie du cycle de sommeil — consolidation dans
+`base_weight`, puis remise à zéro pour le jour suivant. Le `.brain` étant sauvé **après** la
+nuit, l'annexe y est **toujours** nulle. Ce n'était pas un signal.
+
+### La seule trace exploitable — la myéline
+
+La myéline, elle, **n'est pas remise à zéro** la nuit : c'est une trace cumulative, et elle
+ne peut venir **que** du gradient (invariant v34.0).
+
+| | Valeur |
+|---|---|
+| `myeline_M` max sur `tete_motrice` | **0,001040** |
+| Référence historique du dépôt (v34.0-fix1) | 0,0038 |
+| `SEUIL_CRISTAL` (jamais franchi) | 0,80 |
+
+Le gradient atteignant la tête motrice est effectivement **minuscule** — mais ce n'est **pas
+nouveau** : c'est l'état chronique du projet depuis des mois.
+
+### Suspect 4 — Le manque de temps — 🔴 RÉFUTÉ
+
+Campagne appariée **n = 20 × 1500 jours** : plafond au niveau 4, et la tendance de maîtrise
+n'est **jamais positive** sur trois mesures (−0,44 · −4,57 · −4,78). Ce n'est pas de la
+lenteur, c'est un **plateau**.
+
+### Bilan des quatre
+
+| Suspect | Verdict | Preuve |
+|---|---|---|
+| 1. Coefficient d'entropie | 🟢 **disculpé** | 0,5 % du gradient de l'acteur |
+| 2. Érosion nocturne | 🟢 **disculpé** | `tete_motrice` à 100,0 % |
+| 3. Manque de signal | 🟡 **compatible** | myéline à 0,00104 |
+| 4. Manque de temps | 🔴 **réfuté** | plateau sur 1500 j, n=20 |
+
+⚠️ **« Compatible » n'est pas « démontré ».** Le suspect 3 est le dernier debout, mais par
+élimination — pas par mesure directe. Il faudrait instrumenter le gradient **réellement reçu
+par `tete_motrice` pendant une journée**, pas l'état du cerveau après la nuit.
+
+---
+
 ## 5. Ce que la journée établit — et ce qu'elle ne dit pas
 
 ### Établi (mesures directes, banc déterministe δ_A/A = 0)
@@ -892,6 +981,8 @@ représentation. C'est un problème d'AMPLITUDE de la politique.**
 | L'agent n'est PAS aplati | écart au max **0,350** contre **0,00004** pour un cerveau éteint |
 | Le réseau DISCRIMINE | distance des logits **0,861** (bus 0,072 → ×12) |
 | Mais ses logits sont FAIBLES | norme **0,65** ⇒ l'action préférée tirée **24 %** du temps |
+| L'entropie n'y est pour rien | **0,5 %** du gradient de l'acteur, même au coeff max |
+| L'érosion n'y est pour rien | `tete_motrice` à **100,0 %** de sa naissance |
 | C2 pèse | **0,110 %** de 384 808 params |
 | C2 croît en N, le tronc en N² | rapport **×312** à 16 dims |
 
