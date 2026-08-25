@@ -955,6 +955,93 @@ par `tete_motrice` pendant une journée**, pas l'état du cerveau après la nuit
 
 ---
 
+## 4decies. LE DOSSIER SE FERME — c'est du THRASHING, pas un gradient minuscule
+
+### 🔴 D'abord : la sonde de gradient était CASSÉE depuis deux versions
+
+`sonde_gradient.py` (v33.1) avait une signature figée qui ignorait `chocs_dopamine`
+(v37.1, distillation sélective) et `transitions` (v41.31, gradient causal). Elle plantait
+sur `TypeError` **dans `executer_nuit`** — donc **après une journée complète de calcul**,
+invisible à toute vérification courte.
+
+C'est exactement le défaut que le CLAUDE.md décrit pour la détection de greffe : *« le crash
+ne survient ni au chargement, ni pendant la journée, mais à la première `executer_nuit` »*.
+Corrigé par `**extra`, qui repasse tout à l'originale — la sonde ne cassera plus au prochain
+paramètre ajouté.
+
+### La mesure — 8 jours, graine 11
+
+Les deux causes candidates, et leur discriminant `‖Σg‖ / Σ‖g‖` :
+**proche de 1** = pas alignés (gradient faible mais cohérent) · **proche de 0** = annulation.
+
+| jour | ‖g_jour‖ | ‖Σg‖ (cumul) | Σ‖g‖ | alignement | repère 1/√n |
+|---|---|---|---|---|---|
+| 1 | 0,2042 | 0,2042 | 0,2042 | 1,0000 | 1,0000 |
+| 2 | 0,2274 | 0,3394 | 0,4316 | 0,7864 | 0,7071 |
+| 4 | 0,0930 | 0,4845 | 0,6639 | 0,7298 | 0,5000 |
+| 6 | 0,1628 | 0,6807 | 0,9606 | 0,7086 | 0,4082 |
+| 7 | 0,0947 | 0,6436 | 1,0552 | 0,6099 | 0,3780 |
+| **8** | **0,2569** | **0,5204** | 1,3121 | **0,3966** | **0,3536** |
+
+### 🔴 Verdict : le gradient N'EST PAS minuscule — il S'ANNULE
+
+**Le gradient arrive** : 0,164 en moyenne sur `tete_motrice`, et **3200 ticks sur 3200**
+portent une récompense non nulle. La cause « signal absent » est donc **écartée**.
+
+**Mais il s'annule.** L'alignement final est **0,3966** contre un repère de marche aléatoire
+de **0,3536** : les pas sont **quasi indépendants** d'un jour à l'autre. Et la trajectoire est
+le vrai signal — 0,79 → 0,73 → 0,71 → 0,61 → **0,40**, une **décroissance monotone vers le
+hasard**.
+
+**Le jour 8 est décisif** : `‖g_jour‖ = 0,2569`, le **plus gros gradient des 8 jours** — et le
+cumul `‖Σg‖` **RECULE** de 0,6436 à 0,5204.
+
+> **Un gradient de 0,257 a fait reculer le cumul de 0,123.** Le plus gros pas de la semaine
+> pointe **contre** la direction accumulée. C'est la définition exacte du thrashing.
+
+### La hiérarchie du gradient — l'explication probable
+
+| COUCHE | gradient moyen | CV | |
+|---|---|---|---|
+| **`integrateur_bio`** (le CORPS) | **0,9142** | **0,04** | écrase tout, et très stable |
+| `tete_motrice` (la DÉCISION) | 0,1640 | 0,37 | |
+| `hippocampe` | 0,0269 | 0,92 | |
+| `analyseur` | 0,0240 | 0,92 | |
+| **`porte_visuelle`** (la VUE) | **0,0117** | 0,94 | **78× moins que le corps** |
+
+`integrateur_bio` reçoit **5,6×** le gradient de la tête motrice et **78×** celui de la vue —
+avec un coefficient de variation de **0,04**, donc un signal quasi constant.
+
+C'est cohérent avec la table de mixage (`Bio` = 52,1 % de la dispersion au niveau 4) : **le
+gradient suit le signal, et le signal est corporel.** La vue ne reçoit presque rien à
+apprendre, ce qui explique qu'elle ne conditionne pas la décision.
+
+### Ce que cela ferme, et ce que cela ouvre
+
+| Suspect | Verdict final |
+|---|---|
+| 1. Coefficient d'entropie | 🟢 disculpé (0,5 % du gradient) |
+| 2. Érosion nocturne | 🟢 disculpé (`tete_motrice` à 100,0 %) |
+| 3. Manque de signal | 🟢 **DISCULPÉ** — gradient 0,164, 3200/3200 ticks récompensés |
+| 4. Manque de temps | 🔴 réfuté (plateau, n=20 × 1500 j) |
+| **5. THRASHING** | 🔴 **CONFIRMÉ** — alignement 0,40 vs hasard 0,35 |
+
+**La politique ne grandit pas parce qu'elle est tirée dans des directions contradictoires
+d'un jour à l'autre.** L'amplitude faible n'est pas un défaut d'apprentissage : c'est
+l'**équilibre** d'une marche aléatoire.
+
+⚠️ **NON établi — la cause du thrashing.** Trois pistes, aucune mesurée :
+- **le corps domine** (`integrateur_bio` à 78× la vue) et ses besoins **alternent** —
+  affamé un jour, assoiffé le lendemain, donc une direction opposée ;
+- **le masquage causal** (v41.31) retient ~38 % des ticks, différents chaque jour ;
+- **la carte change** entre les jours (P17), donc la politique optimale aussi.
+
+⚠️ **Une seule graine, 8 jours.** L'alignement à 0,40 est net face au repère 0,35, mais
+8 points ne permettent pas d'écarter le bruit avec certitude — il faudrait n ≥ 20 jours et
+plusieurs graines pour en faire une mesure et non un indice.
+
+---
+
 ## 5. Ce que la journée établit — et ce qu'elle ne dit pas
 
 ### Établi (mesures directes, banc déterministe δ_A/A = 0)
@@ -983,6 +1070,9 @@ par `tete_motrice` pendant une journée**, pas l'état du cerveau après la nuit
 | Mais ses logits sont FAIBLES | norme **0,65** ⇒ l'action préférée tirée **24 %** du temps |
 | L'entropie n'y est pour rien | **0,5 %** du gradient de l'acteur, même au coeff max |
 | L'érosion n'y est pour rien | `tete_motrice` à **100,0 %** de sa naissance |
+| Le gradient ARRIVE | **0,164** sur `tete_motrice`, **3200/3200** ticks récompensés |
+| Mais il S'ANNULE | alignement **0,3966** contre un hasard à **0,3536** |
+| Le corps écrase la vue | `integrateur_bio` **0,914** contre `porte_visuelle` **0,012** (**78×**) |
 | C2 pèse | **0,110 %** de 384 808 params |
 | C2 croît en N, le tronc en N² | rapport **×312** à 16 dims |
 

@@ -74,8 +74,13 @@ def instrumenter(agent, journal):
     """Remplace `apprendre_journee` par une version qui mesure tout avant de déléguer."""
     originale = agent.apprendre_journee
 
+    # ⚠️ `**extra` est indispensable : `apprendre_journee` a gagné des paramètres depuis
+    # l'écriture de cette sonde (v33.1) — `chocs_dopamine` (v37.1, distillation sélective)
+    # et `transitions` (v41.31, gradient causal). Une signature figée casse la sonde à
+    # chaque évolution du noyau, et le crash survient DANS `executer_nuit`, donc après une
+    # journée complète de calcul. Tout est repassé tel quel à l'originale.
     def sonde(jepa_losses, log_probs, entropies, valeurs, rewards, dones,
-              gamma=0.95, coeff_entropie=0.02, pertes_vocales=None):
+              gamma=0.95, coeff_entropie=0.02, pertes_vocales=None, **extra):
         mesure = {
             "ticks": len(rewards),
             "rewards_non_nuls": sum(1 for r in rewards if r != 0.0),
@@ -115,7 +120,7 @@ def instrumenter(agent, journal):
         # l'appel suivant, via `zero_grad`). On peut donc les lire juste après.
         perte = originale(jepa_losses, log_probs, entropies, valeurs, rewards, dones,
                           gamma=gamma, coeff_entropie=coeff_entropie,
-                          pertes_vocales=pertes_vocales)
+                          pertes_vocales=pertes_vocales, **extra)
         mesure["perte_totale"] = perte
 
         normes = {}
@@ -129,11 +134,42 @@ def instrumenter(agent, journal):
                     total += float(p.grad.detach().norm() ** 2)
             normes[nom] = total ** 0.5
         mesure["gradients"] = normes
+
+        # --- v41.32 : LE THRASHING — le gradient s'annule-t-il d'un jour à l'autre ? ---
+        #
+        # Une norme de gradient faible a DEUX causes opposées, et les confondre coûte un
+        # cycle (même leçon que (a)/(b) en tête de ce module) :
+        #   (1) le gradient est MINUSCULE — le signal ne modifie rien ;
+        #   (2) le gradient est GRAND mais s'ANNULE — l'agent est poussé dans un sens le
+        #       jour J, dans le sens opposé le jour J+1, et le poids ne bouge pas.
+        #
+        # Le discriminant est le rapport ‖Σg‖ / Σ‖g‖ sur plusieurs jours :
+        #   proche de 1 -> tous les pas sont ALIGNÉS (cause 1, gradient faible mais cohérent)
+        #   proche de 0 -> les pas s'ANNULENT (cause 2, thrashing)
+        #
+        # ⚠️ On accumule le VECTEUR, pas la norme : c'est tout l'intérêt. Sommer des normes
+        # ne peut jamais révéler une annulation.
+        g = agent.tete_motrice.annexe_weight.grad
+        if g is not None:
+            gd = g.detach().clone()
+            if _accum["somme"] is None:
+                _accum["somme"] = torch.zeros_like(gd)
+            _accum["somme"] += gd
+            _accum["somme_normes"] += float(gd.norm())
+            _accum["n"] += 1
+            mesure["grad_jour"] = float(gd.norm())
+            mesure["grad_cumul"] = float(_accum["somme"].norm())
+            mesure["grad_somme_normes"] = _accum["somme_normes"]
         journal.append(mesure)
         return perte
 
     agent.apprendre_journee = sonde
     return originale
+
+
+# Accumulateur du vecteur gradient de `tete_motrice`, partagé entre les jours de la sonde.
+# Module-level par simplicité : la sonde est un instrument mono-run, jamais réentrant.
+_accum = {"somme": None, "somme_normes": 0.0, "n": 0}
 
 
 # --- 2. LE RAPPORT ---
@@ -160,6 +196,27 @@ def afficher(journal, nom_cerveau, niveau):
     print(f"  {'jour':>5} " + " ".join(f"{c[:13]:>14}" for c in couches))
     for i, m in enumerate(journal, 1):
         print(f"  {i:>5} " + " ".join(f"{m['gradients'][c]:>14.6f}" for c in couches))
+
+    # --- v41.32 : LE THRASHING ---
+    if any("grad_cumul" in m for m in journal):
+        print(f"\n  ALIGNEMENT DU GRADIENT SUR tete_motrice (le gradient s'annule-t-il ?)")
+        print("  " + "-" * 94)
+        print(f"  {'jour':>5} {'‖g_jour‖':>14} {'‖Σg‖ (cumul)':>16} {'Σ‖g‖':>14} {'alignement':>12}")
+        for i, m in enumerate(journal, 1):
+            if "grad_cumul" not in m:
+                continue
+            al = m["grad_cumul"] / max(m["grad_somme_normes"], 1e-12)
+            print(f"  {i:>5} {m['grad_jour']:>14.6f} {m['grad_cumul']:>16.6f} "
+                  f"{m['grad_somme_normes']:>14.6f} {al:>12.4f}")
+        dernier = [m for m in journal if "grad_cumul" in m][-1]
+        align = dernier["grad_cumul"] / max(dernier["grad_somme_normes"], 1e-12)
+        print()
+        print(f"  ALIGNEMENT FINAL : {align:.4f}   (1 = pas tous alignés, 0 = ils s'annulent)")
+        # Repère de lecture, pas un seuil de décision : la valeur attendue pour des pas
+        # INDÉPENDANTS est ~1/sqrt(n) — c'est la marche aléatoire, ni alignement ni
+        # annulation active. On la publie à côté plutôt que de trancher à sa place.
+        n = dernier and len([m for m in journal if "grad_cumul" in m])
+        print(f"  Repère marche aléatoire (1/√n, n={n}) : {1.0 / max(n, 1) ** 0.5:.4f}")
 
     # --- Verdict ---
     print("\n" + "=" * 100)
