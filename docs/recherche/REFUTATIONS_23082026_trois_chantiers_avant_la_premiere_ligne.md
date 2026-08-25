@@ -1203,6 +1203,74 @@ A/B, et le fait que le clip morde 12/12 est une **observation**, pas un défaut 
 
 ---
 
+## 4terdecies. La « matière noire » n'existait pas — et le corps prend 93 % du gradient
+
+### 🔴 Le troisième bug de lecture de la campagne, le mien
+
+J'ai annoncé successivement « 49 % du gradient manquant », puis « 84 % ». **Les deux étaient
+faux**, pour la même raison :
+
+```python
+def _clip_espion(params, max_norm, *a, **k):
+    totale = _clip_reel(params, max_norm, ...)   # ← le clip a lieu ICI
+    _brut["norme"] = float(totale)               # ✅ valeur AVANT
+    for ... : parts[nom] = |p.grad|              # ❌ lu APRÈS le clip
+```
+
+La norme totale était juste, mais les **parts** étaient lues après que le clip les avait
+toutes divisées. **La signature était sous mes yeux** : `racine(Σ carrés) = 1,000000
+EXACTEMENT` sur 6/6 jours — c'est la norme post-clip par construction.
+
+**Vérification structurelle décisive** : le réseau ne contient que **12 paramètres
+entraînables** (un `annexe_weight` par couche, énumérés). Il n'existe matériellement aucun
+endroit où du gradient pourrait se cacher — la somme des carrés *doit* égaler la norme
+globale au carré.
+
+C'est le **troisième** défaut de cette famille dans la campagne (chaleur v41.25-fix1, sonde
+de discrimination fix1, celui-ci) : **lire une grandeur après l'opération qui la modifie.**
+
+### La vraie répartition (parts lues AVANT le clip)
+
+`Σ(carrés)/n² = 100,0 %` sur 6/6 jours — comptabilité exacte, aucune matière noire.
+
+| | moyenne | min | max |
+|---|---|---|---|
+| **corps** (`integrateur_bio`) | **92,7 %** | 90,4 % | 96,5 % |
+| **décision** (`tete_motrice`) | **16,0 %** | 9,3 % | 22,7 % |
+| **vue** (`porte_visuelle`) | **0,77 %** | 0,2 % | 1,7 % |
+
+**Rapport corps / vue : 121×.**
+
+⚠️ Mon chiffre précédent (40,1 % / 0,67 %, ratio 60×) était **faux**. Le corps ne prend pas
+40 % du budget mais **93 %**.
+
+### Les trois faits qui tiennent
+
+**(1) Le corps dicte 93 % du gradient.** L'intuition initiale (« le corps dicte 98 % ») était
+donc juste dès le départ ; c'est la mesure qui était cassée. La vue reçoit **0,77 %** — elle
+ne peut pas apprendre à distinguer une pomme d'un mur avec ça, ce qui referme le dossier de
+la non-discrimination (§4sexies).
+
+**(2) L'audio ne dissipe RIEN.** `porte_auditive`, `generateur_attente_audio`, `tete_vocale`
+et `tete_requete` sont à **0,000000 exact sur 6/6 jours**, les quatre. Ils coûtent des
+**paramètres** (24 % du réseau) et du **calcul**, jamais du gradient — ils ne peuvent donc
+pas causer le thrashing. L'hypothèse « la moitié de l'énergie se dissipe dans des organes
+morts » est **réfutée**.
+
+**(3) C2 reçoit 2,02× le gradient de la décision** (0,3241 contre 0,1601) — alors que le
+couper ne change le score de **0,0 point sur 6 niveaux** (v41.29, 78 cellules). C'est du
+gradient réellement investi dans un module sans effet mesuré. **Suspect sérieux, non testé.**
+
+### ⚠️ Ce que cela ne dit toujours pas
+
+Le **thrashing reste inexpliqué**. Le clipping est une division scalaire (il ne renverse
+aucune direction), l'audio est à zéro, et les pistes A et C sont réfutées. Restent la
+**piste B** (masquage causal) et le nouveau suspect **C2**.
+
+⚠️ Une seule graine, 6 jours pour la répartition.
+
+---
+
 ## 5. Ce que la journée établit — et ce qu'elle ne dit pas
 
 ### Établi (mesures directes, banc déterministe δ_A/A = 0)
@@ -1237,7 +1305,9 @@ A/B, et le fait que le clip morde 12/12 est une **observation**, pas un défaut 
 | Piste A (instabilité du monde) | 🔴 réfutée — effet **inverse** (−0,0798) |
 | Piste C (conflit des organes) | 🔴 réfutée — effet **nul** (−0,0039) |
 | Le clipping se déclenche | **12 nuits sur 12**, norme brute moyenne **2,82** (plafond 1,0) |
-| Le corps prend | **40,1 %** du budget brut contre **0,67 %** pour la vue (**60×**) |
+| Le corps prend | **92,7 %** du budget brut contre **0,77 %** pour la vue (**121×**) |
+| L'audio ne consomme RIEN | **0,000000** exact, 4 couches, 6/6 jours |
+| C2 reçoit | **2,02×** le gradient de `tete_motrice`, pour **0,0 pt** d'effet mesuré |
 | Mais le clip ne cause PAS le déséquilibre | il divise tout par le même facteur (~2,3) |
 | C2 pèse | **0,110 %** de 384 808 params |
 | C2 croît en N, le tronc en N² | rapport **×312** à 16 dims |

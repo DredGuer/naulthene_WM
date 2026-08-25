@@ -67,6 +67,22 @@ COUCHES_SUIVIES = (
     "porte_visuelle",         # la vue
     "analyseur", "hippocampe", "fusion_memoire",
     "generateur_attente",     # le JEPA
+    # --- v41.32 : LES CINQ COUCHES MANQUANTES ---
+    #
+    # 🔴 Mesuré le 25/08 : les sept couches ci-dessus ne totalisaient que **51 %** de la
+    # norme brute du gradient. La moitié du budget d'apprentissage n'était attribuée à
+    # personne — une « matière noire » invisible à la sonde.
+    #
+    # Ces cinq-là complètent le réseau. Deux d'entre elles sont des suspects directs :
+    #   - `cortex_prefrontal` (C2) : couper C2 ne change le score de 0,0 pt sur 6 niveaux
+    #     (v41.29, 78 cellules d'ablation) — s'il consomme du gradient, il en dissipe ;
+    #   - l'hémisphère audio (`porte_auditive`, `generateur_attente_audio`, `tete_vocale`) :
+    #     24 % des paramètres pour une faculté qu'aucun niveau MiniGrid n'exerce.
+    "cortex_prefrontal",      # C2 — la délibération
+    "porte_auditive",         # l'ouïe (aucun son dans MiniGrid)
+    "generateur_attente_audio",  # le JEPA audio
+    "tete_vocale",            # la bouche
+    "tete_requete",           # le routage C3 (aucun plug enregistré)
 )
 
 
@@ -134,12 +150,18 @@ def instrumenter(agent, journal):
         _clip_reel = torch.nn.utils.clip_grad_norm_
 
         def _clip_espion(params, max_norm, *a, **k):
-            totale = _clip_reel(params, max_norm, *a, **k)
-            _brut["norme"] = float(totale)
-            _brut["plafond"] = float(max_norm)
-            _brut["clippe"] = float(totale) > float(max_norm)
-            # Part de chaque couche dans la norme BRUTE — c'est elle qui dit qui
-            # cannibalise le budget, et elle n'est lisible qu'ici.
+            # ⚠️ v41.32-fix2 — LES PARTS SE LISENT **AVANT** `_clip_reel`, jamais après.
+            #
+            # 🔴 Bug corrigé : je lisais les `.grad` APRÈS l'appel réel, donc après que le
+            # clip les avait tous divisés. Signature du défaut : racine(Σ carrés) valait
+            # **1.000000 EXACTEMENT** sur 6/6 jours — la norme post-clip, par construction.
+            # J'en avais conclu à « 84 % de gradient manquant » alors qu'il n'existe que
+            # 12 paramètres dans tout le réseau (un `annexe_weight` par couche, vérifié) :
+            # la somme des carrés DOIT égaler la norme globale au carré.
+            #
+            # C'est le même défaut que celui déjà corrigé deux fois dans cette campagne
+            # (chaleur v41.25-fix1, discrimination fix1) : lire une grandeur après
+            # l'opération qui la modifie.
             parts = {}
             for nom_c in COUCHES_SUIVIES:
                 c = getattr(agent, nom_c, None)
@@ -151,6 +173,10 @@ def instrumenter(agent, journal):
                         acc += float(prm.grad.detach().norm() ** 2)
                 parts[nom_c] = acc ** 0.5
             _brut["parts"] = parts
+            totale = _clip_reel(params, max_norm, *a, **k)
+            _brut["norme"] = float(totale)
+            _brut["plafond"] = float(max_norm)
+            _brut["clippe"] = float(totale) > float(max_norm)
             return totale
 
         torch.nn.utils.clip_grad_norm_ = _clip_espion
@@ -274,6 +300,12 @@ def afficher(journal, nom_cerveau, niveau):
             n = m["norme_brute"]
             det = " ".join(f"{100*pb.get(k, 0.0)/max(n, 1e-12):>5.1f}%"
                            for k in ("integrateur_bio", "tete_motrice", "porte_visuelle"))
+            # ⚠️ Les parts sont des normes L2 : leur SOMME dépasse la norme globale (le
+            # carré de la somme n'est pas la somme des carrés). On rapporte donc la somme
+            # des CARRÉS, seule grandeur qui se conserve — sans quoi un « résidu » apparaît
+            # là où il n'y en a pas.
+            _somme_carres = sum(v * v for v in pb.values())
+            det += f"   Σ(carrés)/n² = {100 * _somme_carres / max(n * n, 1e-12):>5.1f}%"
             print(f"  {i:>5} {m['norme_brute']:>14.6f} {'OUI' if m['clippe'] else 'non':>10} "
                   f"{f:>10.4f}   {det}")
         n_clip = sum(1 for m in _avec if m["clippe"])
