@@ -3211,7 +3211,12 @@ class BiologicalHomeostasisEngine:
         # même double comptage que celui écarté dans `calculer_deficit`, côté stock.
         # L'hydratation, elle, se perd bien en continu (transpiration, respiration) : elle
         # n'est pas un carburant mais un COFACTEUR de la conversion.
-        self.hydratation -= self.taux_hydratation
+        # v41.32 — ablation piste C : `SOIF_FIGEE` gèle l'axe hydrique à son maximum.
+        # Un seul point d'application, comme le drain lui-même.
+        if SOIF_FIGEE:
+            self.hydratation = 1.0
+        else:
+            self.hydratation -= self.taux_hydratation
 
         bonus_nouveaute = (0.05 if nouvelle_case_visitee else 0.0) + erreur_jepa * 2.0
         self.stimulation += bonus_nouveaute - self.taux_stimulation
@@ -5877,6 +5882,25 @@ TAILLE_MIN_REVE = 8                  # sous ce nombre de souvenirs, le lot est j
 # des ticks — une ablation VIDE, pas négative (§4 de la règle de mesure). Le banc n'est
 # pas un raccourci : c'est la seule façon d'exposer réellement le mécanisme testé.
 ENV_FORCE = None
+
+# v41.32 — ABLATION « PISTE C » : le thrashing vient-il du CONFLIT DES ORGANES ?
+#
+# Mesuré le 25/08 : le gradient reçu par `integrateur_bio` (0,914) vaut **78×** celui de
+# `porte_visuelle` (0,012) — le corps dicte l'essentiel de la mise à jour des poids. Or les
+# besoins corporels ALTERNENT par construction : affamé un jour, assoiffé le lendemain. Si
+# la politique ne conditionne pas sur l'état externe (mesuré : distance mur/ressource au
+# niveau du bruit), elle subit cette alternance comme un pendule et le gradient s'annule.
+#
+# ⚠️ CE DRAPEAU NE SUPPRIME PAS LA SOIF, il en GÈLE la dynamique : `hydratation` reste à
+# 1.0, donc le terme `(1 − hydratation)²` du déficit vaut 0 en permanence. L'agent garde
+# ses cinq sens, sa mémoire, sa vue — SEUL l'axe hydrique cesse de tirer la politique.
+# C'est la discipline du témoin `--sans-douleur` : garder le SENS, ne couper que la
+# MÉCANIQUE, pour isoler la boucle testée du capteur lui-même.
+#
+# ⚠️ Un agent qui n'a jamais soif ne cherche plus d'eau : la récolte hydrique tombera, et
+# c'est ATTENDU. Ce drapeau ne mesure PAS la performance — uniquement l'alignement du
+# gradient. Ne jamais en tirer une conclusion de niveau atteint.
+SOIF_FIGEE = False
 
 PROGRAMME = [
     # — Socle moteur : se déplacer, sans aucun objet à manipuler —
@@ -11325,6 +11349,10 @@ if __name__ == "__main__":
     # v41.27 — témoin de l'option (b), voir MORT_COUTE_LA_JOURNEE.
     _p.add_argument("--mort-sans-cout", action="store_true",
                     help="ABLATION : mourir ne coûte plus la journée (comportement < v41.27)")
+    _p.add_argument("--soif-figee", action="store_true",
+                    help="ABLATION piste C : l'hydratation reste à 1.0 (le corps ne tire "
+                         "plus que sur UN axe). Mesure l'alignement du gradient, JAMAIS "
+                         "la performance.")
     _p.add_argument("--sans-douleur", action="store_true",
                     help="ABLATION : la chaleur reste perçue mais ne coûte rien (témoin v41.24)")
     # v41.25 — banc de mesure. Le cursus est bloqué au niveau 4, or les niveaux 1-4 ne
@@ -11448,6 +11476,20 @@ if __name__ == "__main__":
         print("🔬 [ABLATION] option (b) COUPÉE — mourir ne coûte plus la journée")
         from naulthene.cerveau.noyau import MORT_COUTE_LA_JOURNEE as _v
         assert _v is False, "l'ablation n'a pas atteint le module — campagne invalide"
+
+    # v41.32 — piste C. MÊME DISCIPLINE : écriture dans le module NOMMÉ + assertion
+    # runtime. C'est le correctif du bug v41.4, où le drapeau n'atteignait pas le module
+    # et où les trois bras de la campagne étaient en réalité identiques — un résultat
+    # « trop propre » qui a coûté un cycle entier.
+    _soif_figee = bool(_args.soif_figee)
+    globals()["SOIF_FIGEE"] = _soif_figee
+    if _module_reel is not None:
+        _module_reel.SOIF_FIGEE = _soif_figee
+    if _soif_figee:
+        print("🔬 [ABLATION] axe hydrique GELÉ (piste C) — hydratation forcée à 1.0, "
+              "le corps ne tire plus que sur la faim")
+        from naulthene.cerveau.noyau import SOIF_FIGEE as _verif_soif
+        assert _verif_soif is True, ("l'ablation n'a pas atteint le module — campagne invalide")
 
     # v41.25 — même discipline : écriture dans le module NOMMÉ + assertion runtime.
     _douleur_active = not _args.sans_douleur

@@ -262,6 +262,8 @@ def main():
     # PROGRAMME entier est remplacé par ce seul niveau, répété.
     p.add_argument("--env-force", type=str, default=None,
                    help="verrouille la carte pour TOUS les jours (ablation P17)")
+    p.add_argument("--soif-figee", action="store_true",
+                   help="ABLATION piste C : hydratation figée à 1.0 (un seul axe corporel)")
     args = p.parse_args()
 
     if not os.path.exists(args.brain):
@@ -279,6 +281,14 @@ def main():
     # ⚠️ Posé AVANT `charger_ou_naitre` : la naissance lit déjà `ENV_FORCE` (l. 7065).
     if args.env_force:
         nx.ENV_FORCE = args.env_force
+    # v41.32 — piste C. Écriture + VÉRIFICATION que le drapeau a atteint le module :
+    # c'est le bug v41.4 (drapeau accepté par l'argparse mais jamais lu), qui avait rendu
+    # trois bras de campagne rigoureusement identiques.
+    if args.soif_figee:
+        nx.SOIF_FIGEE = True
+        from naulthene.cerveau.noyau import SOIF_FIGEE as _verif
+        assert _verif is True, "l'ablation n'a pas atteint le module — campagne invalide"
+        print("🔬 [ABLATION] axe hydrique GELÉ — le corps ne tire plus que sur la faim")
 
     etat = PersistanceAnatomique(copie).charger_ou_naitre()
     if args.niveau is not None:

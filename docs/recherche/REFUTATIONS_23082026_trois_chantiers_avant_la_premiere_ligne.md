@@ -1042,6 +1042,80 @@ plusieurs graines pour en faire une mesure et non un indice.
 
 ---
 
+## 4undecies. Les trois pistes du thrashing — A et C réfutées, le plafond expliqué
+
+### Le protocole
+
+A/B **apparié** : même `.brain` de départ, même graine (11), 12 jours, un seul facteur change
+par bras. Le témoin A a servi aux deux comparaisons.
+
+⚠️ **`--soif-figee` a dû être créé** : contrairement à ce que j'avais annoncé, aucun drapeau
+d'ablation métabolique n'existait (seulement `--sans-heritage`, `--sans-memoire-cartes`,
+`--sans-corps-rollout`, `--sans-economie-action`, `--sans-douleur`). Il **gèle** l'axe
+hydrique à 1.0 plutôt que de le supprimer — l'agent garde ses cinq sens, seul l'axe cesse de
+tirer la politique. Même discipline que `--sans-douleur`, avec **assertion runtime** que le
+drapeau atteint le module (correctif du bug v41.4, où trois bras étaient identiques).
+
+### Les trois bras
+
+| BRAS | alignement final | écart vs témoin |
+|---|---|---|
+| **A — cursus libre** (témoin) | **0,3428** | — |
+| **B — carte verrouillée** (piste A) | **0,2630** | **−0,0798** |
+| **C — soif figée** (piste C) | **0,3389** | **−0,0039** |
+| *repère marche aléatoire (1/√12)* | *0,2887* | |
+
+🔴 **Piste A réfutée, effet INVERSE** : verrouiller le monde **aggrave** le thrashing de 23 %,
+et fait passer l'alignement **sous** le hasard — une annulation *active*. L'instabilité du
+cursus serait plutôt un facteur **stabilisant**.
+
+🔴 **Piste C réfutée, effet NUL** : geler l'axe hydrique change l'alignement de **−0,0039**,
+soit **20× moins** que la piste A. Le conflit des organes n'est pas la cause.
+
+### 🟢 Le vrai résultat — le plafond est le CLIPPING
+
+`‖Σg‖` plafonne au **même endroit** dans les trois bras :
+
+| | A | B | C |
+|---|---|---|---|
+| `‖Σg‖` final | **0,8219** | **0,8329** | **0,8201** |
+
+La direction utile sature identiquement, que la carte soit fixe ou libre, que le corps tire
+sur un ou deux axes. **Le plafond ne dépend d'aucune des causes testées.**
+
+`apprendre_journee` appelle `clip_grad_norm_(toutes les params, max_norm=1.0)`. Norme globale
+mesurée :
+
+| COUCHE | gradient moyen | part du budget global |
+|---|---|---|
+| **`integrateur_bio`** | **0,9142** | **98 %** |
+| `tete_motrice` | 0,1640 | 18 % |
+| `fusion_memoire` | 0,0511 | 5 % |
+| `porte_visuelle` | 0,0117 | **1 %** |
+| **TOTAL (norme globale)** | **0,9315** | **93 % du plafond de 1,0** |
+
+**Le gradient global est à 93 % du seuil de clipping à chaque nuit — et `integrateur_bio`
+en consomme 98 %.**
+
+> **Le clipping ne CRÉE pas le déséquilibre, il le FIGE.** Quand le corps sature le budget,
+> la vue ne peut pas grandir — quelle que soit l'information qu'elle porte. C'est le
+> mécanisme qui relie toutes les mesures de la campagne : le ratio 78× vue/corps, la
+> non-discrimination mur/pomme, et le plafond de `‖Σg‖` insensible aux ablations.
+
+### ⚠️ Ce qui reste NON établi
+
+- **Le clipping est une hypothèse cohérente, pas une mesure.** Il faudrait mesurer la norme
+  globale **avant** clipping, nuit par nuit, et compter les nuits effectivement clippées.
+  La sonde lit les `.grad` **après** `backward` mais l'ordre exact vis-à-vis du clip n'a pas
+  été vérifié.
+- **Piste B (masquage causal) reste non testée.**
+- **Une seule graine, 12 jours** par bras. Les sens des effets sont nets (A négatif, C nul),
+  mais ce ne sont pas des mesures au sens des 20 graines.
+- ⚠️ L'ablation A était **partielle** (P17 révisait encore 1 fois/jour sur 9 jours), donc son
+  écart est un **minorant**.
+
+---
+
 ## 5. Ce que la journée établit — et ce qu'elle ne dit pas
 
 ### Établi (mesures directes, banc déterministe δ_A/A = 0)
@@ -1073,6 +1147,9 @@ plusieurs graines pour en faire une mesure et non un indice.
 | Le gradient ARRIVE | **0,164** sur `tete_motrice`, **3200/3200** ticks récompensés |
 | Mais il S'ANNULE | alignement **0,3966** contre un hasard à **0,3536** |
 | Le corps écrase la vue | `integrateur_bio` **0,914** contre `porte_visuelle` **0,012** (**78×**) |
+| Piste A (instabilité du monde) | 🔴 réfutée — effet **inverse** (−0,0798) |
+| Piste C (conflit des organes) | 🔴 réfutée — effet **nul** (−0,0039) |
+| Le gradient global est à | **93 %** du plafond de clipping, dont **98 %** pour le corps |
 | C2 pèse | **0,110 %** de 384 808 params |
 | C2 croît en N, le tronc en N² | rapport **×312** à 16 dims |
 
