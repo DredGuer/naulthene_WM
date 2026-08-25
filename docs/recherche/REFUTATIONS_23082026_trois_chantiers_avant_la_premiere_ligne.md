@@ -1271,6 +1271,68 @@ aucune direction), l'audio est à zéro, et les pistes A et C sont réfutées. R
 
 ---
 
+## 4quaterdecies. 🔴 LA VUE EST STRUCTURELLEMENT COUPÉE DE LA POLITIQUE
+
+### Le mécanisme proposé, et ce qui l'a réfuté
+
+L'hypothèse : C2 pèse le double de C1 dans le budget, donc **il dicte les mises à jour du
+tronc commun** — le sol se dérobe sous C1, d'où le thrashing.
+
+**Vérification par lecture du code**, ligne 1149 de `_executer_c1_reflexe` :
+
+```python
+pensee_detachee = pensee_enrichie.detach()      # ← LE TRONC EST COUPÉ
+pensee_bio = self.integrer_bio(pensee_detachee, vecteur_bio)
+logits_instinct = self.tete_motrice(pensee_bio)
+```
+
+⚠️ Ce `.detach()` est **non documenté**, contrairement à tous les autres du fichier.
+
+### La carte des chemins de gradient — mesurée, pas déduite
+
+Trois pertes injectées séparément, gradient lu couche par couche :
+
+| Source de la perte | `porte_visuelle` | `hippocampe` | `analyseur` | `integrateur_bio` | `tete_motrice` | `cortex_prefrontal` |
+|---|---|---|---|---|---|---|
+| **logits C1** (la politique) | **0,000000** | **0,000000** | **0,000000** | 6,127 | 5,016 | 0,000000 |
+| **valeur C2** | **0,000000** | **0,000000** | **0,000000** | 4,907 | 0,000000 | 1,774 |
+| `bus_latent` (JEPA) | **92,581** | 0,000000 | 0,000000 | 0,000000 | 0,000000 | 0,000000 |
+
+### 🔴 Trois conséquences
+
+**(1) Le mécanisme proposé est réfuté.** C2 ne peut pas secouer le tronc : il en est
+**coupé**. Une ablation du gradient de C2 ne toucherait que `integrateur_bio` et C2 lui-même
+— jamais `porte_visuelle`, `hippocampe` ou `analyseur`.
+
+**(2) Les 0,77 % de la vue étaient MAL INTERPRÉTÉS** — y compris par moi. Ce n'est pas une
+compétition perdue contre le corps : **la vue ne reçoit AUCUN gradient de la politique**.
+Zéro exact, pas « peu ». Ses 0,77 % viennent uniquement du **JEPA** — apprendre à *prédire*
+l'état suivant, jamais à *agir* dessus.
+
+> **La vision de l'agent n'est pas asphyxiée par le corps. Elle est structurellement
+> déconnectée de la récompense.** Aucun rééquilibrage de budget ne pourrait la reconnecter :
+> il n'y a pas de fil.
+
+**(3) Le vrai point de collision est `integrateur_bio`.** C'est la **seule** couche où C1
+(6,127) et C2 (4,907) rétropropagent **tous les deux**. Le mécanisme proposé est donc juste
+dans son principe — deux têtes qui se disputent une couche partagée — mais **d'un étage trop
+haut**. La collision n'a pas lieu dans le tronc, elle a lieu dans l'intégrateur bio.
+
+### Ce que cela change au plan
+
+L'ablation « couper le gradient de C2 » devient **plus précise, pas caduque** : elle teste
+maintenant une hypothèse exacte — *C1 et C2 se disputent-ils `integrateur_bio` ?* — au lieu
+d'une hypothèse fausse sur le tronc.
+
+⚠️ **Ce `.detach()` non documenté est un chantier à part entière.** Il peut être un choix
+délibéré (empêcher la politique de déformer les représentations perceptives, une pratique
+courante) ou un défaut. Rien dans le code ne le dit. **Ne pas le retirer sans A/B** : le
+supprimer rebrancherait la politique sur la vue, ce qui est un changement architectural
+majeur, exactement le genre de modification que cette campagne a appris à ne pas faire sans
+mesure.
+
+---
+
 ## 5. Ce que la journée établit — et ce qu'elle ne dit pas
 
 ### Établi (mesures directes, banc déterministe δ_A/A = 0)
@@ -1308,6 +1370,8 @@ aucune direction), l'audio est à zéro, et les pistes A et C sont réfutées. R
 | Le corps prend | **92,7 %** du budget brut contre **0,77 %** pour la vue (**121×**) |
 | L'audio ne consomme RIEN | **0,000000** exact, 4 couches, 6/6 jours |
 | C2 reçoit | **2,02×** le gradient de `tete_motrice`, pour **0,0 pt** d'effet mesuré |
+| 🔴 La politique n'atteint JAMAIS la vue | **0,000000** exact — `.detach()` non documenté (l. 1149) |
+| C1 et C2 ne partagent QUE | `integrateur_bio` (6,127 et 4,907) |
 | Mais le clip ne cause PAS le déséquilibre | il divise tout par le même facteur (~2,3) |
 | C2 pèse | **0,110 %** de 384 808 params |
 | C2 croît en N, le tronc en N² | rapport **×312** à 16 dims |
