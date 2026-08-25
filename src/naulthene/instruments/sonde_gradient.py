@@ -253,6 +253,15 @@ def main():
     p.add_argument("--niveau", type=int, default=None,
                    help="indice du PROGRAMME (défaut : celui du .brain)")
     p.add_argument("--graine", type=int, default=1789)
+    # v41.32 — ABLATION « PISTE A » : le thrashing vient-il de l'INSTABILITÉ DU MONDE ?
+    #
+    # `--niveau` ne suffit PAS : il fixe l'env au démarrage, mais `demarrer_journee` peut
+    # ensuite changer de carte à chaque journée (P17, distribution du cursus — observé
+    # « 1 révision · 2 révisions » pendant la mesure du 25/08). Le seul verrou réel est
+    # `ENV_FORCE`, lu par `demarrer_journee` (l. ~7386) : quand il est non-nul, le
+    # PROGRAMME entier est remplacé par ce seul niveau, répété.
+    p.add_argument("--env-force", type=str, default=None,
+                   help="verrouille la carte pour TOUS les jours (ablation P17)")
     args = p.parse_args()
 
     if not os.path.exists(args.brain):
@@ -266,6 +275,10 @@ def main():
     shutil.copy2(args.brain, copie)
 
     torch.manual_seed(args.graine)
+
+    # ⚠️ Posé AVANT `charger_ou_naitre` : la naissance lit déjà `ENV_FORCE` (l. 7065).
+    if args.env_force:
+        nx.ENV_FORCE = args.env_force
 
     etat = PersistanceAnatomique(copie).charger_ou_naitre()
     if args.niveau is not None:
