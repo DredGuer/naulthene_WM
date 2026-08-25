@@ -364,6 +364,10 @@ def main():
                    help="verrouille la carte pour TOUS les jours (ablation P17)")
     p.add_argument("--soif-figee", action="store_true",
                    help="ABLATION piste C : hydratation figée à 1.0 (un seul axe corporel)")
+    p.add_argument("--sans-gradient-c2", action="store_true",
+                   help="ABLATION : C2 ne rétropropage plus (collision C1/C2)")
+    p.add_argument("--gradient-non-filtre", action="store_true",
+                   help="ABLATION piste B : pas de masquage causal (100 %% des ticks)")
     args = p.parse_args()
 
     if not os.path.exists(args.brain):
@@ -373,7 +377,15 @@ def main():
     # hors de question de toucher au cerveau de référence.
     dossier = os.path.join(os.path.dirname(args.brain) or ".", "_sonde")
     os.makedirs(dossier, exist_ok=True)
-    copie = os.path.join(dossier, "sonde.brain")
+    # ⚠️ v41.32 — LE NOM DE LA COPIE EST UNIQUE PAR PROCESSUS.
+    #
+    # 🔴 Défaut attrapé avant qu'il ne fausse une campagne : deux bras d'ablation lancés en
+    # parallèle sur le MÊME `--brain` écrivaient dans le même `_sonde/sonde.brain`. Les
+    # deux processus se seraient écrasés mutuellement, et la comparaison appariée aurait
+    # mesuré un mélange des deux — un « A/B » dont les deux bras partagent leur état.
+    # C'est exactement le piège que CLAUDE.md §8 décrit : « deux runs qui partagent un
+    # chemin .brain s'écrasent mutuellement, et c'est silencieux ».
+    copie = os.path.join(dossier, f"sonde_{os.getpid()}.brain")
     shutil.copy2(args.brain, copie)
 
     torch.manual_seed(args.graine)
@@ -384,6 +396,17 @@ def main():
     # v41.32 — piste C. Écriture + VÉRIFICATION que le drapeau a atteint le module :
     # c'est le bug v41.4 (drapeau accepté par l'argparse mais jamais lu), qui avait rendu
     # trois bras de campagne rigoureusement identiques.
+    # v41.32 — chaque ablation est écrite dans le module NOMMÉ puis VÉRIFIÉE (bug v41.4).
+    if args.sans_gradient_c2:
+        nx.GRADIENT_C2_ACTIF = False
+        from naulthene.cerveau.noyau import GRADIENT_C2_ACTIF as _v2
+        assert _v2 is False, "l'ablation n'a pas atteint le module — campagne invalide"
+        print("🔬 [ABLATION] gradient de C2 COUPÉ — forward intact")
+    if args.gradient_non_filtre:
+        nx.GRADIENT_CAUSAL_ACTIF = False
+        from naulthene.cerveau.noyau import GRADIENT_CAUSAL_ACTIF as _v3
+        assert _v3 is False, "l'ablation n'a pas atteint le module — campagne invalide"
+        print("🔬 [ABLATION] masquage causal RETIRÉ — apprentissage sur 100 % des ticks")
     if args.soif_figee:
         nx.SOIF_FIGEE = True
         from naulthene.cerveau.noyau import SOIF_FIGEE as _verif

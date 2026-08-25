@@ -1723,7 +1723,10 @@ class AGI_Naulthene(nn.Module):
                 perte_acteur = -GAIN_ACTEUR_CONTROLE * (log_probs_tensor * avantages).mean()
             else:
                 perte_acteur = -(log_probs_tensor * avantages).mean()
-            perte_critique = F.mse_loss(valeurs_tensor, returns)
+            # v41.32 — ablation de la collision : le critique n'apprend plus, donc plus
+            # aucun gradient ne part de C2 vers `integrateur_bio`. Le forward est intact.
+            perte_critique = (F.mse_loss(valeurs_tensor, returns) if GRADIENT_C2_ACTIF
+                              else F.mse_loss(valeurs_tensor.detach(), returns))
             perte_entropie = -coeff_entropie * entropies_tensor.mean()
 
             perte_totale = perte_totale + perte_acteur + perte_critique + perte_entropie
@@ -5260,6 +5263,27 @@ FACTEUR_ATTENUATION_LIBRE = 1.00         # déplacement libre : pénalité plein
 # causal, le tube digestif et l'unification du détecteur sont trois mécaniques distinctes ;
 # les couper ensemble produirait une ablation CONFONDUE (règle de mesure §4).
 GRADIENT_CAUSAL_ACTIF = True        # False = `.mean()` d'avant v41.31 (`--gradient-non-filtre`)
+
+# v41.32 — ABLATION « COLLISION C1/C2 » : le critique sabote-t-il l'intégrateur bio ?
+#
+# Mesuré le 25/08 (chemins de gradient, 3 pertes injectées séparément) : `integrateur_bio`
+# est la SEULE couche où C1 (6,127) et C2 (4,907) rétropropagent tous les deux. Le tronc
+# perceptif, lui, est coupé des deux têtes par le `.detach()` de la l. 1149 — la collision
+# ne peut donc avoir lieu QUE là.
+#
+# Ce drapeau neutralise le gradient de C2 en gardant son FORWARD intact : `valeurs_tensor`
+# est détaché avant la perte critique, donc `cortex_prefrontal` et `integrateur_bio` ne
+# reçoivent plus rien de ce canal. C2 continue de produire ses valeurs, de peser dans
+# l'arbitrage et de fournir les avantages — seule sa rétropropagation cesse.
+#
+# ⚠️ NEUTRALISER N'EST PAS DÉBRANCHER : le comportement du tick reste identique, seule
+# l'ardoise du gradient change. C'est ce qui isole la COLLISION de l'UTILITÉ de C2 (dont
+# l'ablation comportementale est déjà mesurée à 0,0 pt sur 6 niveaux, v41.29).
+#
+# ⚠️ Sans gradient, le critique cesse d'apprendre : ses estimations dérivent, donc les
+# AVANTAGES qu'il fournit à l'acteur se dégradent. Ce bras mesure l'ALIGNEMENT du
+# gradient, JAMAIS la performance — un score qui baisse ici ne prouve rien.
+GRADIENT_C2_ACTIF = True
 # v41.31-controle — bras de falsification : gradient acteur ×N SANS filtrage. 1.0 = inactif.
 # Le 2.6 n'est pas posé : c'est `T / Σm` mesuré (61,7 % de ticks stériles → 1/0,383 ≈ 2,6).
 GAIN_ACTEUR_CONTROLE = 1.0
@@ -11349,6 +11373,10 @@ if __name__ == "__main__":
     # v41.27 — témoin de l'option (b), voir MORT_COUTE_LA_JOURNEE.
     _p.add_argument("--mort-sans-cout", action="store_true",
                     help="ABLATION : mourir ne coûte plus la journée (comportement < v41.27)")
+    _p.add_argument("--sans-gradient-c2", action="store_true",
+                    help="ABLATION : C2 garde son forward mais ne rétropropage plus "
+                         "(teste la collision C1/C2 dans integrateur_bio). Mesure "
+                         "l'ALIGNEMENT du gradient, jamais la performance.")
     _p.add_argument("--soif-figee", action="store_true",
                     help="ABLATION piste C : l'hydratation reste à 1.0 (le corps ne tire "
                          "plus que sur UN axe). Mesure l'alignement du gradient, JAMAIS "
@@ -11476,6 +11504,17 @@ if __name__ == "__main__":
         print("🔬 [ABLATION] option (b) COUPÉE — mourir ne coûte plus la journée")
         from naulthene.cerveau.noyau import MORT_COUTE_LA_JOURNEE as _v
         assert _v is False, "l'ablation n'a pas atteint le module — campagne invalide"
+
+    # v41.32 — collision C1/C2. MÊME DISCIPLINE : module NOMMÉ + assertion runtime.
+    _grad_c2 = not _args.sans_gradient_c2
+    globals()["GRADIENT_C2_ACTIF"] = _grad_c2
+    if _module_reel is not None:
+        _module_reel.GRADIENT_C2_ACTIF = _grad_c2
+    if not _grad_c2:
+        print("🔬 [ABLATION] gradient de C2 COUPÉ — forward intact, plus de "
+              "rétropropagation vers integrateur_bio")
+        from naulthene.cerveau.noyau import GRADIENT_C2_ACTIF as _verif_c2
+        assert _verif_c2 is False, ("l'ablation n'a pas atteint le module — campagne invalide")
 
     # v41.32 — piste C. MÊME DISCIPLINE : écriture dans le module NOMMÉ + assertion
     # runtime. C'est le correctif du bug v41.4, où le drapeau n'atteignait pas le module
