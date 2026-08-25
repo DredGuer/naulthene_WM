@@ -1116,6 +1116,93 @@ en consomme 98 %.**
 
 ---
 
+## 4duodecies. LE CLIPPING SE DÉCLENCHE — 12 nuits sur 12
+
+### 🔴 D'abord : ma mesure précédente était une TAUTOLOGIE
+
+J'avais annoncé « la norme globale vaut 0,9315, soit 93 % du plafond de 1,0 » comme un
+indice fort. **C'était sans valeur.** L'ordre réel est :
+
+```python
+perte_totale.backward()
+torch.nn.utils.clip_grad_norm_(..., 1.0)   # ← le clip
+self.optimizer.step()
+```
+
+La sonde lit les `.grad` **après** que la fonction a rendu la main, donc **après** le clip.
+Ma valeur était déjà écrasée, et **mécaniquement bornée à 1,0 par construction**. Une norme
+post-clip ne peut par définition jamais démontrer que le clip se déclenche.
+
+Ce n'était pas un résultat « trop propre » mais **trop cohérent** — une variante du même
+piège.
+
+**Le correctif** : `clip_grad_norm_` **retourne** la norme totale avant écrêtage. On
+l'intercepte le temps de l'appel (restauration dans un `finally`), ce qui donne la seule
+mesure honnête.
+
+### La mesure — 12 jours, graine 11
+
+| jour | norme brute | clippé ? | facteur | corps | décision | vue |
+|---|---|---|---|---|---|---|
+| 1 | 2,4702 | **OUI** | 0,4048 | 36,6 % | 8,3 % | 0,1 % |
+| 4 | **6,6533** | **OUI** | **0,1503** | 13,8 % | 1,4 % | 0,1 % |
+| 6 | 1,5089 | **OUI** | 0,6627 | 64,0 % | 10,8 % | 0,2 % |
+| 12 | 1,3081 | **OUI** | 0,7645 | 66,1 % | 31,4 % | 0,7 % |
+
+| | |
+|---|---|
+| **Nuits clippées** | **12 / 12 (100 %)** |
+| Norme brute moyenne | **2,8193** — soit **×2,8** le plafond |
+| Norme brute maximale | **6,6533** — **×6,7** le plafond |
+| Facteur de division moyen | **0,4435** (tout divisé par ~2,3) |
+
+🔴 **Le clipping se déclenche à chaque nuit, sans exception.** Le gradient brut dépasse le
+plafond d'un facteur 1,3 à 6,7 selon les jours.
+
+### Part du budget BRUT (la seule lecture valable)
+
+| | moyenne | min | max |
+|---|---|---|---|
+| **corps** (`integrateur_bio`) | **40,1 %** | 13,8 % | 66,1 % |
+| **décision** (`tete_motrice`) | **10,0 %** | 1,4 % | 31,4 % |
+| **vue** (`porte_visuelle`) | **0,67 %** | 0,1 % | 1,8 % |
+
+**Le corps prend 60× plus de budget que la vue.**
+
+### ⚠️ LA NUANCE QUI CHANGE LA CONCLUSION
+
+**`clip_grad_norm_` divise TOUTES les composantes par le même facteur.** Il ne change donc
+**pas** les parts relatives : la vue aurait ses 0,67 % du budget **avec ou sans clip**.
+
+> **Le clipping n'est PAS la cause du déséquilibre. Il réduit l'amplitude ABSOLUE de
+> l'apprentissage (÷2,3 en moyenne), pas la répartition.**
+
+Ce que le clipping explique réellement :
+
+| Il explique | Il n'explique PAS |
+|---|---|
+| la **faible amplitude** des logits (tout est divisé par 2,3 chaque nuit) | le **déséquilibre** corps/vue (les parts sont intactes) |
+| le **plafond de `‖Σg‖`** identique dans les 3 bras (la norme est bornée à 1,0) | le **thrashing** (une division uniforme ne change aucune direction) |
+
+**Le déséquilibre 60× est ANTÉRIEUR au clip** — il vient de la structure du signal
+(`Bio` = 52,1 % de la dispersion de la récompense, mesuré à l'étape 3), pas de l'optimiseur.
+
+### ⚠️ Ce qui reste ouvert
+
+- **Le thrashing reste inexpliqué.** Le clipping est une division scalaire : il ne peut pas
+  faire pointer un gradient dans la direction opposée. Les pistes A et C sont réfutées, la
+  **piste B (masquage causal)** reste non testée.
+- **Les parts ne somment qu'à ~51 %** : les couches suivies ne couvrent pas tout le réseau
+  (audio, C2, têtes vocales et C3 manquent). La moitié du budget n'est pas attribuée.
+- **Une seule graine, 12 jours.**
+
+⚠️ **Ne pas « corriger » en relevant `max_norm`.** Le clipping à 1,0 est un garde-fou
+standard, et la norme brute atteint **6,65** certains jours — le relever exposerait le réseau
+à des pas de gradient massifs sur des couches déjà instables. Toute modification exige un
+A/B, et le fait que le clip morde 12/12 est une **observation**, pas un défaut démontré.
+
+---
+
 ## 5. Ce que la journée établit — et ce qu'elle ne dit pas
 
 ### Établi (mesures directes, banc déterministe δ_A/A = 0)
@@ -1149,7 +1236,9 @@ en consomme 98 %.**
 | Le corps écrase la vue | `integrateur_bio` **0,914** contre `porte_visuelle` **0,012** (**78×**) |
 | Piste A (instabilité du monde) | 🔴 réfutée — effet **inverse** (−0,0798) |
 | Piste C (conflit des organes) | 🔴 réfutée — effet **nul** (−0,0039) |
-| Le gradient global est à | **93 %** du plafond de clipping, dont **98 %** pour le corps |
+| Le clipping se déclenche | **12 nuits sur 12**, norme brute moyenne **2,82** (plafond 1,0) |
+| Le corps prend | **40,1 %** du budget brut contre **0,67 %** pour la vue (**60×**) |
+| Mais le clip ne cause PAS le déséquilibre | il divise tout par le même facteur (~2,3) |
 | C2 pèse | **0,110 %** de 384 808 params |
 | C2 croît en N, le tronc en N² | rapport **×312** à 16 dims |
 

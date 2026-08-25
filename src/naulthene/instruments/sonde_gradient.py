@@ -118,9 +118,52 @@ def instrumenter(agent, journal):
         # `apprendre_journee` appelle `optimizer.step()` puis rend la main ; les `.grad`
         # sont encore présents à ce moment (ils ne sont remis à zéro qu'au DÉBUT de
         # l'appel suivant, via `zero_grad`). On peut donc les lire juste après.
-        perte = originale(jepa_losses, log_probs, entropies, valeurs, rewards, dones,
-                          gamma=gamma, coeff_entropie=coeff_entropie,
-                          pertes_vocales=pertes_vocales, **extra)
+        # --- v41.32 : LA NORME BRUTE, AVANT CLIPPING ---
+        #
+        # 🔴 CE QUE ÇA CORRIGE. `apprendre_journee` fait `backward()` -> `clip_grad_norm_`
+        # -> `step()`, puis rend la main. Lire les `.grad` APRÈS l'appel donne donc la
+        # valeur POST-CLIP, jamais la brute — et la norme globale y est mécaniquement
+        # bornée à 1.0. J'ai d'abord lu 0,9315 en croyant mesurer le gradient réel : c'est
+        # en réalité la valeur déjà écrasée. Une norme post-clip ne peut par construction
+        # jamais démontrer que le clip se déclenche.
+        #
+        # `clip_grad_norm_` RETOURNE la norme totale AVANT écrêtage. On l'intercepte donc
+        # le temps de l'appel, ce qui donne la seule mesure honnête : la norme brute, et
+        # le fait que le couperet soit tombé ou non.
+        _brut = {}
+        _clip_reel = torch.nn.utils.clip_grad_norm_
+
+        def _clip_espion(params, max_norm, *a, **k):
+            totale = _clip_reel(params, max_norm, *a, **k)
+            _brut["norme"] = float(totale)
+            _brut["plafond"] = float(max_norm)
+            _brut["clippe"] = float(totale) > float(max_norm)
+            # Part de chaque couche dans la norme BRUTE — c'est elle qui dit qui
+            # cannibalise le budget, et elle n'est lisible qu'ici.
+            parts = {}
+            for nom_c in COUCHES_SUIVIES:
+                c = getattr(agent, nom_c, None)
+                if c is None:
+                    continue
+                acc = 0.0
+                for prm in c.parameters():
+                    if prm.grad is not None:
+                        acc += float(prm.grad.detach().norm() ** 2)
+                parts[nom_c] = acc ** 0.5
+            _brut["parts"] = parts
+            return totale
+
+        torch.nn.utils.clip_grad_norm_ = _clip_espion
+        try:
+            perte = originale(jepa_losses, log_probs, entropies, valeurs, rewards, dones,
+                              gamma=gamma, coeff_entropie=coeff_entropie,
+                              pertes_vocales=pertes_vocales, **extra)
+        finally:
+            torch.nn.utils.clip_grad_norm_ = _clip_reel
+        mesure["norme_brute"] = _brut.get("norme")
+        mesure["clippe"] = _brut.get("clippe")
+        mesure["plafond"] = _brut.get("plafond")
+        mesure["parts_brutes"] = _brut.get("parts")
         mesure["perte_totale"] = perte
 
         normes = {}
@@ -217,6 +260,31 @@ def afficher(journal, nom_cerveau, niveau):
         # annulation active. On la publie à côté plutôt que de trancher à sa place.
         n = dernier and len([m for m in journal if "grad_cumul" in m])
         print(f"  Repère marche aléatoire (1/√n, n={n}) : {1.0 / max(n, 1) ** 0.5:.4f}")
+
+    # --- v41.32 : LE CLIPPING SE DÉCLENCHE-T-IL ? ---
+    _avec = [m for m in journal if m.get("norme_brute") is not None]
+    if _avec:
+        print(f"\n  NORME GLOBALE **AVANT** CLIPPING (plafond = {_avec[0]['plafond']:.2f})")
+        print("  " + "-" * 94)
+        print(f"  {'jour':>5} {'norme brute':>14} {'clippé ?':>10} {'facteur':>10}"
+              f"   part du budget brut : corps / décision / vue")
+        for i, m in enumerate(_avec, 1):
+            f = m["plafond"] / m["norme_brute"] if m["norme_brute"] > m["plafond"] else 1.0
+            pb = m.get("parts_brutes") or {}
+            n = m["norme_brute"]
+            det = " ".join(f"{100*pb.get(k, 0.0)/max(n, 1e-12):>5.1f}%"
+                           for k in ("integrateur_bio", "tete_motrice", "porte_visuelle"))
+            print(f"  {i:>5} {m['norme_brute']:>14.6f} {'OUI' if m['clippe'] else 'non':>10} "
+                  f"{f:>10.4f}   {det}")
+        n_clip = sum(1 for m in _avec if m["clippe"])
+        moy = sum(m["norme_brute"] for m in _avec) / len(_avec)
+        print()
+        print(f"  Nuits clippées : {n_clip}/{len(_avec)} ({100*n_clip/len(_avec):.0f} %)")
+        print(f"  Norme brute moyenne : {moy:.6f}   (plafond {_avec[0]['plafond']:.2f})")
+        if n_clip == 0:
+            print("  🟢 Le clipping ne se déclenche JAMAIS — il n'explique pas le plafond.")
+        elif n_clip == len(_avec):
+            print("  🔴 Le clipping se déclenche à CHAQUE nuit — le budget est saturé en permanence.")
 
     # --- Verdict ---
     print("\n" + "=" * 100)
