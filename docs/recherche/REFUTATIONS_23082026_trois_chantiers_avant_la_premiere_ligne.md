@@ -1495,6 +1495,64 @@ montré ce que vaut un résultat de banc qui ne survit pas au cursus complet (+2
 
 ---
 
+## 4septdecies. La variance des avantages — ni confirmée, ni réfutée
+
+### L'hypothèse
+
+La chute d'alignement d'AB3 au jour 9 viendrait de la **ligne de base** : C2 continue
+d'apprendre, donc `V(s)` bouge, donc l'avantage `A = R − V` tremble, donc une même action
+est récompensée un jour et pénalisée le lendemain.
+
+⚠️ **Précaution de lecture** : `apprendre_journee` **normalise** les retours quand
+`std > 1e-6`. La sonde réplique fidèlement cette normalisation, donc `|avant|` est bien la
+valeur que le gradient voit — mais une explosion de variance *brute* y serait masquée.
+
+### 🟡 La signature temporelle existe
+
+| jour | `|ret|` | `|avant|` | alignement | Δ align |
+|---|---|---|---|---|
+| 7 | 0,1354 | 0,7276 | 0,7746 | +0,0216 |
+| **8** | **0,2837** ← max | 0,8503 | 0,7231 | −0,0515 |
+| **9** | 0,0994 | **0,5644** ← min | **0,5196** | **−0,2035** |
+| 10 | 0,2135 | 0,7815 | 0,3938 | −0,1258 |
+
+Le jour 8 porte le `|ret|` **le plus haut** des 12 (0,2837 contre 0,161 de moyenne), et le
+jour 9 le `|avant|` **le plus bas** — avec la plus forte chute d'alignement du run.
+
+AB3 a par ailleurs une **volatilité des retours 1,5×** celle d'AB1 (0,0520 contre 0,0336).
+
+### 🔴 Mais elle ne suffit pas — trois réserves
+
+**(1) La corrélation est faible et non significative.** « `|ret|` élevé un jour → chute
+d'alignement le lendemain » donne **r = −0,391** sur 11 points. À n=11 il faudrait |r| > 0,60
+environ. Ce n'est pas concluant.
+
+**(2) Le mécanisme ne se déclenche pas de façon reproductible.** Le jour 10 a aussi un `|ret|`
+élevé (0,2135) et l'alignement continue de chuter — mais le jour 5 (0,1674) ne produit
+**rien**. Un mécanisme causal devrait se déclencher à chaque fois.
+
+**(3) La variance des avantages N'EXPLOSE PAS.** L'écart-type de `|avant|` vaut **0,0839** en
+AB3 contre **0,0793** en AB1 — soit **+5,8 %**. Le mécanisme proposé prédit une explosion ;
+la mesure donne un écart négligeable.
+
+### Verdict
+
+🟡 **Ni confirmée, ni réfutée.** Il y a une coïncidence temporelle nette au jour 8-9, mais
+**pas la signature statistique que le mécanisme exige**. À une seule graine et 12 points, un
+décrochage unique peut être du bruit — c'est exactement le cas que la règle de mesure classe
+comme **anecdote**, jamais comme mesure.
+
+**Ce qu'il faudrait pour trancher** : 20 graines × 12 jours minimum, en comparant la
+distribution des chutes d'alignement conditionnellement au `|ret|` de la veille. Trois heures
+de calcul, contre une conclusion tirée d'un seul décrochage.
+
+⚠️ **Ne pas coder de correctif sur cette base.** Les remèdes classiques (learning rate
+réduit pour le critique, clipping de la perte de valeur, lissage temporel) sont tous
+plausibles — mais appliquer l'un d'eux maintenant reviendrait à corriger une cause non
+établie, exactement ce que cette campagne a passé trois jours à éviter.
+
+---
+
 ## 5. Ce que la journée établit — et ce qu'elle ne dit pas
 
 ### Établi (mesures directes, banc déterministe δ_A/A = 0)
@@ -1538,6 +1596,7 @@ montré ce que vaut un résultat de banc qui ne survit pas au cursus complet (+2
 | Et `tete_motrice` reçoit | **×2,37** de gradient (0,1998 → 0,4739) |
 | Piste B (masquage causal) | 🔴 réfutée — le masque **concentre** (le retirer divise le gradient par **2,5**) |
 | Detach asymétrique (AB3) | 🟡 mi-figue — alignement **+25 %**, saturation levée, mais chute au jour 9 |
+| La ligne de base explique-t-elle la chute ? | 🟡 **indécis** — r = −0,391 (NS), variance des avantages +5,8 % seulement |
 | Mais le clip ne cause PAS le déséquilibre | il divise tout par le même facteur (~2,3) |
 | C2 pèse | **0,110 %** de 384 808 params |
 | C2 croît en N, le tronc en N² | rapport **×312** à 16 dims |
