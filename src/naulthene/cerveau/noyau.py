@@ -1394,7 +1394,11 @@ class AGI_Naulthene(nn.Module):
             logits_finaux = logits_finaux.clone()
             logits_finaux[..., ACTION_DEMANDER] = float("-inf")
 
-        valeur_etat_courant = self.cortex_prefrontal(pensee_bio)
+        # v41.32 — detach asymétrique : C2 lit le corps sans le sculpter (voir
+        # DETACH_C2_ASYMETRIQUE). `pensee_bio` reste identique en VALEUR — seul le
+        # chemin de gradient change, donc le comportement du tick est inchangé.
+        _bio_pour_c2 = pensee_bio.detach() if DETACH_C2_ASYMETRIQUE else pensee_bio
+        valeur_etat_courant = self.cortex_prefrontal(_bio_pour_c2)
         # La BOUCHE (v22.0) : produit ses paramètres vocaux à CHAQUE pensée, comme la
         # tête motrice produit ses logits d'action — l'agent peut bouger ET vocaliser
         # simultanément (décision utilisateur), même quand aucune leçon n'est active
@@ -5284,6 +5288,29 @@ GRADIENT_CAUSAL_ACTIF = True        # False = `.mean()` d'avant v41.31 (`--gradi
 # AVANTAGES qu'il fournit à l'acteur se dégradent. Ce bras mesure l'ALIGNEMENT du
 # gradient, JAMAIS la performance — un score qui baisse ici ne prouve rien.
 GRADIENT_C2_ACTIF = True
+
+# v41.32 — LE `.detach()` ASYMÉTRIQUE : C2 LIT LE CORPS, IL NE LE SCULPTE PLUS.
+#
+# Mesuré le 26/08 : couper entièrement le gradient de C2 fait passer l'alignement de
+# `tete_motrice` de 0,3428 à 0,6751 (+97 %) et son gradient de 0,1998 à 0,4739 (×2,4).
+# La collision C1/C2 dans `integrateur_bio` — la SEULE couche partagée — était donc bien
+# la source du thrashing.
+#
+# Mais couper le gradient de C2 empêche le critique d'apprendre : c'est un scalpel de
+# diagnostic, pas un correctif. Le `.detach()` asymétrique est la forme soignée :
+#
+#   - C2 LIT `pensee_bio` pour évaluer et planifier — sa fonction est intacte ;
+#   - mais il ne rétropropage plus DANS `integrateur_bio` ;
+#   - `cortex_prefrontal` continue, lui, d'apprendre normalement.
+#
+# Seul C1 sculpte donc la représentation viscérale. C'est exactement la symétrie du
+# `.detach()` déjà présent l. 1149, qui protège le tronc perceptif des deux têtes : ici on
+# protège la représentation du corps de la seule tête qui n'a pas à la façonner.
+#
+# ⚠️ CE N'EST PAS ÉQUIVALENT À `--sans-gradient-c2` : là, C2 n'apprenait plus du tout et
+# ses estimations dérivaient. Ici, il apprend toujours — il cesse seulement de déformer
+# le sol de C1. Les deux bras doivent être mesurés séparément.
+DETACH_C2_ASYMETRIQUE = False
 # v41.31-controle — bras de falsification : gradient acteur ×N SANS filtrage. 1.0 = inactif.
 # Le 2.6 n'est pas posé : c'est `T / Σm` mesuré (61,7 % de ticks stériles → 1/0,383 ≈ 2,6).
 GAIN_ACTEUR_CONTROLE = 1.0
@@ -11373,6 +11400,10 @@ if __name__ == "__main__":
     # v41.27 — témoin de l'option (b), voir MORT_COUTE_LA_JOURNEE.
     _p.add_argument("--mort-sans-cout", action="store_true",
                     help="ABLATION : mourir ne coûte plus la journée (comportement < v41.27)")
+    _p.add_argument("--detach-c2", action="store_true",
+                    help="C2 lit le corps sans le sculpter : il apprend toujours, mais ne "
+                         "rétropropage plus dans integrateur_bio (correctif candidat de la "
+                         "collision C1/C2)")
     _p.add_argument("--sans-gradient-c2", action="store_true",
                     help="ABLATION : C2 garde son forward mais ne rétropropage plus "
                          "(teste la collision C1/C2 dans integrateur_bio). Mesure "
@@ -11504,6 +11535,16 @@ if __name__ == "__main__":
         print("🔬 [ABLATION] option (b) COUPÉE — mourir ne coûte plus la journée")
         from naulthene.cerveau.noyau import MORT_COUTE_LA_JOURNEE as _v
         assert _v is False, "l'ablation n'a pas atteint le module — campagne invalide"
+
+    # v41.32 — detach asymétrique. MÊME DISCIPLINE : module NOMMÉ + assertion runtime.
+    _det_c2 = bool(_args.detach_c2)
+    globals()["DETACH_C2_ASYMETRIQUE"] = _det_c2
+    if _module_reel is not None:
+        _module_reel.DETACH_C2_ASYMETRIQUE = _det_c2
+    if _det_c2:
+        print("🔬 [VARIANTE] detach asymétrique — C2 lit le corps sans le sculpter")
+        from naulthene.cerveau.noyau import DETACH_C2_ASYMETRIQUE as _verif_det
+        assert _verif_det is True, ("le drapeau n'a pas atteint le module — campagne invalide")
 
     # v41.32 — collision C1/C2. MÊME DISCIPLINE : module NOMMÉ + assertion runtime.
     _grad_c2 = not _args.sans_gradient_c2

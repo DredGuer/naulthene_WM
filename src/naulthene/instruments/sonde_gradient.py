@@ -364,6 +364,8 @@ def main():
                    help="verrouille la carte pour TOUS les jours (ablation P17)")
     p.add_argument("--soif-figee", action="store_true",
                    help="ABLATION piste C : hydratation figée à 1.0 (un seul axe corporel)")
+    p.add_argument("--detach-c2", action="store_true",
+                   help="C2 lit le corps sans le sculpter (correctif candidat)")
     p.add_argument("--sans-gradient-c2", action="store_true",
                    help="ABLATION : C2 ne rétropropage plus (collision C1/C2)")
     p.add_argument("--gradient-non-filtre", action="store_true",
@@ -397,6 +399,11 @@ def main():
     # c'est le bug v41.4 (drapeau accepté par l'argparse mais jamais lu), qui avait rendu
     # trois bras de campagne rigoureusement identiques.
     # v41.32 — chaque ablation est écrite dans le module NOMMÉ puis VÉRIFIÉE (bug v41.4).
+    if args.detach_c2:
+        nx.DETACH_C2_ASYMETRIQUE = True
+        from naulthene.cerveau.noyau import DETACH_C2_ASYMETRIQUE as _v4
+        assert _v4 is True, "le drapeau n'a pas atteint le module — campagne invalide"
+        print("🔬 [VARIANTE] detach asymétrique — C2 lit le corps sans le sculpter")
     if args.sans_gradient_c2:
         nx.GRADIENT_C2_ACTIF = False
         from naulthene.cerveau.noyau import GRADIENT_C2_ACTIF as _v2

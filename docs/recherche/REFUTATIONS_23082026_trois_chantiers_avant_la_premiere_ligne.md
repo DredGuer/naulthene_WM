@@ -1333,6 +1333,168 @@ mesure.
 
 ---
 
+## 4quindecies. 🟢 LE THRASHING EST EXPLIQUÉ — la collision C1/C2 dans `integrateur_bio`
+
+### L'ablation
+
+`--sans-gradient-c2` : `valeurs_tensor` est détaché avant la perte critique. Le **forward de
+C2 reste intact** — il produit ses valeurs, pèse dans l'arbitrage, fournit les avantages.
+Seule sa **rétropropagation** cesse. C'est ce qui isole la *collision* de l'*utilité*.
+
+Écrit dans le module nommé puis relu par assertion ; sortie confirmée
+`🔬 [ABLATION] gradient de C2 COUPÉ — forward intact`.
+
+### 🟢 Le résultat — l'alignement DOUBLE
+
+| BRAS | alignement final | écart vs témoin |
+|---|---|---|
+| Témoin (cursus libre) | 0,3428 | — |
+| Piste A — carte verrouillée | 0,2630 | −0,0798 |
+| Piste C — soif figée | 0,3389 | −0,0039 |
+| **AB1 — gradient de C2 coupé** | **0,6751** | **+0,3323** |
+| *repère marche aléatoire* | *0,2887* | |
+
+**+97 %.** L'effet est **4,2×** celui de la piste A et **85×** celui de la piste C.
+
+### La trajectoire s'inverse
+
+| | jour 1 | 2 | 6 | 8 | 12 |
+|---|---|---|---|---|---|
+| Témoin | 1,00 | 0,79 | 0,71 | 0,40 | **0,34** |
+| **AB1** | 1,00 | 0,53 | 0,75 | 0,76 | **0,68** |
+
+Le témoin **décroît vers le hasard** ; AB1 **monte et se stabilise**.
+
+### Et la saturation disparaît
+
+| | `‖Σg‖` final |
+|---|---|
+| Témoin | **0,8219** (plafonne dès le jour 6) |
+| AB1 | **3,8388** — **×4,7**, croissance continue |
+
+### ⚠️ Le confondant, écarté
+
+Couper le gradient de C2 le retire du total — cela pourrait mécaniquement gonfler
+l'alignement. **Ce n'est pas le cas** : l'alignement est mesuré sur `tete_motrice` **seule**,
+et `cortex_prefrontal` n'entrait pas dans son calcul.
+
+Mieux, le gradient de `tete_motrice` **augmente** :
+
+| | gradient moyen sur `tete_motrice` |
+|---|---|
+| Témoin | 0,1998 |
+| **AB1** | **0,4739** — **×2,37** |
+
+**Plus de signal ET mieux orienté.**
+
+### Le mécanisme
+
+C1 et C2 se disputaient `integrateur_bio` — la **seule** couche partagée (6,127 contre
+4,907), dont la sortie est **l'entrée de `tete_motrice`**. Quand C2 tirait la représentation
+bio dans sa direction, C1 devait réapprendre sur un **sol mouvant**. Le sol cesse de bouger,
+C1 construit enfin une direction stable.
+
+> **Le thrashing n'était ni le monde, ni les organes, ni le clipping. C'était le critique qui
+> déformait, chaque nuit, la représentation sur laquelle la politique s'appuyait.**
+
+### ⚠️ Ce que cela ne dit PAS
+
+- **Ce n'est PAS un correctif à appliquer.** Couper le gradient de C2 **empêche le critique
+  d'apprendre** : ses estimations dérivent, donc les avantages qu'il fournit à l'acteur se
+  dégradent. Ce bras mesure l'**alignement**, jamais la performance. Un agent au gradient
+  parfaitement aligné vers une mauvaise direction n'apprend rien de bon.
+- **La vraie question devient : comment faire cohabiter C1 et C2 sans collision ?** Deux
+  pistes classiques, aucune mesurée — une couche bio **par tête** (coûteuse, mais supprime le
+  partage), ou un `.detach()` côté C2 seulement (C2 lirait la représentation sans la
+  déformer, symétrique du `.detach()` déjà présent l. 1149 pour le tronc).
+- **Une seule graine, 12 jours.** L'effet est énorme (+97 %) et sa direction sans ambiguïté,
+  mais il faut n ≥ 20 pour en faire une mesure.
+- **Piste B (masquage causal) en cours** — son résultat peut être additif ou redondant.
+
+---
+
+## 4sedecies. La matrice complète des ablations du thrashing (26/08/2026)
+
+| BRAS | alignement | `‖Σg‖` final | grad/jour sur `tete_motrice` |
+|---|---|---|---|
+| **Témoin** | 0,3428 | 0,8219 | 0,1998 |
+| A — carte verrouillée | 0,2630 | 0,8329 | — |
+| C — soif figée | 0,3389 | 0,8201 | — |
+| **AB1 — gradient C2 coupé** | **0,6751** | **3,8388** | **0,4739** |
+| AB2 — sans masquage causal | 0,5879 | **0,5571** | **0,0790** |
+| AB3 — detach asymétrique | 0,4298 | 1,8674 | 0,3621 |
+
+### AB2 — piste B réfutée : le masquage CONCENTRE, il ne perturbe pas
+
+L'alignement monte (+71 %) **mais le gradient s'effondre** : 0,1998 → **0,0790**, soit
+**÷2,5**. Et `‖Σg‖` **baisse** (0,82 → 0,56).
+
+**L'alignement monte parce qu'il reste moins de signal à contredire.** C'est l'alignement de
+l'inertie, pas de l'apprentissage.
+
+🟢 **Le code l'avait prédit** (commentaire v41.31) : *« un `.mean()` naïf laisserait `T` au
+dénominateur : à 61,7 % de masquage, le gradient des gestes UTILES serait divisé par ~2,6 »*.
+**Mesuré : ÷2,5.** Le masquage causal est une mécanique de **concentration**, pas une source
+de chaos. Piste B close.
+
+### AB3 — le detach asymétrique : à moitié concluant
+
+✅ **La garde est passée** : `cortex_prefrontal` reçoit **0,638/jour** (min 0,294, max 0,945).
+Le drapeau a bien pris, et ce n'est **pas** AB1 déguisé — C2 apprend toujours.
+
+| | résultat |
+|---|---|
+| alignement | 0,3428 → **0,4298** (+25 %, contre +97 % pour AB1) |
+| `‖Σg‖` final | 0,8219 → **1,8674** (×2,3 — **la saturation disparaît**) |
+| gradient/jour | 0,1998 → **0,3621** (×1,8) |
+
+**Mais la trajectoire s'effondre en fin de run :**
+
+| jours | alignement |
+|---|---|
+| 1 → 8 | 1,000 → 0,723 (**supérieur à AB1** sur cette portion) |
+| 9 → 12 | 0,520 → **0,430** (chute brutale) |
+
+### 🔴 Mon explication de cette chute était FAUSSE
+
+J'ai supposé que le detach était **incomplet** : C2 lit `pensee_bio` à deux endroits
+(l. 1397 pour la valeur courante, l. 1204 pour le rollout), et je n'avais couvert que le
+premier. Le rollout rappelle `integrateur_bio` à chaque saut d'horizon (l. 1058) — la
+collision aurait donc persisté par ce second chemin.
+
+**Réfuté par le code et par la mesure** : `simuler_futur_et_planifier` porte
+**`@torch.no_grad()`** (l. 971). Le rollout ne rétropropage **rien**. Preuve empirique —
+`valeurs_simulees.sum().backward()` lève :
+
+```
+RuntimeError: element 0 of tensors does not require grad and does not have a grad_fn
+```
+
+**Le second chemin n'existe pas. Mon detach couvrait bien tout le gradient de C2 vers
+`integrateur_bio`.**
+
+### Ce qui reste pour expliquer la chute — non mesuré
+
+La différence entre AB1 et AB3 n'est **pas** le chemin des poids partagés (identique dans les
+deux) mais le fait que **C2 continue d'apprendre** en AB3. Or un C2 qui apprend **change ses
+valeurs**, donc **change les avantages** `A = R − V`, donc **change le gradient de l'acteur**.
+
+**Ce couplage passe par la récompense, pas par les poids.** Il subsiste dans AB3 et disparaît
+dans AB1 — ce qui explique pourquoi AB1 obtient un alignement supérieur *sans être un
+correctif viable* (sa ligne de base dérive, donc la variance des avantages explose).
+
+⚠️ **Hypothèse, pas mesure.** Elle se testerait en lisant la variance des avantages jour par
+jour dans les deux bras.
+
+### ⚠️ Portée
+
+**Une seule graine, 12 jours, sur banc de sonde — pas sur le cursus.** Même excellent, AB3
+devrait passer une campagne appariée à **n ≥ 20** avant d'être revendiqué : la v41.31 a
+montré ce que vaut un résultat de banc qui ne survit pas au cursus complet (+2,57 pt au banc,
++0,05 sur 20 graines).
+
+---
+
 ## 5. Ce que la journée établit — et ce qu'elle ne dit pas
 
 ### Établi (mesures directes, banc déterministe δ_A/A = 0)
@@ -1372,6 +1534,10 @@ mesure.
 | C2 reçoit | **2,02×** le gradient de `tete_motrice`, pour **0,0 pt** d'effet mesuré |
 | 🔴 La politique n'atteint JAMAIS la vue | **0,000000** exact — `.detach()` non documenté (l. 1149) |
 | C1 et C2 ne partagent QUE | `integrateur_bio` (6,127 et 4,907) |
+| 🟢 **Couper le gradient de C2** | alignement **0,3428 → 0,6751** (**+97 %**) |
+| Et `tete_motrice` reçoit | **×2,37** de gradient (0,1998 → 0,4739) |
+| Piste B (masquage causal) | 🔴 réfutée — le masque **concentre** (le retirer divise le gradient par **2,5**) |
+| Detach asymétrique (AB3) | 🟡 mi-figue — alignement **+25 %**, saturation levée, mais chute au jour 9 |
 | Mais le clip ne cause PAS le déséquilibre | il divise tout par le même facteur (~2,3) |
 | C2 pèse | **0,110 %** de 384 808 params |
 | C2 croît en N, le tronc en N² | rapport **×312** à 16 dims |
