@@ -4,6 +4,75 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.33-resultats] - 2026-08-27 — L'agnosie est levée. Le crédit ne suit pas.
+
+### Douzième réfutation : le mécanisme marche exactement comme prévu, et ne sert à rien
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | docs (résultats de campagne) |
+| **Impact** | Fonctionnel (réfutation) |
+
+**40 runs terminés** — 20 graines appariées × 400 jours × 2 bras, banc forcé
+`MiniGrid-DoorKey-6x6-v0`. Bras A = bit actif, bras B = `--sans-portage`.
+**10 métriques testées ⇒ seuil Bonferroni `t ≈ 3,53`** (df = 19).
+
+**[1] L'agnosie proprioceptive EST levée — effet fort.**
+
+| | valeur |
+|---|---|
+| d de Cohen `V(porte)` vs `V(vide)`, **bras A** | **+1,4275** |
+| d de Cohen, bras B (témoin) | **−0,0121** |
+| δ | +1,4397 · IC95 ±0,8045 · `t` = **3,51** · **18/20 graines** |
+
+Le témoin à −0,012 reproduit exactement l'agnosie mesurée sur les cerveaux v41.32
+(+0,119 / −0,117 / +0,090) : l'ablation est validée. Le bras nominal atteint un effet
+**fort** au sens de Cohen (>0,8), 5 graines dépassant +2,0 (g122 : +6,90).
+⚠️ `t = 3,51` **manque Bonferroni de 0,02** — nominalement significatif (p < 0,003), pas
+après correction. L'écart de **118×** et le 18/20 rendent la conclusion robuste
+indépendamment du `t`.
+
+**[2] Mais le crédit ne se contraste pas — effet nul.**
+
+| | valeur |
+|---|---|
+| Ratio \|A\| utile / \|A\| neutre, bras A | **1,1844** |
+| Ratio, bras B | 1,1081 |
+| δ | +0,0763 · `t` = **1,97** · 11/20 |
+
+**+6,9 %**, sous le seuil de 25 % de la sonde et loin de Bonferroni. Saisir une clé
+rapporte toujours, à ~18 % près, ce que rapporte un quart de tour sur place.
+
+**[3] Comportement — rien ne bouge**, et toutes les tendances non nulles vont *contre* le
+bit : saisie +1,82 (`t = +1,54`), récolte +0,60 (`t = +1,62`), énergie +0,010
+(`t = +1,43`), maîtrise +0,49 (`t = +0,75`).
+
+**CE QUE ÇA ÉTABLIT.** La chaîne causale est vraie sur son premier maillon — « une
+variable absente de l'entrée ne peut pas être apprise » — et **casse sur le second** : un
+critique qui voit mieux ne produit pas un avantage plus contrasté.
+
+**Hypothèse non mesurée** sur la rupture : l'avantage utilisé par l'acteur est
+`returns − V(s)`, où `returns` est **normalisé sur la journée**. Une saisie n'y apparaît
+que si elle change la récompense environnementale, ce que MiniGrid ne fait qu'à la sortie.
+Le critique sait ; l'acteur ne l'apprend pas. À mesurer, jamais à présenter comme acquis.
+
+⚠️ **Banc forcé** : prouve que la mécanique agit là où elle s'applique, jamais qu'elle ne
+nuit pas ailleurs (règle §4). Le passage en cursus complet serait requis **si** un effet
+avait été trouvé — ce n'est pas le cas.
+
+⚠️ **Le code du bit reste en place** : il lève une cécité réelle et documentée, ne coûte
+qu'une dimension, et son absence d'effet est un *résultat*, pas un défaut. Le retirer
+effacerait la mesure.
+
+| Fichier ajouté | Contenu |
+|-----------------|------------|
+| `brains/27082026_v4133_portage_banc/RESULTATS.md` | tableaux complets, détail par graine |
+| `…/credit_final.json`, `…/comportement.json` | agrégats bruts, à côté des sources (règle §7) |
+| `…/credit_campagne.py`, `…/comport.py` | scripts d'extraction |
+
+---
+
 ## [v41.33-licence] - 2026-08-27 — Passage à l'AGPL-3.0-or-later
 
 ### Protéger contre une utilisation non consentie, sans fermer le code

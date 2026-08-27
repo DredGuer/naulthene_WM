@@ -192,7 +192,7 @@ Two caveats, both measurable rather than rhetorical:
 | **Why it plateaus at level 4** | **Not cognitive — metabolic.** `mastery ~ mean energy`: **r = +0.710**, `t = +2.85` (SIG, n=10). Three **posed constants** calibrate the metabolic rhythm for a *newborn* agent: the code assumes **4 episodes/day**, the agent plays **1.55**, and the gap **widens** over the run (×1.68 → ×2.58). **9 seeds out of 10 sit at the exact `PATIENCE_MAX = 350` ceiling** |
 | **v41.31 — the causal gradient** | Masking the actor's gradient on non-transitions gave mastery **+2.57 pts** (`t = +2.68`) on a **forced** `SimpleCrossing` bench, n=20. 🔴 **It does not survive the full curriculum.** 20 paired seeds × 1500 days, free curriculum (40 runs): level **+0.05 (`t = +0.37`)**, mastery **+1.09 (`t = +0.39`)**, energy **+0.001 (`t = +0.07`)** — all NS, and **0 of 40 runs pass level 5**. A forced bench proves a mechanic works *where it applies*, never that it helps elsewhere |
 | **v41.32 — asymmetric detach (AB3)** | Cutting C2's gradient into the shared trunk cleans the gradient (+25 % alignment on the bench) and **changes nothing**: 20 paired seeds × 1440 days, level **−0.10 (`t = −0.70`)**, mastery **−6.09 (`t = −1.93`)**. The one significant metric (C2/C1 ratio, `t = +3.82`) is a **tautology** — decomposition shows C1's amplitude *falling* 27 % (`t = −3.57`) while C2 does not move (`t = +1.70`, NS). **Tenth refutation** |
-| **v41.33 — proprioceptive agnosia** | The critic separates *object ahead* from *wall ahead* very well (Cohen's **d = +0.65 to +1.21**, 3 brains) but **cannot tell it is carrying something** (d = **+0.12 / −0.12 / +0.09**, sign unstable). Cause: of the 41 bio dimensions, **zero** encoded the inventory (max gap 0.00001). This fully explains the flat advantage on useful gestures (`\|A\| useful / \|A\| neutral` = **0.86× to 1.11×**). A **carry bit** was added in queue; **under measurement** |
+| **v41.33 — the carry bit** | The critic separates *object ahead* from *wall ahead* very well (Cohen's **d = +0.65 to +1.21**) but **could not tell it was carrying something** (d ≈ **0.1**, sign unstable) — of the 41 bio dimensions, **zero** encoded the inventory. Adding a 42nd dimension **lifts the blindness**: d goes **−0.012 → +1.428**, 18/20 seeds, 40 runs. 🔴 **And it changes nothing.** The credit stays flat (`\|A\| useful / \|A\| neutral` **1.11× → 1.18×**, `t = +1.97`, NS) and no behavioural metric moves. **Twelfth refutation** |
 | Levers that did work | **3 — two properties of the world, one of the decision** |
 
 > 🔴 **The gradient was not the cause — nine refutations, then a twist (26-27 Aug 2026).**
@@ -207,6 +207,18 @@ Two caveats, both measurable rather than rhetorical:
 > (0.033868). No amount of incentive can sculpt what the agent learns to see. And the *credit*
 > is flat where it should peak: a useful grab earns, within ±13 %, what a quarter-turn on the
 > spot earns.
+>
+> 🔴 **And giving the agent the missing information was not enough either (27 Aug 2026).**
+> The critic was found blind to its own hands: of 41 bio dimensions, **zero** encoded whether
+> it was carrying anything. Adding one dimension **fixes exactly that** — Cohen's d goes from
+> −0.012 (control) to **+1.428**, on 18 of 20 paired seeds, 40 runs. The chain's first link
+> held: a variable absent from the input cannot be learned.
+> **The second link does not.** A critic that sees better does not produce a sharper advantage:
+> the useful-gesture credit moves 1.11× → **1.18×** (`t = +1.97`, NS against a Bonferroni
+> threshold of 3.53 over 10 metrics), and every behavioural metric stays put — with the
+> non-zero trends running *against* the bit. **Twelfth refutation.** The bit stays in the code:
+> it lifts a real, measured blindness for one dimension, and its null effect is a result, not
+> a defect.
 >
 > ⚠️ **One campaign had to be killed mid-flight.** The carry bit was validated on `DoorKey-6x6`
 > (a level-9 environment) then launched on the full curriculum, where the agent plateaus at

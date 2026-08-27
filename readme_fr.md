@@ -157,7 +157,7 @@ Deux nuances, mesurées et non rhétoriques :
 | **Pourquoi ça plafonne au niveau 4** | **Pas cognitif — métabolique.** `maîtrise ~ énergie moyenne` : **r = +0,710**, `t = +2,85` (SIG, n=10). Trois **constantes posées** calibrent le rythme métabolique sur un agent *neuf* : le code suppose **4 épisodes/jour**, l'agent en joue **1,55**, et l'écart **se creuse** au fil du run (×1,68 → ×2,58). **9 graines sur 10 sont au plafond exact `PATIENCE_MAX = 350`** |
 | **v41.31 — le gradient causal** | Masquer le gradient de l'acteur sur les non-transitions donnait maîtrise **+2,57 pts** (`t = +2,68`) sur banc **forcé** `SimpleCrossing`, n=20. 🔴 **Il ne survit PAS au cursus complet.** 20 graines appariées × 1500 jours, cursus libre (40 runs) : niveau **+0,05 (`t = +0,37`)**, maîtrise **+1,09 (`t = +0,39`)**, énergie **+0,001 (`t = +0,07`)** — tout NS, et **0 run sur 40 ne dépasse le niveau 5**. Un banc forcé prouve qu'une mécanique marche *là où elle s'applique*, jamais qu'elle aide ailleurs |
 | **v41.32 — le detach asymétrique (AB3)** | Couper le gradient de C2 dans le tronc partagé assainit le gradient (+25 % d'alignement au banc) et **ne change rien** : 20 graines appariées × 1440 jours, niveau **−0,10 (`t = −0,70`)**, maîtrise **−6,09 (`t = −1,93`)**. La seule métrique significative (ratio C2/C1, `t = +3,82`) est une **tautologie** — la décomposition montre l'amplitude de C1 qui *chute* de 27 % (`t = −3,57`) alors que C2 ne bouge pas (`t = +1,70`, NS). **Dixième réfutation** |
-| **v41.33 — l'agnosie proprioceptive** | Le critique sépare très bien *objet en face* de *mur en face* (d de Cohen **+0,65 à +1,21**, 3 cerveaux) mais **ne sait pas qu'il porte quelque chose** (d = **+0,12 / −0,12 / +0,09**, signe instable). Cause : des 41 dims du vecteur bio, **zéro** n'encodait l'inventaire (écart max 0,00001). Cela explique entièrement l'avantage plat sur les gestes utiles (`\|A\| utile / \|A\| neutre` = **0,86× à 1,11×**). Un **bit de portage** a été ajouté en queue ; **en cours de mesure** |
+| **v41.33 — le bit de portage** | Le critique sépare très bien *objet en face* de *mur en face* (d de Cohen **+0,65 à +1,21**) mais **ne savait pas qu'il portait quelque chose** (d ≈ **0,1**, signe instable) — des 41 dims du vecteur bio, **zéro** n'encodait l'inventaire. Ajouter une 42ᵉ dimension **lève la cécité** : d passe de **−0,012 à +1,428**, 18/20 graines, 40 runs. 🔴 **Et ça ne change rien.** Le crédit reste plat (`\|A\| utile / \|A\| neutre` **1,11× → 1,18×**, `t = +1,97`, NS) et aucune métrique comportementale ne bouge. **Douzième réfutation** |
 | Leviers qui ont marché | **3 — deux propriétés du monde, une de la décision** |
 
 > 🔴 **Le gradient n'était pas la cause — neuf réfutations, puis un retournement (26-27/08/2026).**
@@ -173,6 +173,19 @@ Deux nuances, mesurées et non rhétoriques :
 > JEPA sculpte la perception** (0,033868). Aucune incitation ne peut façonner ce que l'agent
 > apprend à voir. Et le *crédit* est plat là où il devrait culminer : une saisie utile
 > rapporte, à ±13 % près, ce que rapporte un quart de tour sur place.
+>
+> 🔴 **Et donner l'information manquante à l'agent n'a pas suffi non plus (27/08/2026).**
+> Le critique était aveugle à ses propres mains : des 41 dims du vecteur bio, **zéro**
+> n'encodait s'il portait quelque chose. Ajouter une dimension **corrige exactement cela** —
+> le d de Cohen passe de −0,012 (témoin) à **+1,428**, sur 18 graines appariées sur 20,
+> 40 runs. Le premier maillon de la chaîne tenait : une variable absente de l'entrée ne peut
+> pas être apprise.
+> **Le second, non.** Un critique qui voit mieux ne produit pas un avantage plus contrasté :
+> le crédit des gestes utiles passe de 1,11× à **1,18×** (`t = +1,97`, NS contre un seuil de
+> Bonferroni de 3,53 sur 10 métriques), et aucune métrique comportementale ne bouge — les
+> tendances non nulles allant même *contre* le bit. **Douzième réfutation.** Le bit reste dans
+> le code : il lève une cécité réelle et mesurée pour une seule dimension, et son effet nul
+> est un résultat, pas un défaut.
 >
 > ⚠️ **Une campagne a dû être tuée en vol.** Le bit de portage avait été validé sur
 > `DoorKey-6x6` (un environnement du niveau 9) puis lancé sur le cursus complet, où l'agent
