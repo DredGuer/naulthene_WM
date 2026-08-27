@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Adrien Nault — Naulthène AGI
 """
 Le Contrôle de Connaissances (expérimental) — mesure de rétention par niveau.
 

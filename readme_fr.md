@@ -7,7 +7,7 @@ La vue, l'ouïe, le toucher, l'odorat, le goût, le contrôle moteur, un modèle
 épisodique et la parole lisent et écrivent tous dans **un seul bus latent**. Ajouter un sens, c'est
 ajouter des dimensions à un vecteur — pas greffer un sous-système.
 
-**55 552 paramètres à la naissance. 0,21 Mo.** Un seul `nn.Module`, douze couches, mille trois
+**55 616 paramètres à la naissance. 0,21 Mo.** Un seul `nn.Module`, douze couches, mille trois
 cents jours simulés de vie continue. ⚠️ **Ce chiffre est celui d'un cerveau NEUF** : la
 neurogenèse le fait grossir en cours de vie, et un cerveau à 1500 jours pèse en moyenne
 **1 241 790 paramètres — 22,4×** (mesuré sur 35 cerveaux, voir plus bas).
@@ -67,7 +67,7 @@ datacenter.*
 | `porte_auditive` (130 → 64) | 8 320 |
 | `hippocampe` (128 → 64) | 8 192 |
 | `fusion_memoire` (128 → 64) | 8 192 |
-| `integrateur_bio` (105 → 64) — 5 sens + homéostasie | 6 720 |
+| `integrateur_bio` (106 → 64) — 5 sens + homéostasie + proprioception | 6 784 |
 | `generateur_attente` (72 → 64) — modèle du monde JEPA | 4 608 |
 | `generateur_attente_audio` (72 → 64) | 4 608 |
 | `analyseur` (64 → 64) | 4 096 |
@@ -75,15 +75,16 @@ datacenter.*
 | `tete_vocale` (64 → 8) | 512 |
 | `tete_requete` (64 → 5) — routage C3 | 320 |
 | `cortex_prefrontal` (64 → 1) — C2 | 64 |
-| **Total** | **55 552** (0,21 Mo en fp32) |
+| **Total** | **55 616** (0,212 Mo en fp32) |
 
-> ⚠️ **Corrigé le 21/08/2026.** Ce tableau annonçait **55 232** avec `integrateur_bio` à
-> 100→64. La thermoception (v41.11) avait fait passer le vecteur bio de 36 à **41** dimensions,
-> donc la couche est **105→64** et le total **+320**. Le compte n'avait pas été refait depuis.
-> Recompté par `sum(p.numel() for p in agent.parameters())`, jamais estimé. Démontage complet :
+> ⚠️ **Recompté le 27/08/2026.** La v41.33 ajoute un **bit proprioceptif** (l'agent porte-t-il
+> quelque chose ?) en queue du vecteur bio, qui passe de 41 à **42** dimensions : la couche est
+> donc **106→64** et le total **55 616**. Mesuré par
+> `sum(p.numel() for p in agent.parameters())`, jamais estimé — la même discipline qui avait
+> déjà rattrapé le **55 232** périmé de deux versions. Démontage complet :
 > [anatomie du noyau](docs/etat_des_lieux/21082026_anatomie_du_noyau.md).
 >
-> **Ce que la répartition révèle** : **C2 — la délibération — pèse 64 paramètres sur 55 552,
+> **Ce que la répartition révèle** : **C2 — la délibération — pèse 64 paramètres sur 55 616,
 > soit 0,1 % du cerveau.** Toute la délibération tient dans une projection 64→1. À rapprocher
 > du résultat d'ablation (« couper C2 ne change le score de 0,0 point ») : ce n'est peut-être
 > pas que C2 soit inutile, c'est qu'il est *minuscule*. À l'inverse, l'hémisphère audio pèse
@@ -155,7 +156,32 @@ Deux nuances, mesurées et non rhétoriques :
 | Effet d'agrandir le cerveau (96 → 160 → 512 dims) | **aucun** sur 3 campagnes — et l'énergie chute ×11 |
 | **Pourquoi ça plafonne au niveau 4** | **Pas cognitif — métabolique.** `maîtrise ~ énergie moyenne` : **r = +0,710**, `t = +2,85` (SIG, n=10). Trois **constantes posées** calibrent le rythme métabolique sur un agent *neuf* : le code suppose **4 épisodes/jour**, l'agent en joue **1,55**, et l'écart **se creuse** au fil du run (×1,68 → ×2,58). **9 graines sur 10 sont au plafond exact `PATIENCE_MAX = 350`** |
 | **v41.31 — le gradient causal** | Masquer le gradient de l'acteur sur les non-transitions donnait maîtrise **+2,57 pts** (`t = +2,68`) sur banc **forcé** `SimpleCrossing`, n=20. 🔴 **Il ne survit PAS au cursus complet.** 20 graines appariées × 1500 jours, cursus libre (40 runs) : niveau **+0,05 (`t = +0,37`)**, maîtrise **+1,09 (`t = +0,39`)**, énergie **+0,001 (`t = +0,07`)** — tout NS, et **0 run sur 40 ne dépasse le niveau 5**. Un banc forcé prouve qu'une mécanique marche *là où elle s'applique*, jamais qu'elle aide ailleurs |
+| **v41.32 — le detach asymétrique (AB3)** | Couper le gradient de C2 dans le tronc partagé assainit le gradient (+25 % d'alignement au banc) et **ne change rien** : 20 graines appariées × 1440 jours, niveau **−0,10 (`t = −0,70`)**, maîtrise **−6,09 (`t = −1,93`)**. La seule métrique significative (ratio C2/C1, `t = +3,82`) est une **tautologie** — la décomposition montre l'amplitude de C1 qui *chute* de 27 % (`t = −3,57`) alors que C2 ne bouge pas (`t = +1,70`, NS). **Dixième réfutation** |
+| **v41.33 — l'agnosie proprioceptive** | Le critique sépare très bien *objet en face* de *mur en face* (d de Cohen **+0,65 à +1,21**, 3 cerveaux) mais **ne sait pas qu'il porte quelque chose** (d = **+0,12 / −0,12 / +0,09**, signe instable). Cause : des 41 dims du vecteur bio, **zéro** n'encodait l'inventaire (écart max 0,00001). Cela explique entièrement l'avantage plat sur les gestes utiles (`\|A\| utile / \|A\| neutre` = **0,86× à 1,11×**). Un **bit de portage** a été ajouté en queue ; **en cours de mesure** |
 | Leviers qui ont marché | **3 — deux propriétés du monde, une de la décision** |
+
+> 🔴 **Le gradient n'était pas la cause — neuf réfutations, puis un retournement (26-27/08/2026).**
+> Une semaine de diagnostic du gradient a convergé sur le *thrashing* : les gradients
+> journaliers de l'acteur s'annulent (alignement 0,3966 contre 0,3536 pour une marche
+> aléatoire). Couper le gradient de C2 hors du tronc partagé le répare — et la campagne en
+> cursus complet (**40 runs, tous terminés**) ne trouve **rien**. Un gradient propre qui n'a
+> rien à optimiser ne produit aucune intelligence.
+>
+> **Ce que les sondes ont ensuite trouvé est structurel.** L'acteur et le critique envoient
+> **exactement 0,000000** de gradient à `porte_visuelle`, `hippocampe`, `analyseur` et
+> `fusion_memoire` — un `.detach()` coupe le tronc perceptif des deux têtes, donc **seul le
+> JEPA sculpte la perception** (0,033868). Aucune incitation ne peut façonner ce que l'agent
+> apprend à voir. Et le *crédit* est plat là où il devrait culminer : une saisie utile
+> rapporte, à ±13 % près, ce que rapporte un quart de tour sur place.
+>
+> ⚠️ **Une campagne a dû être tuée en vol.** Le bit de portage avait été validé sur
+> `DoorKey-6x6` (un environnement du niveau 9) puis lancé sur le cursus complet, où l'agent
+> plafonne au niveau 4 — le premier objet manipulable apparaît au niveau 6. `🔑 Portage 0.0%`
+> sur 400 jours, les deux bras bit-identiques : une **ablation vide, pas négative**, le piège
+> exact que décrit le §4 des règles de mesure. 16 runs jetés, et une étape obligatoire
+> ajoutée : *vérifier que la variable indépendante varie avant de lancer*.
+> [Conditionnement](docs/recherche/CONDITIONNEMENT_27082026_le_signal_arrive_et_ne_sert_a_rien.md) ·
+> [Crédit](docs/recherche/CREDIT_27082026_l_arrosage_confirme_et_la_vue_orpheline.md)
 
 Un PPO standard résout `Empty-8x8` en quelques milliers d'épisodes. **Naulthène, non.**
 
@@ -268,7 +294,17 @@ eux-mêmes** — c'est le prix du cycle jour/nuit, et une cible d'optimisation r
 > **Agent Cognitif Autonome Hybride (RL + JEPA + Mémoire Épisodique + Bio-Homéostasie)**
 > *Un modèle d'apprentissage universel guidé par le développement cognitif, la plasticité neuro-mimétique et le libre arbitre.*
 
-**Auteur** : Adrien Nault ([@DredGuer](https://github.com/DredGuer)) — Licence [Apache 2.0](LICENSE). Toute réutilisation, redistribution, publication ou œuvre dérivée reprenant le concept ou l'architecture de ce projet (code, mécaniques, idée originale) **doit citer Adrien Nault comme auteur original de Naulthène AGI** — voir [NOTICE](NOTICE) pour l'exigence d'attribution complète.
+**Auteur** : Adrien Nault ([@DredGuer](https://github.com/DredGuer)) — Licence
+**[AGPL-3.0-or-later](LICENSE)** (repassée d'Apache 2.0 le 27/08/2026).
+
+L'AGPL garde ce travail ouvert aux pairs et aux contributeurs tout en empêchant qu'un acteur
+le reprenne pour l'enfermer dans une boîte noire propriétaire. **La section 13 est celle qui
+compte ici** : quiconque fait tourner une version modifiée de Naulthène comme service en
+réseau — une API, un agent hébergé, une démo — doit en proposer les sources aux utilisateurs
+de ce service. C'est précisément ce que l'Apache 2.0 ne couvrait pas. Toute réutilisation,
+redistribution, publication ou œuvre dérivée reprenant le concept ou l'architecture de ce
+projet (code, mécaniques, idée originale) **doit citer Adrien Nault comme auteur original de
+Naulthène AGI** — voir [NOTICE](NOTICE) pour l'exigence d'attribution complète.
 
 ---
 

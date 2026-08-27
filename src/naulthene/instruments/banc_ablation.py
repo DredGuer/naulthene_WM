@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Adrien Nault — Naulthène AGI
 """LE BANC D'ABLATION — la lobotomie contrôlée (v33.1, expérimental)
 
 Instrument de DIAGNOSTIC, pas d'entraînement. Prend un `.brain` entraîné, en fait une

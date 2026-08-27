@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Adrien Nault — Naulthène AGI
 """Plug HTTP (v28.0, expérimental) — backend générique JSON/HTTP, sans logique propre
 à un fournisseur.
 

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Adrien Nault — Naulthène AGI
 """Plug Simulé (v28.0, expérimental) — greffon déterministe pour les crash-tests.
 
 Ne fait aucun appel réseau. `preferences_fixes` (optionnel) permet de forcer un avis

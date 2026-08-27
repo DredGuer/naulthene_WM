@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Adrien Nault — Naulthène AGI
 """Plug Nul (v28.0, expérimental) — le plug par défaut, toujours indisponible.
 
 C'est le mode nominal : un `AGI_Naulthene` sans aucun plug enregistré (ou seulement

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Adrien Nault — Naulthène AGI
 """
 L'Enregistreur de Voix (v27.0, expérimental) — constitue la banque vocale de
 l'utilisateur pour l'École de la Parole & Synesthésie.

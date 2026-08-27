@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Adrien Nault — Naulthène AGI
 """Sonde de perméabilité — à quel étage l'état cesse-t-il d'influencer la décision ?
 
 Instrument de diagnostic **en lecture seule** (v41.32, Chantier 0) : charge un `.brain`,

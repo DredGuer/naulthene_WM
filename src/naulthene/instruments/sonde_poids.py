@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Adrien Nault — Naulthène AGI
 """Sonde des poids — état de santé synaptique couche par couche.
 
 Instrument de diagnostic **en lecture seule** (v37.0) : ouvre un `.brain` et affiche,

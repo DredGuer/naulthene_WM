@@ -1,0 +1,522 @@
+{
+ "11": {
+  "A": {
+   "niveau_max": 3,
+   "niveau_fin": 3,
+   "maitrise": 8.125,
+   "energie": 0.2606025,
+   "satiete": 0.436025,
+   "ratio_c2c1": 3.98355,
+   "accord": 6.037000000000001,
+   "jepa": 0.009041500000000001,
+   "recolte": 10.575,
+   "n_nuits": 400
+  },
+  "B": {
+   "niveau_max": 4,
+   "niveau_fin": 4,
+   "maitrise": 11.7,
+   "energie": 0.3047225,
+   "satiete": 0.492725,
+   "ratio_c2c1": 4.561775,
+   "accord": 4.866499999999999,
+   "jepa": 0.0191035,
+   "recolte": 10.26,
+   "n_nuits": 400
+  }
+ },
+ "22": {
+  "A": {
+   "niveau_max": 4,
+   "niveau_fin": 4,
+   "maitrise": 7.2125,
+   "energie": 0.21187,
+   "satiete": 0.50075,
+   "ratio_c2c1": 1.857325,
+   "accord": 8.3675,
+   "jepa": 0.01359275,
+   "recolte": 11.0725,
+   "n_nuits": 400
+  },
+  "B": {
+   "niveau_max": 4,
+   "niveau_fin": 4,
+   "maitrise": 17.2375,
+   "energie": 0.181595,
+   "satiete": 0.582225,
+   "ratio_c2c1": 2.735525,
+   "accord": 27.13075,
+   "jepa": 0.010627500000000002,
+   "recolte": 14.72,
+   "n_nuits": 400
+  }
+ },
+ "33": {
+  "A": {
+   "niveau_max": 4,
+   "niveau_fin": 4,
+   "maitrise": 28.5125,
+   "energie": 0.1658075,
+   "satiete": 0.5975,
+   "ratio_c2c1": 2.464825,
+   "accord": 20.82025,
+   "jepa": 0.00928325,
+   "recolte": 14.8175,
+   "n_nuits": 400
+  },
+  "B": {
+   "niveau_max": 3,
+   "niveau_fin": 3,
+   "maitrise": 4.3875,
+   "energie": 0.28227,
+   "satiete": 0.48822499999999996,
+   "ratio_c2c1": 5.03845,
+   "accord": 5.478,
+   "jepa": 0.00946375,
+   "recolte": 12.0425,
+   "n_nuits": 400
+  }
+ },
+ "44": {
+  "A": {
+   "niveau_max": 4,
+   "niveau_fin": 4,
+   "maitrise": 3.0375,
+   "energie": 0.192665,
+   "satiete": 0.5101,
+   "ratio_c2c1": 4.6960500000000005,
+   "accord": 10.0265,
+   "jepa": 0.0086905,
+   "recolte": 12.1075,
+   "n_nuits": 400
+  },
+  "B": {
+   "niveau_max": 5,
+   "niveau_fin": 5,
+   "maitrise": 9.5625,
+   "energie": 0.2136225,
+   "satiete": 0.4543,
+   "ratio_c2c1": 3.6153250000000003,
+   "accord": 7.35,
+   "jepa": 0.0061045000000000006,
+   "recolte": 8.3375,
+   "n_nuits": 400
+  }
+ },
+ "55": {
+  "A": {
+   "niveau_max": 4,
+   "niveau_fin": 4,
+   "maitrise": 4.3125,
+   "energie": 0.25516500000000003,
+   "satiete": 0.43652500000000005,
+   "ratio_c2c1": 5.02895,
+   "accord": 2.6755,
+   "jepa": 0.00687525,
+   "recolte": 10.9025,
+   "n_nuits": 400
+  },
+  "B": {
+   "niveau_max": 4,
+   "niveau_fin": 4,
+   "maitrise": 6.025,
+   "energie": 0.360015,
+   "satiete": 0.46555,
+   "ratio_c2c1": 4.83735,
+   "accord": 22.850250000000003,
+   "jepa": 0.014480999999999999,
+   "recolte": 10.6175,
+   "n_nuits": 400
+  }
+ },
+ "66": {
+  "A": {
+   "niveau_max": 4,
+   "niveau_fin": 4,
+   "maitrise": 31.4375,
+   "energie": 0.16474,
+   "satiete": 0.506225,
+   "ratio_c2c1": 2.2572,
+   "accord": 31.613249999999997,
+   "jepa": 0.01112175,
+   "recolte": 12.52,
+   "n_nuits": 400
+  },
+  "B": {
+   "niveau_max": 5,
+   "niveau_fin": 5,
+   "maitrise": 5.325,
+   "energie": 0.19797499999999998,
+   "satiete": 0.436775,
+   "ratio_c2c1": 4.50735,
+   "accord": 7.095750000000001,
+   "jepa": 0.006563,
+   "recolte": 7.885,
+   "n_nuits": 400
+  }
+ },
+ "77": {
+  "A": {
+   "niveau_max": 4,
+   "niveau_fin": 4,
+   "maitrise": 9.575,
+   "energie": 0.2603175,
+   "satiete": 0.541825,
+   "ratio_c2c1": 2.4791749999999997,
+   "accord": 5.449,
+   "jepa": 0.00966825,
+   "recolte": 12.6725,
+   "n_nuits": 400
+  },
+  "B": {
+   "niveau_max": 4,
+   "niveau_fin": 4,
+   "maitrise": 9.4875,
+   "energie": 0.383695,
+   "satiete": 0.5158999999999999,
+   "ratio_c2c1": 3.6464749999999997,
+   "accord": 37.6675,
+   "jepa": 0.017395,
+   "recolte": 12.085,
+   "n_nuits": 400
+  }
+ },
+ "88": {
+  "A": {
+   "niveau_max": 4,
+   "niveau_fin": 4,
+   "maitrise": 6.8125,
+   "energie": 0.23841,
+   "satiete": 0.48700000000000004,
+   "ratio_c2c1": 2.4203,
+   "accord": 10.579500000000001,
+   "jepa": 0.008753,
+   "recolte": 11.1225,
+   "n_nuits": 400
+  },
+  "B": {
+   "niveau_max": 4,
+   "niveau_fin": 4,
+   "maitrise": 5.1875,
+   "energie": 0.21827249999999998,
+   "satiete": 0.48457500000000003,
+   "ratio_c2c1": 4.1939,
+   "accord": 10.55725,
+   "jepa": 0.00874575,
+   "recolte": 10.955,
+   "n_nuits": 400
+  }
+ },
+ "99": {
+  "A": {
+   "niveau_max": 4,
+   "niveau_fin": 4,
+   "maitrise": 2.525,
+   "energie": 0.2200425,
+   "satiete": 0.4549,
+   "ratio_c2c1": 2.9869,
+   "accord": 25.728,
+   "jepa": 0.009169749999999999,
+   "recolte": 10.435,
+   "n_nuits": 400
+  },
+  "B": {
+   "niveau_max": 4,
+   "niveau_fin": 4,
+   "maitrise": 6.8625,
+   "energie": 0.2027975,
+   "satiete": 0.44005000000000005,
+   "ratio_c2c1": 5.520425,
+   "accord": 3.4735,
+   "jepa": 0.013167249999999998,
+   "recolte": 9.8375,
+   "n_nuits": 400
+  }
+ },
+ "111": {
+  "A": {
+   "niveau_max": 5,
+   "niveau_fin": 5,
+   "maitrise": 22.736572890025574,
+   "energie": 0.34798250000000003,
+   "satiete": 0.53925,
+   "ratio_c2c1": 2.6645999999999996,
+   "accord": 18.91,
+   "jepa": 0.019395,
+   "recolte": 9.4,
+   "n_nuits": 400
+  },
+  "B": {
+   "niveau_max": 4,
+   "niveau_fin": 4,
+   "maitrise": 15.4,
+   "energie": 0.1985475,
+   "satiete": 0.472275,
+   "ratio_c2c1": 2.5319,
+   "accord": 12.177750000000001,
+   "jepa": 0.01536675,
+   "recolte": 10.6975,
+   "n_nuits": 400
+  }
+ },
+ "122": {
+  "A": {
+   "niveau_max": 4,
+   "niveau_fin": 4,
+   "maitrise": 21.9625,
+   "energie": 0.2199275,
+   "satiete": 0.541,
+   "ratio_c2c1": 3.554375,
+   "accord": 15.8955,
+   "jepa": 0.01662325,
+   "recolte": 13.21,
+   "n_nuits": 400
+  },
+  "B": {
+   "niveau_max": 4,
+   "niveau_fin": 4,
+   "maitrise": 18.825,
+   "energie": 0.21011749999999998,
+   "satiete": 0.5293,
+   "ratio_c2c1": 3.636025,
+   "accord": 20.578249999999997,
+   "jepa": 0.01025625,
+   "recolte": 12.355,
+   "n_nuits": 400
+  }
+ },
+ "133": {
+  "A": {
+   "niveau_max": 4,
+   "niveau_fin": 4,
+   "maitrise": 28.225,
+   "energie": 0.18491,
+   "satiete": 0.5743,
+   "ratio_c2c1": 3.152525,
+   "accord": 22.6725,
+   "jepa": 0.013216,
+   "recolte": 13.8975,
+   "n_nuits": 400
+  },
+  "B": {
+   "niveau_max": 4,
+   "niveau_fin": 4,
+   "maitrise": 8.4,
+   "energie": 0.17349250000000002,
+   "satiete": 0.5278,
+   "ratio_c2c1": 3.6801749999999998,
+   "accord": 12.5405,
+   "jepa": 0.00888125,
+   "recolte": 13.62,
+   "n_nuits": 400
+  }
+ },
+ "144": {
+  "A": {
+   "niveau_max": 5,
+   "niveau_fin": 5,
+   "maitrise": 4.7375,
+   "energie": 0.3247275,
+   "satiete": 0.49325,
+   "ratio_c2c1": 4.1190750000000005,
+   "accord": 13.548250000000001,
+   "jepa": 0.021402749999999998,
+   "recolte": 9.095,
+   "n_nuits": 400
+  },
+  "B": {
+   "niveau_max": 4,
+   "niveau_fin": 4,
+   "maitrise": 20.0625,
+   "energie": 0.200695,
+   "satiete": 0.52095,
+   "ratio_c2c1": 4.0421249999999995,
+   "accord": 16.06,
+   "jepa": 0.011366750000000002,
+   "recolte": 12.7625,
+   "n_nuits": 400
+  }
+ },
+ "155": {
+  "A": {
+   "niveau_max": 4,
+   "niveau_fin": 4,
+   "maitrise": 30.775,
+   "energie": 0.19009250000000003,
+   "satiete": 0.477925,
+   "ratio_c2c1": 1.658125,
+   "accord": 21.274,
+   "jepa": 0.013509,
+   "recolte": 11.215,
+   "n_nuits": 400
+  },
+  "B": {
+   "niveau_max": 4,
+   "niveau_fin": 4,
+   "maitrise": 2.2,
+   "energie": 0.212945,
+   "satiete": 0.43810000000000004,
+   "ratio_c2c1": 4.9849,
+   "accord": 2.8794999999999997,
+   "jepa": 0.010251999999999999,
+   "recolte": 10.1675,
+   "n_nuits": 400
+  }
+ },
+ "166": {
+  "A": {
+   "niveau_max": 4,
+   "niveau_fin": 4,
+   "maitrise": 22.725,
+   "energie": 0.21201,
+   "satiete": 0.48432499999999995,
+   "ratio_c2c1": 2.26845,
+   "accord": 21.136999999999997,
+   "jepa": 0.010915250000000001,
+   "recolte": 11.6675,
+   "n_nuits": 400
+  },
+  "B": {
+   "niveau_max": 4,
+   "niveau_fin": 4,
+   "maitrise": 3.9625,
+   "energie": 0.311835,
+   "satiete": 0.462625,
+   "ratio_c2c1": 4.570775,
+   "accord": 4.6160000000000005,
+   "jepa": 0.016312,
+   "recolte": 10.415,
+   "n_nuits": 400
+  }
+ },
+ "177": {
+  "A": {
+   "niveau_max": 4,
+   "niveau_fin": 4,
+   "maitrise": 28.8,
+   "energie": 0.18236249999999998,
+   "satiete": 0.545725,
+   "ratio_c2c1": 2.59685,
+   "accord": 18.6425,
+   "jepa": 0.0115215,
+   "recolte": 12.5625,
+   "n_nuits": 400
+  },
+  "B": {
+   "niveau_max": 4,
+   "niveau_fin": 4,
+   "maitrise": 3.725,
+   "energie": 0.33317749999999996,
+   "satiete": 0.43810000000000004,
+   "ratio_c2c1": 5.4469,
+   "accord": 9.30525,
+   "jepa": 0.0201685,
+   "recolte": 10.545,
+   "n_nuits": 400
+  }
+ },
+ "188": {
+  "A": {
+   "niveau_max": 5,
+   "niveau_fin": 5,
+   "maitrise": 10.9375,
+   "energie": 0.184855,
+   "satiete": 0.49994999999999995,
+   "ratio_c2c1": 3.5696499999999998,
+   "accord": 9.1745,
+   "jepa": 0.00625225,
+   "recolte": 8.2675,
+   "n_nuits": 400
+  },
+  "B": {
+   "niveau_max": 4,
+   "niveau_fin": 4,
+   "maitrise": 26.2875,
+   "energie": 0.170805,
+   "satiete": 0.577725,
+   "ratio_c2c1": 4.412575,
+   "accord": 14.8795,
+   "jepa": 0.008681,
+   "recolte": 13.03,
+   "n_nuits": 400
+  }
+ },
+ "199": {
+  "A": {
+   "niveau_max": 4,
+   "niveau_fin": 4,
+   "maitrise": 4.525,
+   "energie": 0.2208175,
+   "satiete": 0.446175,
+   "ratio_c2c1": 3.2992500000000002,
+   "accord": 6.09325,
+   "jepa": 0.01235225,
+   "recolte": 9.885,
+   "n_nuits": 400
+  },
+  "B": {
+   "niveau_max": 4,
+   "niveau_fin": 4,
+   "maitrise": 1.575,
+   "energie": 0.22776,
+   "satiete": 0.443625,
+   "ratio_c2c1": 3.7494,
+   "accord": 5.5015,
+   "jepa": 0.01202175,
+   "recolte": 10.4,
+   "n_nuits": 400
+  }
+ },
+ "211": {
+  "A": {
+   "niveau_max": 5,
+   "niveau_fin": 5,
+   "maitrise": 10.1125,
+   "energie": 0.1926525,
+   "satiete": 0.509125,
+   "ratio_c2c1": 4.57035,
+   "accord": 3.8825,
+   "jepa": 0.00793875,
+   "recolte": 7.575,
+   "n_nuits": 400
+  },
+  "B": {
+   "niveau_max": 4,
+   "niveau_fin": 4,
+   "maitrise": 7.0625,
+   "energie": 0.1832275,
+   "satiete": 0.48455,
+   "ratio_c2c1": 4.385425000000001,
+   "accord": 10.49825,
+   "jepa": 0.0115595,
+   "recolte": 11.96,
+   "n_nuits": 400
+  }
+ },
+ "222": {
+  "A": {
+   "niveau_max": 4,
+   "niveau_fin": 4,
+   "maitrise": 25.0875,
+   "energie": 0.2251525,
+   "satiete": 0.50125,
+   "ratio_c2c1": 4.57035,
+   "accord": 18.57525,
+   "jepa": 0.0178545,
+   "recolte": 10.6525,
+   "n_nuits": 400
+  },
+  "B": {
+   "niveau_max": 4,
+   "niveau_fin": 4,
+   "maitrise": 7.0875,
+   "energie": 0.394025,
+   "satiete": 0.5352250000000001,
+   "ratio_c2c1": 5.14765,
+   "accord": 12.6095,
+   "jepa": 0.020457,
+   "recolte": 12.04,
+   "n_nuits": 400
+  }
+ }
+}

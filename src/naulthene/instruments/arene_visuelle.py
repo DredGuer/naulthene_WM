@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Adrien Nault — Naulthène AGI
 """
 L'Arène Visuelle (V24.0, expérimental) — le rendu de la Démo Live.
 

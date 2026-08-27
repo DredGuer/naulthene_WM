@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Adrien Nault — Naulthène AGI
 #Version actuelle 29. — Variante LOCALE de test (Mac, non versionnée dans le script Colab de référence)
 # Différences avec agi_google_colab.py : détection du device MPS (Apple Silicon) et
 # jours_totaux (500) réglé pour des runs locaux plus courts que les 400 jours de Colab.
@@ -440,10 +442,48 @@ DIM_RAPPEL_MARQUANT = 2
 # se recharge en héritant d'un canal neutre à 0.
 DIM_PRESENCE_AUDITIVE = 1
 
+# --- v41.33 : LA PROPRIOCEPTION DE LA CHARGE (le « bit de portage ») ---
+#
+# 🔴 CE QUE ÇA CORRIGE (mesuré le 27/08/2026, 3 cerveaux × 6000 ticks). Le critique
+# distingue TRÈS BIEN un objet en face d'un mur (d de Cohen +0,651 à +1,214) — il n'est
+# donc pas aveugle au monde. Mais il ne distingue PAS « je porte un objet » de « j'ai les
+# mains vides » : d = +0,119 / −0,117 / +0,090, le signe s'inversant d'un cerveau à
+# l'autre. Or c'est exactement la variable dont dépend le TD-error d'une saisie : si
+# V(porte) ≈ V(mains vides), l'avantage d'une saisie ne peut PAS produire de pic, et c'est
+# ce qui a été mesuré (|A| utile / |A| neutre entre 0,86× et 1,11× sur 4 cerveaux).
+#
+# LA CAUSE N'ÉTAIT PAS UN DÉFAUT D'APPRENTISSAGE, MAIS UNE ABSENCE D'ENTRÉE. Vérifié sur
+# 4000 ticks : des 41 dims du vecteur bio, **ZÉRO** ne séparait les deux états (écart max
+# 0,00001013). L'inventaire n'était encodé nulle part. Aucune quantité de gradient ne fait
+# apprendre une variable absente de l'entrée.
+#
+# L'information existe pourtant dans la VUE (d de Cohen global 6,73 : l'objet a disparu de
+# la grille), mais elle y arrive comme un indice INDIRECT, confondu avec « un objet a été
+# déplacé quelque part ». Rien n'oblige le réseau à le lire comme « je possède ».
+#
+# ⚠️ CE N'EST PAS UNE RÉCOMPENSE EN DUR. La dimension porte une PERCEPTION, au même titre
+# que la faim ou la pression tactile : rien ne déclare qu'être chargé est bon. Le réseau
+# reste libre de l'ignorer — c'est à lui de découvrir, par la résolution ultérieure de sa
+# faim, si porter tel objet mène quelque part. Le dogme est intact.
+#
+# ⚠️ AJOUTÉE EN QUEUE, jamais au milieu (contrat append-only, invariant v29.0) : la greffe
+# `_greffer_vecteur_bio_etendu` recopie les N premières colonnes, donc un `.brain` à 41
+# dims se recharge en héritant d'un canal neutre à 0.
+#
+# Le neutre est **0.0**, et ici c'est JUSTE (contrairement à la clinotaxie v32.0 ou au
+# rappel marquant v36.0, dont le 0.0 signifierait « pire cas ») : 0.0 veut dire « je ne
+# porte rien », ce qui est exactement l'information à porter, pas une inconnue.
+DIM_PORTAGE = 1
+
+# Interrupteur d'ablation (v41.33). False = la 42ᵉ dim existe toujours mais reste à 0.0 :
+# le témoin conserve la LARGEUR du réseau et ne coupe que l'INFORMATION.
+PORTAGE_PERCU_ACTIF = True
+
 DIM_VECTEUR_BIO = (16 + DIM_TOUCHER + DIM_CHIMIE + DIM_EXO
                    + DIM_ODORAT_DELTA + DIM_THERMOCEPTION + DIM_PRESSION
                    + DIM_RAPPEL_MARQUANT
-                   + DIM_PRESENCE_AUDITIVE)  # = 41 depuis la v41.12
+                   + DIM_PRESENCE_AUDITIVE
+                   + DIM_PORTAGE)  # = 42 depuis la v41.33
                        # 3 jauges (satiete, hydratation, stimulation) + 3 quête (target_vector one-hot)
                        # + 2 rappel spatial (v20.0 : distance normalisée + fraîcheur du souvenir)
                        # + 8 quête vocale (v22.1 : formants cibles de la leçon en cours, ou [0]*8
@@ -3515,7 +3555,7 @@ class BiologicalHomeostasisEngine:
 
     def obtenir_vecteur_bio(self, rappel_spatial=None, cible_vocale=None,
                              signaux_sensoriels=None, rappel_marquant=None,
-                             presence_auditive=None):
+                             presence_auditive=None, portage=None):
         """Retourne le vecteur de `DIM_VECTEUR_BIO` dims — la constante fait foi, ce
         commentaire ne la répète PAS (v39-fix R2 : la valeur « 34 » écrite ici en dur
         était périmée depuis deux versions, et c'est ce genre d'écart qui a produit le
@@ -3598,9 +3638,16 @@ class BiologicalHomeostasisEngine:
         vecteur_presence = [float(np.clip(presence_auditive, 0.0, 1.0))
                             if presence_auditive is not None else 0.0]
 
+        # v41.33 — LA CHARGE PORTÉE, en QUEUE (contrat append-only). Voir DIM_PORTAGE.
+        # `portage=None` (aucun corps ce tick : rêve, leçon vocale hors MiniGrid) donne
+        # 0.0, la même valeur que « mains vides » — et c'est correct : dans les deux cas
+        # l'agent ne porte effectivement rien. Il n'y a pas de « portage inconnu ».
+        vecteur_portage = [float(np.clip(portage, 0.0, 1.0))
+                           if portage is not None else 0.0]
+
         return ([self.satiete, self.hydratation, self.stimulation] + vecteur_quete
                 + vecteur_rappel + vecteur_quete_vocale + vecteur_sensoriel
-                + vecteur_marquant + vecteur_presence)
+                + vecteur_marquant + vecteur_presence + vecteur_portage)
 
 
 class DetecteurRessourcesBiologiques:
@@ -8691,11 +8738,25 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
     _presence_aud = (float(torch.clamp(obs_auditive.detach().abs().mean(), 0.0, 1.0))
                      if obs_auditive is not None else 0.0)
 
+    # v41.33 — LA CHARGE PORTÉE. Lue sur `carrying`, l'API MiniGrid, exactement comme
+    # `transition_tick` lit `agent_pos`/`agent_dir` (v41.31) : aucun TYPE d'objet n'est
+    # nommé, seule la PRÉSENCE d'une charge est perçue. Un agent qui porte une clé et un
+    # agent qui porte une balle envoient le même 1.0 — c'est au réseau de découvrir la
+    # différence par ce qui lui arrive ensuite, jamais à une table de le lui dire.
+    # Lecture défensive : hors MiniGrid (rêve, cuve, arène), `portage=None` → 0.0.
+    try:
+        _portage = 1.0 if etat.env.unwrapped.carrying is not None else 0.0
+    except Exception:
+        _portage = None
+    if not PORTAGE_PERCU_ACTIF:
+        _portage = 0.0   # témoin : la dimension reste, l'information est coupée
+
     vecteur_bio_tensor = torch.tensor(
         [etat.moteur_bio.obtenir_vecteur_bio(rappel_spatial, cible_vocale,
                                               signaux_sensoriels=signaux_sensoriels,
                                               rappel_marquant=rappel_marquant,
-                                              presence_auditive=_presence_aud)],
+                                              presence_auditive=_presence_aud,
+                                              portage=_portage)],
         dtype=torch.float32, device=DEVICE
     )
 
@@ -11414,6 +11475,10 @@ if __name__ == "__main__":
                          "la performance.")
     _p.add_argument("--sans-douleur", action="store_true",
                     help="ABLATION : la chaleur reste perçue mais ne coûte rien (témoin v41.24)")
+    _p.add_argument("--sans-portage", action="store_true",
+                    help="ABLATION v41.33 : le bit de portage reste dans le vecteur bio "
+                         "mais toujours à 0.0 (témoin — la DIMENSION est conservée, seule "
+                         "l'INFORMATION est coupée, ce qui isole le signal de la largeur)")
     # v41.25 — banc de mesure. Le cursus est bloqué au niveau 4, or les niveaux 1-4 ne
     # contiennent AUCUNE lave : mesurer la douleur thermique sur le cursus normal
     # reviendrait à mesurer un terme nul dans 99,7 % des ticks (mesuré : chaleur moyenne
@@ -11580,6 +11645,21 @@ if __name__ == "__main__":
         print("🔬 [ABLATION] nociception thermique v41.25 COUPÉE — chaleur perçue mais indolore")
         from naulthene.cerveau.noyau import DOULEUR_THERMIQUE_ACTIVE as _verif_dlr
         assert _verif_dlr is False, ("l'ablation n'a pas atteint le module — campagne invalide")
+
+    # v41.33 — même discipline : écriture dans le module NOMMÉ + assertion runtime.
+    #
+    # ⚠️ LE TÉMOIN GARDE LA DIMENSION ET NE COUPE QUE L'INFORMATION (règle de mesure §6.3).
+    # Retirer la 42ᵉ colonne changerait la LARGEUR d'`integrateur_bio` : on mesurerait
+    # « un réseau plus large contre un réseau plus étroit », pas « avec ou sans
+    # proprioception ». Ici les deux bras ont exactement la même architecture.
+    _portage_actif = not _args.sans_portage
+    globals()["PORTAGE_PERCU_ACTIF"] = _portage_actif
+    if _module_reel is not None:
+        _module_reel.PORTAGE_PERCU_ACTIF = _portage_actif
+    if not _portage_actif:
+        print("🔬 [ABLATION] bit de portage v41.33 COUPÉ — la dim reste, l'info est à 0.0")
+        from naulthene.cerveau.noyau import PORTAGE_PERCU_ACTIF as _verif_port
+        assert _verif_port is False, ("l'ablation n'a pas atteint le module — campagne invalide")
 
     # v41.13 — même discipline : écriture dans le module NOMMÉ + assertion runtime.
     _corps_actif = not _args.sans_corps_rollout

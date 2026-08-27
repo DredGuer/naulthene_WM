@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Adrien Nault — Naulthène AGI
 """LA SONDE DE GRADIENT — l'apprentissage a-t-il seulement démarré ? (v33.1, expérimental)
 
 Instrument de DIAGNOSTIC en lecture seule. Fait vivre à un cerveau une journée complète,

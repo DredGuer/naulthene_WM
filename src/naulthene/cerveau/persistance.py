@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Adrien Nault — Naulthène AGI
 """
 Persistance Anatomique (V21.0, expérimental) — Cristallisation du cerveau Naulthène.
 

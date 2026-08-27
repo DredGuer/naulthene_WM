@@ -4,6 +4,55 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.33-licence] - 2026-08-27 — Passage à l'AGPL-3.0-or-later
+
+### Protéger contre une utilisation non consentie, sans fermer le code
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | docs (licence) |
+| **Impact** | Critique (juridique) |
+
+**Naulthène AGI passe d'Apache 2.0 à AGPL-3.0-or-later.** Adrien Nault étant l'auteur
+unique et seul détenteur des droits, il est fondé à relicencier.
+
+**Ce que l'Apache 2.0 ne couvrait pas.** Elle autorise qu'un tiers reprenne l'architecture,
+la modifie, et l'exploite comme **service en réseau** (API, agent hébergé, démo) sans jamais
+publier ses modifications. C'est exactement le scénario qu'un projet de recherche en phase
+active doit écarter — et c'est ce que traite la **section 13** de l'AGPL, qui étend
+l'obligation de partage aux utilisateurs d'un service distant.
+
+**Ce que ça ne change pas** : le code reste ouvert, lisible, forkable et contribuable. Le
+choix vise l'appropriation fermée, jamais la relecture par les pairs.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `LICENSE` | texte officiel AGPL-3.0 (661 lignes, gnu.org) |
+| `LICENSE-Apache-2.0-historique.txt` | ancienne licence conservée (`git mv`), jamais supprimée |
+| `NOTICE` | réécrit : changement de licence daté, section 13 explicitée, attribution maintenue, périmètre des dépendances, avertissement « ne fonctionne pas encore » |
+| `readme.md` / `readme_fr.md` | bloc licence mis à jour **dans le même commit** (règle de miroir) |
+| `src/naulthene/**/*.py` | en-tête `SPDX-License-Identifier: AGPL-3.0-or-later` sur **39 fichiers** |
+
+**Compatibilité des dépendances vérifiée avant bascule** — aucune n'empêche l'AGPL :
+
+| Dépendance | Licence |
+|---|---|
+| PyTorch, NumPy | BSD-3-Clause |
+| Gymnasium, MiniGrid, Weights & Biases | MIT |
+| Requests | Apache-2.0 |
+| Matplotlib | PSF |
+| Pygame | LGPL (liaison, compatible) |
+
+⚠️ **Portée temporelle** : les commits antérieurs au 27/08/2026 restent disponibles sous
+Apache 2.0 — une licence déjà accordée ne se révoque pas. Toutes les versions publiées à
+partir de cette date sont régies par l'AGPL.
+
+⚠️ **Ce n'est pas un avis juridique.** Le choix et sa rédaction sont ceux de l'auteur ; une
+relecture par un juriste reste souhaitable avant toute publication ou dépôt formel.
+
+---
+
 ## [v41.32-etape2] - 2026-08-23 — La sonde de fourrage : l'agent n'est pas anorexique
 
 ### Il tente de manger 52 fois par jour — c'est la CONJONCTION qui échoue
