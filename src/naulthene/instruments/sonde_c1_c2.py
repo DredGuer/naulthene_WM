@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Adrien Nault — Naulthène AGI
 """Sonde C1/C2 — mesure le rapport de force entre le réflexe et le néo-cortex.
 
 Instrument de diagnostic **en lecture seule** (v37.0) : charge un `.brain`, le fait

@@ -6,7 +6,7 @@ Vision, hearing, touch, smell, taste, motor control, a world model, episodic mem
 all read from and write to a **single latent bus**. Adding a sense means appending dimensions to
 one vector, not bolting on a subsystem.
 
-**55,552 parameters at birth. 0.21 MB.** One `nn.Module`, twelve layers, twelve hundred
+**55,616 parameters at birth. 0.21 MB.** One `nn.Module`, twelve layers, twelve hundred
 simulated days of continuous life. ⚠️ **That figure is a NEWBORN brain**: neurogenesis grows it
 during life, and a brain at 1500 days averages **1,241,790 parameters — 22.4×** (measured over
 35 brains, see below).
@@ -53,9 +53,15 @@ datacenter.*
 > 📊 **[Live experiments on Weights & Biases →](https://wandb.ai/naultadrien123-nvnc/Naulthene-AGI)**
 > (every run, every curve, including the failures)
 
-**Author**: Adrien Nault ([@DredGuer](https://github.com/DredGuer)) — [Apache 2.0](LICENSE).
-Any reuse, redistribution or derivative work building on this concept or architecture **must
-credit Adrien Nault as the original author of Naulthène AGI** — see [NOTICE](NOTICE).
+**Author**: Adrien Nault ([@DredGuer](https://github.com/DredGuer)) —
+**[AGPL-3.0-or-later](LICENSE)** (relicensed from Apache 2.0 on 2026-08-27).
+
+The AGPL keeps this work open to peers and contributors while making sure it cannot be taken
+and closed behind a proprietary black box. **Section 13 matters here**: if you run a modified
+version of Naulthène as a network service — an API, a hosted agent, a demo — you must offer
+its source to the users of that service. Any reuse, redistribution or derivative work building
+on this concept or architecture **must credit Adrien Nault as the original author of Naulthène
+AGI** — see [NOTICE](NOTICE).
 
 ---
 
@@ -98,7 +104,7 @@ This section exists because the thesis above is only worth stating if it can be 
 | `porte_auditive` (130 → 64) | 8,320 |
 | `hippocampe` (128 → 64) | 8,192 |
 | `fusion_memoire` (128 → 64) | 8,192 |
-| `integrateur_bio` (105 → 64) — 5 senses + homeostasis | 6,720 |
+| `integrateur_bio` (106 → 64) — 5 senses + homeostasis + proprioception | 6,784 |
 | `generateur_attente` (72 → 64) — JEPA world model | 4,608 |
 | `generateur_attente_audio` (72 → 64) | 4,608 |
 | `analyseur` (64 → 64) | 4,096 |
@@ -106,12 +112,13 @@ This section exists because the thesis above is only worth stating if it can be 
 | `tete_vocale` (64 → 8) | 512 |
 | `tete_requete` (64 → 5) — C3 routing ⚠️ **dead at runtime** | 320 |
 | `cortex_prefrontal` (64 → 1) — C2 | 64 |
-| **Total** | **55,552** (0.21 MB fp32) |
+| **Total** | **55,616** (0.212 MB fp32) |
 
-> ⚠️ **Corrected 21 Aug 2026.** This table previously read **55,232** with `integrateur_bio`
-> at 100→64. Thermoception (v41.11) had grown the bio vector from 36 to **41** dimensions, so
-> the layer is **105→64** and the total is **+320**. The count had not been re-measured since.
-> Recounted with `sum(p.numel() for p in agent.parameters())`, never estimated. Full teardown:
+> ⚠️ **Recounted 27 Aug 2026.** v41.33 adds a **proprioceptive bit** (does the agent carry
+> something?) in queue of the bio vector, taking it from 41 to **42** dimensions, so
+> `integrateur_bio` is **106→64** and the total **55,616**. Measured with
+> `sum(p.numel() for p in agent.parameters())`, never estimated — the same discipline that
+> caught the earlier **55,232** figure, stale by two versions. Full teardown:
 > [anatomy of the core](docs/etat_des_lieux/21082026_anatomie_du_noyau.md).
 >
 > **What the split reveals**: **C2 — the deliberative system — is 64 parameters out of 55,552,
@@ -125,8 +132,17 @@ This section exists because the thesis above is only worth stating if it can be 
 > the trunk grows **2.2× faster**. The cause is geometry, not a tunable: when `dim_bus` goes
 > 16 → 154, a `bus→bus` layer grows as **N²** while a `bus→1` head grows as **N**
 > (`hippocampe` ×28.9 vs `cortex_prefrontal` ×13.0). **Every neurogenesis event dilutes C2.**
-> There is no constant to fix — rebalancing would require *non-uniform* growth, letting what
-> the agent lived decide **where** the brain grows.
+> There is no constant to fix.
+>
+> 🔴 **And non-uniform growth would not fix it either — measured 2026-08-23.** The obvious
+> remedy (distribute new neurons by per-layer stress) fails twice. It is *structurally
+> impossible* as stated — the growth step `a` is both the input **and** the output widening,
+> and eight layers are chained on the same bus, so a per-layer `a` breaks the chain at the
+> first forward. And its goal is out of reach anyway: on a real 384,808-parameter brain,
+> `cortex_prefrontal` weighs **422 params (0.110 %)** *because it has a single output*. Even
+> given **100 % of the budget** it would gain **96** parameters where `hippocampe` gains
+> **29,952** (**×312**). The lever is not how many dimensions C2 receives — it is that C2
+> has **one output**.
 
 ### Versus MiniGrid baselines — **the thesis does not yet hold on size**
 
@@ -175,7 +191,31 @@ Two caveats, both measurable rather than rhetorical:
 | Effect of growing the brain (96 → 160 → 512 dims) | **none** across 3 campaigns — and energy drops 11× |
 | **Why it plateaus at level 4** | **Not cognitive — metabolic.** `mastery ~ mean energy`: **r = +0.710**, `t = +2.85` (SIG, n=10). Three **posed constants** calibrate the metabolic rhythm for a *newborn* agent: the code assumes **4 episodes/day**, the agent plays **1.55**, and the gap **widens** over the run (×1.68 → ×2.58). **9 seeds out of 10 sit at the exact `PATIENCE_MAX = 350` ceiling** |
 | **v41.31 — the causal gradient** | Masking the actor's gradient on non-transitions gave mastery **+2.57 pts** (`t = +2.68`) on a **forced** `SimpleCrossing` bench, n=20. 🔴 **It does not survive the full curriculum.** 20 paired seeds × 1500 days, free curriculum (40 runs): level **+0.05 (`t = +0.37`)**, mastery **+1.09 (`t = +0.39`)**, energy **+0.001 (`t = +0.07`)** — all NS, and **0 of 40 runs pass level 5**. A forced bench proves a mechanic works *where it applies*, never that it helps elsewhere |
+| **v41.32 — asymmetric detach (AB3)** | Cutting C2's gradient into the shared trunk cleans the gradient (+25 % alignment on the bench) and **changes nothing**: 20 paired seeds × 1440 days, level **−0.10 (`t = −0.70`)**, mastery **−6.09 (`t = −1.93`)**. The one significant metric (C2/C1 ratio, `t = +3.82`) is a **tautology** — decomposition shows C1's amplitude *falling* 27 % (`t = −3.57`) while C2 does not move (`t = +1.70`, NS). **Tenth refutation** |
+| **v41.33 — proprioceptive agnosia** | The critic separates *object ahead* from *wall ahead* very well (Cohen's **d = +0.65 to +1.21**, 3 brains) but **cannot tell it is carrying something** (d = **+0.12 / −0.12 / +0.09**, sign unstable). Cause: of the 41 bio dimensions, **zero** encoded the inventory (max gap 0.00001). This fully explains the flat advantage on useful gestures (`\|A\| useful / \|A\| neutral` = **0.86× to 1.11×**). A **carry bit** was added in queue; **under measurement** |
 | Levers that did work | **3 — two properties of the world, one of the decision** |
+
+> 🔴 **The gradient was not the cause — nine refutations, then a twist (26-27 Aug 2026).**
+> A week of gradient diagnostics converged on *thrashing*: the actor's daily gradients cancel
+> out (alignment 0.3966 against 0.3536 for a random walk). Cutting C2's gradient out of the
+> shared trunk repairs it — and the full-curriculum campaign (**40 runs, all complete**) finds
+> **nothing**. A clean gradient with nothing worth optimising produces no intelligence.
+>
+> **What the probes then found is structural.** The actor and the critic send **exactly
+> 0.000000** gradient to `porte_visuelle`, `hippocampe`, `analyseur` and `fusion_memoire` — a
+> `.detach()` cuts the perceptual trunk from both heads, so **only the JEPA shapes perception**
+> (0.033868). No amount of incentive can sculpt what the agent learns to see. And the *credit*
+> is flat where it should peak: a useful grab earns, within ±13 %, what a quarter-turn on the
+> spot earns.
+>
+> ⚠️ **One campaign had to be killed mid-flight.** The carry bit was validated on `DoorKey-6x6`
+> (a level-9 environment) then launched on the full curriculum, where the agent plateaus at
+> level 4 — the first graspable object appears at level 6. `🔑 Carry 0.0%` over 400 days, both
+> arms bit-identical: an **empty ablation, not a negative one**, the exact trap §4 of the
+> measurement rules describes. 16 runs discarded, and a new mandatory step added: *verify the
+> independent variable actually varies before launching*.
+> [Conditioning](docs/recherche/CONDITIONNEMENT_27082026_le_signal_arrive_et_ne_sert_a_rien.md) ·
+> [Credit](docs/recherche/CREDIT_27082026_l_arrosage_confirme_et_la_vue_orpheline.md)
 
 A standard PPO solves `Empty-8x8` in a few thousand episodes. **Naulthène currently does not.**
 
@@ -308,7 +348,7 @@ This is the table that would decide whether the architecture is *efficient* or m
 |---|---|---|---|---|
 | PPO CNN (`rl-starter-files`) | 19,384 | — | — | — |
 | PPO + LSTM | 52,664 | — | — | — |
-| **Naulthène** | **55,552** | **44.7 %** (v41 bench, 300 ep.) | — | **never reached** |
+| **Naulthène** | **55,616** | **44.7 %** (v41 bench, 300 ep.) | — | **never reached** |
 
 Across **20 seeds × 1500 simulated days** on a reproducible bench, **100 % [84–100]** of
 agents reach level 4 of the 15-level curriculum, and **20 % [8–42]** now hold level 5 — up

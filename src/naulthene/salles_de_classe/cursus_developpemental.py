@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Adrien Nault — Naulthène AGI
 """
 Le Cursus Développemental par Ères (V23.0/V24.0, expérimental) — 1000 jours
 d'apprentissage autonome, MiniGrid + parole.

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Adrien Nault — Naulthène AGI
 """LA SONDE DE GRADIENT — l'apprentissage a-t-il seulement démarré ? (v33.1, expérimental)
 
 Instrument de DIAGNOSTIC en lecture seule. Fait vivre à un cerveau une journée complète,
@@ -67,6 +69,22 @@ COUCHES_SUIVIES = (
     "porte_visuelle",         # la vue
     "analyseur", "hippocampe", "fusion_memoire",
     "generateur_attente",     # le JEPA
+    # --- v41.32 : LES CINQ COUCHES MANQUANTES ---
+    #
+    # 🔴 Mesuré le 25/08 : les sept couches ci-dessus ne totalisaient que **51 %** de la
+    # norme brute du gradient. La moitié du budget d'apprentissage n'était attribuée à
+    # personne — une « matière noire » invisible à la sonde.
+    #
+    # Ces cinq-là complètent le réseau. Deux d'entre elles sont des suspects directs :
+    #   - `cortex_prefrontal` (C2) : couper C2 ne change le score de 0,0 pt sur 6 niveaux
+    #     (v41.29, 78 cellules d'ablation) — s'il consomme du gradient, il en dissipe ;
+    #   - l'hémisphère audio (`porte_auditive`, `generateur_attente_audio`, `tete_vocale`) :
+    #     24 % des paramètres pour une faculté qu'aucun niveau MiniGrid n'exerce.
+    "cortex_prefrontal",      # C2 — la délibération
+    "porte_auditive",         # l'ouïe (aucun son dans MiniGrid)
+    "generateur_attente_audio",  # le JEPA audio
+    "tete_vocale",            # la bouche
+    "tete_requete",           # le routage C3 (aucun plug enregistré)
 )
 
 
@@ -74,8 +92,13 @@ def instrumenter(agent, journal):
     """Remplace `apprendre_journee` par une version qui mesure tout avant de déléguer."""
     originale = agent.apprendre_journee
 
+    # ⚠️ `**extra` est indispensable : `apprendre_journee` a gagné des paramètres depuis
+    # l'écriture de cette sonde (v33.1) — `chocs_dopamine` (v37.1, distillation sélective)
+    # et `transitions` (v41.31, gradient causal). Une signature figée casse la sonde à
+    # chaque évolution du noyau, et le crash survient DANS `executer_nuit`, donc après une
+    # journée complète de calcul. Tout est repassé tel quel à l'originale.
     def sonde(jepa_losses, log_probs, entropies, valeurs, rewards, dones,
-              gamma=0.95, coeff_entropie=0.02, pertes_vocales=None):
+              gamma=0.95, coeff_entropie=0.02, pertes_vocales=None, **extra):
         mesure = {
             "ticks": len(rewards),
             "rewards_non_nuls": sum(1 for r in rewards if r != 0.0),
@@ -113,9 +136,62 @@ def instrumenter(agent, journal):
         # `apprendre_journee` appelle `optimizer.step()` puis rend la main ; les `.grad`
         # sont encore présents à ce moment (ils ne sont remis à zéro qu'au DÉBUT de
         # l'appel suivant, via `zero_grad`). On peut donc les lire juste après.
-        perte = originale(jepa_losses, log_probs, entropies, valeurs, rewards, dones,
-                          gamma=gamma, coeff_entropie=coeff_entropie,
-                          pertes_vocales=pertes_vocales)
+        # --- v41.32 : LA NORME BRUTE, AVANT CLIPPING ---
+        #
+        # 🔴 CE QUE ÇA CORRIGE. `apprendre_journee` fait `backward()` -> `clip_grad_norm_`
+        # -> `step()`, puis rend la main. Lire les `.grad` APRÈS l'appel donne donc la
+        # valeur POST-CLIP, jamais la brute — et la norme globale y est mécaniquement
+        # bornée à 1.0. J'ai d'abord lu 0,9315 en croyant mesurer le gradient réel : c'est
+        # en réalité la valeur déjà écrasée. Une norme post-clip ne peut par construction
+        # jamais démontrer que le clip se déclenche.
+        #
+        # `clip_grad_norm_` RETOURNE la norme totale AVANT écrêtage. On l'intercepte donc
+        # le temps de l'appel, ce qui donne la seule mesure honnête : la norme brute, et
+        # le fait que le couperet soit tombé ou non.
+        _brut = {}
+        _clip_reel = torch.nn.utils.clip_grad_norm_
+
+        def _clip_espion(params, max_norm, *a, **k):
+            # ⚠️ v41.32-fix2 — LES PARTS SE LISENT **AVANT** `_clip_reel`, jamais après.
+            #
+            # 🔴 Bug corrigé : je lisais les `.grad` APRÈS l'appel réel, donc après que le
+            # clip les avait tous divisés. Signature du défaut : racine(Σ carrés) valait
+            # **1.000000 EXACTEMENT** sur 6/6 jours — la norme post-clip, par construction.
+            # J'en avais conclu à « 84 % de gradient manquant » alors qu'il n'existe que
+            # 12 paramètres dans tout le réseau (un `annexe_weight` par couche, vérifié) :
+            # la somme des carrés DOIT égaler la norme globale au carré.
+            #
+            # C'est le même défaut que celui déjà corrigé deux fois dans cette campagne
+            # (chaleur v41.25-fix1, discrimination fix1) : lire une grandeur après
+            # l'opération qui la modifie.
+            parts = {}
+            for nom_c in COUCHES_SUIVIES:
+                c = getattr(agent, nom_c, None)
+                if c is None:
+                    continue
+                acc = 0.0
+                for prm in c.parameters():
+                    if prm.grad is not None:
+                        acc += float(prm.grad.detach().norm() ** 2)
+                parts[nom_c] = acc ** 0.5
+            _brut["parts"] = parts
+            totale = _clip_reel(params, max_norm, *a, **k)
+            _brut["norme"] = float(totale)
+            _brut["plafond"] = float(max_norm)
+            _brut["clippe"] = float(totale) > float(max_norm)
+            return totale
+
+        torch.nn.utils.clip_grad_norm_ = _clip_espion
+        try:
+            perte = originale(jepa_losses, log_probs, entropies, valeurs, rewards, dones,
+                              gamma=gamma, coeff_entropie=coeff_entropie,
+                              pertes_vocales=pertes_vocales, **extra)
+        finally:
+            torch.nn.utils.clip_grad_norm_ = _clip_reel
+        mesure["norme_brute"] = _brut.get("norme")
+        mesure["clippe"] = _brut.get("clippe")
+        mesure["plafond"] = _brut.get("plafond")
+        mesure["parts_brutes"] = _brut.get("parts")
         mesure["perte_totale"] = perte
 
         normes = {}
@@ -129,11 +205,42 @@ def instrumenter(agent, journal):
                     total += float(p.grad.detach().norm() ** 2)
             normes[nom] = total ** 0.5
         mesure["gradients"] = normes
+
+        # --- v41.32 : LE THRASHING — le gradient s'annule-t-il d'un jour à l'autre ? ---
+        #
+        # Une norme de gradient faible a DEUX causes opposées, et les confondre coûte un
+        # cycle (même leçon que (a)/(b) en tête de ce module) :
+        #   (1) le gradient est MINUSCULE — le signal ne modifie rien ;
+        #   (2) le gradient est GRAND mais s'ANNULE — l'agent est poussé dans un sens le
+        #       jour J, dans le sens opposé le jour J+1, et le poids ne bouge pas.
+        #
+        # Le discriminant est le rapport ‖Σg‖ / Σ‖g‖ sur plusieurs jours :
+        #   proche de 1 -> tous les pas sont ALIGNÉS (cause 1, gradient faible mais cohérent)
+        #   proche de 0 -> les pas s'ANNULENT (cause 2, thrashing)
+        #
+        # ⚠️ On accumule le VECTEUR, pas la norme : c'est tout l'intérêt. Sommer des normes
+        # ne peut jamais révéler une annulation.
+        g = agent.tete_motrice.annexe_weight.grad
+        if g is not None:
+            gd = g.detach().clone()
+            if _accum["somme"] is None:
+                _accum["somme"] = torch.zeros_like(gd)
+            _accum["somme"] += gd
+            _accum["somme_normes"] += float(gd.norm())
+            _accum["n"] += 1
+            mesure["grad_jour"] = float(gd.norm())
+            mesure["grad_cumul"] = float(_accum["somme"].norm())
+            mesure["grad_somme_normes"] = _accum["somme_normes"]
         journal.append(mesure)
         return perte
 
     agent.apprendre_journee = sonde
     return originale
+
+
+# Accumulateur du vecteur gradient de `tete_motrice`, partagé entre les jours de la sonde.
+# Module-level par simplicité : la sonde est un instrument mono-run, jamais réentrant.
+_accum = {"somme": None, "somme_normes": 0.0, "n": 0}
 
 
 # --- 2. LE RAPPORT ---
@@ -160,6 +267,58 @@ def afficher(journal, nom_cerveau, niveau):
     print(f"  {'jour':>5} " + " ".join(f"{c[:13]:>14}" for c in couches))
     for i, m in enumerate(journal, 1):
         print(f"  {i:>5} " + " ".join(f"{m['gradients'][c]:>14.6f}" for c in couches))
+
+    # --- v41.32 : LE THRASHING ---
+    if any("grad_cumul" in m for m in journal):
+        print(f"\n  ALIGNEMENT DU GRADIENT SUR tete_motrice (le gradient s'annule-t-il ?)")
+        print("  " + "-" * 94)
+        print(f"  {'jour':>5} {'‖g_jour‖':>14} {'‖Σg‖ (cumul)':>16} {'Σ‖g‖':>14} {'alignement':>12}")
+        for i, m in enumerate(journal, 1):
+            if "grad_cumul" not in m:
+                continue
+            al = m["grad_cumul"] / max(m["grad_somme_normes"], 1e-12)
+            print(f"  {i:>5} {m['grad_jour']:>14.6f} {m['grad_cumul']:>16.6f} "
+                  f"{m['grad_somme_normes']:>14.6f} {al:>12.4f}")
+        dernier = [m for m in journal if "grad_cumul" in m][-1]
+        align = dernier["grad_cumul"] / max(dernier["grad_somme_normes"], 1e-12)
+        print()
+        print(f"  ALIGNEMENT FINAL : {align:.4f}   (1 = pas tous alignés, 0 = ils s'annulent)")
+        # Repère de lecture, pas un seuil de décision : la valeur attendue pour des pas
+        # INDÉPENDANTS est ~1/sqrt(n) — c'est la marche aléatoire, ni alignement ni
+        # annulation active. On la publie à côté plutôt que de trancher à sa place.
+        n = dernier and len([m for m in journal if "grad_cumul" in m])
+        print(f"  Repère marche aléatoire (1/√n, n={n}) : {1.0 / max(n, 1) ** 0.5:.4f}")
+
+    # --- v41.32 : LE CLIPPING SE DÉCLENCHE-T-IL ? ---
+    _avec = [m for m in journal if m.get("norme_brute") is not None]
+    if _avec:
+        print(f"\n  NORME GLOBALE **AVANT** CLIPPING (plafond = {_avec[0]['plafond']:.2f})")
+        print("  " + "-" * 94)
+        print(f"  {'jour':>5} {'norme brute':>14} {'clippé ?':>10} {'facteur':>10}"
+              f"   part du budget brut : corps / décision / vue")
+        for i, m in enumerate(_avec, 1):
+            f = m["plafond"] / m["norme_brute"] if m["norme_brute"] > m["plafond"] else 1.0
+            pb = m.get("parts_brutes") or {}
+            n = m["norme_brute"]
+            det = " ".join(f"{100*pb.get(k, 0.0)/max(n, 1e-12):>5.1f}%"
+                           for k in ("integrateur_bio", "tete_motrice", "porte_visuelle"))
+            # ⚠️ Les parts sont des normes L2 : leur SOMME dépasse la norme globale (le
+            # carré de la somme n'est pas la somme des carrés). On rapporte donc la somme
+            # des CARRÉS, seule grandeur qui se conserve — sans quoi un « résidu » apparaît
+            # là où il n'y en a pas.
+            _somme_carres = sum(v * v for v in pb.values())
+            det += f"   Σ(carrés)/n² = {100 * _somme_carres / max(n * n, 1e-12):>5.1f}%"
+            print(f"  {i:>5} {m['norme_brute']:>14.6f} {'OUI' if m['clippe'] else 'non':>10} "
+                  f"{f:>10.4f}   {det}")
+        n_clip = sum(1 for m in _avec if m["clippe"])
+        moy = sum(m["norme_brute"] for m in _avec) / len(_avec)
+        print()
+        print(f"  Nuits clippées : {n_clip}/{len(_avec)} ({100*n_clip/len(_avec):.0f} %)")
+        print(f"  Norme brute moyenne : {moy:.6f}   (plafond {_avec[0]['plafond']:.2f})")
+        if n_clip == 0:
+            print("  🟢 Le clipping ne se déclenche JAMAIS — il n'explique pas le plafond.")
+        elif n_clip == len(_avec):
+            print("  🔴 Le clipping se déclenche à CHAQUE nuit — le budget est saturé en permanence.")
 
     # --- Verdict ---
     print("\n" + "=" * 100)
@@ -196,6 +355,23 @@ def main():
     p.add_argument("--niveau", type=int, default=None,
                    help="indice du PROGRAMME (défaut : celui du .brain)")
     p.add_argument("--graine", type=int, default=1789)
+    # v41.32 — ABLATION « PISTE A » : le thrashing vient-il de l'INSTABILITÉ DU MONDE ?
+    #
+    # `--niveau` ne suffit PAS : il fixe l'env au démarrage, mais `demarrer_journee` peut
+    # ensuite changer de carte à chaque journée (P17, distribution du cursus — observé
+    # « 1 révision · 2 révisions » pendant la mesure du 25/08). Le seul verrou réel est
+    # `ENV_FORCE`, lu par `demarrer_journee` (l. ~7386) : quand il est non-nul, le
+    # PROGRAMME entier est remplacé par ce seul niveau, répété.
+    p.add_argument("--env-force", type=str, default=None,
+                   help="verrouille la carte pour TOUS les jours (ablation P17)")
+    p.add_argument("--soif-figee", action="store_true",
+                   help="ABLATION piste C : hydratation figée à 1.0 (un seul axe corporel)")
+    p.add_argument("--detach-c2", action="store_true",
+                   help="C2 lit le corps sans le sculpter (correctif candidat)")
+    p.add_argument("--sans-gradient-c2", action="store_true",
+                   help="ABLATION : C2 ne rétropropage plus (collision C1/C2)")
+    p.add_argument("--gradient-non-filtre", action="store_true",
+                   help="ABLATION piste B : pas de masquage causal (100 %% des ticks)")
     args = p.parse_args()
 
     if not os.path.exists(args.brain):
@@ -205,10 +381,46 @@ def main():
     # hors de question de toucher au cerveau de référence.
     dossier = os.path.join(os.path.dirname(args.brain) or ".", "_sonde")
     os.makedirs(dossier, exist_ok=True)
-    copie = os.path.join(dossier, "sonde.brain")
+    # ⚠️ v41.32 — LE NOM DE LA COPIE EST UNIQUE PAR PROCESSUS.
+    #
+    # 🔴 Défaut attrapé avant qu'il ne fausse une campagne : deux bras d'ablation lancés en
+    # parallèle sur le MÊME `--brain` écrivaient dans le même `_sonde/sonde.brain`. Les
+    # deux processus se seraient écrasés mutuellement, et la comparaison appariée aurait
+    # mesuré un mélange des deux — un « A/B » dont les deux bras partagent leur état.
+    # C'est exactement le piège que CLAUDE.md §8 décrit : « deux runs qui partagent un
+    # chemin .brain s'écrasent mutuellement, et c'est silencieux ».
+    copie = os.path.join(dossier, f"sonde_{os.getpid()}.brain")
     shutil.copy2(args.brain, copie)
 
     torch.manual_seed(args.graine)
+
+    # ⚠️ Posé AVANT `charger_ou_naitre` : la naissance lit déjà `ENV_FORCE` (l. 7065).
+    if args.env_force:
+        nx.ENV_FORCE = args.env_force
+    # v41.32 — piste C. Écriture + VÉRIFICATION que le drapeau a atteint le module :
+    # c'est le bug v41.4 (drapeau accepté par l'argparse mais jamais lu), qui avait rendu
+    # trois bras de campagne rigoureusement identiques.
+    # v41.32 — chaque ablation est écrite dans le module NOMMÉ puis VÉRIFIÉE (bug v41.4).
+    if args.detach_c2:
+        nx.DETACH_C2_ASYMETRIQUE = True
+        from naulthene.cerveau.noyau import DETACH_C2_ASYMETRIQUE as _v4
+        assert _v4 is True, "le drapeau n'a pas atteint le module — campagne invalide"
+        print("🔬 [VARIANTE] detach asymétrique — C2 lit le corps sans le sculpter")
+    if args.sans_gradient_c2:
+        nx.GRADIENT_C2_ACTIF = False
+        from naulthene.cerveau.noyau import GRADIENT_C2_ACTIF as _v2
+        assert _v2 is False, "l'ablation n'a pas atteint le module — campagne invalide"
+        print("🔬 [ABLATION] gradient de C2 COUPÉ — forward intact")
+    if args.gradient_non_filtre:
+        nx.GRADIENT_CAUSAL_ACTIF = False
+        from naulthene.cerveau.noyau import GRADIENT_CAUSAL_ACTIF as _v3
+        assert _v3 is False, "l'ablation n'a pas atteint le module — campagne invalide"
+        print("🔬 [ABLATION] masquage causal RETIRÉ — apprentissage sur 100 % des ticks")
+    if args.soif_figee:
+        nx.SOIF_FIGEE = True
+        from naulthene.cerveau.noyau import SOIF_FIGEE as _verif
+        assert _verif is True, "l'ablation n'a pas atteint le module — campagne invalide"
+        print("🔬 [ABLATION] axe hydrique GELÉ — le corps ne tire plus que sur la faim")
 
     etat = PersistanceAnatomique(copie).charger_ou_naitre()
     if args.niveau is not None:

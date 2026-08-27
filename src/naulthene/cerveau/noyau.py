@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Adrien Nault — Naulthène AGI
 #Version actuelle 29. — Variante LOCALE de test (Mac, non versionnée dans le script Colab de référence)
 # Différences avec agi_google_colab.py : détection du device MPS (Apple Silicon) et
 # jours_totaux (500) réglé pour des runs locaux plus courts que les 400 jours de Colab.
@@ -440,10 +442,48 @@ DIM_RAPPEL_MARQUANT = 2
 # se recharge en héritant d'un canal neutre à 0.
 DIM_PRESENCE_AUDITIVE = 1
 
+# --- v41.33 : LA PROPRIOCEPTION DE LA CHARGE (le « bit de portage ») ---
+#
+# 🔴 CE QUE ÇA CORRIGE (mesuré le 27/08/2026, 3 cerveaux × 6000 ticks). Le critique
+# distingue TRÈS BIEN un objet en face d'un mur (d de Cohen +0,651 à +1,214) — il n'est
+# donc pas aveugle au monde. Mais il ne distingue PAS « je porte un objet » de « j'ai les
+# mains vides » : d = +0,119 / −0,117 / +0,090, le signe s'inversant d'un cerveau à
+# l'autre. Or c'est exactement la variable dont dépend le TD-error d'une saisie : si
+# V(porte) ≈ V(mains vides), l'avantage d'une saisie ne peut PAS produire de pic, et c'est
+# ce qui a été mesuré (|A| utile / |A| neutre entre 0,86× et 1,11× sur 4 cerveaux).
+#
+# LA CAUSE N'ÉTAIT PAS UN DÉFAUT D'APPRENTISSAGE, MAIS UNE ABSENCE D'ENTRÉE. Vérifié sur
+# 4000 ticks : des 41 dims du vecteur bio, **ZÉRO** ne séparait les deux états (écart max
+# 0,00001013). L'inventaire n'était encodé nulle part. Aucune quantité de gradient ne fait
+# apprendre une variable absente de l'entrée.
+#
+# L'information existe pourtant dans la VUE (d de Cohen global 6,73 : l'objet a disparu de
+# la grille), mais elle y arrive comme un indice INDIRECT, confondu avec « un objet a été
+# déplacé quelque part ». Rien n'oblige le réseau à le lire comme « je possède ».
+#
+# ⚠️ CE N'EST PAS UNE RÉCOMPENSE EN DUR. La dimension porte une PERCEPTION, au même titre
+# que la faim ou la pression tactile : rien ne déclare qu'être chargé est bon. Le réseau
+# reste libre de l'ignorer — c'est à lui de découvrir, par la résolution ultérieure de sa
+# faim, si porter tel objet mène quelque part. Le dogme est intact.
+#
+# ⚠️ AJOUTÉE EN QUEUE, jamais au milieu (contrat append-only, invariant v29.0) : la greffe
+# `_greffer_vecteur_bio_etendu` recopie les N premières colonnes, donc un `.brain` à 41
+# dims se recharge en héritant d'un canal neutre à 0.
+#
+# Le neutre est **0.0**, et ici c'est JUSTE (contrairement à la clinotaxie v32.0 ou au
+# rappel marquant v36.0, dont le 0.0 signifierait « pire cas ») : 0.0 veut dire « je ne
+# porte rien », ce qui est exactement l'information à porter, pas une inconnue.
+DIM_PORTAGE = 1
+
+# Interrupteur d'ablation (v41.33). False = la 42ᵉ dim existe toujours mais reste à 0.0 :
+# le témoin conserve la LARGEUR du réseau et ne coupe que l'INFORMATION.
+PORTAGE_PERCU_ACTIF = True
+
 DIM_VECTEUR_BIO = (16 + DIM_TOUCHER + DIM_CHIMIE + DIM_EXO
                    + DIM_ODORAT_DELTA + DIM_THERMOCEPTION + DIM_PRESSION
                    + DIM_RAPPEL_MARQUANT
-                   + DIM_PRESENCE_AUDITIVE)  # = 41 depuis la v41.12
+                   + DIM_PRESENCE_AUDITIVE
+                   + DIM_PORTAGE)  # = 42 depuis la v41.33
                        # 3 jauges (satiete, hydratation, stimulation) + 3 quête (target_vector one-hot)
                        # + 2 rappel spatial (v20.0 : distance normalisée + fraîcheur du souvenir)
                        # + 8 quête vocale (v22.1 : formants cibles de la leçon en cours, ou [0]*8
@@ -1394,7 +1434,11 @@ class AGI_Naulthene(nn.Module):
             logits_finaux = logits_finaux.clone()
             logits_finaux[..., ACTION_DEMANDER] = float("-inf")
 
-        valeur_etat_courant = self.cortex_prefrontal(pensee_bio)
+        # v41.32 — detach asymétrique : C2 lit le corps sans le sculpter (voir
+        # DETACH_C2_ASYMETRIQUE). `pensee_bio` reste identique en VALEUR — seul le
+        # chemin de gradient change, donc le comportement du tick est inchangé.
+        _bio_pour_c2 = pensee_bio.detach() if DETACH_C2_ASYMETRIQUE else pensee_bio
+        valeur_etat_courant = self.cortex_prefrontal(_bio_pour_c2)
         # La BOUCHE (v22.0) : produit ses paramètres vocaux à CHAQUE pensée, comme la
         # tête motrice produit ses logits d'action — l'agent peut bouger ET vocaliser
         # simultanément (décision utilisateur), même quand aucune leçon n'est active
@@ -1723,7 +1767,10 @@ class AGI_Naulthene(nn.Module):
                 perte_acteur = -GAIN_ACTEUR_CONTROLE * (log_probs_tensor * avantages).mean()
             else:
                 perte_acteur = -(log_probs_tensor * avantages).mean()
-            perte_critique = F.mse_loss(valeurs_tensor, returns)
+            # v41.32 — ablation de la collision : le critique n'apprend plus, donc plus
+            # aucun gradient ne part de C2 vers `integrateur_bio`. Le forward est intact.
+            perte_critique = (F.mse_loss(valeurs_tensor, returns) if GRADIENT_C2_ACTIF
+                              else F.mse_loss(valeurs_tensor.detach(), returns))
             perte_entropie = -coeff_entropie * entropies_tensor.mean()
 
             perte_totale = perte_totale + perte_acteur + perte_critique + perte_entropie
@@ -3211,7 +3258,12 @@ class BiologicalHomeostasisEngine:
         # même double comptage que celui écarté dans `calculer_deficit`, côté stock.
         # L'hydratation, elle, se perd bien en continu (transpiration, respiration) : elle
         # n'est pas un carburant mais un COFACTEUR de la conversion.
-        self.hydratation -= self.taux_hydratation
+        # v41.32 — ablation piste C : `SOIF_FIGEE` gèle l'axe hydrique à son maximum.
+        # Un seul point d'application, comme le drain lui-même.
+        if SOIF_FIGEE:
+            self.hydratation = 1.0
+        else:
+            self.hydratation -= self.taux_hydratation
 
         bonus_nouveaute = (0.05 if nouvelle_case_visitee else 0.0) + erreur_jepa * 2.0
         self.stimulation += bonus_nouveaute - self.taux_stimulation
@@ -3503,7 +3555,7 @@ class BiologicalHomeostasisEngine:
 
     def obtenir_vecteur_bio(self, rappel_spatial=None, cible_vocale=None,
                              signaux_sensoriels=None, rappel_marquant=None,
-                             presence_auditive=None):
+                             presence_auditive=None, portage=None):
         """Retourne le vecteur de `DIM_VECTEUR_BIO` dims — la constante fait foi, ce
         commentaire ne la répète PAS (v39-fix R2 : la valeur « 34 » écrite ici en dur
         était périmée depuis deux versions, et c'est ce genre d'écart qui a produit le
@@ -3586,9 +3638,16 @@ class BiologicalHomeostasisEngine:
         vecteur_presence = [float(np.clip(presence_auditive, 0.0, 1.0))
                             if presence_auditive is not None else 0.0]
 
+        # v41.33 — LA CHARGE PORTÉE, en QUEUE (contrat append-only). Voir DIM_PORTAGE.
+        # `portage=None` (aucun corps ce tick : rêve, leçon vocale hors MiniGrid) donne
+        # 0.0, la même valeur que « mains vides » — et c'est correct : dans les deux cas
+        # l'agent ne porte effectivement rien. Il n'y a pas de « portage inconnu ».
+        vecteur_portage = [float(np.clip(portage, 0.0, 1.0))
+                           if portage is not None else 0.0]
+
         return ([self.satiete, self.hydratation, self.stimulation] + vecteur_quete
                 + vecteur_rappel + vecteur_quete_vocale + vecteur_sensoriel
-                + vecteur_marquant + vecteur_presence)
+                + vecteur_marquant + vecteur_presence + vecteur_portage)
 
 
 class DetecteurRessourcesBiologiques:
@@ -5255,6 +5314,50 @@ FACTEUR_ATTENUATION_LIBRE = 1.00         # déplacement libre : pénalité plein
 # causal, le tube digestif et l'unification du détecteur sont trois mécaniques distinctes ;
 # les couper ensemble produirait une ablation CONFONDUE (règle de mesure §4).
 GRADIENT_CAUSAL_ACTIF = True        # False = `.mean()` d'avant v41.31 (`--gradient-non-filtre`)
+
+# v41.32 — ABLATION « COLLISION C1/C2 » : le critique sabote-t-il l'intégrateur bio ?
+#
+# Mesuré le 25/08 (chemins de gradient, 3 pertes injectées séparément) : `integrateur_bio`
+# est la SEULE couche où C1 (6,127) et C2 (4,907) rétropropagent tous les deux. Le tronc
+# perceptif, lui, est coupé des deux têtes par le `.detach()` de la l. 1149 — la collision
+# ne peut donc avoir lieu QUE là.
+#
+# Ce drapeau neutralise le gradient de C2 en gardant son FORWARD intact : `valeurs_tensor`
+# est détaché avant la perte critique, donc `cortex_prefrontal` et `integrateur_bio` ne
+# reçoivent plus rien de ce canal. C2 continue de produire ses valeurs, de peser dans
+# l'arbitrage et de fournir les avantages — seule sa rétropropagation cesse.
+#
+# ⚠️ NEUTRALISER N'EST PAS DÉBRANCHER : le comportement du tick reste identique, seule
+# l'ardoise du gradient change. C'est ce qui isole la COLLISION de l'UTILITÉ de C2 (dont
+# l'ablation comportementale est déjà mesurée à 0,0 pt sur 6 niveaux, v41.29).
+#
+# ⚠️ Sans gradient, le critique cesse d'apprendre : ses estimations dérivent, donc les
+# AVANTAGES qu'il fournit à l'acteur se dégradent. Ce bras mesure l'ALIGNEMENT du
+# gradient, JAMAIS la performance — un score qui baisse ici ne prouve rien.
+GRADIENT_C2_ACTIF = True
+
+# v41.32 — LE `.detach()` ASYMÉTRIQUE : C2 LIT LE CORPS, IL NE LE SCULPTE PLUS.
+#
+# Mesuré le 26/08 : couper entièrement le gradient de C2 fait passer l'alignement de
+# `tete_motrice` de 0,3428 à 0,6751 (+97 %) et son gradient de 0,1998 à 0,4739 (×2,4).
+# La collision C1/C2 dans `integrateur_bio` — la SEULE couche partagée — était donc bien
+# la source du thrashing.
+#
+# Mais couper le gradient de C2 empêche le critique d'apprendre : c'est un scalpel de
+# diagnostic, pas un correctif. Le `.detach()` asymétrique est la forme soignée :
+#
+#   - C2 LIT `pensee_bio` pour évaluer et planifier — sa fonction est intacte ;
+#   - mais il ne rétropropage plus DANS `integrateur_bio` ;
+#   - `cortex_prefrontal` continue, lui, d'apprendre normalement.
+#
+# Seul C1 sculpte donc la représentation viscérale. C'est exactement la symétrie du
+# `.detach()` déjà présent l. 1149, qui protège le tronc perceptif des deux têtes : ici on
+# protège la représentation du corps de la seule tête qui n'a pas à la façonner.
+#
+# ⚠️ CE N'EST PAS ÉQUIVALENT À `--sans-gradient-c2` : là, C2 n'apprenait plus du tout et
+# ses estimations dérivaient. Ici, il apprend toujours — il cesse seulement de déformer
+# le sol de C1. Les deux bras doivent être mesurés séparément.
+DETACH_C2_ASYMETRIQUE = False
 # v41.31-controle — bras de falsification : gradient acteur ×N SANS filtrage. 1.0 = inactif.
 # Le 2.6 n'est pas posé : c'est `T / Σm` mesuré (61,7 % de ticks stériles → 1/0,383 ≈ 2,6).
 GAIN_ACTEUR_CONTROLE = 1.0
@@ -5877,6 +5980,25 @@ TAILLE_MIN_REVE = 8                  # sous ce nombre de souvenirs, le lot est j
 # des ticks — une ablation VIDE, pas négative (§4 de la règle de mesure). Le banc n'est
 # pas un raccourci : c'est la seule façon d'exposer réellement le mécanisme testé.
 ENV_FORCE = None
+
+# v41.32 — ABLATION « PISTE C » : le thrashing vient-il du CONFLIT DES ORGANES ?
+#
+# Mesuré le 25/08 : le gradient reçu par `integrateur_bio` (0,914) vaut **78×** celui de
+# `porte_visuelle` (0,012) — le corps dicte l'essentiel de la mise à jour des poids. Or les
+# besoins corporels ALTERNENT par construction : affamé un jour, assoiffé le lendemain. Si
+# la politique ne conditionne pas sur l'état externe (mesuré : distance mur/ressource au
+# niveau du bruit), elle subit cette alternance comme un pendule et le gradient s'annule.
+#
+# ⚠️ CE DRAPEAU NE SUPPRIME PAS LA SOIF, il en GÈLE la dynamique : `hydratation` reste à
+# 1.0, donc le terme `(1 − hydratation)²` du déficit vaut 0 en permanence. L'agent garde
+# ses cinq sens, sa mémoire, sa vue — SEUL l'axe hydrique cesse de tirer la politique.
+# C'est la discipline du témoin `--sans-douleur` : garder le SENS, ne couper que la
+# MÉCANIQUE, pour isoler la boucle testée du capteur lui-même.
+#
+# ⚠️ Un agent qui n'a jamais soif ne cherche plus d'eau : la récolte hydrique tombera, et
+# c'est ATTENDU. Ce drapeau ne mesure PAS la performance — uniquement l'alignement du
+# gradient. Ne jamais en tirer une conclusion de niveau atteint.
+SOIF_FIGEE = False
 
 PROGRAMME = [
     # — Socle moteur : se déplacer, sans aucun objet à manipuler —
@@ -6821,6 +6943,50 @@ class EtatCognitif:
         self.sous_objectifs_curiosite_jour = 0
         self.r_bio_jour = 0.0
         self.effort_metabolique_jour = 0.0
+
+        # --- v41.32-etape1 : LA SONDE DE MIXAGE (télémétrie PURE, aucun effet) ---
+        # Le point d'assemblage de la récompense est UNIQUE dans tout le fichier : les
+        # onze termes y sont sommés à poids 1 (voir `recompense_interne`). C'est le
+        # dernier gros coefficient posé du projet — mais avant de le remplacer par quoi
+        # que ce soit, il faut savoir ce que chaque terme PÈSE et surtout ce qu'il
+        # VARIE. Un terme constant, si gros soit-il, n'apprend rien au gradient : c'est
+        # la dispersion qui porte le signal, pas la moyenne.
+        #
+        # ⚠️ Cinq des onze termes avaient déjà un cumul (`r_bio_jour`,
+        # `penalite_stagnation_jour`, `guidage_but_journee`…), mais TROIS autres
+        # comptaient des ÉVÉNEMENTS et non des AMPLITUDES : `portes_franchies_jour`,
+        # `progres_personnel_jour` et `sous_objectifs_curiosite_jour` répondent à
+        # « combien de fois ? », jamais à « combien de récompense ? ». Un terme fréquent
+        # à trois fois rien et un terme rare mais massif avaient donc le même compteur.
+        #
+        # Méthode : trois scalaires par terme (n, Σx, Σx²), moyenne ET écart-type
+        # reconstruits la nuit. Surtout PAS de liste tick par tick — 1500 jours × 400
+        # ticks × 11 termes = 6,6 M de flottants Python pour un résultat obtenable en
+        # O(1) mémoire. Coût mesuré par tick : 11 additions + 11 multiplications, contre
+        # un forward réseau + un rollout C2 sur 7 actions (< 0,01 % du tick).
+        #
+        # Remis à zéro ICI comme tout buffer journalier — piège `score_vocal_jour` v27.0,
+        # rappelé en tête de cette méthode : un compteur créé à la volée par getattr()
+        # sans réarmement cumulerait depuis la NAISSANCE du cerveau, et la « moyenne du
+        # jour » serait en réalité la moyenne de toute la vie.
+        self.mix_n = 0
+        self.mix_somme = {}
+        self.mix_somme_carres = {}
+
+        # --- v41.32-etape2 : LA SONDE DE FOURRAGE (télémétrie PURE) ---
+        # Mesure la CONJONCTION « être en face d'une ressource » ET « jouer le geste ».
+        # Voir `_sonder_fourrage` pour le détail de ce que chaque compteur distingue.
+        # Réarmés ici comme tout buffer journalier (piège `score_vocal_jour` v27.0).
+        # --- v41.32-etape4 : LA SONDE DE DISCRIMINATION (télémétrie PURE) ---
+        # Distribution des 7 actions quand `contact_frontal = 1`, séparément selon que la
+        # case frontale porte un MUR ou une RESSOURCE. Voir `_sonder_discrimination`.
+        self.discrim_actions_mur = {}
+        self.discrim_actions_ressource = {}
+
+        self.fourrage_occasions_jour = 0
+        self.fourrage_saisies_jour = 0
+        self.fourrage_tentatives_jour = 0
+        self.fourrage_faim_aux_occasions = 0.0
         self.food_consommes_jour = 0
         self.water_consommes_jour = 0
 
@@ -7613,6 +7779,218 @@ def _compter_ressources_grille(etat) -> int:
         return 0
 
 
+def _sonder_mixage(etat, **termes) -> None:
+    """v41.32-etape1 — LA SONDE DE MIXAGE. Télémétrie PURE, aucun effet sur la décision.
+
+    Accumule, pour chaque terme de la récompense, les trois scalaires qui suffisent à
+    reconstruire moyenne et écart-type la nuit venue : n, Σx, Σx². Rien n'est stocké
+    tick par tick.
+
+    POURQUOI L'ÉCART-TYPE ET PAS SEULEMENT LA MOYENNE
+    -------------------------------------------------
+    Le gradient n'apprend pas d'une constante. Un terme qui vaut toujours −0,015 est un
+    décalage d'origine : il déplace la valeur de tous les états sans jamais distinguer
+    une action d'une autre. Un terme rare mais massif, lui, porte tout le signal. Les
+    deux peuvent avoir la MÊME moyenne. C'est donc la dispersion qui départage, et c'est
+    elle qu'il faut mesurer avant de toucher à la moindre pondération.
+
+    POURQUOI PAS DE LISTE
+    ---------------------
+    1500 jours × 400 ticks × 12 termes = 7,2 M de flottants Python, pour un résultat
+    obtenable en O(1) mémoire. Ici : 3 scalaires par terme, constants, aucune croissance.
+    Coût par tick : une addition et une multiplication par terme — contre un forward
+    réseau et un rollout C2 sur 7 actions. Mesuré négligeable (< 0,01 % du tick).
+
+    ⚠️ La variance est calculée par Σx²/n − (Σx/n)², sensible à l'annulation
+    catastrophique quand la moyenne est grande devant l'écart-type. Ce n'est PAS le cas
+    ici : les termes de récompense sont tous d'ordre 1e-3 à 1e0, et la variance est
+    clampée à 0 avant la racine (voir `executer_nuit`). Si un jour un terme sortait de
+    cette plage, passer à l'algorithme de Welford en ligne (moyenne courante + M2).
+
+    ⚠️ Les trois dictionnaires sont réarmés dans `_reinitialiser_buffers_journee`, comme
+    TOUT buffer journalier. Ne jamais les créer à la volée par getattr() sans les y
+    ajouter : c'est le bug `score_vocal_jour` v27.0, où la « moyenne du jour » cumulait
+    depuis la naissance du cerveau.
+    """
+    etat.mix_n += 1
+    somme = etat.mix_somme
+    carres = etat.mix_somme_carres
+    for nom, valeur in termes.items():
+        v = float(valeur)
+        somme[nom] = somme.get(nom, 0.0) + v
+        carres[nom] = carres.get(nom, 0.0) + v * v
+
+
+def _sonder_fourrage(etat, action_item) -> None:
+    """v41.32-etape2 — LA SONDE DE FOURRAGE. Télémétrie PURE, aucun effet sur la décision.
+
+    Question mesurée : **pourquoi un agent entraîné récolte-t-il 1,68 FOOD/jour quand un
+    marcheur aléatoire en récolte 3,33 ?** (mesuré le 23/08, 3 graines, même distribution
+    d'actions). L'agent fait donc MOINS BIEN que l'absence de politique.
+
+    Manger exige une CONJONCTION depuis la v41.2-fix5/fix6 :
+      (1) l'agent doit FAIRE FACE à la ressource (case frontale `agent_pos + dir_vec`),
+      (2) et jouer `ACTION_CONSOMMER` (le `pickup` de MiniGrid).
+
+    Une conjonction se casse de deux façons, et il faut savoir LAQUELLE :
+      - l'agent ne se met jamais en position (défaut de NAVIGATION) ;
+      - il s'y met mais ne tente pas le geste (défaut de DÉCISION).
+
+    Les compteurs distinguent exactement ces deux cas :
+      `occasions`        — ticks où une ressource est dans la case frontale
+      `saisies`          — occasions où `ACTION_CONSOMMER` a effectivement été joué
+      `tentatives`       — `ACTION_CONSOMMER` joué, avec ou sans ressource en face
+      `tentatives_vides` — geste joué dans le vide (dérivé : tentatives − saisies)
+
+    Le rapport `saisies / occasions` est le **taux de saisie** : sachant que l'agent est
+    en position, tente-t-il de manger ? C'est LA grandeur qui manque au diagnostic.
+
+    ⚠️ Lue AVANT `env.step` du tick suivant, donc la case frontale est bien celle que
+    l'agent voyait quand il a décidé. Lire après périmerait la mesure — même défaut que
+    la chaleur en v41.25-fix1, où une grandeur lue en tête et consommée en queue
+    traversait un `env.step` qui l'avait invalidée.
+
+    ⚠️ Compteurs réarmés dans `_reinitialiser_buffers_journee` comme TOUT buffer
+    journalier (piège `score_vocal_jour` v27.0).
+    """
+    det = getattr(etat, "detecteur_ressources_bio", None)
+    if det is None or not getattr(det, "actif", False):
+        return
+    try:
+        env = etat.env
+        devant = tuple(np.array(env.unwrapped.agent_pos) + env.unwrapped.dir_vec)
+        sur_food = devant in det.positions_food
+        sur_water = devant in det.positions_water
+        tente = (action_item == ACTION_CONSOMMER)
+
+        if tente:
+            etat.fourrage_tentatives_jour += 1
+        if sur_food or sur_water:
+            etat.fourrage_occasions_jour += 1
+            if tente:
+                etat.fourrage_saisies_jour += 1
+            # La faim au moment de l'occasion : un agent repu qui passe son tour a
+            # raison, un agent affamé qui passe son tour est le défaut cherché.
+            etat.fourrage_faim_aux_occasions += float(etat.moteur_bio.faim())
+    except Exception:
+        return    # une sonde ne doit JAMAIS interrompre un tick
+
+
+def _sonder_discrimination(etat, action_item) -> None:
+    """v41.32-etape4 — LA SONDE DE DISCRIMINATION. Télémétrie PURE.
+
+    Question mesurée : **l'agent distingue-t-il une ressource d'un mur ?**
+
+    `contact_frontal` (bus_sensoriel, DIM_TOUCHER) est UN SEUL BIT, dérivé de
+    `can_overlap()`. Or `Ball.can_overlap() == False` comme `Wall.can_overlap() == False` :
+    le même bit vaut 1.0 pour un mur ET pour une ressource. Mesuré sur `Empty-5x5`
+    (3000 ticks) : quand le bit vaut 1, c'est un mur dans **81,5 %** des cas.
+
+    Un réflexe appris sur ce seul bit apprendrait donc majoritairement à SE DÉTOURNER —
+    et se détourner devant une ressource est exactement l'anti-corrélation mesurée à
+    l'étape 2 (ratio observé/attendu = 0,67, 49 nuits sur 60 sous le hasard).
+
+    ⚠️ MAIS L'INFORMATION EXISTE AILLEURS : la vue voit la couleur et le type, l'odorat
+    donne un gradient topologique. Le bit ambigu n'est donc une cause que si l'agent
+    s'appuie dessus PLUTÔT QUE sur ces canaux. C'est ce que cette sonde tranche.
+
+    Le test : comparer la distribution des 7 actions quand `contact_frontal = 1`,
+    séparément selon ce que porte la case frontale.
+      - distributions IDENTIQUES  -> l'agent ne discrimine pas : le bit aveugle
+      - distributions DIFFÉRENTES -> il discrimine par un autre canal : hypothèse tombée
+
+    La distance entre les deux distributions est mesurée par la **distance de variation
+    totale** (½·Σ|p−q|, dans [0,1]) : 0 = indiscernables, 1 = disjointes. Aucune
+    hypothèse de forme, aucun seuil posé — c'est une lecture, pas un test.
+
+    ⚠️ Compteurs réarmés dans `_reinitialiser_buffers_journee` (piège `score_vocal_jour`
+    v27.0). Aucune écriture hors de `discrim_*`.
+    """
+    det = getattr(etat, "detecteur_ressources_bio", None)
+    if det is None or not getattr(det, "actif", False):
+        return
+    if not (isinstance(action_item, (int, np.integer)) and 0 <= int(action_item) < 7):
+        return
+    try:
+        env = etat.env
+        e = env.unwrapped
+        fx, fy = (int(v) for v in e.front_pos)
+        grille = e.grid
+        # ⚠️ v41.32-etape4-fix1 — L'APPARTENANCE AUX ENSEMBLES DU DÉTECTEUR EST TESTÉE
+        # EN PREMIER, jamais `can_overlap()` sur la grille.
+        #
+        # Défaut mesuré : `env.step` s'exécute ~370 lignes plus haut, donc quand la sonde
+        # regarde, MiniGrid a DÉJÀ exécuté `pickup` — la Ball est dans `carrying` et la
+        # case est VIDE. `grille.get(fx,fy)` retournait None, `bloquant` valait False, et
+        # la sonde sortait sans rien compter. Résultat : « consommer sur ressource » à
+        # **0,0 % sur 60/60 nuits**, alors que le même run enregistrait **295 saisies**
+        # réelles. Les deux étaient incompatibles — c'était l'artefact, pas une découverte.
+        #
+        # `positions_food`/`positions_water` sont maintenus par le détecteur lui-même et
+        # ne sont vidés qu'à `evaluer_tick`, APRÈS cette sonde : ils restent donc valides.
+        # C'est exactement la raison pour laquelle la sonde de fourrage, qui les utilise
+        # déjà, n'a jamais eu ce biais.
+        est_ressource = (fx, fy) in det.positions_food or (fx, fy) in det.positions_water
+        if not est_ressource:
+            if not (0 <= fx < grille.width and 0 <= fy < grille.height):
+                bloquant = True                   # bord de grille = mur
+            else:
+                objet = grille.get(fx, fy)
+                bloquant = objet is not None and not objet.can_overlap()
+            if not bloquant:
+                return                             # contact_frontal = 0, hors sujet
+        a = int(action_item)
+        if est_ressource:
+            etat.discrim_actions_ressource[a] = etat.discrim_actions_ressource.get(a, 0) + 1
+        else:
+            etat.discrim_actions_mur[a] = etat.discrim_actions_mur.get(a, 0) + 1
+    except Exception:
+        return    # une sonde ne doit JAMAIS interrompre un tick
+
+
+def _resumer_discrimination(etat) -> tuple:
+    """v41.32-etape4 — distance de variation totale entre les deux distributions.
+
+    Retourne (distance, n_mur, n_ressource, p_mur, p_ressource) ou None si l'un des deux
+    échantillons est vide — auquel cas il n'y a rien à comparer, et publier un zéro ferait
+    passer une sonde INACTIVE pour une mesure NULLE (règle de mesure §4).
+    """
+    mur = getattr(etat, "discrim_actions_mur", {}) or {}
+    res = getattr(etat, "discrim_actions_ressource", {}) or {}
+    n_mur, n_res = sum(mur.values()), sum(res.values())
+    if n_mur == 0 or n_res == 0:
+        return None
+    p_mur = [mur.get(a, 0) / n_mur for a in range(7)]
+    p_res = [res.get(a, 0) / n_res for a in range(7)]
+    distance = 0.5 * sum(abs(p_mur[a] - p_res[a]) for a in range(7))
+    return distance, n_mur, n_res, p_mur, p_res
+
+
+def _resumer_mixage(etat) -> dict:
+    """v41.32-etape1 — reconstruit (moyenne, écart-type) par terme depuis les 3 scalaires.
+
+    Appelée UNE FOIS PAR NUIT, jamais par tick : le coût est de ~2 divisions et 1 racine
+    par terme, soit une douzaine d'opérations pour toute la journée.
+
+    ⚠️ `max(0.0, var)` avant la racine : Σx²/n − moy² peut sortir très légèrement négatif
+    par arrondi flottant quand un terme est rigoureusement constant (typiquement un terme
+    jamais déclenché de la journée, donc à 0.0 partout). Sans ce clamp, `sqrt` lèverait
+    une `ValueError` en pleine nuit — et une exception ici ferait perdre la journée
+    entière, alors que la sonde est censée n'avoir AUCUN effet.
+
+    Retourne {nom: (moyenne, ecart_type)}. Un terme absent du dictionnaire est un terme
+    qui n'a jamais été sondé — pas un terme à zéro.
+    """
+    n = max(1, getattr(etat, "mix_n", 0))
+    carres = getattr(etat, "mix_somme_carres", {}) or {}
+    resultats = {}
+    for nom, somme in (getattr(etat, "mix_somme", {}) or {}).items():
+        moyenne = somme / n
+        variance = carres.get(nom, 0.0) / n - moyenne * moyenne
+        resultats[nom] = (moyenne, math.sqrt(max(0.0, variance)))
+    return resultats
+
+
 def _quete_auto_active(etat) -> bool:
     """v33.0-etape0.5 — SEULE définition de « la quête auto tourne-t-elle ce tick ? ».
 
@@ -8360,11 +8738,25 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
     _presence_aud = (float(torch.clamp(obs_auditive.detach().abs().mean(), 0.0, 1.0))
                      if obs_auditive is not None else 0.0)
 
+    # v41.33 — LA CHARGE PORTÉE. Lue sur `carrying`, l'API MiniGrid, exactement comme
+    # `transition_tick` lit `agent_pos`/`agent_dir` (v41.31) : aucun TYPE d'objet n'est
+    # nommé, seule la PRÉSENCE d'une charge est perçue. Un agent qui porte une clé et un
+    # agent qui porte une balle envoient le même 1.0 — c'est au réseau de découvrir la
+    # différence par ce qui lui arrive ensuite, jamais à une table de le lui dire.
+    # Lecture défensive : hors MiniGrid (rêve, cuve, arène), `portage=None` → 0.0.
+    try:
+        _portage = 1.0 if etat.env.unwrapped.carrying is not None else 0.0
+    except Exception:
+        _portage = None
+    if not PORTAGE_PERCU_ACTIF:
+        _portage = 0.0   # témoin : la dimension reste, l'information est coupée
+
     vecteur_bio_tensor = torch.tensor(
         [etat.moteur_bio.obtenir_vecteur_bio(rappel_spatial, cible_vocale,
                                               signaux_sensoriels=signaux_sensoriels,
                                               rappel_marquant=rappel_marquant,
-                                              presence_auditive=_presence_aud)],
+                                              presence_auditive=_presence_aud,
+                                              portage=_portage)],
         dtype=torch.float32, device=DEVICE
     )
 
@@ -8882,6 +9274,13 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
 
     # v41.2-fix5 — l'action du tick est transmise : manger n'est plus un effet de bord du
     # déplacement mais un geste volontaire (voir DetecteurRessourcesBiologiques.evaluer_tick).
+    # v41.32-etape2 — sonde de fourrage, AVANT `evaluer_tick` : celui-ci retire la
+    # ressource de la grille en cas de succès, donc mesurer après ferait disparaître
+    # l'occasion qu'on veut compter.
+    _sonder_fourrage(etat, action_item)
+    # v41.32-etape4 — même position que la sonde de fourrage, et pour la même raison :
+    # `evaluer_tick` retire la ressource de la grille en cas de succès.
+    _sonder_discrimination(etat, action_item)
     mange_food, mange_water = etat.detecteur_ressources_bio.evaluer_tick(etat.env, action_item)
     # v41.2-fix7 — LE SOULAGEMENT EST CRÉDITÉ AU GESTE QUI L'A PRODUIT.
     #
@@ -9051,6 +9450,32 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
     # décrété par un seuil de palier. ⚠️ Changement de comportement réel : un agent
     # au-delà du palier 5 qui NE maîtrise PAS garde son aide — c'est le but.
     recompense_interne += recompense_continue
+
+    # --- v41.32-etape1 : SONDE DE MIXAGE (lecture seule, aucun effet sur la décision) ---
+    # Placée ICI, juste après l'assemblage, pour trois raisons :
+    #   - c'est le SEUL point du fichier où les onze termes coexistent ;
+    #   - c'est APRÈS le guidage dégressif `_g` (l. ~8760), donc on mesure l'aide
+    #     RÉELLEMENT versée et non l'aide brute — même précaution que le noyau prend
+    #     déjà explicitement pour `guidage_but_journee` ;
+    #   - c'est APRÈS l'atténuation par `acceptation()` sur la curiosité.
+    # Mesurer avant l'un ou l'autre donnerait des chiffres qui ne sont pas ceux que le
+    # gradient reçoit — donc inutilisables pour arbitrer une pondération.
+    _sonder_mixage(
+        etat,
+        Env=recompense_env,
+        Curiosite=dopamine_curiosite,
+        Jalons=micro_recompense,
+        Portes=micro_recompense_porte,
+        Progres=micro_recompense_progres,
+        Stagnation=penalite_stagnation,
+        SousObjectif=sous_objectif_intrinseque,
+        Bio=r_bio,
+        Vocal=micro_recompense_vocale,
+        CoutC3=-cout_requete_c3,
+        Guidage=recompense_continue,
+        Total=recompense_interne,
+    )
+
     # v41.27 — `MALUS_DOULEUR` SUPPRIMÉ. Le choc mural n'est plus une pénalité posée dans
     # la récompense (−0,01, l'une des 4 récompenses en dur que l'audit du dogme signalait,
     # et celle-là même qui produisait l'inversion « mourir coûte moins cher que se
@@ -10064,6 +10489,67 @@ def executer_nuit(etat, plafond_reve=None):
     print(f"  ├─ Métabolisme    : r_bio cumulé {etat.r_bio_jour:+.3f} — {etat.food_consommes_jour} Nourriture(s), "
           f"{etat.water_consommes_jour} Eau(x) consommée(s) — effort moyen (20% cerveau/80% corps): {effort_moyen_jour:.3f}")
 
+    # --- v41.32-etape4 : LA DISCRIMINATION — mur ou ressource ? ---
+    # Distance de variation totale entre les deux distributions d'actions, à
+    # `contact_frontal = 1`. Proche de 0 : l'agent réagit IDENTIQUEMENT à un mur et à une
+    # pomme, donc il ne discrimine pas. Ligne conditionnelle (règle v29.1).
+    _disc = _resumer_discrimination(etat)
+    if _disc is not None:
+        _d, _nm, _nr, _pm, _pr = _disc
+        print(f"  ├─ Discrim v41.32 : 🧱 {_nm} tick(s) face à un MUR | "
+              f"🍎 {_nr} face à une RESSOURCE | distance des politiques {_d:.4f} "
+              f"(0 = indiscernables)")
+        _noms = {0: "gauche", 1: "droite", 2: "avancer", 3: "consommer",
+                 4: "poser", 5: "activer", 6: "parler"}
+        _det = " ".join(f"{_noms[a][:4]} {100*_pm[a]:.0f}/{100*_pr[a]:.0f}" for a in range(7))
+        print(f"  │                   ↳ % mur/ressource — {_det}")
+
+    # --- v41.32-etape2 : LE FOURRAGE — la conjonction, décomposée ---
+    # Manger exige DEUX conditions simultanées (v41.2-fix5/fix6) : faire FACE à la
+    # ressource, et jouer le geste. Cette ligne dit laquelle des deux manque.
+    #   - `occasions` bas  -> défaut de NAVIGATION (l'agent ne se met pas en position)
+    #   - `saisie` bas     -> défaut de DÉCISION (il y est, mais ne tente pas)
+    # ⚠️ Ligne CONDITIONNELLE (règle v29.1) : sans détecteur actif, ne rien afficher
+    # plutôt que des zéros qui feraient passer une sonde inactive pour une mesure nulle.
+    _occ = getattr(etat, "fourrage_occasions_jour", 0)
+    _tent = getattr(etat, "fourrage_tentatives_jour", 0)
+    if _occ > 0 or _tent > 0:
+        _sais = getattr(etat, "fourrage_saisies_jour", 0)
+        _taux = 100.0 * _sais / _occ if _occ else 0.0
+        _faim = (getattr(etat, "fourrage_faim_aux_occasions", 0.0) / _occ) if _occ else 0.0
+        _vides = _tent - _sais
+        print(f"  ├─ Fourrage v41.32: 🍽️  {_occ} occasion(s) (face à une ressource) | "
+              f"{_sais} saisie(s) → taux {_taux:.1f}% | faim moyenne aux occasions {_faim:.3f}")
+        print(f"  │                   ↳ {_tent} geste(s) `consommer` joué(s), dont "
+              f"{_vides} dans le vide")
+
+    # --- v41.32-etape1 : LA TABLE DE MIXAGE, mesurée ---
+    # Ce que chaque terme de la récompense PÈSE (moyenne) et ce qu'il VARIE (écart-type).
+    # Les termes sont triés par écart-type DÉCROISSANT, pas par moyenne : c'est la
+    # dispersion qui porte le signal d'apprentissage, une constante ne distingue aucune
+    # action d'une autre. Un terme en tête de liste est un terme que le gradient entend ;
+    # un terme en queue est un décalage d'origine, si gros soit-il.
+    #
+    # ⚠️ Ligne CONDITIONNELLE (règle v29.1) : sur un jour sans aucun tick — vocal isolé,
+    # journée avortée — ne rien afficher plutôt que des zéros trompeurs, qui feraient
+    # passer une sonde INACTIVE pour une mesure NULLE (distinction ablation vide /
+    # ablation négative de la règle de mesure).
+    _mix_n = getattr(etat, "mix_n", 0)
+    if _mix_n > 0:
+        _stats_mix = _resumer_mixage(etat)
+        # `Total` est la récompense assemblée : c'est le dénominateur de lecture, pas un
+        # terme. Affiché à part pour qu'on puisse rapporter chaque part au tout.
+        _tot = _stats_mix.pop("Total", None)
+        _classe = sorted(_stats_mix.items(), key=lambda kv: -kv[1][1])
+        _tete = " | ".join(f"{nom} {moy:+.4f}±{ec:.4f}" for nom, (moy, ec) in _classe[:4])
+        print(f"  ├─ Mixage v41.32  : 🎚️  {_mix_n} tick(s) | par σ décroissant → {_tete}")
+        _queue = " | ".join(f"{nom} {moy:+.4f}±{ec:.4f}" for nom, (moy, ec) in _classe[4:])
+        if _queue:
+            print(f"  │                   ↳ {_queue}")
+        if _tot is not None:
+            print(f"  │                   ↳ TOTAL assemblé {_tot[0]:+.4f}±{_tot[1]:.4f} "
+                  f"(les 11 termes sont sommés à poids 1)")
+
     # --- v34.0-etape0 : les mesures préalables au chantier Fatigue/Mortalité/Soin ---
     # Ligne unique et dense : c'est un cadran de calibrage, pas une métrique de suivi.
     # Elle disparaîtra quand les constantes de la v34 auront été calibrées.
@@ -10506,6 +10992,9 @@ def executer_nuit(etat, plafond_reve=None):
         "Bio_Stimulation": etat.moteur_bio.stimulation,
         "Bio_Deficit": etat.moteur_bio.calculer_deficit(),
         "Bio_R_Bio_Jour": etat.r_bio_jour,
+        # v41.32-etape1 — la sonde de mixage n'entre PAS ici : ses clés sont ajoutées
+        # plus bas de façon CONDITIONNELLE (une par terme réellement observé), pour ne
+        # pas publier des zéros sur un jour sans tick. Voir le bloc `Mix_*`.
         "Bio_Food_Consommes_Jour": etat.food_consommes_jour,
         "Bio_Water_Consommes_Jour": etat.water_consommes_jour,
         "Bio_Quete_Active": etat.moteur_bio.quete_active["type"] if etat.moteur_bio.quete_active else "Aucune",
@@ -10739,6 +11228,70 @@ def executer_nuit(etat, plafond_reve=None):
         log_wandb["Empreinte_Valence_Max"] = max(_vals)
         log_wandb["Empreinte_Valence_Min"] = min(_vals)
         log_wandb["Empreinte_Valence_Etendue"] = max(_vals) - min(_vals)
+
+    # --- v41.32-etape4 : LA DISCRIMINATION en W&B ---
+    # `Discrim_Distance` est la courbe décisive. Si elle reste plate près de 0 au fil des
+    # jours, l'agent n'apprend jamais à distinguer une ressource d'un obstacle.
+    _disc_w = _resumer_discrimination(etat)
+    if _disc_w is not None:
+        _dw, _nmw, _nrw, _pmw, _prw = _disc_w
+        log_wandb["Discrim_Distance"] = _dw
+        log_wandb["Discrim_Ticks_Mur"] = _nmw
+        log_wandb["Discrim_Ticks_Ressource"] = _nrw
+        log_wandb["Discrim_Consommer_Sur_Mur"] = _pmw[ACTION_CONSOMMER]
+        log_wandb["Discrim_Consommer_Sur_Ressource"] = _prw[ACTION_CONSOMMER]
+
+    # --- v41.32-etape2 : LE FOURRAGE en W&B ---
+    # `Fourrage_Taux_Saisie` est la courbe décisive : sachant que l'agent est EN FACE
+    # d'une ressource, tente-t-il de la prendre ? Si elle DÉCROÎT au fil des jours, le
+    # gradient réprime activement le geste — c'est l'hypothèse à falsifier.
+    # Clés conditionnelles (règle v29.1) : un détecteur inactif ne doit rien publier.
+    _occ_w = getattr(etat, "fourrage_occasions_jour", 0)
+    _tent_w = getattr(etat, "fourrage_tentatives_jour", 0)
+    if _occ_w > 0 or _tent_w > 0:
+        _sais_w = getattr(etat, "fourrage_saisies_jour", 0)
+        log_wandb["Fourrage_Occasions"] = _occ_w
+        log_wandb["Fourrage_Saisies"] = _sais_w
+        log_wandb["Fourrage_Tentatives"] = _tent_w
+        log_wandb["Fourrage_Tentatives_Vides"] = _tent_w - _sais_w
+        if _occ_w > 0:
+            log_wandb["Fourrage_Taux_Saisie"] = _sais_w / _occ_w
+            log_wandb["Fourrage_Faim_Aux_Occasions"] = (
+                getattr(etat, "fourrage_faim_aux_occasions", 0.0) / _occ_w)
+        if _tent_w > 0:
+            log_wandb["Fourrage_Efficacite_Geste"] = _sais_w / _tent_w
+
+    # --- v41.32-etape1 : LA TABLE DE MIXAGE en W&B ---
+    # Deux courbes par terme : `Mix_Moy_*` (ce qu'il pèse) et `Mix_Ecart_*` (ce qu'il
+    # varie). C'est la SECONDE qui décide : un terme constant ne distingue aucune action
+    # d'une autre, quelle que soit son amplitude.
+    #
+    # ⚠️ Clés CONDITIONNELLES (règle v29.1, blocs `Sens_*` et C3) : un terme jamais sondé
+    # doit être ABSENT des courbes, pas à zéro. Publier un zéro ferait passer un canal
+    # débranché pour un canal mesuré nul — exactement la confusion « ablation vide /
+    # ablation négative » que la règle de mesure interdit, et le piège dans lequel le
+    # projet est déjà tombé deux fois (v41.4, v41.7).
+    #
+    # Ce que ces courbes doivent montrer :
+    #   - quel terme domine RÉELLEMENT la récompense, par sa dispersion ;
+    #   - si `Mix_Ecart_Bio` est du même ordre que `Mix_Ecart_Env` — auquel cas la
+    #     survie et le but parlent au gradient à voix comparable ;
+    #   - si un terme a un écart-type quasi nul : il ne sert alors à rien, quelle que
+    #     soit sa moyenne, et c'est un candidat au retrait plutôt qu'à la pondération.
+    if getattr(etat, "mix_n", 0) > 0:
+        log_wandb["Mix_Ticks"] = etat.mix_n
+        _stats_w = _resumer_mixage(etat)
+        for _nom, (_moy, _ec) in _stats_w.items():
+            log_wandb[f"Mix_Moy_{_nom}"] = _moy
+            log_wandb[f"Mix_Ecart_{_nom}"] = _ec
+        # Part de dispersion : quelle fraction du signal total chaque terme porte.
+        # C'est la lecture DIRECTE de la table de mixage — la seule qui réponde à
+        # « le soulagement de l'eau est-il noyé sous le bruit de fond ? ».
+        _somme_ec = sum(_ec for _nom, (_moy, _ec) in _stats_w.items() if _nom != "Total")
+        if _somme_ec > 0:
+            for _nom, (_moy, _ec) in _stats_w.items():
+                if _nom != "Total":
+                    log_wandb[f"Mix_PartSignal_{_nom}"] = _ec / _somme_ec
     log_wandb["Reve_Facteur_Richesse"] = facteur_richesse
     log_wandb["Reve_Empreinte_Enfance"] = etat.empreinte_enfance
     # v31.1 — santé de la mémoire spatiale : la déduplication travaille-t-elle, et la
@@ -10908,8 +11461,24 @@ if __name__ == "__main__":
     # v41.27 — témoin de l'option (b), voir MORT_COUTE_LA_JOURNEE.
     _p.add_argument("--mort-sans-cout", action="store_true",
                     help="ABLATION : mourir ne coûte plus la journée (comportement < v41.27)")
+    _p.add_argument("--detach-c2", action="store_true",
+                    help="C2 lit le corps sans le sculpter : il apprend toujours, mais ne "
+                         "rétropropage plus dans integrateur_bio (correctif candidat de la "
+                         "collision C1/C2)")
+    _p.add_argument("--sans-gradient-c2", action="store_true",
+                    help="ABLATION : C2 garde son forward mais ne rétropropage plus "
+                         "(teste la collision C1/C2 dans integrateur_bio). Mesure "
+                         "l'ALIGNEMENT du gradient, jamais la performance.")
+    _p.add_argument("--soif-figee", action="store_true",
+                    help="ABLATION piste C : l'hydratation reste à 1.0 (le corps ne tire "
+                         "plus que sur UN axe). Mesure l'alignement du gradient, JAMAIS "
+                         "la performance.")
     _p.add_argument("--sans-douleur", action="store_true",
                     help="ABLATION : la chaleur reste perçue mais ne coûte rien (témoin v41.24)")
+    _p.add_argument("--sans-portage", action="store_true",
+                    help="ABLATION v41.33 : le bit de portage reste dans le vecteur bio "
+                         "mais toujours à 0.0 (témoin — la DIMENSION est conservée, seule "
+                         "l'INFORMATION est coupée, ce qui isole le signal de la largeur)")
     # v41.25 — banc de mesure. Le cursus est bloqué au niveau 4, or les niveaux 1-4 ne
     # contiennent AUCUNE lave : mesurer la douleur thermique sur le cursus normal
     # reviendrait à mesurer un terme nul dans 99,7 % des ticks (mesuré : chaleur moyenne
@@ -11032,6 +11601,41 @@ if __name__ == "__main__":
         from naulthene.cerveau.noyau import MORT_COUTE_LA_JOURNEE as _v
         assert _v is False, "l'ablation n'a pas atteint le module — campagne invalide"
 
+    # v41.32 — detach asymétrique. MÊME DISCIPLINE : module NOMMÉ + assertion runtime.
+    _det_c2 = bool(_args.detach_c2)
+    globals()["DETACH_C2_ASYMETRIQUE"] = _det_c2
+    if _module_reel is not None:
+        _module_reel.DETACH_C2_ASYMETRIQUE = _det_c2
+    if _det_c2:
+        print("🔬 [VARIANTE] detach asymétrique — C2 lit le corps sans le sculpter")
+        from naulthene.cerveau.noyau import DETACH_C2_ASYMETRIQUE as _verif_det
+        assert _verif_det is True, ("le drapeau n'a pas atteint le module — campagne invalide")
+
+    # v41.32 — collision C1/C2. MÊME DISCIPLINE : module NOMMÉ + assertion runtime.
+    _grad_c2 = not _args.sans_gradient_c2
+    globals()["GRADIENT_C2_ACTIF"] = _grad_c2
+    if _module_reel is not None:
+        _module_reel.GRADIENT_C2_ACTIF = _grad_c2
+    if not _grad_c2:
+        print("🔬 [ABLATION] gradient de C2 COUPÉ — forward intact, plus de "
+              "rétropropagation vers integrateur_bio")
+        from naulthene.cerveau.noyau import GRADIENT_C2_ACTIF as _verif_c2
+        assert _verif_c2 is False, ("l'ablation n'a pas atteint le module — campagne invalide")
+
+    # v41.32 — piste C. MÊME DISCIPLINE : écriture dans le module NOMMÉ + assertion
+    # runtime. C'est le correctif du bug v41.4, où le drapeau n'atteignait pas le module
+    # et où les trois bras de la campagne étaient en réalité identiques — un résultat
+    # « trop propre » qui a coûté un cycle entier.
+    _soif_figee = bool(_args.soif_figee)
+    globals()["SOIF_FIGEE"] = _soif_figee
+    if _module_reel is not None:
+        _module_reel.SOIF_FIGEE = _soif_figee
+    if _soif_figee:
+        print("🔬 [ABLATION] axe hydrique GELÉ (piste C) — hydratation forcée à 1.0, "
+              "le corps ne tire plus que sur la faim")
+        from naulthene.cerveau.noyau import SOIF_FIGEE as _verif_soif
+        assert _verif_soif is True, ("l'ablation n'a pas atteint le module — campagne invalide")
+
     # v41.25 — même discipline : écriture dans le module NOMMÉ + assertion runtime.
     _douleur_active = not _args.sans_douleur
     globals()["DOULEUR_THERMIQUE_ACTIVE"] = _douleur_active
@@ -11041,6 +11645,21 @@ if __name__ == "__main__":
         print("🔬 [ABLATION] nociception thermique v41.25 COUPÉE — chaleur perçue mais indolore")
         from naulthene.cerveau.noyau import DOULEUR_THERMIQUE_ACTIVE as _verif_dlr
         assert _verif_dlr is False, ("l'ablation n'a pas atteint le module — campagne invalide")
+
+    # v41.33 — même discipline : écriture dans le module NOMMÉ + assertion runtime.
+    #
+    # ⚠️ LE TÉMOIN GARDE LA DIMENSION ET NE COUPE QUE L'INFORMATION (règle de mesure §6.3).
+    # Retirer la 42ᵉ colonne changerait la LARGEUR d'`integrateur_bio` : on mesurerait
+    # « un réseau plus large contre un réseau plus étroit », pas « avec ou sans
+    # proprioception ». Ici les deux bras ont exactement la même architecture.
+    _portage_actif = not _args.sans_portage
+    globals()["PORTAGE_PERCU_ACTIF"] = _portage_actif
+    if _module_reel is not None:
+        _module_reel.PORTAGE_PERCU_ACTIF = _portage_actif
+    if not _portage_actif:
+        print("🔬 [ABLATION] bit de portage v41.33 COUPÉ — la dim reste, l'info est à 0.0")
+        from naulthene.cerveau.noyau import PORTAGE_PERCU_ACTIF as _verif_port
+        assert _verif_port is False, ("l'ablation n'a pas atteint le module — campagne invalide")
 
     # v41.13 — même discipline : écriture dans le module NOMMÉ + assertion runtime.
     _corps_actif = not _args.sans_corps_rollout

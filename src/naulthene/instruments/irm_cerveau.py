@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Adrien Nault — Naulthène AGI
 """
 L'IRM du Cerveau (V25.x, expérimental) — scanner d'activation en direct.
 

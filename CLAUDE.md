@@ -352,6 +352,124 @@ Deux réflexes qui ont chacun débusqué un bug réel :
 Une ablation dont le témoin est à zéro ne mesure rien : distinguer une ablation
 **négative** (mesurée à 0) d'une ablation **vide** (jamais activée).
 
+### 5. Le protocole A/A — comment il se lance réellement
+
+Le A/A n'est pas un principe abstrait : c'est **deux commandes** avant toute campagne, et
+son coût est de quelques minutes.
+
+```bash
+# Deux runs RIGOUREUSEMENT identiques — même graine, même code, même env
+mkdir -p brains/AA_<sujet>_$(date +%d%m%Y)
+for rep in 1 2; do
+  WANDB_MODE=offline PYTHONPATH=src python -m naulthene.cerveau.noyau \
+      --graine 11 --jours 60 \
+      --brain "brains/AA_<sujet>_$(date +%d%m%Y)/AA_g11_rep${rep}.brain" \
+      > "brains/AA_<sujet>_$(date +%d%m%Y)/AA_g11_rep${rep}.log" 2>&1
+done
+diff <(grep -o 'Niveau [0-9]*' AA_g11_rep1.log) <(grep -o 'Niveau [0-9]*' AA_g11_rep2.log)
+```
+
+**Lecture du résultat :**
+
+| Ce qu'on observe | Verdict | Suite |
+|---|---|---|
+| Les deux runs sont **bit-identiques** | ✅ le banc est déterministe | l'A/B peut mesurer un effet ; **δ_A/A = 0** |
+| Ils diffèrent, mais **moins** que l'effet attendu | 🟡 bruit résiduel | l'A/B doit dépasser `δ_A/A` **et** passer le `t` |
+| Ils diffèrent **autant** que A et B | ❌ **le test ne mesure rien** | corriger le déterminisme AVANT toute campagne |
+
+> ⚠️ **`δ_A/A` est le vrai plancher de détection**, pas l'intervalle de confiance
+> théorique. Un effet A/B inférieur à l'écart A/A **n'existe pas**, quel que soit son `t` :
+> le banc ne sait pas le voir. Toujours reporter `δ_A/A` **à côté** du résultat A/B.
+
+### 6. Le protocole A/B — la forme obligatoire
+
+Quatre exigences, toutes déjà payées par un cycle perdu :
+
+1. **Appariement par graine.** La graine `g11` du bras A et la graine `g11` du bras B
+   doivent voir **le même monde**. Sans appariement, on compare deux tirages, pas deux
+   versions.
+2. **Un seul bras par mécanique.** Jamais deux drapeaux d'ablation ensemble : patience et
+   rythme coupés simultanément ont donné une ablation **confondue** (v41.30). Si deux
+   mécaniques sont couplées, il faut **trois** bras (A, A+m1, A+m2), pas deux.
+3. **Le témoin doit garder le SENS et ne couper que la MÉCANIQUE.** `--sans-douleur`
+   conserve la thermoception et ne coupe que la boucle nociceptive : c'est ce qui isole le
+   mécanisme du capteur. Un témoin qui coupe les deux ne dit pas lequel des deux agissait.
+4. **Vérifier que le témoin est ATTEINT.** Le drapeau doit être lu **dans le module**, pas
+   seulement accepté par l'argparse — le bug v41.4 est exactement ça : le drapeau
+   n'atteignait pas le module et les trois bras étaient identiques.
+
+⚠️ **Le run doit être TERMINÉ avant tout `t`.** Un `t` sur un run en cours choisit
+implicitement sa fenêtre : le ratio C2/C1 valait `t=+3,68` sur 5/5 graines au jour 1046, et
+`t=+1,93` sur 3/5 au jour 1479 — l'écart moyen avait pourtant AUGMENTÉ, c'est la dispersion
+qui a explosé (leçon du 20/08/2026). De même, la maîtrise lue à n=5 valait **+4,95** ; à
+n=20, **+1,09**.
+
+⚠️ **Correction de Bonferroni dès qu'on teste plusieurs métriques.** 3 métriques ⇒ seuil
+`t ≈ 2,86` (p = 0,05/3, df = 19). Un `t = +2,17` isolé **ne passe pas** (p ≈ 0,13). Annoncer
+le nombre de métriques testées **avant** de donner le `t`.
+
+⚠️ **Un banc forcé (`--env-force`) ne prouve rien sur le cursus.** Il court-circuite la
+promotion, donc le niveau reste à 1/15 **par construction** et « niveau atteint » devient
+inopérant comme juge. Un banc forcé prouve qu'une mécanique marche **là où elle
+s'applique**, jamais qu'elle ne nuit pas ailleurs — la nociception v41.25 était bonne sur
+`LavaGap` et coûtait **−25 % de récolte** partout ailleurs. Toute mécanique validée au banc
+forcé **doit** repasser en cursus complet avant d'être revendiquée.
+
+### 7. La gestion des données — « une campagne s'archive AVANT de tourner »
+
+> Règle posée le 22/08/2026, après la perte de **40 `.brain` et 40 logs** d'une campagne
+> de 1500 jours × 20 graines : ils avaient été écrits dans le scratchpad de session, purgé
+> quelques minutes après la fin des runs. Les chiffres extraits avant la purge sont exacts,
+> mais **aucune réanalyse n'est possible** — ni ouvrir un cerveau, ni recouper une
+> métrique, ni tester une hypothèse née après coup.
+
+**Le dossier de campagne se crée AVANT le lancement, jamais après.**
+
+```bash
+CAMPAGNE="brains/$(date +%d%m%Y)_<sujet>"
+mkdir -p "$CAMPAGNE"           # ← AVANT le premier run, jamais après
+```
+
+| Règle | Détail |
+|---|---|
+| **Écrire directement dans `brains/<campagne>/`** | jamais dans `/tmp`, jamais dans le scratchpad de session — il est purgé **sans préavis**, y compris pendant que la session est encore vivante |
+| **Le `.log` compte autant que le `.brain`** | il porte les bilans de nuit, donc toute la télémétrie console qui n'est pas dans W&B. Rediriger `> …log 2>&1`, un fichier par run |
+| **Toujours archiver, jamais supprimer** | un `.brain` = des centaines de jours de run. Ranger dans `brains/old_VXX/`, ne jamais effacer |
+| **Un `LISEZ_MOI.md` par campagne** | protocole, commande exacte, date, nombre de graines, ce qu'on cherchait. Un dossier de `.brain` sans protocole est illisible six semaines plus tard |
+| **Vérifier le gitignore après création** | `git check-ignore -v brains/<campagne>/x.brain` — `brains/**/*.brain` couvre les sous-dossiers, mais le `LISEZ_MOI.md`, lui, **doit** être versionné |
+| **Extraire les chiffres AU FIL DE L'EAU** | ne pas attendre la fin des 40 runs pour lire les `.brain`. Un résumé JSON écrit après chaque vague survit à la perte des sources |
+| **Sauvegarder l'agrégat à côté des sources** | `resultats.json` + le tableau markdown dans le même dossier : c'est ce qui a survécu au 22/08, et c'est tout ce qui a survécu |
+
+**Nommage** (convention v30.0, inchangée) : `DDMMYYYYHHMM_VXX_NMRTOUR_RMD.brain`,
+horodatage du **lancement**. Dans une campagne appariée, ajouter le bras et la graine :
+`…_CAUSAL_g11.brain` / `…_TEMOIN_g11.brain` — deux bras dans **le même** dossier, sinon
+l'appariement se perd au rangement.
+
+### 8. Les copies de cerveaux — ce qu'on a le droit de comparer
+
+Un `.brain` n'est pas un fichier de données : c'est un **état cognitif daté**, et le
+comparer à un autre suppose une parenté.
+
+| Situation | Comparable ? | Pourquoi |
+|---|---|---|
+| Deux bras, **même graine**, même version | ✅ oui | c'est l'appariement — le seul cas propre |
+| Deux graines différentes, même version | 🟡 population seulement | jamais tick à tick ; n ≥ 20 obligatoire |
+| Deux versions d'architecture différentes | ❌ **non** | les couches n'ont pas les mêmes dimensions ; toute « comparaison » passe par une greffe qui change le sujet |
+| Un `.brain` repris pour un **nouveau** run | ❌ **jamais sans copie** | le fichier est **écrasé à chaque nuit** par `sauvegarder()` — reprendre un cerveau sans le copier **détruit** l'original |
+
+⚠️ **Copier AVANT de reprendre un cerveau** :
+`cp ancien.brain brains/<campagne>/reprise_g11.brain` puis lancer sur la **copie**. Deux
+runs qui partagent un chemin `.brain` s'écrasent mutuellement, et c'est silencieux.
+
+⚠️ **Ne jamais réutiliser un chemin générique** (`brains/naulthene_cursus.brain`) pour un
+nouveau run : ces chemins historiques existent pour *reprendre* un run, pas pour en démarrer
+un. Un `--brain` explicite par run, toujours.
+
+⚠️ **Un `.brain` d'une version antérieure est greffé au chargement** (par recopie, jamais
+par exclusion) mais **garde son nom d'origine** : le nom trace sa naissance, pas son état
+courant. Ne jamais déduire la version courante d'un cerveau de son nom de fichier — la lire
+dans le fichier.
+
 ---
 
 ## Format de Rapport — 3 / 3 / 3

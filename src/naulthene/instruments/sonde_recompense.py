@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Adrien Nault — Naulthène AGI
 """LA SONDE DE RÉCOMPENSE — qui tire la récompense vers le bas ? (v33.1, expérimental)
 
 Instrument de DIAGNOSTIC en lecture seule. Décompose, terme par terme, la récompense

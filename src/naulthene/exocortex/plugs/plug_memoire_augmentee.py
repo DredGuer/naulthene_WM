@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Adrien Nault — Naulthène AGI
 """Plug Mémoire Augmentée (v30.0, expérimental) — le premier plug PERCEPTIF.
 
 C'est le plug de démonstration de l'Exo-Sens (le 6ème sens). Contrairement aux plugs

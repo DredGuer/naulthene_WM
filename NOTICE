@@ -1,49 +1,102 @@
 Naulthène AGI (naulthene_WM)
-Copyright 2026 Adrien Nault
+Copyright (C) 2026 Adrien Nault
 
-This product includes software originally designed, conceived, and developed
-by Adrien Nault (https://github.com/DredGuer).
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option) any
+later version.
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
 
-    http://www.apache.org/licenses/LICENSE-2.0
+You should have received a copy of the GNU Affero General Public License along
+with this program. If not, see <https://www.gnu.org/licenses/>.
 
-ATTRIBUTION REQUIREMENT (per License Section 4(d))
+--------------------------------------------------------------------------------
+LICENCE CHANGE — 2026-08-27
+--------------------------------------------------------------------------------
 
-This NOTICE file is part of the Naulthène AGI distribution. As provided by
-Section 4(d) of the Apache License, Version 2.0, any Derivative Work that
-You distribute (in Source or Object form, modified or unmodified, in whole
-or in part) MUST include a readable copy of this attribution notice, in at
-least one of the places listed in Section 4(d) of the License.
+Naulthène AGI was previously distributed under the Apache License 2.0. As of
+2026-08-27 it is distributed under the GNU Affero General Public License v3.0
+or later (AGPL-3.0-or-later).
+
+Adrien Nault is the sole author and copyright holder of this work and is
+therefore entitled to relicense it. The previous licence text is retained as
+LICENSE-Apache-2.0-historique.txt for reference. Commits made before
+2026-08-27 remain available under the Apache License 2.0; all subsequent
+versions of this work are governed by the AGPL-3.0-or-later.
+
+WHY THIS CHANGE. This project is in an active research and validation phase.
+The AGPL keeps the work open to peers, reviewers, and contributors, while
+ensuring that no party can take this cognitive architecture, build upon it,
+and close it behind a proprietary black box — including as a hosted network
+service, which is precisely what Section 13 of the AGPL addresses and what the
+Apache License did not.
+
+--------------------------------------------------------------------------------
+SECTION 13 — REMOTE NETWORK INTERACTION
+--------------------------------------------------------------------------------
+
+If you modify this program and make it available to users over a network —
+whether as an API, a hosted agent, a research demonstrator, a SaaS product, or
+any comparable service — Section 13 of the AGPL requires you to offer those
+users access to the Corresponding Source of your modified version, free of
+charge and through a customary means of software distribution.
+
+Running Naulthène AGI, or a derivative of it, as a network-accessible service
+without publishing the corresponding source is a violation of this licence.
+
+--------------------------------------------------------------------------------
+ATTRIBUTION
+--------------------------------------------------------------------------------
 
 Adrien Nault is the original author of the Naulthène AGI concept, cognitive
 architecture, and reference implementation — including, without limitation,
-the hybrid System 1 / System 2 design, the JEPA-based world model, the
-homeostatic dopaminergic reservoir, the base/annexe synaptic plasticity
-mechanism, and the adaptive nightly consolidation ("dream") cycle described
-in readme.md and explications_readme.md.
+the hybrid System 1 / System 2 design (C1 reflex / C2 neocortex), the
+JEPA-based world model, the homeostatic dopaminergic reservoir, the
+base/annexe synaptic plasticity mechanism, the multimodal sensory bus, and
+the adaptive nightly consolidation ("dream") cycle described in readme.md,
+readme_fr.md, and docs/.
 
-Accordingly, any public use, publication, redistribution, fork, or
-derivative work — whether or not the source code is modified, and whether
-distributed as software, published as research, or described in an
-article, paper, presentation, or other public communication — must credit:
+Any public use, publication, redistribution, fork, or derivative work —
+whether or not the source code is modified, and whether distributed as
+software, published as research, or described in an article, paper,
+presentation, model card, or other public communication — must credit:
 
     Adrien Nault — original author of the Naulthène AGI concept and
     architecture (https://github.com/DredGuer)
 
-This attribution must be reasonably prominent and reasonably proximate to
-the description or use of the Naulthène AGI concept or architecture (e.g.
-in the credits/authors section of a publication, in the README or
-about-page of a derivative project, or in comparable citation practice for
-the medium used) — not merely buried in a LICENSE file. Removing, obscuring,
-or failing to carry forward this attribution when the concept or
-architecture is used, described, or built upon is a violation of this
-NOTICE and of Section 4 of the License.
+This attribution must be reasonably prominent and reasonably proximate to the
+description or use of the Naulthène AGI concept or architecture (for example,
+in the credits/authors section of a publication, in the README or about-page
+of a derivative project, or in comparable citation practice for the medium
+used) — not merely buried in a licence file. Removing, obscuring, or failing
+to carry it forward when the concept or architecture is used, described, or
+built upon is a violation of this NOTICE.
 
-The contents of this NOTICE file are for informational purposes only and
-do not modify the License, per Section 4(d). You may add your own
-attribution notices within Derivative Works that you distribute, alongside
-or as an addendum to this NOTICE, provided that such additional attribution
-notices cannot be construed as modifying the License.
+--------------------------------------------------------------------------------
+SCOPE — WHAT IS AND IS NOT COVERED
+--------------------------------------------------------------------------------
+
+Covered: the source code in src/, the documentation in docs/, readme.md and
+readme_fr.md, and any derivative of them.
+
+Not covered by this copyright: the third-party dependencies this project
+imports (PyTorch, NumPy, Gymnasium, MiniGrid, Weights & Biases, Pygame,
+Matplotlib, Requests), each governed by its own licence — all permissive
+(BSD-3-Clause, MIT, Apache-2.0, PSF) or LGPL, and none of which restricts
+distribution of this work under the AGPL.
+
+Trained brain files (brains/**/*.brain) are experimental artefacts, are not
+distributed with this repository, and carry no separate licence grant.
+
+--------------------------------------------------------------------------------
+NO WARRANTY — RESEARCH SOFTWARE
+--------------------------------------------------------------------------------
+
+Naulthène AGI is a research notebook, not a product. It does not work yet: as
+of 2026-08-27 the agent plateaus at level 4 of a 15-level curriculum and shows
+no measurable learning at that level. See readme.md for the current, measured
+state. Nothing in this repository should be read as a claim of working
+artificial general intelligence.

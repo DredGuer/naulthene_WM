@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Adrien Nault — Naulthène AGI
 """
 L'Arène & Démo Live (V24.0, expérimental) — observer un cerveau entraîné en action.
 

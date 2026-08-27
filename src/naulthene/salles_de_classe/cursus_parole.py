@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Adrien Nault — Naulthène AGI
 """
 Le Cursus de la Parole (V27.0, expérimental, "École de la Parole & Synesthésie") — 900
 jours × 800 ticks d'acquisition du langage ancré dans la vision (grounding).

@@ -4,6 +4,201 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.33-licence] - 2026-08-27 — Passage à l'AGPL-3.0-or-later
+
+### Protéger contre une utilisation non consentie, sans fermer le code
+
+| Type | Details |
+|------|---------|
+| **Commit** | `bd2af14` |
+| **Catégorie** | docs (licence) |
+| **Impact** | Critique (juridique) |
+
+**Naulthène AGI passe d'Apache 2.0 à AGPL-3.0-or-later.** Adrien Nault étant l'auteur
+unique et seul détenteur des droits, il est fondé à relicencier.
+
+**Ce que l'Apache 2.0 ne couvrait pas.** Elle autorise qu'un tiers reprenne l'architecture,
+la modifie, et l'exploite comme **service en réseau** (API, agent hébergé, démo) sans jamais
+publier ses modifications. C'est exactement le scénario qu'un projet de recherche en phase
+active doit écarter — et c'est ce que traite la **section 13** de l'AGPL, qui étend
+l'obligation de partage aux utilisateurs d'un service distant.
+
+**Ce que ça ne change pas** : le code reste ouvert, lisible, forkable et contribuable. Le
+choix vise l'appropriation fermée, jamais la relecture par les pairs.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `LICENSE` | texte officiel AGPL-3.0 (661 lignes, gnu.org) |
+| `LICENSE-Apache-2.0-historique.txt` | ancienne licence conservée (`git mv`), jamais supprimée |
+| `NOTICE` | réécrit : changement de licence daté, section 13 explicitée, attribution maintenue, périmètre des dépendances, avertissement « ne fonctionne pas encore » |
+| `readme.md` / `readme_fr.md` | bloc licence mis à jour **dans le même commit** (règle de miroir) |
+| `src/naulthene/**/*.py` | en-tête `SPDX-License-Identifier: AGPL-3.0-or-later` sur **39 fichiers** |
+
+**Compatibilité des dépendances vérifiée avant bascule** — aucune n'empêche l'AGPL :
+
+| Dépendance | Licence |
+|---|---|
+| PyTorch, NumPy | BSD-3-Clause |
+| Gymnasium, MiniGrid, Weights & Biases | MIT |
+| Requests | Apache-2.0 |
+| Matplotlib | PSF |
+| Pygame | LGPL (liaison, compatible) |
+
+⚠️ **Portée temporelle** : les commits antérieurs au 27/08/2026 restent disponibles sous
+Apache 2.0 — une licence déjà accordée ne se révoque pas. Toutes les versions publiées à
+partir de cette date sont régies par l'AGPL.
+
+⚠️ **Ce n'est pas un avis juridique.** Le choix et sa rédaction sont ceux de l'auteur ; une
+relecture par un juriste reste souhaitable avant toute publication ou dépôt formel.
+
+---
+
+## [v41.32-etape2] - 2026-08-23 — La sonde de fourrage : l'agent n'est pas anorexique
+
+### Il tente de manger 52 fois par jour — c'est la CONJONCTION qui échoue
+
+| Type | Details |
+|------|---------|
+| **Commit** | `350d6ed` |
+| **Catégorie** | feat (télémétrie) |
+| **Impact** | **Majeur — réfute l'hypothèse du geste réprimé, isole une anti-corrélation** |
+
+Fil laissé ouvert par l'étape 1 : **l'agent entraîné récolte 1,68 FOOD/jour, un marcheur
+aléatoire 3,33.** Hypothèse testée : `ACTION_CONSOMMER` étant coûteux, le gradient aurait
+appris à **ne plus tenter**.
+
+`_sonder_fourrage` — télémétrie **pure** (vérifiée statiquement : n'écrit que dans
+`fourrage_*`). Manger exige une **conjonction** (v41.2-fix5/fix6) : faire **face** à la
+ressource **et** jouer `ACTION_CONSOMMER`. Les compteurs distinguent le défaut de
+**navigation** (jamais en position) du défaut de **décision** (en position, pas de geste).
+
+**Test A/A : δ = 0**, 60 nuits bit-identiques, graine 11.
+
+| Grandeur | Valeur |
+|---|---|
+| Occasions (face à une ressource) | **52,2/jour** |
+| Gestes `consommer` joués | **52,5/jour** |
+| **Saisies (conjonction réussie)** | **4,2/jour** |
+| **Taux de saisie** | **8,1 %** |
+| Gestes dans le vide | **92,0 %** |
+| Faim moyenne aux occasions | **0,961** |
+
+**🔴 L'hypothèse est réfutée.** Les tentatives **triplent** au fil du run (27,2 → 56,0 →
+74,2 gestes/jour) et le taux de saisie monte aussi (4,2 % → 8,1 % → 13,0 %). Le geste n'est
+pas réprimé, il est **renforcé**. L'agent n'est pas anorexique : il essaie de manger 52 fois
+par jour, de plus en plus, en famine quasi totale.
+
+**Ce que la sonde trouve à la place — l'anti-corrélation.** Les deux termes marchent
+séparément (52,2 occasions et 52,5 gestes sur 400 ticks) ; c'est leur **intersection** qui
+échoue. Sous hypothèse d'indépendance, on attendrait **378,9** saisies ; on en observe
+**253**, soit un ratio de **0,67**, et **49 nuits sur 60** sous le hasard. Les deux
+comportements ne sont pas décorrélés : ils sont **anti-corrélés**. L'agent joue le geste
+quand il n'est pas en face, et se trouve en face quand il ne joue pas le geste.
+
+Cohérent avec le fait initial : le marcheur aléatoire n'a aucune anti-corrélation à
+surmonter, donc il ferme la conjonction au taux nominal.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `_sonder_fourrage`, buffers `fourrage_*`, ligne console `Fourrage v41.32`, clés `Fourrage_*` conditionnelles (dont `Fourrage_Taux_Saisie`) |
+| `docs/recherche/REFUTATIONS_23082026_…md` | enquête n°4 |
+| `brains/23082026_v4132_fourrage/` | protocole + agrégat JSON versionnés |
+
+⚠️ **Une seule graine** (g11, 60 jours). Le fait qualitatif (ratio < 1, tentatives
+croissantes) est net ; le chiffre exact lui est propre.
+
+⚠️ **Pistes ouvertes, aucune mesurée** : la ressource est-elle perceptible dans la case
+frontale au moment de décider ? Le crédit du soulagement (v41.2-fix7) atteint-il le tick du
+geste ? `ACTION_CONSOMMER` répond-il à la **faim** (état interne) plutôt qu'à la **présence**
+(état externe) — ce qui produirait *exactement* cette anti-corrélation ?
+
+---
+
+## [v41.32-etape1] - 2026-08-23 — La sonde de mixage, et trois chantiers réfutés
+
+### Instrumenter les 11 termes de la récompense — puis réfuter trois propositions avant de les coder
+
+| Type | Details |
+|------|---------|
+| **Commit** | `ab66f81` (sonde) · `893d7f5` (réfutations) |
+| **Catégorie** | feat (télémétrie) + docs (mesure) |
+| **Impact** | **Majeur — trois chantiers annulés sur mesure, zéro correctif inutile livré** |
+
+**La sonde.** Le point d'assemblage de la récompense est **unique** dans tout `noyau.py` :
+onze termes y sont sommés à **poids 1**. `_sonder_mixage` / `_resumer_mixage` mesurent
+désormais, pour chacun, sa **moyenne** et son **écart-type** — trois scalaires par terme
+(`n`, `Σx`, `Σx²`), reconstruits la nuit. Aucune liste tick par tick : 1500 j × 400 ticks ×
+12 termes auraient fait 7,2 M de flottants pour un résultat en O(1) mémoire. Coût par tick
+mesuré négligeable (11 additions + 11 multiplications contre un forward réseau et un rollout
+C2). **Télémétrie pure** : vérifié statiquement, `_sonder_mixage` n'écrit que dans `mix_*`.
+
+**Test A/A : δ = 0.** Deux runs bit-identiques sur 40 nuits, même taille de `.brain` à
+l'octet. Le banc est déterministe.
+
+**Pourquoi l'écart-type et pas la moyenne** : le gradient n'apprend pas d'une constante. Un
+terme qui vaut toujours −0,015 est un décalage d'origine, pas un signal. Rien ne mesurait la
+dispersion avant cette sonde.
+
+#### La mesure (g11, 40 jours, cursus complet)
+
+| TERME | MOYENNE | σ | PART DU SIGNAL |
+|---|---|---|---|
+| **Bio** | +0,00346 | **0,04357** | **44,0 %** |
+| **Env** | +0,00136 | 0,02163 | 21,8 % |
+| Stagnation | −0,01611 | 0,01359 | 13,7 % |
+| Curiosite | **+0,02091** | 0,00889 | 9,0 % |
+| SousObjectif | +0,00171 | 0,00679 | 6,8 % |
+| Progres | +0,00090 | 0,00462 | 4,7 % |
+| *5 autres* | 0,00000 | **0,00000** | 0,0 % |
+
+#### Trois réfutations
+
+**(1) « le signal vital est écrasé » — FAUX.** `Bio` **domine** à 44 % de la dispersion, le
+double d'`Env`. Le vrai défaut est inversé : `Curiosite` a la plus forte **moyenne** de la
+table (6× celle de `Bio`) pour la 4ᵉ dispersion — un **décalage d'origine** qui n'apprend
+rien mais gonfle la valeur de tous les états. `Stagnation` est sa taxe symétrique.
+
+**(2) « boire ne procure aucun soulagement » — FAUX.** Ni le déficit (`(1−satiete)²` vs
+`(1−hydratation)²`) ni les profils (`FOOD.satiete=1.0` vs `WATER.hydrique=1.0`) ne sont
+asymétriques. L'écart vient de l'**état des jauges** : satiété au plancher **40/40 nuits**,
+hydratation à 0,53. `r_bio` étant la **dérivée** du déficit, une jauge pleine ne peut rien
+soulager. Ratio prédit **5,14×**, ratio des valences apprises **4,93×** — **4,4 % d'écart**.
+Les valences mesurent *exactement* le soulagement réel. Le correctif v41.7 est confirmé :
+`FOOD` est passé de `+0.000 (×4004)` à **+0,575**.
+
+**(3) « la densité est le goulot » — FAUX.** Témoin marcheur **aléatoire** sur la carte
+réelle, distribution d'actions identique : **3,33 FOOD/jour** contre **1,68** pour l'agent
+entraîné, seuil de viabilité **2,78**. Le hasard pur franchit le seuil que l'agent ne
+franchit pas. **La famine est comportementale, pas géométrique.** ⚠️ Corrige au passage un
+diagnostic erroné de la veille : le plafond v41.2-fix3 fonctionne (`Empty-5x5` place 1 FOOD
+sur 6 cases libres) ; le « 7+7 » des logs est le **souhait**, jamais le placé.
+
+**(4) « répartir la neurogenèse selon le stress » — IMPOSSIBLE, et sans objet.** `a` est à la
+fois l'ajout en entrée **et** en sortie, et huit couches sont chaînées sur le même bus : un
+`a` différent par couche casse la chaîne au premier `forward`. Et l'objectif est hors de
+portée — `cortex_prefrontal` pèse **422 params sur 384 808 (0,110 %)** parce qu'il n'a
+**qu'une seule sortie**. Il croît en **N**, toute matrice carrée en **N²** : même à 100 % du
+budget il gagnerait **96** params quand `hippocampe` en gagne **29 952** (**×312**).
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `_sonder_mixage`, `_resumer_mixage`, buffers `mix_*`, ligne console `Mixage v41.32`, clés `Mix_Moy_*` / `Mix_Ecart_*` / `Mix_PartSignal_*` conditionnelles |
+| `CLAUDE.md` | 4 sections ajoutées à la règle de mesure : protocole A/A, protocole A/B, gestion des données, copies de cerveaux |
+| `docs/recherche/REFUTATIONS_23082026_…md` | **nouveau** — les trois enquêtes complètes |
+| `docs/ameliorations/PLAN_v41.32_…md` | plan vivant, état d'avancement |
+| `brains/23082026_v4132_mixage/` | protocole + agrégat JSON versionnés |
+
+⚠️ **Cinq termes à σ = 0,00000 sont des ablations VIDES, pas négatives** : l'agent est resté
+au niveau 1/15 (`Empty-5x5`), donc ni porte, ni DoorKey, ni tuteur vocal, ni plug C3. La
+table de mixage ne pourra être arbitrée qu'après un run au **niveau 4**.
+
+⚠️ **Une seule graine** (g11, 40 jours) : les chiffres exacts lui sont propres. Seuls les
+faits qualitatifs (σ = 0 exact, `Bio` dominant, C2 à 0,110 %) sont robustes. Le témoin
+aléatoire est à **3 graines**, sous le seuil des 20 — il établit un ordre de grandeur, pas
+une mesure d'effet.
+
+---
+
 ## [v41.31-cursus] - 2026-08-22 — Le gradient causal NE SURVIT PAS au cursus complet
 
 ### 40 runs, n=20 apparié, 1500 jours : effet nul sur le niveau
