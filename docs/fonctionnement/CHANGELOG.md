@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `bd2af14` |
 | **Catégorie** | docs (licence) |
 | **Impact** | Critique (juridique) |
 
