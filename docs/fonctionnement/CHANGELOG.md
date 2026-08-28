@@ -4,6 +4,62 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.35-diagnostic] - 2026-08-28 — Le plafond est GÉOMÉTRIQUE
+
+### Le réseau détruit l'information que l'œil lui apporte
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | docs (diagnostic) + feat (3 instruments) |
+| **Impact** | Critique (réorganise la lecture de 14 réfutations) |
+
+**Ce n'est pas une réfutation de plus : c'est le diagnostic vers lequel les quatorze
+précédentes convergent.**
+
+**[1] L'optimiseur ne PEUT PAS séparer « ressource » de « mur ».**
+`cos(∇_ressource, ∇_mur)` en renforçant `ramasser` : **+0,9857 / +0,9850 / +0,9865**
+(3 cerveaux). Les gradients sont quasi colinéaires — impossibilité **mécanique**, qu'aucune
+récompense ni durée de run ne peut lever.
+
+**[2] La cause : le réseau confond progressivement ce que l'œil distingue.**
+
+| Étage | cos(ressource, mur) |
+|---|---|
+| Observation brute (147) | **0,610** |
+| `bus_latent` | 0,959 |
+| `pensee_bio` (entrée de la tête) | **0,996** |
+
+Le gradient d'une couche linéaire vaut `δ ⊗ x` : entrées colinéaires ⇒ gradients
+colinéaires, **quelle que soit `δ`**. [1] est la conséquence arithmétique de [2].
+
+**[3] Le plafond que la géométrie impose.** `|logit_r − logit_m| ≤ ‖W‖·‖x_r − x_m‖` :
+
+| Cerveau | écart de logit max | proba max de l'action favorisée |
+|---|---|---|
+| A_g11 | 0,2752 | **18,00 %** |
+| A_g44 | 0,0221 | **14,56 %** (hasard : 14,29 %) |
+
+Les **15,00 %** mesurés le 27/08 ne sont **pas de l'apathie** — c'est le maximum autorisé.
+
+**CE QUE ÇA RÉORGANISE.** Les quatorze pistes réfutées agissaient toutes sur `δ` (le signal
+d'erreur) : thrashing, crédit temporel, proprioception, attention descendante. **Aucune ne
+pouvait agir sur `x`.**
+
+⚠️ **CE QUE ÇA N'ÉTABLIT PAS** : que c'est LA cause du plafond au niveau 4 (lien plausible,
+**non mesuré** — les niveaux 1-4 ne contiennent aucun objet à ramasser) ; que 0,996 est
+pathologique (aucune référence externe mesurée) ; que c'est corrigible (aucune correction
+testée).
+
+| Fichier ajouté | Rôle |
+|-----------------|------|
+| `instruments/sonde_pression_separation.py` | `cos(∇_A, ∇_B)` — l'optimiseur peut-il séparer ? |
+| `instruments/sonde_collapse.py` | `cos(x_A, x_B)` étage par étage — où l'information se perd |
+| `instruments/sonde_plafond_geometrique.py` | l'écart de logit que la géométrie autorise |
+| `docs/recherche/COLLAPSE_28082026_*.md` | le carnet complet |
+
+---
+
 ## [v41.34] - 2026-08-28 — Le `.detach()` historique protège quelque chose de réel
 
 ### Quatorzième réfutation : l'attention descendante AUGMENTE le bruit de 48 %
