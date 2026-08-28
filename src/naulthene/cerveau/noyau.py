@@ -479,6 +479,43 @@ DIM_PORTAGE = 1
 # le témoin conserve la LARGEUR du réseau et ne coupe que l'INFORMATION.
 PORTAGE_PERCU_ACTIF = True
 
+# --- v41.34 : LE TRONC PERCEPTIF EST-IL COUPÉ POUR RIEN ? ---
+#
+# `_executer_c1_reflexe` contient `pensee_enrichie.detach()` — présent dans `colab.py`
+# DEPUIS L'ORIGINE du projet, **jamais commenté, jamais justifié, jamais mesuré**. C'est
+# le dernier choix structurel du cœur dont personne ne connaît la raison.
+#
+# 🔴 CE QU'IL FAIT (mesuré le 27/08/2026, 3 pertes injectées séparément) :
+#
+#   couche              JEPA        ACTEUR      CRITIQUE
+#   porte_visuelle      0.033868    0.000000    0.000000
+#   hippocampe          0.042690    0.000000    0.000000
+#   analyseur           0.105406    0.000000    0.000000
+#   fusion_memoire      0.000000    0.000000    0.000000
+#   integrateur_bio     0.000000    3.370580    4.332367
+#
+# **Seul le JEPA sculpte la perception.** L'acteur et le critique n'y envoient rien —
+# exactement 0,000000. Ils travaillent sur une représentation qu'il ne leur est pas permis
+# de modifier, optimisée pour PRÉDIRE la dynamique, jamais pour distinguer ce qui a de la
+# valeur.
+#
+# 🔴 POURQUOI ÇA POURRAIT COMPTER. Le bit de portage vaut **+0,325 de valeur** en
+# contrefactuel pur, soit 361 % du mouvement typique de `V` — et pourtant le saut RÉEL au
+# moment d'une saisie ne vaut que **+0,006**, contre +0,015 sur un tick banal. Le signal
+# est noyé par le bruit de la vue (±0,090/tick, non orienté), parce que la perception
+# n'a aucune raison d'apprendre à taire ce qui ne vaut rien. C'est ce qui a réfuté le
+# passage en TD(0) (13ᵉ réfutation, `docs/recherche/CLIC_27082026_*.md`).
+#
+# ⚠️ CE DRAPEAU N'EST PAS UNE CORRECTION, C'EST UNE QUESTION. Le `.detach()` protège
+# peut-être quelque chose de réel : sans lui, le gradient de l'acteur remonte dans un
+# tronc RÉCURRENT (`hippocampe` lit `memoire_precedente`), et les deux têtes se
+# rétropropagent désormais dans les MÊMES couches perceptives — c'est précisément la
+# collision C1/C2 mesurée en v41.32 sur `integrateur_bio`, mais étendue à quatre couches
+# de plus. Le bras peut donc être NUISIBLE, et l'A/B doit pouvoir le dire.
+#
+# True = comportement strictement identique à toutes les versions antérieures.
+TRONC_PERCEPTIF_DETACHE = True
+
 DIM_VECTEUR_BIO = (16 + DIM_TOUCHER + DIM_CHIMIE + DIM_EXO
                    + DIM_ODORAT_DELTA + DIM_THERMOCEPTION + DIM_PRESSION
                    + DIM_RAPPEL_MARQUANT
@@ -1186,7 +1223,11 @@ class AGI_Naulthene(nn.Module):
         )
         pensee_enrichie = self.lecture_episodique(pensee, contexte_episodique)
 
-        pensee_detachee = pensee_enrichie.detach()
+        # v41.34 — le tronc perceptif est-il coupé pour rien ? Voir TRONC_PERCEPTIF_DETACHE.
+        # `True` reproduit bit à bit tout ce qui précède ; `False` laisse l'acteur et le
+        # critique rétropropager jusqu'à `porte_visuelle`.
+        pensee_detachee = (pensee_enrichie.detach() if TRONC_PERCEPTIF_DETACHE
+                           else pensee_enrichie)
         pensee_bio = self.integrer_bio(pensee_detachee, vecteur_bio)
         logits_instinct = self.tete_motrice(pensee_bio)
         return bus_latent, memoire_actuelle, pensee_enrichie, pensee_bio, logits_instinct
@@ -11475,6 +11516,9 @@ if __name__ == "__main__":
                          "la performance.")
     _p.add_argument("--sans-douleur", action="store_true",
                     help="ABLATION : la chaleur reste perçue mais ne coûte rien (témoin v41.24)")
+    _p.add_argument("--tronc-connecte", action="store_true",
+                    help="ABLATION v41.34 : retire le .detach() du tronc perceptif — "
+                         "l'acteur et le critique rétropropagent jusqu'à porte_visuelle")
     _p.add_argument("--sans-portage", action="store_true",
                     help="ABLATION v41.33 : le bit de portage reste dans le vecteur bio "
                          "mais toujours à 0.0 (témoin — la DIMENSION est conservée, seule "
@@ -11660,6 +11704,17 @@ if __name__ == "__main__":
         print("🔬 [ABLATION] bit de portage v41.33 COUPÉ — la dim reste, l'info est à 0.0")
         from naulthene.cerveau.noyau import PORTAGE_PERCU_ACTIF as _verif_port
         assert _verif_port is False, ("l'ablation n'a pas atteint le module — campagne invalide")
+
+    # v41.34 — même discipline : écriture dans le module NOMMÉ + assertion runtime.
+    _tronc_detache = not _args.tronc_connecte
+    globals()["TRONC_PERCEPTIF_DETACHE"] = _tronc_detache
+    if _module_reel is not None:
+        _module_reel.TRONC_PERCEPTIF_DETACHE = _tronc_detache
+    if not _tronc_detache:
+        print("🔬 [VARIANTE] tronc perceptif CONNECTÉ — l'acteur et le critique "
+              "sculptent la vue")
+        from naulthene.cerveau.noyau import TRONC_PERCEPTIF_DETACHE as _verif_tronc
+        assert _verif_tronc is False, ("la variante n'a pas atteint le module — campagne invalide")
 
     # v41.13 — même discipline : écriture dans le module NOMMÉ + assertion runtime.
     _corps_actif = not _args.sans_corps_rollout

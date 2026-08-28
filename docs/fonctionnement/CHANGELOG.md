@@ -4,6 +4,60 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.34] - 2026-08-28 — Le `.detach()` historique protège quelque chose de réel
+
+### Quatorzième réfutation : l'attention descendante AUGMENTE le bruit de 48 %
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | feat (drapeau d'ablation) + docs (résultats) |
+| **Impact** | Fonctionnel (réfutation) |
+
+**Le `.detach()` de `_executer_c1_reflexe` existe dans `colab.py` DEPUIS L'ORIGINE du
+projet** — jamais commenté, jamais justifié, jamais mesuré. Dernier choix structurel du
+cœur dont personne ne connaissait la raison. Mesuré : l'acteur et le critique envoient
+**exactement 0,000000** de gradient à `porte_visuelle`, `hippocampe`, `analyseur` et
+`fusion_memoire` ; seul le JEPA (0,033868) sculpte la perception.
+
+**Hypothèse testée** : un signal de valeur atteignant la vue apprendrait à taire ce qui ne
+vaut rien, donc le bruit perceptif `|V(t+1) − V(t)|` devrait **baisser**.
+
+**[1] FALSIFIÉE sur son propre critère.** 20 graines appariées × 400 jours, cursus complet,
+40 runs :
+
+| | A (détaché) | B (connecté) | δ | `t` |
+|---|---|---|---|---|
+| Bruit `\|V(t+1)−V(t)\|` | 0,024016 | 0,035532 | **+0,011516** | **+2,71** (14/20) |
+
+**+48,0 %** — le signe est l'inverse exact de la prédiction.
+
+**[2] Et ce n'est pas un effondrement de V** (garde posée avant la mesure) : σ(V) **+52 %**
+(`t = +2,87`), étendue **+29 %** (`t = +2,03`). Le tronc est **agité, pas orienté** — c'est
+le risque de collision inscrit au protocole : trois pertes (JEPA, acteur, critique)
+sculptent désormais les mêmes couches.
+
+**[3] Comportement — 10 métriques, seuil Bonferroni `t ≈ 3,53`.** Niveau max **3,95 vs
+3,95, δ = 0,00 exactement** (18/20 graines identiques). Aucune ne passe la correction ; la
+plus forte est le **taux de saisie à `t = −3,63`, DÉFAVORABLE** au bras connecté (−4,66 pts).
+
+⚠️ **Une métrique retirée avant publication.** La sonde publiait un « rapport
+signal/bruit » fondé sur l'effet causal du bit de portage. Invalide ici : ces cerveaux ont
+vécu les niveaux 1-4, où `🔑 Portage 0.0%` — le bit n'a jamais rien porté de leur vie, et
+l'effet mesuré (0,0036 contre +0,325 sur les cerveaux v41.33) est celui d'un poids resté à
+son initialisation. **Même erreur que le 27/08**, attrapée cette fois avant publication.
+
+**CE QUE ÇA ÉTABLIT.** Le `.detach()` n'est pas de la dette technique : il **protège la
+stabilité de la carte perceptive**. Sa raison n'était pas documentée, elle est désormais
+mesurée.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `TRONC_PERCEPTIF_DETACHE` (défaut `True`, comportement **bit-identique** — A/A vérifié δ=0) + drapeau `--tronc-connecte` avec assertion runtime |
+| `brains/28082026_v4134_tronc/` | protocole, résultats, agrégats JSON et scripts, à côté des sources |
+
+---
+
 ## [v41.33-resultats] - 2026-08-27 — L'agnosie est levée. Le crédit ne suit pas.
 
 ### Douzième réfutation : le mécanisme marche exactement comme prévu, et ne sert à rien
