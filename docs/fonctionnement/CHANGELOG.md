@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `dd2af19` |
 | **Catégorie** | docs (diagnostic) + feat (3 instruments) |
 | **Impact** | Critique (réorganise la lecture de 14 réfutations) |
 
