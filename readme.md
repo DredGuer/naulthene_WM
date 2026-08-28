@@ -29,10 +29,11 @@ the same agent once expert. What remains hardcoded, and is documented rather tha
 (`"red"`/`"blue"`) inside the core. Full audit:
 [dogma review](docs/etat_des_lieux/18082026_revue_dogme_avant_publication.md).
 
-**⚠️ It does not work yet.** The agent clears 1 to 5 levels out of 6 depending on the random
-seed — a **×69 variance between two identical runs**. Eight cognitive mechanisms have been
-tested; eight failed. The only two levers that ever worked are properties of the *world*, not
-of the brain.
+**⚠️ It does not work yet.** The agent plateaus at **level 4 of 15**, and **fifteen**
+successive explanations for that plateau have been measured and refuted — thrashing, credit
+assignment, proprioception, top-down attention, representational drift. The only levers that
+ever worked are properties of the *world*, not of the brain. The one measured predictor of
+mastery remains **energy** (`r = +0.710`, `t = +2.85`).
 
 **⚠️ And the benchmark itself was biased.** A code review on 13-14 August found that up to
 **one map in two** was solvable without the key — the agent was passing a rigged exam. Fixed;
@@ -41,7 +42,8 @@ prior results are **not comparable** to future ones. Full account:
 [code review](docs/recherche/REVUE_CODE_v39_aout_2026.md).
 
 Read this as a research log, not a released system. Everything broken is written down,
-including [every diagnostic mistake](docs/recherche/recherche_bug_or_not_bug.md) — 15 of them so far.
+including [every diagnostic mistake](docs/recherche/recherche_bug_or_not_bug.md) — 18 of them so far,
+three of which were caught and retracted in the last week alone.
 
 *Long-term direction: a generalist intelligence that runs on a single Apple Silicon chip, with no
 datacenter.*
@@ -121,7 +123,7 @@ This section exists because the thesis above is only worth stating if it can be 
 > caught the earlier **55,232** figure, stale by two versions. Full teardown:
 > [anatomy of the core](docs/etat_des_lieux/21082026_anatomie_du_noyau.md).
 >
-> **What the split reveals**: **C2 — the deliberative system — is 64 parameters out of 55,552,
+> **What the split reveals**: **C2 — the deliberative system — is 64 parameters out of 55,616,
 > i.e. 0.1 % of the brain.** All of deliberation is one 64→1 projection. Worth holding next to
 > the ablation result ("severing C2 changes the score by 0.0 points"): perhaps C2 is not
 > useless, it is *tiny*. Meanwhile the audio hemisphere weighs **13,440 parameters (24 %)** for
@@ -195,7 +197,8 @@ Two caveats, both measurable rather than rhetorical:
 | **v41.33 — the carry bit** | The critic separates *object ahead* from *wall ahead* very well (Cohen's **d = +0.65 to +1.21**) but **could not tell it was carrying something** (d ≈ **0.1**, sign unstable) — of the 41 bio dimensions, **zero** encoded the inventory. Adding a 42nd dimension **lifts the blindness**: d goes **−0.012 → +1.428**, 18/20 seeds, 40 runs. 🔴 **And it changes nothing.** The credit stays flat (`\|A\| useful / \|A\| neutral` **1.11× → 1.18×**, `t = +1.97`, NS) and no behavioural metric moves. **Twelfth refutation** |
 | **v41.34 — the historical `.detach()`** | The actor and critic send **exactly 0.000000** gradient to the four perceptual layers; only the JEPA (0.033868) shapes what the agent learns to see — a line present in `colab.py` **since the project's origin**, never commented, never justified. Connecting it was expected to *reduce* perceptual noise. It **raises it 48 %** (`t = +2.71`, 14/20, 40 runs), with σ(V) +52 % — the trunk is *agitated*, not oriented. Level: **δ = 0.00 exactly**. The `.detach()` is not technical debt; it **protects the stability of the perceptual map**. **Fourteenth refutation** |
 | **v41.35 — a geometric ceiling, and a retracted diagnosis** | Bound: `\|logit_r − logit_m\| ≤ ‖W‖·‖x_r − x_w‖` caps the favoured action at **14.56 %–18.00 %** against **14.29 %** for chance — the 15.00 % measured in play is **not apathy**. ⚠️ **The accompanying claim that "the network destroys the information" was WRONG and is retracted**: cosine **saturates** post-`relu` (two clearly separated clouds, d' = 2.93, still read cos = 0.971). Re-measured with d-prime where the agent actually plateaus, the network **amplifies** the decisive feature — *is the goal visible?* — by **3.5× to 4.4×** (d' 0.824 → 2.891/3.613/3.017). The JEPA is doing its job; the bottleneck is what `tete_motrice` **does** with a clean input, and that has never been measured |
-| 🔴 **v41.36 — the head chases a target that outruns it** | Everything upstream works: the trunk **amplifies** the decisive feature (d' 0.824 → 2.891/3.613/3.017), the gradient arrives, **g22 is never clipped** (0/5 nights), Adam takes its full step, the night does not erode (norm at **90–98 %** of birth), and the steps are **directed** and **additive** (temporal alignment **0.969** vs 0.316 for a random walk). But the informative axis — defined in `pensee_bio`, trained *at the same time* — **rotates 0.4203°/night** while `W` turns at 0.0359°/night: **×11.7**. Over 200 nights the alignment does not stall, it **regresses** (0.1051 → 0.0917). And the two are **coupled**: when the target slows to 0.101°, `W` slows to 0.012° with it — same gradient, so freezing the trunk might freeze `W` too. ⚠️ An earlier ×46 figure was **retracted**: its prey was measured without a fixed seed and its pursuer was derived from a formula rather than measured |
+| **v41.36 — the head chases a target that outruns it** | Everything upstream works: the trunk **amplifies** the decisive feature, the gradient arrives, **g22 is never clipped** (0/5 nights), Adam takes its full step, the night does not erode (norm at **90–98 %** of birth), and the steps are **directed** and **additive** (temporal alignment **0.969** vs 0.316 for a random walk). But the informative axis — trained *at the same time* — **rotates 0.4203°/night** while `W` turns at 0.0359°/night (**×11.7**), and over 200 nights the alignment **regresses** (0.1051 → 0.0917). The two are **coupled**: when the target slows to 0.101°, `W` slows to 0.012° with it. ⚠️ An earlier ×46 figure was **retracted** — its prey was measured without a fixed seed, its pursuer derived from a formula rather than measured |
+| 🔴 **v41.37 — and the drift predicts nothing** | The missing link, refused as an assumption for two days, does not hold. Drift speed measured on all **20 paired brains** of the v41.34 cohort, correlated against performance already logged: **r(drift, mastery) = +0.1386** (`t = +0.59`), r(drift, energy) = −0.1059, r(drift, level) = −0.0506 — **none approaches the Bonferroni threshold** (3.38 over 3 metrics), and the first sign is *positive*, the opposite of the prediction. **g111 drifts 4.6× more than g211 and masters 3.1× better.** The drift is real; it does not explain the plateau. **Fifteenth refutation** — and it cost 20 minutes instead of a 40-run campaign, because a correlation is falsifiable in both directions while a finer description of the phenomenon is not |
 | Levers that did work | **3 — two properties of the world, one of the decision** |
 
 > 🔴 **The gradient was not the cause — nine refutations, then a twist (26-27 Aug 2026).**

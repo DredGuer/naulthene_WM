@@ -31,10 +31,11 @@ plutôt que caché : **quatre récompenses posées**, ~25 constantes de calibrat
 **nourriture/eau identifiées par couleur** (`"red"`/`"blue"`) dans le cœur. Audit complet :
 [revue du dogme](docs/etat_des_lieux/18082026_revue_dogme_avant_publication.md).
 
-**⚠️ Cela ne fonctionne pas encore.** L'agent franchit **1 à 5 paliers sur 6** selon la graine
-aléatoire — une **variance ×69 entre deux runs identiques**. Huit mécaniques cognitives ont été
-testées ; huit ont échoué. Les deux seuls leviers qui aient jamais marché sont des propriétés du
-*monde*, pas du cerveau.
+**⚠️ Cela ne fonctionne pas encore.** L'agent plafonne au **niveau 4 sur 15**, et **quinze**
+explications successives de ce plafond ont été mesurées puis réfutées — thrashing du gradient,
+attribution du crédit, proprioception, attention descendante, dérive de représentation. Les
+seuls leviers qui aient jamais marché sont des propriétés du *monde*, pas du cerveau. Le seul
+prédicteur mesuré de la maîtrise reste l'**énergie** (`r = +0,710`, `t = +2,85`).
 
 **⚠️ Et le banc d'essai lui-même était biaisé.** Une revue de code des 13-14 août a montré que
 jusqu'à **une carte sur deux** était gagnable **sans la clé** — l'agent passait un examen truqué.
@@ -43,7 +44,8 @@ Corrigé ; la tâche est alors devenue **50× plus dure** (réussite d'une polit
 Récit complet : [revue de code](docs/recherche/REVUE_CODE_v39_aout_2026.md).
 
 À lire comme un carnet de recherche, pas comme un système livré. Tout ce qui est cassé est écrit,
-y compris [chaque erreur de diagnostic](docs/recherche/recherche_bug_or_not_bug.md) — 15 à ce jour.
+y compris [chaque erreur de diagnostic](docs/recherche/recherche_bug_or_not_bug.md) — 18 à ce jour,
+dont trois attrapées et rétractées dans la seule semaine écoulée.
 
 *Direction long terme : une intelligence généraliste qui tourne sur une puce Apple Silicon, sans
 datacenter.*
@@ -160,7 +162,8 @@ Deux nuances, mesurées et non rhétoriques :
 | **v41.33 — le bit de portage** | Le critique sépare très bien *objet en face* de *mur en face* (d de Cohen **+0,65 à +1,21**) mais **ne savait pas qu'il portait quelque chose** (d ≈ **0,1**, signe instable) — des 41 dims du vecteur bio, **zéro** n'encodait l'inventaire. Ajouter une 42ᵉ dimension **lève la cécité** : d passe de **−0,012 à +1,428**, 18/20 graines, 40 runs. 🔴 **Et ça ne change rien.** Le crédit reste plat (`\|A\| utile / \|A\| neutre` **1,11× → 1,18×**, `t = +1,97`, NS) et aucune métrique comportementale ne bouge. **Douzième réfutation** |
 | **v41.34 — le `.detach()` historique** | L'acteur et le critique envoient **exactement 0,000000** de gradient aux quatre couches perceptives ; seul le JEPA (0,033868) sculpte ce que l'agent apprend à voir — une ligne présente dans `colab.py` **depuis l'origine du projet**, jamais commentée, jamais justifiée. La connecter devait *réduire* le bruit perceptif. Elle l'**augmente de 48 %** (`t = +2,71`, 14/20, 40 runs), avec σ(V) +52 % — le tronc est *agité*, pas orienté. Niveau : **δ = 0,00 exactement**. Ce `.detach()` n'est pas de la dette technique : il **protège la stabilité de la carte perceptive**. **Quatorzième réfutation** |
 | **v41.35 — un plafond géométrique, et un diagnostic rétracté** | La borne `\|logit_r − logit_m\| ≤ ‖W‖·‖x_r − x_m‖` plafonne l'action favorisée à **14,56 %–18,00 %** contre **14,29 %** pour le hasard — les 15,00 % mesurés en jeu ne sont **pas de l'apathie**. ⚠️ **L'affirmation associée, « le réseau détruit l'information », était FAUSSE et est rétractée** : le cosinus **sature** en espace post-`relu` (deux nuages nettement séparés, d' = 2,93, donnent encore cos = 0,971). Refaite au d-prime là où l'agent plafonne réellement, la mesure montre que le réseau **amplifie** la caractéristique décisive — *est-ce que je vois le but ?* — d'un facteur **3,5 à 4,4** (d' 0,824 → 2,891/3,613/3,017). Le JEPA fait son travail ; le goulot est dans ce que `tete_motrice` **fait** d'une entrée nette, et cela n'a jamais été mesuré |
-| 🔴 **v41.36 — la tête poursuit une cible qui la distance** | Tout fonctionne en amont : le tronc **amplifie** la caractéristique décisive (d' 0,824 → 2,891/3,613/3,017), le gradient arrive, **g22 n'est jamais clippé** (0/5 nuits), Adam fait son pas plein, la nuit n'érode pas (norme à **90–98 %** de la naissance), et les pas sont **dirigés** et **cumulatifs** (alignement temporel **0,969** contre 0,316 pour une marche aléatoire). Mais l'axe informatif — défini dans `pensee_bio`, entraîné *en même temps* — **tourne de 0,4203°/nuit** quand `W` tourne de 0,0359°/nuit : **×11,7**. Sur 200 nuits l'alignement ne stagne pas, il **régresse** (0,1051 → 0,0917). Et les deux sont **couplés** : quand la cible ralentit à 0,101°, `W` ralentit à 0,012° avec elle — même gradient, donc geler le tronc pourrait geler `W` aussi. ⚠️ Un chiffre de ×46 publié la veille a été **retiré** : sa proie était mesurée sans graine fixée et son prédateur dérivé d'une formule au lieu d'être mesuré |
+| **v41.36 — la tête poursuit une cible qui la distance** | Tout fonctionne en amont : le tronc **amplifie** la caractéristique décisive, le gradient arrive, **g22 n'est jamais clippé** (0/5 nuits), Adam fait son pas plein, la nuit n'érode pas (norme à **90–98 %** de la naissance), et les pas sont **dirigés** et **cumulatifs** (alignement temporel **0,969** contre 0,316 pour une marche aléatoire). Mais l'axe informatif — entraîné *en même temps* — **tourne de 0,4203°/nuit** quand `W` tourne de 0,0359°/nuit (**×11,7**), et sur 200 nuits l'alignement **régresse** (0,1051 → 0,0917). Les deux sont **couplés** : quand la cible ralentit à 0,101°, `W` ralentit à 0,012° avec elle. ⚠️ Un chiffre de ×46 publié la veille a été **retiré** — sa proie était mesurée sans graine fixée, son prédateur dérivé d'une formule au lieu d'être mesuré |
+| 🔴 **v41.37 — et la dérive ne prédit rien** | Le maillon manquant, refusé comme supposition pendant deux jours, ne tient pas. Vitesse de dérive mesurée sur les **20 cerveaux appariés** de la cohorte v41.34, corrélée à la performance déjà enregistrée : **r(dérive, maîtrise) = +0,1386** (`t = +0,59`), r(dérive, énergie) = −0,1059, r(dérive, niveau) = −0,0506 — **aucune n'approche le seuil de Bonferroni** (3,38 sur 3 métriques), et le signe du premier est *positif*, l'inverse de la prédiction. **g111 dérive 4,6× plus que g211 et maîtrise 3,1× mieux.** La dérive est réelle ; elle n'explique pas le plafond. **Quinzième réfutation** — et elle a coûté 20 minutes au lieu d'une campagne de 40 runs, parce qu'une corrélation est falsifiable dans les deux sens là où une description plus fine du phénomène ne l'est pas |
 | Leviers qui ont marché | **3 — deux propriétés du monde, une de la décision** |
 
 > 🔴 **Le gradient n'était pas la cause — neuf réfutations, puis un retournement (26-27/08/2026).**

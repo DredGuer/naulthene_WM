@@ -4,6 +4,61 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.37] - 2026-08-29 — La dérive ne prédit rien. Quinzième réfutation.
+
+### Une corrélation à n=20 ferme la piste en 20 minutes, là où deux campagnes l'auraient décrite
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | docs (réfutation) + feat (instrument) |
+| **Impact** | Critique (ferme la série ouverte le 23/08) |
+
+**LE CHOIX DE MÉTHODE.** Deux suites étaient possibles après la mesure de la dérive : passer
+la sonde à 20 graines pour un intervalle de confiance propre, ou enrichir la mesure avec
+d'autres axes informatifs. **Les deux décrivent le phénomène plus finement sans tester s'il
+cause quoi que ce soit** — le piège que le projet a déjà payé. Une corrélation, elle, est
+**falsifiable dans les deux sens**, et le dépôt a le précédent qui valide la méthode :
+`maîtrise ~ énergie` donne `r = +0,710` (`t = +2,85`).
+
+**PROTOCOLE.** Cohorte v41.34, **20 cerveaux appariés** (n=20 immédiat, aucune campagne).
+Chaque cerveau vieilli de 12 nuits **uniquement** pour mesurer sa dérive ; la performance
+corrélée est celle **déjà enregistrée dans son log**, jamais recalculée.
+
+**RÉSULTAT :**
+
+| Corrélation | `r` | `t` | seuil Bonferroni (3 métriques, df=18) |
+|---|---|---|---|
+| dérive ↔ **maîtrise** | **+0,1386** | +0,59 | 3,38 |
+| dérive ↔ énergie | −0,1059 | −0,45 | 3,38 |
+| dérive ↔ niveau | −0,0506 | −0,21 | 3,38 |
+
+**Aucune n'approche le seuil**, et le signe du premier est **positif** — l'inverse de la
+prédiction. Lisible à l'œil nu : **g111 dérive 2,87 °/nuit et maîtrise 22,75 %**, quand
+**g211 dérive 0,62 °/nuit et maîtrise 7,30 %**. Le cerveau qui dérive **4,6× plus** maîtrise
+**3,1× mieux**.
+
+**CE QUE ÇA FERME.** La dérive **existe** (0,42 °/nuit, alignement qui recule, couplage
+proie/prédateur — tout cela reste mesuré). Elle **n'explique pas le plafond au niveau 4**.
+C'était le maillon manquant, refusé comme supposition pendant deux jours ; il ne tient pas.
+
+⚠️ **CE QUE ÇA NE DIT PAS** : que la dérive est inoffensive (un effet non linéaire ou au-delà
+de l'étendue observée — 0,60 à 2,87 °/nuit — reste possible) ; qu'une intervention
+architecturale serait inutile (elle n'est simplement **plus justifiée par cette mesure**) ;
+qu'un `r` nul prouve une absence de lien — c'est un argument plus faible qu'un `r` fort.
+
+**CE QUI RESTE.** Le plafond reste inexpliqué après **quinze réfutations**. Le seul
+prédicteur mesuré est **l'énergie** (`r = +0,710`), qui pointe vers le métabolisme — pas
+vers la géométrie, pas vers le gradient, pas vers la perception.
+
+| Fichier ajouté | Rôle |
+|-----------------|------|
+| `instruments/sonde_correlation_derive.py` | dérive vs performance sur une cohorte appariée |
+| `docs/recherche/CORRELATION_29082026_la_derive_ne_predit_rien.md` | le carnet |
+| `brains/28082026_v4134_tronc/correlation_derive.json` | données brutes, à côté des sources |
+
+---
+
 ## [v41.36-fix1] - 2026-08-29 — La course mesurée proprement : ×11,7, et le prédateur recule
 
 ### Le ×46 de la veille est retiré · l'alignement ne stagne pas, il régresse
