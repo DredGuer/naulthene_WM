@@ -105,3 +105,79 @@ PYTHONPATH=src python -m naulthene.instruments.sonde_pression_separation <brain>
 PYTHONPATH=src python -m naulthene.instruments.sonde_collapse <brain>
 PYTHONPATH=src python -m naulthene.instruments.sonde_plafond_geometrique <brain>
 ```
+
+---
+
+# ⚠️ ADDENDUM DU 28/08 (soir) — CE DIAGNOSTIC EST EN PARTIE FAUX. Le cosinus saturait.
+
+> À lire **avant** tout ce qui précède. La mesure du plafond (§3) tient ; l'interprétation
+> « le réseau détruit l'information » (§2) est un **artefact d'indicateur**.
+
+## L'erreur
+
+Le cosinus **sature dans un espace à activations positives** (post-`relu`, où tout est ≥ 0).
+Contrôle sur des nuages synthétiques :
+
+| écart réel des moyennes | cosinus | d-prime |
+|---|---|---|
+| 0,0 | **0,9991** | 0,125 |
+| 1,0 | **0,9919** | 0,966 |
+| 3,0 | **0,9711** | **2,925** |
+
+**Deux nuages nettement séparés (d' = 2,9) donnent encore cos = 0,971.** Le « 0,610 → 0,996 »
+ne mesurait donc pas une perte d'information : il mesurait le passage d'un espace signé
+(l'observation) à un espace positif (les activations). Le plancher intra-classe de la sonde
+valait d'ailleurs **0,9999**, ce qui aurait dû m'alerter immédiatement — je l'avais lu comme
+une confirmation au lieu d'un avertissement.
+
+## La même mesure, avec un indicateur qui ne sature pas
+
+`ressource vs mur` sur `DoorKey-6x6` — le cas du 28/08 :
+
+| Étage | cos (g11) | **d' (g11)** | **d' (g22)** | **d' (g44)** |
+|---|---|---|---|---|
+| observation brute | 0,620 | 1,651 | 1,651 | 1,651 |
+| `bus_latent` | 0,951 | 1,573 | 2,395 | 1,553 |
+| `pensee_bio` | 0,994 | **1,885** | **3,544** | **0,373** |
+
+**Le réseau ne détruit pas l'information — il l'amplifie sur 2 cerveaux sur 3** (g11 : 1,65 →
+1,89 ; g22 : 1,65 → **3,54**). Seul g44 la perd (1,65 → 0,37), et c'est précisément le cerveau
+dont le plafond de logit était le plus bas (0,022).
+
+## Et sur les niveaux où l'agent bloque réellement (`SimpleCrossingS9N1`)
+
+| Paire | d' observation | **d' `pensee_bio`** (g11 / g44 / g111) |
+|---|---|---|
+| A. mur / case libre | 1,638 | 0,806 · 0,377 · 1,341 |
+| **B. but visible / but absent** | 0,824 | **2,891 · 3,613 · 3,017** |
+| C. but devant / but sur le côté | 0,616 | 1,222 · 1,390 · 1,175 |
+
+**L'agent n'est PAS topologiquement aveugle.** Sur la paire la plus décisive pour naviguer —
+*est-ce que je vois le but ?* — le réseau **amplifie** la séparation d'un facteur **3,5 à
+4,4** (0,824 → 2,891/3,613/3,017), et il l'amplifie aussi sur « but devant vs sur le côté »
+(×2 environ).
+
+La seule paire qu'il dégrade est **mur / case libre** (1,638 → 0,38–1,34), et sur 2 cerveaux
+sur 3 elle tombe sous d' = 1.
+
+## Ce qui survit de ce carnet
+
+| Affirmation | Statut |
+|---|---|
+| `cos(∇_res, ∇_mur) = +0,986` | ✅ **tient** — mais c'est aussi un cosinus, donc à **reprendre** avec un indicateur non saturant |
+| Plafond `\|logit_r − logit_m\| ≤ ‖W‖·‖x_r − x_m‖` = 14,56–18,00 % | ✅ **tient** — c'est une norme de différence, pas un cosinus |
+| « Le réseau détruit l'information » | ❌ **FAUX** — il l'amplifie sur la plupart des paires |
+| « L'agent est topologiquement aveugle » | ❌ **FAUX** — d' = 2,9–3,6 sur « but visible » |
+
+Le plafond de logit reste réel, et sa cause reste à trouver : la représentation **est**
+séparable (d' ≈ 3 sur le but), pourtant l'écart de logit atteignable plafonne à 0,28. Le
+goulot n'est donc **pas** dans la représentation reçue par la tête motrice, mais dans ce que
+la tête motrice en **fait** — une piste qui n'a jamais été mesurée.
+
+## Leçon de méthode
+
+**Un indicateur borné doit être testé sur des données synthétiques dont on connaît la
+réponse, avant d'être publié.** Cinq lignes de contrôle auraient évité une conclusion fausse
+poussée sur `master`. C'est le même défaut que « le résultat trop propre est suspect »
+(règle §3) : un plancher intra-classe à 0,9999 n'était pas une validation, c'était le signe
+que l'indicateur ne discriminait rien.

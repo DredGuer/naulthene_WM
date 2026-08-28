@@ -4,6 +4,67 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.35-fix1] - 2026-08-28 — Le cosinus saturait. Le JEPA est innocenté.
+
+### Correction publique d'une conclusion poussée sur `master` deux heures plus tôt
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | fix (instrument) + docs (correction) |
+| **Impact** | Critique (annule une conclusion publiée) |
+
+**L'ERREUR.** Le cosinus **sature dans un espace post-`relu`** (toutes les activations ≥ 0,
+donc tous les vecteurs dans le même hyper-octant). Contrôle synthétique :
+
+| écart réel des moyennes | cosinus | d-prime |
+|---|---|---|
+| 0,0 | **0,9991** | 0,125 |
+| 1,0 | 0,9919 | 0,966 |
+| 3,0 | **0,9711** | **2,925** |
+
+Deux nuages **nettement séparés** donnent encore cos = 0,971. Le « 0,610 → 0,996 » publié
+le matin ne mesurait donc **pas** une perte d'information, mais le passage d'un espace signé
+(l'observation) à un espace positif (les activations). ⚠️ Le plancher intra-classe valait
+**0,9999** dans la sonde d'origine — ce n'était pas une validation, c'était le signe que
+l'indicateur ne discriminait rien.
+
+**LA MESURE REFAITE (d-prime), là où l'agent bloque — `SimpleCrossingS9N1`, niveaux 1-4 :**
+
+| Paire | d' observation | d' `pensee_bio` (g11 / g44 / g111) |
+|---|---|---|
+| mur / case libre | 1,638 | 0,806 · 0,377 · 1,341 |
+| **but visible / but absent** | 0,824 | **2,891 · 3,613 · 3,017** |
+| but devant / sur le côté | 0,616 | 1,222 · 1,390 · 1,175 |
+
+**L'agent n'est PAS topologiquement aveugle.** Sur la paire décisive pour naviguer, le
+réseau **amplifie** la séparation d'un facteur **3,5 à 4,4**. Le JEPA fait son travail.
+
+**CE QUI SURVIT DU DIAGNOSTIC DU MATIN :**
+
+| Affirmation | Statut |
+|---|---|
+| Plafond `\|logit_r − logit_m\| ≤ ‖W‖·‖x_r − x_m‖` = 14,56–18,00 % | ✅ **tient** (norme, pas cosinus) |
+| `cos(∇_res, ∇_mur) = +0,986` | ⚠️ **à reprendre** — c'est aussi un cosinus |
+| « le réseau détruit l'information » | ❌ **FAUX** — il l'amplifie (2 cerveaux sur 3) |
+| « l'agent est topologiquement aveugle » | ❌ **FAUX** |
+
+**LE GOULOT SE DÉPLACE.** La représentation **est** séparable (d' ≈ 3 sur le but), et
+pourtant l'écart de logit atteignable plafonne à 0,28. Le problème n'est donc pas dans ce
+que `tete_motrice` **reçoit**, mais dans ce qu'elle en **fait** — jamais mesuré.
+
+**LEÇON DE MÉTHODE.** Un indicateur borné doit être testé sur des données synthétiques dont
+on connaît la réponse **avant** publication. Cinq lignes de contrôle auraient évité une
+conclusion fausse poussée sur `master`.
+
+| Fichier ajouté | Rôle |
+|-----------------|------|
+| `instruments/controle_saturation_cosinus.py` | le contrôle qui a invalidé la conclusion |
+| `instruments/sonde_collapse_navigation.py` | séparabilité des 3 paires de navigation |
+| `docs/recherche/COLLAPSE_28082026_*.md` | addendum en tête du carnet |
+
+---
+
 ## [v41.35-diagnostic] - 2026-08-28 — Le plafond est GÉOMÉTRIQUE
 
 ### Le réseau détruit l'information que l'œil lui apporte
