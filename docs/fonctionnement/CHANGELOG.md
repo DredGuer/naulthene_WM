@@ -4,6 +4,72 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.36-fix1] - 2026-08-29 — La course mesurée proprement : ×11,7, et le prédateur recule
+
+### Le ×46 de la veille est retiré · l'alignement ne stagne pas, il régresse
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | fix (mesure) + docs |
+| **Impact** | Critique (corrige un chiffre publié la veille) |
+
+**CE QUI EST RETIRÉ.** Le rapport proie/prédateur de **×46 / ×14** publié le 28/08 portait
+deux biais : la proie était mesurée **sans graine fixée** (le bruit d'échantillonnage
+comptait comme rotation, et le plancher de bruit n'existait pas encore) et la vitesse du
+prédateur était **dérivée d'une formule**, jamais mesurée. Les deux grandeurs sortent
+désormais du même protocole.
+
+**[1] LA MATURATION EST RÉELLE — PUIS ELLE S'INVERSE** (300 nuits, plancher 0,0198°) :
+
+| Bloc | axe visuel | axe complet | JEPA |
+|---|---|---|---|
+| 1–30 | **1,148°** | 1,622° | 0,00735 |
+| **91–120** | **0,166°** | 0,283° | 0,00324 |
+| **271–300** | **0,409°** | 0,468° | 0,00290 |
+
+Décroissance d'un facteur **7** jusqu'à la nuit ~100, puis **remontée** (pente
+**+0,00044 °/nuit** sur la seconde moitié ; les 20 dernières nuits valent **2,1×** les
+nuits 61–80). ⚠️ **L'erreur JEPA converge proprement pendant ce temps** (0,00735 → 0,00290,
+monotone) et `dim_bus` reste à 147 : ni le modèle du monde ni la neurogenèse n'expliquent la
+remontée. Le ratio complet/visuel reste entre **1,15 et 1,70** — le corps continue de faire
+osciller la représentation quand la vue se stabilise.
+
+**[2] LES DEUX VITESSES, MÊME PROTOCOLE, 200 NUITS :**
+
+| | mesure |
+|---|---|
+| La proie — l'axe | **0,4203 °/nuit** |
+| Le prédateur — `W` | **0,0359 °/nuit** |
+| **Rapport** | **×11,7** |
+
+**[3] L'ALIGNEMENT RECULE** : 0,1051 → **0,0917** sur 200 nuits, gain net
+**−0,000069/nuit**. La tête ne se rapproche jamais de la solution.
+
+**[4] LES DEUX MOUVEMENTS SONT COUPLÉS.** Nuits 90–130 : quand `rot_axe` tombe à 0,101°,
+`rot_W` tombe **en même temps** à 0,012°. Le prédateur ne profite pas du ralentissement de
+la proie — il ralentit avec elle, car les deux viennent du **même gradient**.
+
+⚠️ **Conséquence pour toute intervention** : **geler le tronc pourrait geler `W` du même
+coup**. Le « ~12 nuits de gel par nuit de dérive » n'est **pas** une posologie utilisable :
+sa prémisse — que `W` continue d'avancer une fois la cible figée — n'est **pas mesurée**.
+
+⚠️ **NON ÉTABLI** : que c'est LA cause du plafond au niveau 4 (**non mesuré**) ; que c'est
+une *impossibilité* — c'est un recul mesuré sur **200 nuits, UN cerveau**, pas une preuve,
+et la règle des 20 graines s'applique ; que 0,42 °/nuit est anormal (**aucune référence
+externe**) ; qu'une intervention marcherait (**aucune testée**).
+
+**CE QUE ÇA FERME** : « il suffit d'attendre que le tronc se stabilise ». La stabilisation
+a lieu, puis s'inverse, et l'alignement ne progresse à aucun moment.
+
+| Fichier ajouté | Rôle |
+|-----------------|------|
+| `instruments/sonde_derive_longue.py` | rotation nuit après nuit, **axe visuel vs axe complet** |
+| `instruments/sonde_course_poursuite.py` | les deux vitesses **mesurées**, jamais dérivées |
+| `docs/recherche/COURSE_29082026_le_predateur_recule.md` | le carnet |
+
+---
+
 ## [v41.36-diagnostic] - 2026-08-28 — La tête motrice poursuit une cible qui fuit
 
 ### Tout fonctionne, sauf que l'axe informatif tourne 14× à 46× plus vite que W

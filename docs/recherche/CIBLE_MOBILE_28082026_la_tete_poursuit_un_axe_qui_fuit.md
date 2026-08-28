@@ -25,10 +25,13 @@ Un chiffre de rotation ne veut rien dire sans la vitesse du poursuivant :
 
 | Cerveau | l'axe tourne (la proie) | `W` se rapproche (le prédateur) | rapport |
 |---|---|---|---|
-| A_g11 | **4,81 °/nuit** | 0,106 °/nuit | **×46** |
-| A_g22 | **3,35 °/nuit** | 0,245 °/nuit | **×14** |
+| A_g11 | ~~4,81 °/nuit~~ | ~~0,106 °/nuit~~ | ~~×46~~ |
+| A_g22 | ~~3,35 °/nuit~~ | ~~0,245 °/nuit~~ | ~~×14~~ |
 
-Sur 10 nuits, l'axe a tourné de **35,2°** (g11) et **27,3°** (g22).
+🔴 **CES CHIFFRES SONT RETIRÉS — voir `COURSE_29082026_*.md`.** Deux biais : la proie était
+mesurée **sans graine fixée** (bruit d'échantillonnage compté comme rotation) et la vitesse
+du prédateur était **dérivée d'une formule**, jamais mesurée. Sur un protocole unifié et
+sur 200 nuits, le rapport réel est **×11,7**, et l'alignement **recule** au lieu de stagner.
 
 ## Pourquoi la cible bouge
 
