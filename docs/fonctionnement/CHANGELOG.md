@@ -4,6 +4,64 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.36-diagnostic] - 2026-08-28 — La tête motrice poursuit une cible qui fuit
+
+### Tout fonctionne, sauf que l'axe informatif tourne 14× à 46× plus vite que W
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | docs (diagnostic) + feat (3 instruments) |
+| **Impact** | Critique (conclusion de la série ouverte le 23/08) |
+
+**LA CHAÎNE, MESURÉE BOUT EN BOUT :**
+
+| Maillon | État | Mesure |
+|---|---|---|
+| L'œil voit | ✅ | d' = 0,824 (observation brute) |
+| Le tronc **amplifie** | ✅ | d' → **2,891 / 3,613 / 3,017** (×3,5 à ×4,4) |
+| Le gradient arrive | ✅ | 0,234 / 0,056, non nul |
+| Le clipping épargne | ✅ | g22 : **0 nuit clippée sur 5** (norme 0,26 / plafond 1,0) |
+| Adam fait son pas | ✅ | 0,93 % de \|W\| / 5 nuits, contre 0,034 théorique |
+| La nuit n'érode pas | ✅ | norme à **90–98 %** de la naissance |
+| Les pas sont **dirigés** | ✅ | \|cos(ΔW, axe)\| = 0,0925 / **0,2617** (hasard : 0,029) |
+| Les pas **s'additionnent** | ✅ | alignement temporel **0,780 / 0,969** (aléatoire : 0,316) |
+| **La cible bouge** | 🔴 | l'axe tourne de **4,81° / 3,35° par nuit** |
+
+**LE CALIBRAGE** — un chiffre de rotation ne dit rien sans la vitesse du poursuivant :
+
+| Cerveau | l'axe tourne | `W` se rapproche | rapport |
+|---|---|---|---|
+| A_g11 | 4,81 °/nuit | 0,106 °/nuit | **×46** |
+| A_g22 | 3,35 °/nuit | 0,245 °/nuit | **×14** |
+
+**LA CAUSE.** L'axe est défini dans `pensee_bio`, qui dépend d'`integrateur_bio` et du
+tronc — **entraînés simultanément avec la tête**. C'est la **dérive de représentation**,
+jamais mesurée ici.
+
+**TROIS HYPOTHÈSES RÉFUTÉES**, dont une de l'auteur de ce CHANGELOG : le clipping global
+(g22 n'est jamais clippé), le ratio \|∇W\|/\|W\| (Adam **normalise** le pas, ce ratio ne le
+détermine pas), et « la couche est en stase » (alignement temporel **0,97** — elle avance
+presque en ligne droite).
+
+⚠️ **CE QUE ÇA N'ÉTABLIT PAS** : que c'est LA cause du plafond au niveau 4 (lien **non
+mesuré**) ; que 4°/nuit est anormal (**aucune référence externe**) ; qu'une correction
+marcherait (**aucune testée**). Le fait solide est le **rapport ×14 à ×46**.
+
+⚠️ **LES TROIS PISTES DE CORRECTION INTRODUISENT TOUTES UNE CONSTANTE POSÉE** (gel
+périodique du tronc, réseau cible avec τ, taux d'apprentissage découplés) — ce que
+« rien en dur » interdit d'écrire sans mesure préalable. **La mesure qui manque** : la
+rotation de l'axe décroît-elle avec la maturité ? Si oui, le problème se résout seul.
+
+| Fichier ajouté | Rôle |
+|-----------------|------|
+| `instruments/sonde_etat_synapses.py` | norme + alignement, **avec plancher du hasard** |
+| `instruments/sonde_gradient_recu.py` | clip intercepté **à la source**, pas relu après |
+| `instruments/sonde_derive_representation.py` | rotation de l'axe, nuit après nuit |
+| `docs/recherche/CIBLE_MOBILE_28082026_*.md` | le carnet complet |
+
+---
+
 ## [v41.35-fix1] - 2026-08-28 — Le cosinus saturait. Le JEPA est innocenté.
 
 ### Correction publique d'une conclusion poussée sur `master` deux heures plus tôt
