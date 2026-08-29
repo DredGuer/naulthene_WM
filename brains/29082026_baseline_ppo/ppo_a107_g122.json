@@ -1,0 +1,15 @@
+{
+ "arch": 107,
+ "graine": 122,
+ "params": 55648,
+ "pas": 152043,
+ "proba_favorite_but_vu": 0.31324031949043274,
+ "proba_favorite_but_absent": 0.23636050522327423,
+ "action_favorite_but_vu": 2,
+ "action_favorite_but_absent": 2,
+ "entropie": 1.7038023471832275,
+ "entropie_max": 1.9459101490553132,
+ "dprime_latent": 0.6149395108222961,
+ "derive_par_jalon_deg": 32.76417297662296,
+ "reussite": 0.02
+}

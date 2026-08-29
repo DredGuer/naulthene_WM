@@ -4,6 +4,69 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.38-baseline] - 2026-08-29 — La ligne de base PPO : le mur informationnel n'existe pas
+
+### 60 runs remplissent la table restée vide depuis la création du dépôt
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | feat (instrument) + docs (benchmark) |
+| **Impact** | Critique (donne une échelle à toutes les mesures du projet) |
+
+**δ_A/A = 0,000000** sur les 5 métriques (2 runs identiques, 152 043 pas) : le banc est
+strictement déterministe, **tout écart mesuré est réel**.
+
+| Agent | Params | Réussite | P(action favorite) | Entropie | d' |
+|---|---|---|---|---|---|
+| PPO `[37,37]` | 14 068 | **36,2 % ±13,3** | **35,45 % ±5,33** | 1,667 | 0,697 |
+| PPO `[69,69]` | 30 644 | **39,8 % ±11,7** | **35,13 % ±5,08** | 1,681 | 0,647 |
+| PPO `[107,107]` | 55 648 | **27,1 % ±10,8** | **34,73 % ±3,88** | 1,704 | 0,644 |
+| **Naulthène** | 55 616 | ~16 % | **15,00 %** | **1,930** | **2,891–3,613** |
+
+**[1] LE MUR N'EXISTE PAS.** PPO atteint **34,7–35,5 %** — près du **double du plafond
+géométrique de 18,00 %** de Naulthène. Les trois architectures tiennent dans **0,7 point**.
+Le plafond est une **pathologie de Naulthène**, pas une propriété de MiniGrid.
+
+**[2] LA CAPACITÉ N'EST PAS EN CAUSE.** `r(params, réussite) = −0,1519` (`t = −1,17`, NS).
+Un PPO de **14 068 paramètres — 4× plus léger que le cœur RL — réussit 2,3× mieux**, et le
+bras le plus gros est le pire.
+
+**[3] LE d' N'EST NI DIMENSIONNEL NI UTILE.** `r(params, d') = −0,1097` (NS) et surtout
+**`r(d', réussite) = −0,0368`** (`t = −0,28`). 🔴 **Cela renverse deux jours de lectures** :
+le d' élevé de Naulthène (2,891–3,613) avait été lu comme un signe de santé (« le tronc
+amplifie », « le JEPA fait son travail ») — PPO réussit **2,3× mieux avec un d' 4,5× plus
+faible**. La représentation propre est **décorative**.
+
+**[4] LA DÉRIVE NE PRÉDIT RIEN, SUR UNE SECONDE ARCHITECTURE.** `r(dérive, réussite) =
+−0,2066` (NS) chez PPO. La quinzième réfutation tient sur **deux architectures
+indépendantes**.
+
+**[5] LE NOUVEAU SUSPECT : L'ENTROPIE.** PPO converge à **1,667–1,704** (86–88 % du max) ;
+Naulthène stagne à **1,930 — 99,2 % du bruit blanc** après 400 jours. C'est l'écart mesuré
+le plus net entre les deux.
+
+**ÉQUITÉ VERROUILLÉE AVANT ENTRAÎNEMENT** : observation 7×7×3 **aplatie** + `MlpPolicy`
+(jamais `CnnPolicy` — `porte_visuelle` est linéaire) · **7 actions** (la 8ᵉ est masquée chez
+Naulthène) · **152 043 pas** 🔴 *mesurés* dans un `tick_absolu` réel, jamais le nominal
+160 000 qui est faux · récompense brute, aucun shaping · **trois** architectures, car
+égaliser à 55 616 aurait donné à PPO **1,8× le budget décisionnel réel**.
+
+⚠️ **RÉSERVES** : un PPO bien réglé n'est pas « la normale », c'est *une* référence ; les
+architectures ne sont pas comparables terme à terme ; le taux de réussite de Naulthène n'est
+**pas mesuré dans le même protocole** — ce sont **la probabilité de l'action favorite et
+l'entropie**, mesurées à l'identique, qui portent la conclusion.
+
+| Fichier ajouté | Rôle |
+|-----------------|------|
+| `instruments/banc_ppo.py` | le banc, avec mode `--aa` |
+| `docs/recherche/BASELINE_PPO_29082026_*.md` | le carnet |
+| `brains/29082026_baseline_ppo/` | protocole, 60 JSON, agrégat |
+
+⚠️ `stable-baselines3` est une dépendance **d'instrument**, jamais importée par le cœur.
+
+---
+
 ## [v41.37] - 2026-08-29 — La dérive ne prédit rien. Quinzième réfutation.
 
 ### Une corrélation à n=20 ferme la piste en 20 minutes, là où deux campagnes l'auraient décrite

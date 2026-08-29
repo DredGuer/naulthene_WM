@@ -357,16 +357,53 @@ the price of the day/night cycle, and a real target for optimization.
 | PPO CNN (`rl-starter-files`) | — | — | — |
 | **Naulthène** | **1.683 MB** | **0.211 MB** | **1.58 MB** |
 
-### 3. Parameter efficiency at equal performance — ⏳ **not run**
+### 3. Against a PPO baseline — ✅ **measured 29 Aug 2026, 60 runs**
 
-This is the table that would decide whether the architecture is *efficient* or merely
-*different*. It requires training PPO baselines on the same levels — not yet done.
+The table that had been empty since this repository was created. **δ_A/A = 0.000000** on all
+five metrics (two identical runs, 152,043 steps): the bench is strictly deterministic, so
+every gap below is real.
 
-| Agent | Params | `Empty-5x5` success | `DoorKey-5x5` success | Episodes to 80 % |
-|---|---|---|---|---|
-| PPO CNN (`rl-starter-files`) | 19,384 | — | — | — |
-| PPO + LSTM | 52,664 | — | — | — |
-| **Naulthène** | **55,616** | **44.7 %** (v41 bench, 300 ep.) | — | **never reached** |
+Same task (`SimpleCrossingS9N1`, the level where Naulthène plateaus), same **flattened 7×7×3
+observation** and `MlpPolicy` — never `CnnPolicy`, since `porte_visuelle` is a **linear**
+layer with no convolution — same **7 actions** (Naulthène masks the 8th to `-inf`
+permanently), same **152,043 environment steps** (🔴 *measured* in a real brain's
+`tick_absolu` at 400 days, not the nominal 400×400 = 160,000, which is wrong), and MiniGrid's
+**raw sparse reward**, no shaping.
+
+| Agent | Params | Success | P(favoured action) | Entropy | d' |
+|---|---|---|---|---|---|
+| PPO `[37,37]` | 14,068 | **36.2 % ±13.3** | **35.45 % ±5.33** | 1.667 | 0.697 |
+| PPO `[69,69]` | 30,644 | **39.8 % ±11.7** | **35.13 % ±5.08** | 1.681 | 0.647 |
+| PPO `[107,107]` | 55,648 | **27.1 % ±10.8** | **34.73 % ±3.88** | 1.704 | 0.644 |
+| **Naulthène** | **55,616** | **~16 %** | **15.00 %** | **1.930** | **2.891–3.613** |
+
+*(Naulthène's geometric ceiling: 18.00 % · maximum entropy ln(7) = 1.9459)*
+
+> **Three arms, not one, and deliberately.** Matching PPO to the 55,616 total would have handed
+> it **1.8× Naulthène's real decision budget** — 45 % of those parameters buy an audio
+> hemisphere, a JEPA world model, a biological integrator and an exocortex port that no
+> baseline has. The strictly comparable RL core is **30,464**.
+
+🔴 **The informational wall does not exist.** PPO reaches **34.7–35.5 %** on the favoured
+action — nearly **double the 18.00 % ceiling** Naulthène's own geometry allows — and all three
+architectures sit within **0.7 points** of each other. The plateau is a pathology of
+Naulthène, not a property of MiniGrid.
+
+🔴 **Capacity is not the cause.** `r(params, success) = −0.1519` (`t = −1.17`, NS). A PPO of
+**14,068 parameters — 4× lighter than Naulthène's RL core — succeeds 2.3× better**, and the
+largest arm is the worst of the three.
+
+🔴 **And representation quality buys nothing.** `r(d', success) = −0.0368` (`t = −0.28`).
+PPO succeeds **2.3× better with a d' 4.5× lower**. This **reverses two days of readings**:
+Naulthène's clean latent space (d' ≈ 3.0) had been taken as a sign of health — it is
+decorative. A geometrically clean representation is not a prerequisite for a good policy.
+`r(drift, success) = −0.2066` (NS) likewise confirms the fifteenth refutation on a **second,
+independent architecture**.
+
+**What is left is the entropy.** PPO converges to **1.667–1.704** (86–88 % of maximum);
+Naulthène sits at **1.930 — 99.2 % of white noise** after 400 days. That is now the sharpest
+measured difference between the two, and the next thing to investigate.
+[Full write-up](docs/recherche/BASELINE_PPO_29082026_le_mur_n_existe_pas.md).
 
 Across **20 seeds × 1500 simulated days** on a reproducible bench, **100 % [84–100]** of
 agents reach level 4 of the 15-level curriculum, and **20 % [8–42]** now hold level 5 — up

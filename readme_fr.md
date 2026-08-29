@@ -138,8 +138,55 @@ Deux nuances, mesurées et non rhétoriques :
    qu'aucun baseline MiniGrid n'a : un hémisphère audio/vocal (13 440), un modèle du monde JEPA
    (4 608), un intégrateur biologique à 5 sens (6 720), un port exocortex (320). Le **cœur
    strictement comparable pèse 30 464 paramètres** — 1,57× un CNN, 0,58× un CNN+LSTM.
-2. **Toute affirmation d'efficience exige une comparaison à budget égal**, et cette expérience
-   n'a pas été menée.
+2. ~~**Toute affirmation d'efficience exige une comparaison à budget égal**, et cette
+   expérience n'a pas été menée.~~ ✅ **Menée le 29/08/2026** — voir ci-dessous.
+
+### Face à un baseline PPO — ✅ **mesuré le 29/08/2026, 60 runs**
+
+La table restée vide depuis la création du dépôt. **δ_A/A = 0,000000** sur les cinq
+métriques (deux runs identiques, 152 043 pas) : le banc est strictement déterministe, donc
+chaque écart ci-dessous est réel.
+
+Même tâche (`SimpleCrossingS9N1`, le niveau où Naulthène plafonne), même **observation 7×7×3
+aplatie** et `MlpPolicy` — jamais `CnnPolicy`, puisque `porte_visuelle` est une couche
+**linéaire** sans convolution — mêmes **7 actions** (Naulthène masque la 8ᵉ à `-inf` en
+permanence), mêmes **152 043 pas d'environnement** (🔴 *mesurés* dans le `tick_absolu` d'un
+cerveau réel à 400 jours, pas le nominal 400×400 = 160 000 qui est faux), et la **récompense
+creuse brute** de MiniGrid, sans aucun shaping.
+
+| Agent | Params | Réussite | P(action favorite) | Entropie | d' |
+|---|---|---|---|---|---|
+| PPO `[37,37]` | 14 068 | **36,2 % ±13,3** | **35,45 % ±5,33** | 1,667 | 0,697 |
+| PPO `[69,69]` | 30 644 | **39,8 % ±11,7** | **35,13 % ±5,08** | 1,681 | 0,647 |
+| PPO `[107,107]` | 55 648 | **27,1 % ±10,8** | **34,73 % ±3,88** | 1,704 | 0,644 |
+| **Naulthène** | **55 616** | **~16 %** | **15,00 %** | **1,930** | **2,891–3,613** |
+
+*(plafond géométrique de Naulthène : 18,00 % · entropie maximale ln(7) = 1,9459)*
+
+> **Trois bras, pas un, et délibérément.** Aligner PPO sur le total de 55 616 lui aurait donné
+> **1,8× le budget décisionnel réel** de Naulthène — 45 % de ces paramètres achètent un
+> hémisphère audio, un JEPA, un intégrateur biologique et un port exocortex qu'aucun baseline
+> n'a. Le cœur RL strictement comparable pèse **30 464**.
+
+🔴 **Le mur informationnel n'existe pas.** PPO atteint **34,7–35,5 %** sur l'action favorite
+— près du **double du plafond de 18,00 %** que la géométrie de Naulthène autorise — et les
+trois architectures tiennent dans **0,7 point**. Le plafond est une pathologie de Naulthène,
+pas une propriété de MiniGrid.
+
+🔴 **La capacité n'est pas en cause.** `r(params, réussite) = −0,1519` (`t = −1,17`, NS). Un
+PPO de **14 068 paramètres — 4× plus léger que le cœur RL de Naulthène — réussit 2,3×
+mieux**, et le bras le plus gros est le pire des trois.
+
+🔴 **Et la qualité de la représentation n'achète rien.** `r(d', réussite) = −0,0368`
+(`t = −0,28`). PPO réussit **2,3× mieux avec un d' 4,5× plus faible**. Cela **renverse deux
+jours de lectures** : l'espace latent propre de Naulthène (d' ≈ 3,0) avait été lu comme un
+signe de santé — il est décoratif. `r(dérive, réussite) = −0,2066` (NS) confirme par ailleurs
+la quinzième réfutation sur une **seconde architecture indépendante**.
+
+**Ce qui reste, c'est l'entropie.** PPO converge à **1,667–1,704** (86–88 % du maximum) ;
+Naulthène stagne à **1,930 — 99,2 % du bruit blanc** après 400 jours. C'est désormais l'écart
+mesuré le plus net entre les deux, et la prochaine piste.
+[Carnet complet](docs/recherche/BASELINE_PPO_29082026_le_mur_n_existe_pas.md).
 
 ### Performance sur la tâche — **actuellement bloquée**
 

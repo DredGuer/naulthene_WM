@@ -1,0 +1,32 @@
+{
+ "rep1": {
+  "arch": 69,
+  "graine": 11,
+  "params": 30644,
+  "pas": 152043,
+  "proba_favorite_but_vu": 0.2688431739807129,
+  "proba_favorite_but_absent": 0.37894803285598755,
+  "action_favorite_but_vu": 2,
+  "action_favorite_but_absent": 0,
+  "entropie": 1.7716377973556519,
+  "entropie_max": 1.9459101490553132,
+  "dprime_latent": 0.630938708782196,
+  "derive_par_jalon_deg": 33.561953544931995,
+  "reussite": 0.43
+ },
+ "rep2": {
+  "arch": 69,
+  "graine": 11,
+  "params": 30644,
+  "pas": 152043,
+  "proba_favorite_but_vu": 0.2688431739807129,
+  "proba_favorite_but_absent": 0.37894803285598755,
+  "action_favorite_but_vu": 2,
+  "action_favorite_but_absent": 0,
+  "entropie": 1.7716377973556519,
+  "entropie_max": 1.9459101490553132,
+  "dprime_latent": 0.630938708782196,
+  "derive_par_jalon_deg": 33.561953544931995,
+  "reussite": 0.43
+ }
+}
