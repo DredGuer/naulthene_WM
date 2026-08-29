@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `053804a` |
 | **Catégorie** | fix (rétractation) + docs (réorganisation) |
 | **Impact** | Critique (retire l'affirmation la plus structurante du dépôt) |
 
