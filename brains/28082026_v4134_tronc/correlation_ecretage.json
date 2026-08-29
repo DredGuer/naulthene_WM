@@ -1,0 +1,182 @@
+{
+ "11": {
+  "taux_ecretage": 0.1075,
+  "gain_moyen": 3.4089418661594393,
+  "amplitude_c1": 0.30732780661433934,
+  "entropie": 1.8631409811973572,
+  "p_favorite": 0.23891497697681188,
+  "maitrise": 25.75,
+  "energie": 0.19037500000000002
+ },
+ "22": {
+  "taux_ecretage": 0.1325,
+  "gain_moyen": 3.411733242869377,
+  "amplitude_c1": 0.31262502357363703,
+  "entropie": 1.8334756749868393,
+  "p_favorite": 0.24639836717396973,
+  "maitrise": 14.575,
+  "energie": 0.19601500000000002
+ },
+ "33": {
+  "taux_ecretage": 0.0,
+  "gain_moyen": 1.1047558307647705,
+  "amplitude_c1": 0.9607374648749828,
+  "entropie": 1.9032420545816422,
+  "p_favorite": 0.21950217965990304,
+  "maitrise": 25.770833333333332,
+  "energie": 0.21371500000000002
+ },
+ "44": {
+  "taux_ecretage": 0.9975,
+  "gain_moyen": 3.999976511001587,
+  "amplitude_c1": 0.16949889104813337,
+  "entropie": 1.8322352546453475,
+  "p_favorite": 0.26014656644314527,
+  "maitrise": 3.775,
+  "energie": 0.22341999999999998
+ },
+ "55": {
+  "taux_ecretage": 0.0,
+  "gain_moyen": 1.8135917341709138,
+  "amplitude_c1": 0.5829117275774479,
+  "entropie": 1.8504647678136825,
+  "p_favorite": 0.24948967002332212,
+  "maitrise": 14.487179487179487,
+  "energie": 0.20107000000000003
+ },
+ "66": {
+  "taux_ecretage": 0.0,
+  "gain_moyen": 1.9817844182252884,
+  "amplitude_c1": 0.535089525654912,
+  "entropie": 1.8032435330748557,
+  "p_favorite": 0.25565210305154323,
+  "maitrise": 14.95,
+  "energie": 0.18386499999999997
+ },
+ "77": {
+  "taux_ecretage": 0.0,
+  "gain_moyen": 1.9554251620173455,
+  "amplitude_c1": 0.5740701323002577,
+  "entropie": 1.860468297302723,
+  "p_favorite": 0.2723238041251898,
+  "maitrise": 17.267676767676768,
+  "energie": 0.34128000000000003
+ },
+ "88": {
+  "taux_ecretage": 0.0,
+  "gain_moyen": 1.6849446624517441,
+  "amplitude_c1": 0.6244020169973373,
+  "entropie": 1.830100947022438,
+  "p_favorite": 0.2174318989738822,
+  "maitrise": 18.575,
+  "energie": 0.247175
+ },
+ "99": {
+  "taux_ecretage": 0.86,
+  "gain_moyen": 3.846567050218582,
+  "amplitude_c1": 0.21207937888801098,
+  "entropie": 1.8662870076298714,
+  "p_favorite": 0.2191226661577821,
+  "maitrise": 9.975,
+  "energie": 0.318225
+ },
+ "111": {
+  "taux_ecretage": 0.6175,
+  "gain_moyen": 3.6643247002363206,
+  "amplitude_c1": 0.2506907517462969,
+  "entropie": 1.8346902617812157,
+  "p_favorite": 0.27109354123473167,
+  "maitrise": 22.75,
+  "energie": 0.18123499999999995
+ },
+ "122": {
+  "taux_ecretage": 0.0,
+  "gain_moyen": 1.500154319703579,
+  "amplitude_c1": 0.7064014758169651,
+  "entropie": 1.9044659575819969,
+  "p_favorite": 0.23269198048859835,
+  "maitrise": 11.525,
+  "energie": 0.22909000000000002
+ },
+ "133": {
+  "taux_ecretage": 0.0,
+  "gain_moyen": 2.409138339757919,
+  "amplitude_c1": 0.437837348729372,
+  "entropie": 1.8405297708511352,
+  "p_favorite": 0.25400337494909764,
+  "maitrise": 26.575,
+  "energie": 0.23549
+ },
+ "144": {
+  "taux_ecretage": 0.0,
+  "gain_moyen": 1.4195357725024222,
+  "amplitude_c1": 0.7459741833806038,
+  "entropie": 1.877588349878788,
+  "p_favorite": 0.2391904643550515,
+  "maitrise": 22.525,
+  "energie": 0.177405
+ },
+ "155": {
+  "taux_ecretage": 0.0,
+  "gain_moyen": 1.6369715574383736,
+  "amplitude_c1": 0.642680570781231,
+  "entropie": 1.8499308905005456,
+  "p_favorite": 0.27164057549089193,
+  "maitrise": 22.05,
+  "energie": 0.20413
+ },
+ "166": {
+  "taux_ecretage": 0.2275,
+  "gain_moyen": 3.422736164331436,
+  "amplitude_c1": 0.3084244640171528,
+  "entropie": 1.8057456514239312,
+  "p_favorite": 0.2972791079804301,
+  "maitrise": 7.025,
+  "energie": 0.226295
+ },
+ "177": {
+  "taux_ecretage": 0.0,
+  "gain_moyen": 1.8786201778054237,
+  "amplitude_c1": 0.5629964387416839,
+  "entropie": 1.7533482664823532,
+  "p_favorite": 0.3317543338984251,
+  "maitrise": 18.225,
+  "energie": 0.172045
+ },
+ "188": {
+  "taux_ecretage": 0.635,
+  "gain_moyen": 3.5495704355835915,
+  "amplitude_c1": 0.3022968674823642,
+  "entropie": 1.8578191441297531,
+  "p_favorite": 0.26195899173617365,
+  "maitrise": 9.945,
+  "energie": 0.19045
+ },
+ "199": {
+  "taux_ecretage": 0.0,
+  "gain_moyen": 2.5855868220329286,
+  "amplitude_c1": 0.41978509932756425,
+  "entropie": 1.8779684060811996,
+  "p_favorite": 0.2097676533833146,
+  "maitrise": 20.5,
+  "energie": 0.272725
+ },
+ "211": {
+  "taux_ecretage": 0.0075,
+  "gain_moyen": 3.322330045700073,
+  "amplitude_c1": 0.3201411946862936,
+  "entropie": 1.793651220500469,
+  "p_favorite": 0.29935441207140684,
+  "maitrise": 7.3,
+  "energie": 0.157455
+ },
+ "222": {
+  "taux_ecretage": 0.0,
+  "gain_moyen": 2.3857322171330453,
+  "amplitude_c1": 0.449518953114748,
+  "entropie": 1.8773218739032744,
+  "p_favorite": 0.2715369389206171,
+  "maitrise": 10.1,
+  "energie": 0.218405
+ }
+}

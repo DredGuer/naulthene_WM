@@ -4,6 +4,71 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.39] - 2026-08-29 — L'agent n'est pas paralysé par le doute. Il se trompe avec aplomb.
+
+### Le chapitre « mécanique de décision » se referme — et une mesure du 27/08 est corrigée
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | fix (mesure) + docs (réfutation) |
+| **Impact** | Critique (corrige un chiffre publié, ferme une piste) |
+
+**[0] CORRECTION — la politique mesurée n'était pas la bonne.** La politique **jouée** est
+`voix_c1 + voix_c2` (`penser()`, l. 1405), pas les logits bruts de
+`_executer_c1_reflexe`. Les **15 %** publiés le 27/08 venaient des logits **bruts** :
+
+| | entropie | P(action favorite) |
+|---|---|---|
+| logits bruts (C1 seul) — *mesuré à tort* | 1,9417 | **16,05 %** |
+| **politique jouée** (C1+C2) | **1,8631** | **23,89 %** |
+| PPO (60 runs) | 1,667–1,704 | 34,7–35,5 % |
+
+C2 apporte **+8 points de décision**. Et le « plafond géométrique à 18 % » du 28/08 portait
+sur les logits bruts : **la politique réelle le dépasse déjà**.
+
+**[1] `coeff_entropie` ACQUITTÉ.** Le gradient de la perte d'entropie pèse **0,44 % à
+1,05 %** de celui de l'avantage sur `tete_motrice`. Il ne réprime aucune spécialisation.
+
+**[2] L'ÉCRÊTAGE : un signal sous le seuil.** `gain_c1` sature **99,8 % des ticks sur g44**,
+0 % sur onze cerveaux.
+
+| Corrélation (n=20) | `r` | `t` | seuil (5 corr., df=18) |
+|---|---|---|---|
+| écrêtage → maîtrise | −0,4519 | −2,15 | **3,61** |
+| amplitude C1 → maîtrise | +0,4768 | **+2,30** | **3,61** |
+| P(favorite) → maîtrise | **−0,2868** | −1,27 | 3,61 |
+| écrêtage → entropie | −0,0192 | −0,08 | 3,61 |
+
+**Aucune ne passe.** ⚠️ Les deux premières sont le **même fait vu deux fois**
+(`gain = vigueur/amplitude`), pas deux indices. ⚠️ Et `gain_c1` n'est pas produit par
+l'optimiseur : il sature quand **C1 est faible**. Le résultat dit « les cerveaux dont C1 est
+faible maîtrisent moins », **pas** « la borne nuit » — seule une **ablation** distinguerait
+les deux.
+
+**[3] LA CHAÎNE CAUSALE EST BRISÉE.** L'écrêtage **ne touche pas l'entropie**
+(`r = −0,0192`), alors que toute l'hypothèse était « la borne ampute la certitude ». Et
+**P(action favorite) corrèle NÉGATIVEMENT avec la maîtrise** (`r = −0,2868`) : g177 est le
+plus décidé (33,18 %) pour 18,23 % de maîtrise, g133 est à 25,40 % pour **26,57 %**.
+
+🔴 **L'agent n'est pas paralysé par le doute — quand il se décide, il se décide souvent pour
+la mauvaise action.** Le fossé avec PPO n'est donc **pas** dans la forme de la distribution
+(1,83 / 25 % contre 1,68 / 35 % — proches, pour 16 % contre 40 % de réussite). **L'échec est
+qualitatif, pas quantitatif.**
+
+⚠️ **AUCUNE ABLATION DE `GAIN_C1_MAX` N'EST AUTORISÉE PAR CE RÉSULTAT** : le signal ne passe
+pas Bonferroni, et la borne haute est un correctif documenté — sans elle le ratio C1/C2
+**s'inverse à 0,21×** (v37.0, mesuré sur 30 jours). Il faudrait **n ≥ 40 graines**, ou une
+ablation directe.
+
+| Fichier ajouté | Rôle |
+|-----------------|------|
+| `instruments/sonde_entropie_politique.py` | quelle politique gouverne · écrêtage · gradient entropie vs avantage |
+| `instruments/sonde_ecretage_c1.py` | corrélation écrêtage/amplitude ↔ performance, n=20 |
+| `docs/recherche/DECISION_29082026_confiant_dans_l_erreur.md` | le carnet |
+
+---
+
 ## [v41.38-baseline] - 2026-08-29 — La ligne de base PPO : le mur informationnel n'existe pas
 
 ### 60 runs remplissent la table restée vide depuis la création du dépôt
