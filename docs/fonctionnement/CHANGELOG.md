@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `e8908ff` |
 | **Catégorie** | feat (instrument) + docs (benchmark) |
 | **Impact** | Critique (donne une échelle à toutes les mesures du projet) |
 
