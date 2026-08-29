@@ -357,7 +357,7 @@ Le run de 100 jours dit que la mécanique **vit**. Il ne dit pas qu'elle **aide*
 | **v40.1** | + envie de vivre sur toutes les décisions |
 
 Mêmes graines, comparés en **taux de victoire par niveau** — jamais en victoires brutes
-(piège identifié dans [CAMPAGNE_P17](../recherche/CAMPAGNE_P17_ABLATION_aout_2026.md)).
+(piège identifié dans [CAMPAGNE_P17](../recherche/campagnes/CAMPAGNE_P17_ABLATION_aout_2026.md)).
 
 **Une prédiction testable** : sur `DoorKey-5x5` où couper C2 multiplie le succès par 4,5,
 un agent v40 qui échoue devrait voir $f$ baisser **tout seul** et converger vers le

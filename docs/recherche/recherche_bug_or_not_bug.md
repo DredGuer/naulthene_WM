@@ -1604,7 +1604,7 @@ l'odorat.
 
 ### ✅ Réponse définitive — campagne v41, 78 cellules (15/08)
 
-→ [CAMPAGNE_v41_population_et_ablation_aout_2026.md](CAMPAGNE_v41_population_et_ablation_aout_2026.md)
+→ [CAMPAGNE_v41_population_et_ablation_aout_2026.md](campagnes/CAMPAGNE_v41_population_et_ablation_aout_2026.md)
 
 Les trois réserves ci-dessus sont levées sur le volume : **78 cellules** (13 lésions × 3
 niveaux × 2 cerveaux), 300 épisodes chacune, sur deux cerveaux v41 à 2000 jours, avec un

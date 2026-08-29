@@ -30,7 +30,7 @@ Deux runs instrumentés sur **copies** de `brains/28082026_v4134_tronc/A_g11.bra
 tendances fortes, pas des conclusions de population. Le lien avec le plafond au niveau 4
 reste **non mesuré**.
 
-Carnet complet : `docs/recherche/COURSE_29082026_le_predateur_recule.md`.
+Carnet complet : `docs/recherche/enquetes_closes/COURSE_29082026_le_predateur_recule.md`.
 
 ## Reproduction
 

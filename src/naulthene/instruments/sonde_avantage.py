@@ -14,7 +14,7 @@ Ne sauvegarde jamais et n'entraîne rien : le `.brain` ressort inchangé.
 RÉSULTAT (8 cerveaux × 2000 ticks, 27/08/2026) : **aucune ne contraste**. MC 1,275× ·
 TD(0) 1,125× · GAE 1,161× — et le code actuel est le moins mauvais des trois. TD(0) est en
 outre très instable (0,351× à 2,953× selon la graine). Voir
-`docs/recherche/CLIC_27082026_le_td_error_ne_sauve_rien.md`.
+`docs/recherche/enquetes_closes/CLIC_27082026_le_td_error_ne_sauve_rien.md`.
 
 ⚠️ Le masque `ACTION_DEMANDER` (indice 7, `-inf`) est appliqué : softmaxer les 8 logits
 bruts mesurerait une politique qui n'existe pas — l'entropie dépassait alors ln(7).

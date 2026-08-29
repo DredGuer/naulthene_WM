@@ -8,5 +8,5 @@ Regroupe le cerveau (`cerveau`), les salles de classe / cursus
 audio/vocal (`audio`) et les instruments d'observation (`instruments`).
 
 Voir CLAUDE.md (racine du dépôt) pour la description complète de l'architecture
-et docs/readme.md pour la documentation narrative.
+et readme_fr.md pour la documentation narrative.
 """

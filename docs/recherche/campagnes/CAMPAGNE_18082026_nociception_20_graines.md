@@ -96,7 +96,7 @@ que le plus court chemin — l'agent n'a jamais eu à arbitrer entre sécurité 
 
 La cause réelle est **métabolique** : énergie 0,156 (ON) contre 0,259 (OFF), **86 % des
 ticks en hypoglycémie**, vigueur à 0,020 du plancher — donc C2 éteint à ~97 %. Voir
-[`DIAGNOSTIC_18082026_pourquoi_la_douleur_coute.md`](DIAGNOSTIC_18082026_pourquoi_la_douleur_coute.md).
+[`DIAGNOSTIC_18082026_pourquoi_la_douleur_coute.md`](../DIAGNOSTIC_18082026_pourquoi_la_douleur_coute.md).
 
 ---
 

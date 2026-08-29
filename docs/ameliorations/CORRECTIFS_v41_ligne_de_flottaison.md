@@ -16,7 +16,7 @@
 > niveau 4 de g22 (§10) était une **loterie natale**, pas un effet du correctif ; le
 > réveil de C2 est un **transitoire de 500 jours**. La correction d'échelle reste acquise,
 > son effet sur les actes n'existe pas.
-> → [CAMPAGNE_v41_population_et_ablation_aout_2026.md](../recherche/CAMPAGNE_v41_population_et_ablation_aout_2026.md)
+> → [CAMPAGNE_v41_population_et_ablation_aout_2026.md](../recherche/campagnes/CAMPAGNE_v41_population_et_ablation_aout_2026.md)
 
 ---
 

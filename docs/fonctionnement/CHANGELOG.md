@@ -4,6 +4,65 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.40] - 2026-08-29 — Le tableau des suspects est vide, et la doc est rangée
+
+### La dernière cause tombe à n=20 · `docs/` réorganisé · 76 documents indexés
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | fix (rétractation) + docs (réorganisation) |
+| **Impact** | Critique (retire l'affirmation la plus structurante du dépôt) |
+
+**[1] LA CAUSE MÉTABOLIQUE EST RETIRÉE.** `maîtrise ~ énergie moyenne` était citée depuis le
+20/08 dans les deux README, dans `CLAUDE.md` et dans le tableau de performance comme **la**
+cause du plafond :
+
+| | n = 10 (20/08) | **n = 20 (29/08)** |
+|---|---|---|
+| `r(énergie, maîtrise)` | **+0,710** | **−0,0588** |
+| `t` | +2,85 (SIG) | **−0,25** |
+
+**Le signe s'inverse et le signal disparaît.** Jackknife : `r` reste dans
+**[−0,168 ; +0,055]** quelle que soit la graine retirée — aucun point aberrant ne
+l'explique. Lisible à l'œil nu : **g77** a la 2ᵉ meilleure énergie (0,3413) pour 17,27 % de
+maîtrise, **g144** la 2ᵉ pire (0,1774) pour **22,52 %**.
+
+C'est le même motif que la maîtrise du 22/08 (+4,95 à n=5 → +1,09 à n=20) et que le ratio
+C2/C1 (`t = +3,68` à mi-parcours → +1,93 à la fin). **Une corrélation à n=10 ne vaut rien**,
+même avec un `t` qui passe un seuil non corrigé.
+
+🔴 **Seize explications mesurées, seize réfutées. Aucune cause mesurée ne survit.**
+
+**[2] DOCUMENTATION RANGÉE.** `docs/recherche/` était passé à **46 fichiers à plat** :
+
+| Avant | Après |
+|---|---|
+| 46 fichiers à plat dans `recherche/` | 28 + `enquetes_closes/` (9) + `campagnes/` (7) |
+| **27 documents orphelins** de l'INDEX | **0** |
+| INDEX couvrant 48 documents sur 76 | **76 sur 76** |
+| liens morts | **0** (vérifié) |
+
+⚠️ Déplacements par `git mv`, et **30 liens entrants réécrits** dans 11 fichiers (README,
+carnets, docstrings) — vérifié : aucun lien ne pointe dans le vide.
+
+**[3] AFFIRMATIONS PÉRIMÉES CORRIGÉES** dans les deux README, en miroir :
+
+| Affirmation | Correction |
+|---|---|
+| « la cause est métabolique, `r = +0,710` » (×4 par README) | **retirée**, avec le chiffre à n=20 |
+| « P(favorite) = 15,00 % » | c'était **C1 seul** ; la politique jouée est à **23,89 %** |
+| « le benchmark PPO n'a pas été mené » | ✅ **mené**, 60 runs, table remplie |
+| « 1 mécanique sur 14 » · « neuf mécaniques testées » | **1 sur 19** · **dix-neuf testées** |
+
+**[4] `CLAUDE.md` : une section d'état ajoutée en tête** — le tableau des sept pistes
+réfutées cette semaine, pour qu'aucune ne soit retestée, et un avertissement : **cinq
+chiffres publiés ont été rétractés cette semaine** (cosinus saturant, ratio ×46, « couche en
+stase », plafond 18 % mesuré sur C1 seul, corrélation métabolique). **Avant de citer une
+mesure de ce dépôt, vérifier sa date et son `n`.**
+
+---
+
 ## [v41.39] - 2026-08-29 — L'agent n'est pas paralysé par le doute. Il se trompe avec aplomb.
 
 ### Le chapitre « mécanique de décision » se referme — et une mesure du 27/08 est corrigée
@@ -65,7 +124,7 @@ ablation directe.
 |-----------------|------|
 | `instruments/sonde_entropie_politique.py` | quelle politique gouverne · écrêtage · gradient entropie vs avantage |
 | `instruments/sonde_ecretage_c1.py` | corrélation écrêtage/amplitude ↔ performance, n=20 |
-| `docs/recherche/DECISION_29082026_confiant_dans_l_erreur.md` | le carnet |
+| `docs/recherche/enquetes_closes/DECISION_29082026_confiant_dans_l_erreur.md` | le carnet |
 
 ---
 
@@ -182,7 +241,7 @@ vers la géométrie, pas vers le gradient, pas vers la perception.
 | Fichier ajouté | Rôle |
 |-----------------|------|
 | `instruments/sonde_correlation_derive.py` | dérive vs performance sur une cohorte appariée |
-| `docs/recherche/CORRELATION_29082026_la_derive_ne_predit_rien.md` | le carnet |
+| `docs/recherche/enquetes_closes/CORRELATION_29082026_la_derive_ne_predit_rien.md` | le carnet |
 | `brains/28082026_v4134_tronc/correlation_derive.json` | données brutes, à côté des sources |
 
 ---
@@ -249,7 +308,7 @@ a lieu, puis s'inverse, et l'alignement ne progresse à aucun moment.
 |-----------------|------|
 | `instruments/sonde_derive_longue.py` | rotation nuit après nuit, **axe visuel vs axe complet** |
 | `instruments/sonde_course_poursuite.py` | les deux vitesses **mesurées**, jamais dérivées |
-| `docs/recherche/COURSE_29082026_le_predateur_recule.md` | le carnet |
+| `docs/recherche/enquetes_closes/COURSE_29082026_le_predateur_recule.md` | le carnet |
 
 ---
 
@@ -2143,7 +2202,7 @@ remonte-t-elle ?**
 | **Commit** | `e03ac80` |
 | **Catégorie** | docs (résultat de mesure) |
 | **Impact** | **Mesure — aucun changement de code** |
-| **Carnet** | [`CAMPAGNE_18082026_...`](../recherche/CAMPAGNE_18082026_nociception_20_graines.md) |
+| **Carnet** | [`CAMPAGNE_18082026_...`](../recherche/campagnes/CAMPAGNE_18082026_nociception_20_graines.md) |
 
 **Banc** : `LavaGapS5` forcé, 20 graines × 2 bras × 300 jours, **40/40 runs terminés**.
 
@@ -3303,7 +3362,7 @@ l'odorat mesuré **inerte** à l'ablation.
 | **Catégorie** | docs (**aucune ligne de `src/` modifiée**) |
 | **Impact** | Documentation — corrige une affirmation fausse de la vitrine publique |
 | **Branche** | `feat/v41-ligne-flottaison` |
-| **Carnet** | [CAMPAGNE_v41_population_et_ablation_aout_2026.md](../recherche/CAMPAGNE_v41_population_et_ablation_aout_2026.md) |
+| **Carnet** | [CAMPAGNE_v41_population_et_ablation_aout_2026.md](../recherche/campagnes/CAMPAGNE_v41_population_et_ablation_aout_2026.md) |
 
 Application de la **règle de miroir** (CLAUDE.md §2bis) : `readme.md` (EN) et `readme_fr.md`
 (FR) modifiés **dans le même commit**, mêmes chiffres des deux côtés.
@@ -3330,7 +3389,7 @@ score déjà au plancher. L'effet « ×2 » était porté presque entièrement p
 | `readme.md` | table d'ablation **78 cellules** (Δ par niveau, 2 cerveaux) + note de protocole sur le témoin non nul + état du blocage réécrit + ligne baseline `Empty-8x8` → `Empty-5x5` 44,7 % |
 | `readme_fr.md` | **miroir strict** des mêmes blocs |
 | `docs/recherche/recherche_bug_or_not_bug.md` | **H15 tranchée** — « les sens sont-ils utilisés ? » → non, 4 sur 6 sont inertes |
-| `docs/recherche/CAMPAGNE_P17_ABLATION_aout_2026.md` | §« suite donnée » — la **Lecture 2** (« C2 change de signe selon la carte ») est **contredite** : c'était du bruit sur témoin au plancher |
+| `docs/recherche/campagnes/CAMPAGNE_P17_ABLATION_aout_2026.md` | §« suite donnée » — la **Lecture 2** (« C2 change de signe selon la carte ») est **contredite** : c'était du bruit sur témoin au plancher |
 | `docs/INDEX.md` | pointeurs mis à jour |
 
 ⚠️ **Une lecture antérieure est explicitement contredite.** La campagne P17 concluait que
@@ -3350,7 +3409,7 @@ corrigée en silence.
 | **Catégorie** | docs (campagne de mesure, **aucune ligne de `src/` modifiée**) |
 | **Impact** | Critique — infirme le résultat mis en avant en v41.0 |
 | **Branche** | `feat/v41-ligne-flottaison` |
-| **Carnet** | [CAMPAGNE_v41_population_et_ablation_aout_2026.md](../recherche/CAMPAGNE_v41_population_et_ablation_aout_2026.md) |
+| **Carnet** | [CAMPAGNE_v41_population_et_ablation_aout_2026.md](../recherche/campagnes/CAMPAGNE_v41_population_et_ablation_aout_2026.md) |
 
 **20 000 jours simulés (10 graines × 2000 j) + 78 cellules d'ablation.**
 

@@ -143,7 +143,7 @@ la fusion. C'est un renversement complet de la situation historique du projet (�
 
 Le ratio C2/C1 est passé de 0,41× à **3,13×**. C2 domine désormais la fusion.
 
-Or le carnet [`SONDE_17082026_utilite_de_C2.md`](SONDE_17082026_utilite_de_C2.md) mesure
+Or le carnet [`SONDE_17082026_utilite_de_C2.md`](../SONDE_17082026_utilite_de_C2.md) mesure
 que dans **43 %** des cerveaux, C2 est une **copie** de C1 (corrélation > +0,7). Un
 doublon qui pèse trois fois plus n'est pas un progrès cognitif — c'est le même avis, plus
 fort.

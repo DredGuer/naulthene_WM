@@ -407,7 +407,7 @@ pas le même selon la carte : sur `5x5` l'agent ferait mieux avec $f_{planif} \a
 > n'y en avait pas.
 
 Détail complet et protocole :
-[CAMPAGNE_P17_ABLATION](../recherche/CAMPAGNE_P17_ABLATION_aout_2026.md).
+[CAMPAGNE_P17_ABLATION](../recherche/campagnes/CAMPAGNE_P17_ABLATION_aout_2026.md).
 
 ---
 
@@ -1113,7 +1113,7 @@ aussi le seul dont l'ablation effondre l'accord C1/C2 (0,311 → 0,042) : privé
 le planificateur délire.
 
 Protocole et tableaux complets :
-[CAMPAGNE_P17_ABLATION](../recherche/CAMPAGNE_P17_ABLATION_aout_2026.md).
+[CAMPAGNE_P17_ABLATION](../recherche/campagnes/CAMPAGNE_P17_ABLATION_aout_2026.md).
 
 ---
 

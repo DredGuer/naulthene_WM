@@ -1,9 +1,9 @@
 # Trois chantiers réfutés avant la première ligne de correctif
 
 **23/08/2026** — carnet de recherche, **non normatif**.
-Pour l'état courant, voir [`CHANGELOG.md`](../fonctionnement/CHANGELOG.md).
+Pour l'état courant, voir [`CHANGELOG.md`](../../fonctionnement/CHANGELOG.md).
 Pour le plan vivant, voir
-[`PLAN_v41.32`](../ameliorations/PLAN_v41.32_table_de_mixage_et_neurogenese_dirigee.md).
+[`PLAN_v41.32`](../../ameliorations/PLAN_v41.32_table_de_mixage_et_neurogenese_dirigee.md).
 
 > **Ce que ce document raconte** : une journée où **trois** propositions successives ont été
 > réfutées **avant** d'être codées — la première par une sonde, la deuxième par un témoin
@@ -1634,9 +1634,9 @@ mesure. Ce qui a été évité :
 
 ## 7. Documents liés
 
-- [`PLAN_v41.32`](../ameliorations/PLAN_v41.32_table_de_mixage_et_neurogenese_dirigee.md) — le plan vivant, avec l'état d'avancement
-- [`21082026_anatomie_du_noyau.md`](../etat_des_lieux/21082026_anatomie_du_noyau.md) — les 225 constantes, le point d'assemblage unique
-- [`22082026_campagne_v41.31_cursus_complet.md`](../etat_des_lieux/22082026_campagne_v41.31_cursus_complet.md) — la falsification n=20
-- [`METABOLISME_20082026_la_variable_morte.md`](METABOLISME_20082026_la_variable_morte.md) — le chantier métabolique ouvert
-- [`EXPANSION_17082026_le_frein_de_la_neurogenese.md`](EXPANSION_17082026_le_frein_de_la_neurogenese.md) — l'enquête antérieure sur la croissance
+- [`PLAN_v41.32`](../../ameliorations/PLAN_v41.32_table_de_mixage_et_neurogenese_dirigee.md) — le plan vivant, avec l'état d'avancement
+- [`21082026_anatomie_du_noyau.md`](../../etat_des_lieux/21082026_anatomie_du_noyau.md) — les 225 constantes, le point d'assemblage unique
+- [`22082026_campagne_v41.31_cursus_complet.md`](../../etat_des_lieux/22082026_campagne_v41.31_cursus_complet.md) — la falsification n=20
+- [`METABOLISME_20082026_la_variable_morte.md`](../METABOLISME_20082026_la_variable_morte.md) — le chantier métabolique ouvert
+- [`EXPANSION_17082026_le_frein_de_la_neurogenese.md`](../EXPANSION_17082026_le_frein_de_la_neurogenese.md) — l'enquête antérieure sur la croissance
 - `brains/23082026_v4132_mixage/` — la campagne (protocole, JSON, `.brain` et `.log`)

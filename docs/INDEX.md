@@ -1,185 +1,138 @@
-# Index de la documentation — Naulthène
+# Index de la documentation — quelle question mène à quel document
 
-> **Point d'entrée unique.** Ce fichier dit *où* chercher et *dans quel ordre* lire.
-> Il ne contient aucune connaissance propre : uniquement des pointeurs.
->
-> Dernière mise à jour : **15 août 2026**
+> Réorganisé le 29/08/2026. **Tout document doit figurer ici**, sinon il sera oublié.
+> `recherche/` était passé à 46 fichiers à plat : il est désormais découpé en trois niveaux.
 
----
+## Les cinq dossiers, et ce qui fait autorité
 
-## 🚦 Par où commencer selon ce que tu cherches
-
-| Ta question | Le document | Temps |
+| Dossier | Nature | Fait autorité sur l'état courant ? |
 |---|---|---|
-| **« Objectifs, cerveau, parcours — tout en un »** | **[etat_des_lieux/15082026_v41.4.md](etat_des_lieux/15082026_v41.4.md)** | 20 min |
-| **« Où en est le projet ? »** | [ETAT_DU_PROJET_aout_2026.md](recherche/ETAT_DU_PROJET_aout_2026.md) | 15 min |
-| « Qu'est-ce qui a changé et quand ? » | [CHANGELOG.md](fonctionnement/CHANGELOG.md) | consultation |
-| « Comment je lance un run ? » | [LANCEMENT.md](fonctionnement/LANCEMENT.md) | 5 min |
-| « Comment ça marche, en détail ? » | [explications_readme.md](fonctionnement/explications_readme.md) | long |
-| « Qu'est-ce qu'on a déjà essayé ? » | **[METABOLISME_20082026_la_variable_morte.md](recherche/METABOLISME_20082026_la_variable_morte.md)** | **`taux_satiete` n'est soustrait NULLE PART** depuis la v41.2 — le vrai régulateur est `DEBIT_DIGESTIF_JOUR`, qui impose 3,333 estomacs/jour **identiques dans les deux bras** d'une ablation. Explique l'invariance énergétique de la campagne v41.30, et invalide le fix2. Contient la leçon « ne jamais annoncer un SIG sur un run en cours » |
-| [recherche_bug_or_not_bug.md](recherche/recherche_bug_or_not_bug.md) | ⚠️ **à lire avant toute idée neuve** |
-| « Qu'est-ce qu'on fait ensuite ? » | [AVIS_ET_PROPOSITIONS_aout_2026.md](ameliorations/AVIS_ET_PROPOSITIONS_aout_2026.md) | 20 min |
+| [`fonctionnement/`](fonctionnement/) | **normatif** | ✅ **oui** |
+| [`recherche/`](recherche/) | **enquêtes** — non normatif, conserve les hypothèses réfutées | ❌ non |
+| [`ameliorations/`](ameliorations/) | **idées** proposées, non validées | ❌ non |
+| [`ameliorations_appliquees/`](ameliorations_appliquees/) | **livré**, garde la trace des options écartées | 🟡 partiellement |
+| [`etat_des_lieux/`](etat_des_lieux/) | **photos datées**, jamais mises à jour après coup | ❌ non (**périmable**) |
 
 ---
 
-## 📚 Les trois familles de documents
+## 🔴 À lire en premier — l'état réel au 29/08/2026
 
-Le piège classique du projet est de confondre ces trois natures. **Un seul dossier fait
-autorité sur l'état courant.**
+**Le tableau des suspects est vide.** Seize explications du plafond au niveau 4 ont été
+mesurées et réfutées, la dernière (`maîtrise ~ énergie`, `r = +0,710`) le 29/08 en passant
+de n=10 à n=20 : **r = −0,0588**.
 
-| Dossier | Nature | Fait autorité ? |
-|---|---|---|
-| `docs/fonctionnement/` | **normatif** — comment ça marche, comment on lance | ✅ **oui** |
-| `docs/recherche/` | **enquêtes** — ce qui bloque, ce qui a été réfuté | ❌ non |
-| `docs/ameliorations/` | **idées** — pistes proposées, pas encore validées | ❌ non |
-| `docs/ameliorations_appliquees/` | **livré** — mécaniques posées dans le code | 🟡 partiellement |
-| `docs/etat_des_lieux/` | **synthèses datées** — une photo à un instant donné | ❌ non (**périmable**) |
-
-> ⚠️ Un document d'`etat_des_lieux/` est une **photo horodatée**, jamais une référence
-> vivante : il n'est pas mis à jour après sa date. Un fichier par point d'étape
-> (`DDMMYYYY_Version.md`), les anciens sont **conservés**, jamais écrasés — c'est ce qui
-> permet de comparer deux dates. Pour l'état courant, aller au CHANGELOG.
-
-> Un carnet est *vivant mais non normatif* : il raconte une enquête, avec ses erreurs.
-> **Ne jamais y chercher l'état courant** (c'est le rôle du CHANGELOG) — mais **toujours
-> le consulter avant de relancer une piste**, pour ne pas retester une idée déjà écartée.
-
----
-
-## 🗺️ La carte complète, par thème
-
-### A. Comprendre le projet
-
-| Document | Ce qu'il contient |
+| Question | Document |
 |---|---|
-| [readme.md](../readme.md) | Vitrine GitHub (anglais) — la thèse, les chiffres, l'état du blocage |
-| [readme_fr.md](../readme_fr.md) | Miroir français + documentation narrative longue (v7 → v39) |
-| [explications_readme.md](fonctionnement/explications_readme.md) | Détail algorithmique et mathématique complet |
-| [Parcourt_readme.md](fonctionnement/Parcourt_readme.md) | Guide vulgarisé des 4 parcours d'entraînement |
-| [CLAUDE.md](../CLAUDE.md) | Règles de maintenance + **tous les invariants à ne pas casser** |
+| Où en est le projet, sans enjolivure ? | [`../readme_fr.md`](../readme_fr.md) · [`../readme.md`](../readme.md) (EN) |
+| Que vaut l'agent face à un PPO ? | [campagnes/BASELINE_PPO_29082026](recherche/campagnes/BASELINE_PPO_29082026_le_mur_n_existe_pas.md) |
+| Qu'est-ce qui a changé, version par version ? | [fonctionnement/CHANGELOG.md](fonctionnement/CHANGELOG.md) |
+| Comment lancer quoi que ce soit ? | [fonctionnement/LANCEMENT.md](fonctionnement/LANCEMENT.md) |
+| Quelles règles de mesure s'appliquent ? | [`../CLAUDE.md`](../CLAUDE.md) § *La Règle de Mesure* |
 
-### B. L'état des lieux *(à jour)*
+---
 
-| Document | Ce qu'il contient | Lié à |
-|---|---|---|
-| **[etat_des_lieux/15082026_v41.4.md](etat_des_lieux/15082026_v41.4.md)** | **Synthèse en 3 volets : les objectifs · l'état du cerveau (fonctionnement, contraintes, blocages) · le parcours (grilles, nourriture, jours, ticks).** Inclut les chantiers v41.2 → v41.4 et la découverte du décalage de maturité | tout |
-| **[22082026_campagne_v41.31_cursus_complet.md](etat_des_lieux/22082026_campagne_v41.31_cursus_complet.md)** | **Le gradient causal falsifié sur cursus complet** — 40 runs (20 graines appariées × 1500 j) : niveau `t=+0,37`, maîtrise `t=+0,39`, **0/40 au-delà du niveau 5**. Comment l'indice à n=5 (**+4,95**) est devenu **+1,09** à n=20. Et les 5 mesures directes : **paramètres réels 22,4× la naissance**, **dilution géométrique de C2**, **eau sous le sol nu**, **famine 78-100 % du dépôt**, **9 termes de récompense à poids 1**. 🔴 Données brutes **perdues** (scratchpad purgé) |
-| **[21082026_anatomie_du_noyau.md](etat_des_lieux/21082026_anatomie_du_noyau.md)** | **Le code génétique des cerveaux** — 11 144 lignes dont **41 % de commentaires**, les 12 couches et leurs **55 552 paramètres** recomptés (le README annonçait 55 232 : erreur corrigée), le vecteur bio à 41 dims, les **225 constantes classées** (36 bornes / 107 coefficients nus), les seuils dans un `if` vérifiés un par un, le génome acquis mesuré sur 10 cerveaux à 1500 jours, et ce qui est **mort ou dormant** (C3, `taux_satiete`, `SEUIL_CRISTAL`) |
-| **[etat_des_lieux/18082026_revue_dogme_avant_publication.md](etat_des_lieux/18082026_revue_dogme_avant_publication.md)** | **Peut-on dire « rien en dur » devant un chercheur ? NON.** Audit des 161 constantes : 4 récompenses posées, 7 sites qui nomment le monde, ~25 constantes de calibration. Donne la formulation qui, elle, résiste à l'audit | tout |
-| **[etat_des_lieux/19082026_rapport_de_nuit.md](etat_des_lieux/19082026_rapport_de_nuit.md)** | **Rapport de nuit 18→19/08.** La cause du coût de la douleur (−25 % de récolte sur 2 cartes), la thermohoméostasie v41.26 implémentée et vérifiée, et les 2 défauts que le banc a réfutés avant lancement | tout |
-| **[ETAT_DU_PROJET_aout_2026.md](recherche/ETAT_DU_PROJET_aout_2026.md)** | **Forces, faiblesses, ce qui reste à faire.** Le point d'entrée | tout |
-| [CHANGELOG.md](fonctionnement/CHANGELOG.md) | Historique version par version — **la référence factuelle** | tout |
-| [REVUE_CODE_v39_aout_2026.md](recherche/REVUE_CODE_v39_aout_2026.md) | **6 défauts trouvés le 13-14/08**, dont le biais qui faussait 2a/2b | §B, §D |
+## `fonctionnement/` — normatif
 
-### C. Les enquêtes *(pourquoi ça ne marche pas)*
-
-| Document | La question posée | Verdict |
-|---|---|---|
-| [recherche_bug_or_not_bug.md](recherche/recherche_bug_or_not_bug.md) | **H1 → H18** : bug ou erreur de conception ? | 15 erreurs de diagnostic consignées · **H15 tranchée** : 4 sens sur 6 sont inertes |
-| [dia_Aout_2026.md](recherche/dia_Aout_2026.md) | Pourquoi bloqué au niveau 2/15 ? | 3 causes, **aucune cognitive** |
-| **[DISSECTION_g22_aout_2026.md](recherche/DISSECTION_g22_aout_2026.md)** | Que contient le cerveau le plus avancé (248 victoires) ? | **Le but vaut 16× le reste — appris, jamais déclaré** |
-| [CAMPAGNE_P17_ABLATION_aout_2026.md](recherche/CAMPAGNE_P17_ABLATION_aout_2026.md) | Le cursus gaussien aide-t-il ? À quoi servent les organes ? | ⚠️ **verdict C2 contredit** par la campagne v41 (témoin au plancher) |
-| **[CAMPAGNE_v41_population_et_ablation_aout_2026.md](recherche/CAMPAGNE_v41_population_et_ablation_aout_2026.md)** | Le déblocage v41 est-il reproductible ? À quoi servent les organes, témoin non nul ? | **0 promotion sur 10 graines** · **C2 débranchable à +0,0 sur 6 niveaux** · 6 lésions sur 13 sans effet |
-| **[NUIT_15082026_trois_questions.md](recherche/NUIT_15082026_trois_questions.md)** | Patience, métabolisme, apprentissage par victoire | ⚠️ **`env.reset()` n'était jamais seedé** — toute comparaison appariée antérieure à la v41.9 est non concluante |
-| **[CAMPAGNE_16082026_banc_reproductible.md](recherche/CAMPAGNE_16082026_banc_reproductible.md)** | Premier taux de référence sur un banc reproductible | **85 % [64–95] atteignent le niveau 3**, 0/20 le niveau 4 (n=20, 2500 j) |
-| **[SCAN_CERVEAUX_16082026.md](recherche/SCAN_CERVEAUX_16082026.md)** | D'où vient le blocage — les meilleurs contre les pires ? | **C2 est 36 % plus gros chez ceux qui ÉCHOUENT** · mémoire à 1 % · `lava` en valence positive |
-| **[CORRECTIF_v4110_memoire_par_carte.md](recherche/CORRECTIF_v4110_memoire_par_carte.md)** | P17 effaçait-il la mémoire ? La lave punit-elle ? | **~3750 effacements/run** (régression P17) · **MiniGrid punit la mort par `0.0`** (206 morts mesurées) |
-| **[CAMPAGNE_n20_17082026_brain_sparing_valide.md](recherche/CAMPAGNE_n20_17082026_brain_sparing_valide.md)** | Le brain-sparing tient-il à n=20 ? | **niveau 4 : 0 % [0–16] → 80 % [58–92]**, intervalles disjoints · 18 gagne / 0 perd · C1 passe de 1,78 à 4,58 actions |
-| **[FACTORIEL_17082026_esprit_contre_corps.md](recherche/FACTORIEL_17082026_esprit_contre_corps.md)** | Qui débloque : la décision (A) ou le métabolisme (B) ? | **A fait tout** (8/10) · **B ne fait rien** (0/10, p=1,0000) alors qu'il double l'énergie |
-| **[TRADUCTEUR_17082026_ce_que_C2_dit_a_C1.md](recherche/TRADUCTEUR_17082026_ce_que_C2_dit_a_C1.md)** | Que dit C2 à C1, en mots simples ? | Les logs perdent les **couples** de votes · veto 0 % chez les témoins, 36–77 % chez les variantes |
-| **[EXPANSION_17082026_le_frein_de_la_neurogenese.md](recherche/EXPANSION_17082026_le_frein_de_la_neurogenese.md)** | Pourquoi la V30 se stabilisait-elle et plus maintenant ? | La V30 s'arrêtait à **dim_bus 48** ; j'avais retiré le frein en v41.21 · Option B : 2 pressions continues, 0 `if` |
-| **[NOCICEPTION_18082026_la_chaleur_qui_fait_mal.md](recherche/NOCICEPTION_18082026_la_chaleur_qui_fait_mal.md)** | Pourquoi la lave a-t-elle la valence de l'eau, et comment fermer la boucle ? | MiniGrid punit la mort par **exactement 0.0** · la v41.11 avait livré le **sens**, pas la **douleur** · `+T²` au déficit · piège du **décalage d'un tick** · **le `−1,000` publié était faux** (douleur annulée par sa propre soustraction, fix1) · valence `lava` **+0,062 → −0,753** |
-| **[CAMPAGNE_18082026_nociception_20_graines.md](recherche/CAMPAGNE_18082026_nociception_20_graines.md)** | La douleur thermique améliore-t-elle la survie ? | **NON.** Valence `lava` **−0,761 sur 20/20** (`t=−1066`) et **−5,6 pts** d'approche du danger — mais survie **8,57 % → 6,71 %** (IC disjoints). Meurt 2,4× moins, gagne 2,9× moins : **la peur seule ne produit pas la compétence** |
-| **[DIAGNOSTIC_18082026_pourquoi_la_douleur_coute.md](recherche/DIAGNOSTIC_18082026_pourquoi_la_douleur_coute.md)** | Pourquoi la douleur fait-elle perdre des victoires : C1/C2, le temps, ou autre ? | **Le métabolisme.** Énergie 0,156 vs 0,259, **86 % des ticks en hypoglycémie**, vigueur à 0,020 du plancher → **C2 éteint à 97 %**. C1/C2 est au contraire en MEILLEURE santé que jamais. ⚠️ Réfute l'hypothèse géométrique du carnet de campagne |
-| **[THERMOHOMEOSTASIE_18082026_la_douleur_graduee.md](recherche/THERMOHOMEOSTASIE_18082026_la_douleur_graduee.md)** | Comment une douleur peut-elle faire mal sans empêcher de vivre ? | `T²` était **non nul partout** (77 % des cases) → aucun lieu de repos → **−25 % de récolte** sur 2 cartes. Gradation en 4 paliers : seuil de perception **dérivé du vécu** (vrai zéro), montée cubique, **brûlure qui s'accumule et se dissipe** |
-| **[DOULEUR_UNIQUE_19082026_refonte.md](recherche/DOULEUR_UNIQUE_19082026_refonte.md)** | Peut-il n'y avoir QU'UNE douleur dans le corps ? | Un seul état, alimenté par des couples **(pic, demi-vie)** — brûlure 60 ticks, choc 5 ticks. Le temps **allonge la récupération**, il n'augmente pas le pic. La chaleur est un **état maintenu** que le corps évacue. `MALUS_DOULEUR` **supprimé** |
-| **[NAVIGATION_20082026_le_vrai_blocage.md](recherche/NAVIGATION_20082026_le_vrai_blocage.md)** | **L'agent apprend-il ?** | **OUI, 10/10 graines** (13,8 % → 54,4 %, intervalle entre victoires 5,4 j → 1,4 j) — **mais il plafonne 21 pts SOUS une politique aléatoire** (75,7 %). Le blocage n'est ni la lave ni la douleur |
-| **[POURQUOI_20082026_l_agent_economise.md](recherche/POURQUOI_20082026_l_agent_economise.md)** | **Pourquoi l'agent joue-t-il des gestes inutiles ?** | Parce qu'ils sont **les moins chers** : AVANCER coûte **4,00**, un geste stérile **1,09**. Il optimise exactement ce qu'on lui demande. ⚠️ Corrige aussi la baseline aléatoire (39,2 % à 7 actions, pas 75,7 % à 3) |
-| **[NUIT_18082026_le_niveau_5_franchi_et_le_frein_qui_ne_borne_pas.md](recherche/NUIT_18082026_le_niveau_5_franchi_et_le_frein_qui_ne_borne_pas.md)** | Le palier 5 est-il tenu ? Le frein borne-t-il la taille ? | **niv 4 : 100 % [84–100], niv 5 : 20 % [8–42]** sur 1500 j, palier TENU (1078 nuits) · mais le frein ne borne **pas** la taille · `lava` toujours **positive** |
-| **[AUTOPSIE_17082026_esprit_g7_le_seul_niveau_5.md](recherche/AUTOPSIE_17082026_esprit_g7_le_seul_niveau_5.md)** | Comment le seul cerveau à franchir le niveau 5 a-t-il fait ? | **`lava` en valence POSITIVE (+0,072)** ≈ eau · C2 figé 400/400 · **couper C2 triple le score** |
-| **[CHANTIER_v40_planification_emergente.md](ameliorations_appliquees/CHANTIER_v40_planification_emergente.md)** | Peut-on supprimer les constantes de l'arbitrage ? | **3 supprimées** · l'envie de vivre peut tuer l'agent |
-| [CHANTIER_v37_equilibre_c1_c2.md](ameliorations_appliquees/CHANTIER_v37_equilibre_c1_c2.md) | C2 écrase-t-il C1 ? | Équilibre atteint, blocage persiste |
-| [CHANTIER_v38_monde_continu.md](ameliorations_appliquees/CHANTIER_v38_monde_continu.md) | Un monde continu débloque-t-il ? | **1 brique validée sur 6** |
-| [les_sens_combinatoire.md](ameliorations/les_sens_combinatoire.md) | Les sens se lient-ils entre eux ? | Cadrage du liage multimodal |
-
-### D. Les projets *(ce qu'on veut faire)*
-
-| Document | Ce qu'il contient |
+| Document | Rôle |
 |---|---|
-| **[AVIS_ET_PROPOSITIONS_aout_2026.md](ameliorations/AVIS_ET_PROPOSITIONS_aout_2026.md)** | **P1 → P17** : les pistes, sous la règle « rien en dur si ça peut émerger » + la grille développementale + **la gaussienne d'apprentissage (P17)** |
-| **[CORRECTIFS_v41_ligne_de_flottaison.md](ameliorations/CORRECTIFS_v41_ligne_de_flottaison.md)** | **LIVRÉ (C1+C2)** — la moyenne sur 400 ticks noyait la victoire sous le coût métabolique. Le vécu se compte désormais en saillances au-dessus du coût d'exister : **C2 passe de mort (2000 nuits/2000) à dominant**. Contient aussi le benchmark « C1 pur » (§8) |
-| **[CHANTIER_v41.2_metabolisme_deux_etages.md](ameliorations/CHANTIER_v41.2_metabolisme_deux_etages.md)** | **PROPOSÉ** — l'agent vit **400 ticks sur 400 en zone critique** : l'échelle temporelle est fausse d'un facteur ~35. Deux étages (satiété *stock* / énergie *flux*), mort par insolvabilité **sans aucun `if`**, et des bornes qu'un métabolisme peut déplacer à coût **exponentiel** |
-| **[CHANTIER_v41.2_energie_modulatrice.md](ameliorations/CHANTIER_v41.2_energie_modulatrice.md)** | **EN COURS** — l'énergie module C1, C2, le déficit et la plasticité via `vigueur = énergie ** κ`. Contient les **4 erreurs de diagnostic** du chantier (dont « la carte était saturée : 13 ressources demandées sur 8 cases libres ») |
-| **[CHANTIER_v41.4_maitrise_generale_et_heritage.md](ameliorations/CHANTIER_v41.4_maitrise_generale_et_heritage.md)** | **LIVRÉ (non revendiqué)** — deux maîtrises (générale / par carte), sevrage hérité **à proportion de la parenté mesurée** (0,85 → 0,00 selon la paire, **6 ruptures sur 14**). ⚠️ **§7 : la maturité multiplie la maîtrise du jour par l'autonomie de la VEILLE** — g11 refusé à 65 % de maîtrise, g44 promu à 60 % |
-| **[CHANTIER_v41.31_gradient_causal_et_tube_digestif.md](ameliorations/CHANTIER_v41.31_gradient_causal_et_tube_digestif.md)** | **CONCEPTION (20/08/2026)** — neutraliser le gradient **RL SEUL** sur les non-transitions (JEPA conservé : l'immobilité face à un mur est une prédiction valide dont C2 a besoin pour planifier). **32 % des ticks sont stériles à 100 %**. Contient le doublon de détecteurs à résorber (61,7 % vs 29,9 %) et l'assainissement du tube digestif |
-| **[REFUTATIONS_23082026_trois_chantiers_avant_la_premiere_ligne.md](recherche/REFUTATIONS_23082026_trois_chantiers_avant_la_premiere_ligne.md)** | **23/08/2026** — trois chantiers réfutés **avant** la première ligne de correctif : le softmax de la table de mixage (`Bio` domine **déjà** à 44 % de la dispersion), la densité de ressources (un marcheur **aléatoire** récolte **3,33 FOOD/j** contre **1,68** pour l'agent entraîné — la famine est **comportementale**), et la neurogenèse dirigée (C2 pèse **0,110 %** parce qu'il n'a **qu'une sortie** : il croît en N, le tronc en N², rapport **×312**). Contient l'innocentement du canal WATER (valences ≡ soulagement réel à **4,4 %** près) |
-| **[PLAN_v41.32_table_de_mixage_et_neurogenese_dirigee.md](ameliorations/PLAN_v41.32_table_de_mixage_et_neurogenese_dirigee.md)** | **PLAN OUVERT (23/08/2026)** — l'ordre de bataille des trois propositions : table de mixage (Maslow émergent), **neurogenèse dirigée** (la seule retenue telle quelle) et métabolisme modulaire. Contient l'**inventaire réel des 9 termes de récompense** (5 déjà instrumentés, 3 comptent des *événements* et non des *amplitudes*), la sonde de Welford à **coût < 0,01 % du tick**, et les trois défauts du softmax proposé (`TEMPERATURE` posée · la normalisation qui **plafonne** le pic dopaminergique · la prémisse « eau à 0,017 » **non mesurée**) |
-| **[EPISODES_REFERENCE_20082026_la_derniere_constante_posee.md](ameliorations/EPISODES_REFERENCE_20082026_la_derniere_constante_posee.md)** | **PROPOSÉ (20/08/2026)** — **trois constantes posées** à supprimer : `EPISODES_PAR_JOURNEE_REFERENCE = 4.0`, `PATIENCE_MAX = 350`, `BOOST_PATIENCE_MIN_PAR_RECURRENCE = 10`. Le code suppose **4 épisodes/jour**, l'agent en joue **1,55**, et **9 graines sur 10 sont au plafond exact de patience**. Corrélation `maîtrise ~ énergie` : **r = +0,710**. ⚠️ Le **sens** de la correction n'est pas tranché |
-| [CONCEPTION_v34_fatigue_mortalite.md](ameliorations/CONCEPTION_v34_fatigue_mortalite.md) | Fatigue, mortalité, les 4 gestes du parent — **prérequis de lecture du v41.2** |
+| [CHANGELOG.md](fonctionnement/CHANGELOG.md) | **la référence factuelle**, version par version |
+| [LANCEMENT.md](fonctionnement/LANCEMENT.md) | commandes, dépannage |
+| [explications_readme.md](fonctionnement/explications_readme.md) | détail algorithmique, §15 sens |
+| [Parcourt_readme.md](fonctionnement/Parcourt_readme.md) | parcours de lecture |
 
-### E. Opérationnel
+---
 
-| Document | Ce qu'il contient |
+## `recherche/` — trois niveaux
+
+### `recherche/enquetes_closes/` — **les pistes réfutées, série du 23-29/08/2026**
+
+Neuf carnets, une série. À lire **avant de rouvrir une piste** : c'est ce qui évite de
+retester une idée déjà écartée.
+
+| Document | Ce qui a été réfuté |
 |---|---|
-| [LANCEMENT.md](fonctionnement/LANCEMENT.md) | Toutes les commandes, options, dépannage |
+| [REFUTATIONS_23082026](recherche/enquetes_closes/REFUTATIONS_23082026_trois_chantiers_avant_la_premiere_ligne.md) | trois chantiers, avant d'écrire une ligne |
+| [CONDITIONNEMENT_27082026](recherche/enquetes_closes/CONDITIONNEMENT_27082026_le_signal_arrive_et_ne_sert_a_rien.md) | le signal perceptif **arrive** aux logits — pas un défaut de câblage |
+| [CREDIT_27082026](recherche/enquetes_closes/CREDIT_27082026_l_arrosage_confirme_et_la_vue_orpheline.md) | l'arrosage du crédit ; l'acteur/critique envoient **0,000000** à la vue |
+| [CLIC_27082026](recherche/enquetes_closes/CLIC_27082026_le_td_error_ne_sauve_rien.md) | TD(0) et GAE ne contrastent pas — **mesuré avant d'être codé** |
+| [COLLAPSE_28082026](recherche/enquetes_closes/COLLAPSE_28082026_le_plafond_est_geometrique.md) | ⚠️ **contient sa propre rétractation** : le cosinus saturait |
+| [CIBLE_MOBILE_28082026](recherche/enquetes_closes/CIBLE_MOBILE_28082026_la_tete_poursuit_un_axe_qui_fuit.md) | la dérive de représentation ⚠️ chiffres ×46 **retirés** |
+| [COURSE_29082026](recherche/enquetes_closes/COURSE_29082026_le_predateur_recule.md) | la course mesurée proprement : ×11,7, l'alignement **recule** |
+| [CORRELATION_29082026](recherche/enquetes_closes/CORRELATION_29082026_la_derive_ne_predit_rien.md) | la dérive **ne prédit pas** la performance (n=20) |
+| [DECISION_29082026](recherche/enquetes_closes/DECISION_29082026_confiant_dans_l_erreur.md) | l'agent n'est pas apathique — il se trompe avec aplomb |
+
+### `recherche/campagnes/` — **les mesures à n ≥ 20**
+
+| Document | Ce qu'il mesure |
+|---|---|
+| [BASELINE_PPO_29082026](recherche/campagnes/BASELINE_PPO_29082026_le_mur_n_existe_pas.md) | 🔴 **la ligne de base**, 60 runs — le mur informationnel n'existe pas |
+| [CAMPAGNE_v41_population_et_ablation](recherche/campagnes/CAMPAGNE_v41_population_et_ablation_aout_2026.md) | population + ablation sensorielle, 78 cellules |
+| [CAMPAGNE_n20_17082026](recherche/campagnes/CAMPAGNE_n20_17082026_brain_sparing_valide.md) | brain-sparing validé à n=20 |
+| [CAMPAGNE_18082026](recherche/campagnes/CAMPAGNE_18082026_nociception_20_graines.md) | nociception, 20 graines |
+| [CAMPAGNE_16082026](recherche/campagnes/CAMPAGNE_16082026_banc_reproductible.md) | le banc reproductible |
+| [CAMPAGNE_17082026](recherche/campagnes/CAMPAGNE_17082026_brain_sparing.md) | brain-sparing, première mesure |
+| [CAMPAGNE_P17_ABLATION](recherche/campagnes/CAMPAGNE_P17_ABLATION_aout_2026.md) | ablation P17 |
+
+### `recherche/` — enquêtes antérieures
+
+| Document | Sujet |
+|---|---|
+| [dia_Aout_2026.md](recherche/dia_Aout_2026.md) | **le diagnostic système** — plus utile que le README |
+| [recherche_bug_or_not_bug.md](recherche/recherche_bug_or_not_bug.md) | **les 18 erreurs de diagnostic**, H1→H18 |
+| [ETAT_DU_PROJET_aout_2026.md](recherche/ETAT_DU_PROJET_aout_2026.md) | état du projet |
+| [REVUE_CODE_v39_aout_2026.md](recherche/REVUE_CODE_v39_aout_2026.md) | les 6 défauts trouvés dans le code |
+| [REVUE_DOGME_17082026_rien_en_dur.md](recherche/REVUE_DOGME_17082026_rien_en_dur.md) | audit « rien en dur » |
+| [METABOLISME_20082026_la_variable_morte.md](recherche/METABOLISME_20082026_la_variable_morte.md) | `taux_satiete` est une variable morte |
+| [NAVIGATION_20082026_le_vrai_blocage.md](recherche/NAVIGATION_20082026_le_vrai_blocage.md) | la navigation sur `Empty-5x5` |
+| [POURQUOI_20082026_l_agent_economise.md](recherche/POURQUOI_20082026_l_agent_economise.md) | pourquoi l'agent économise ses gestes |
+| [DOULEUR_UNIQUE_19082026_refonte.md](recherche/DOULEUR_UNIQUE_19082026_refonte.md) | la refonte de la douleur |
+| [DIAGNOSTIC_17082026](recherche/DIAGNOSTIC_17082026_pourquoi_C2_est_etouffe.md) · [SONDE_17082026](recherche/SONDE_17082026_utilite_de_C2.md) | pourquoi C2 est étouffé, et son utilité |
+| [AUTOPSIE_17082026](recherche/AUTOPSIE_17082026_esprit_g7_le_seul_niveau_5.md) · [DISSECTION_g22](recherche/DISSECTION_g22_aout_2026.md) | autopsies de cerveaux |
+| [EXPANSION_17082026](recherche/EXPANSION_17082026_le_frein_de_la_neurogenese.md) · [MUR_17082026](recherche/MUR_17082026_le_verrou_P17.md) | neurogenèse, verrou P17 |
+| [FACTORIEL_17082026](recherche/FACTORIEL_17082026_esprit_contre_corps.md) · [CONSTAT_16082026](recherche/CONSTAT_16082026_pauvrete_du_monde.md) | esprit contre corps, pauvreté du monde |
+| [CORRECTIF_v4110](recherche/CORRECTIF_v4110_memoire_par_carte.md) · [CORRECTIF_v4113](recherche/CORRECTIF_v4113_corps_dans_le_rollout.md) | correctifs documentés |
+| [1440_JOURS_NAULTHENE_V1.md](recherche/1440_JOURS_NAULTHENE_V1.md) · [2026-07-28_progression_vue_et_ouie.md](recherche/2026-07-28_progression_vue_et_ouie.md) | archives anciennes |
+| [NOCICEPTION_18082026](recherche/NOCICEPTION_18082026_la_chaleur_qui_fait_mal.md) · [THERMOHOMEOSTASIE_18082026](recherche/THERMOHOMEOSTASIE_18082026_la_douleur_graduee.md) · [DIAGNOSTIC_18082026](recherche/DIAGNOSTIC_18082026_pourquoi_la_douleur_coute.md) | la douleur : nociception, gradation, coût |
+| [TRADUCTEUR_17082026](recherche/TRADUCTEUR_17082026_ce_que_C2_dit_a_C1.md) · [SCAN_CERVEAUX_16082026.md](recherche/SCAN_CERVEAUX_16082026.md) | ce que C2 dit à C1 · scan de population |
+| [NUIT_18082026](recherche/NUIT_18082026_le_niveau_5_franchi_et_le_frein_qui_ne_borne_pas.md) · [NUIT_15082026](recherche/NUIT_15082026_trois_questions.md) | carnets de nuit |
+| [evals/](recherche/evals/) | sorties JSON |
 
 ---
 
-## 🔗 Les fils qui traversent plusieurs documents
+## `ameliorations/` — idées non validées
 
-Trois idées reviennent partout. Voici où les suivre :
-
-### Fil 1 — « Le monde, pas le cerveau »
-
-> Ce qui **rend possible** fait progresser · ce qui **facilite** ne change rien · ce qui
-> **fait à la place** fait régresser.
-
-Parcours : [CHANTIER_v38 §10](ameliorations_appliquees/CHANTIER_v38_monde_continu.md) *(l'origine)* →
-[ETAT_DU_PROJET §4](recherche/ETAT_DU_PROJET_aout_2026.md) *(la synthèse)* →
-[AVIS §P0](ameliorations/AVIS_ET_PROPOSITIONS_aout_2026.md) *(la règle de conception)*
-
-### Fil 2 — La saturation
-
-> Une variable saturée — dans un sens **comme dans l'autre** — cesse de porter de
-> l'information.
-
-Rencontrée 6 fois : états absorbants, parole permanente, portée sonore ×2, **et
-maintenant la difficulté** (test trop facile → puis trop dur, [REVUE §R6](recherche/REVUE_CODE_v39_aout_2026.md)).
-
-### Fil 3 — « Un invariant en commentaire finit par être violé »
-
-Trois des six défauts de la revue étaient des règles **écrites en toutes lettres** dans
-une docstring, jamais transformées en test.
-→ [REVUE_CODE_v39](recherche/REVUE_CODE_v39_aout_2026.md) · proposition **P9**
+| Document | Sujet |
+|---|---|
+| [AVIS_ET_PROPOSITIONS_aout_2026.md](ameliorations/AVIS_ET_PROPOSITIONS_aout_2026.md) | P1 → P16 |
+| [PLAN_v41.32_table_de_mixage_et_neurogenese_dirigee.md](ameliorations/PLAN_v41.32_table_de_mixage_et_neurogenese_dirigee.md) | table de mixage, neurogenèse dirigée |
+| [EPISODES_REFERENCE_20082026_la_derniere_constante_posee.md](ameliorations/EPISODES_REFERENCE_20082026_la_derniere_constante_posee.md) | la dernière constante posée |
+| [les_sens_combinatoire.md](ameliorations/les_sens_combinatoire.md) | les dix paires sensorielles |
+| [CONCEPTION_v33](ameliorations/CONCEPTION_v33_memoire_emotionnelle.md) · [CONCEPTION_v34](ameliorations/CONCEPTION_v34_fatigue_mortalite.md) | mémoire émotionnelle, fatigue/mortalité |
+| [CHANTIER_v41.2 énergie](ameliorations/CHANTIER_v41.2_energie_modulatrice.md) · [métabolisme](ameliorations/CHANTIER_v41.2_metabolisme_deux_etages.md) | métabolisme à deux étages |
+| [CHANTIER_v41.31](ameliorations/CHANTIER_v41.31_gradient_causal_et_tube_digestif.md) · [v41.4](ameliorations/CHANTIER_v41.4_maitrise_generale_et_heritage.md) · [v41.6](ameliorations/CHANTIER_v41.6_P17_cursus_distribution.md) | chantiers v41 |
+| [CORRECTIFS_v41_ligne_de_flottaison.md](ameliorations/CORRECTIFS_v41_ligne_de_flottaison.md) · [CONFRONTATION_16082026](ameliorations/CONFRONTATION_16082026_jepa_multimodal.md) · [AMELIORATION_V1.md](ameliorations/AMELIORATION_V1.md) | divers |
 
 ---
 
-## 📌 État au 15 août 2026 — l'essentiel en 9 lignes
+## `ameliorations_appliquees/` — livré, avec les options écartées
 
-1. **La v41 ne débloque pas le cursus** — 0 promotion sur 10 graines × 2000 jours. Le
-   niveau 4 atteint par g22 était une **loterie natale**, pas un effet du correctif
-   ([campagne v41](recherche/CAMPAGNE_v41_population_et_ablation_aout_2026.md)).
-2. **C2 est débranchable sans effet** : `c2_coupe` = **+0,0 sur les 6 niveaux**. Quatre
-   sens sur six sont inertes ; les trois mémoires sont plutôt **nuisibles**.
-3. **Le cerveau est sain** : 0 synapse morte (contre 13 769 avant les correctifs v37).
-4. **Aucune mécanique cognitive n'a démontré son apport** — **9 testées, 9 échecs**.
-5. **Les deux seuls leviers qui marchent sont des propriétés du MONDE.**
-6. **Le banc d'essai était biaisé** : jusqu'à 1 carte sur 2 gagnable sans clé ([R5](recherche/REVUE_CODE_v39_aout_2026.md)).
-7. **Corrigé — mais le test est devenu 50× trop dur** ([R6](recherche/REVUE_CODE_v39_aout_2026.md)). À recalibrer.
-8. **Le prior d'empreinte (P12) a échoué** — 2/5 graines positives, p = 1,000. 8ᵉ mécanique, 8ᵉ échec.
-9. **Priorité : la gaussienne d'apprentissage** ([P17](ameliorations/AVIS_ET_PROPOSITIONS_aout_2026.md)) —
-   le palier joué est *tiré au sort* autour du niveau courant, au lieu d'être un pointeur qui
-   ne recule jamais. Retours en arrière et « pas au-delà tant que ce n'est pas acquis »
-   **émergent** de la distribution, sans un seul seuil.
-10. **En cours — v41.2, le métabolisme à deux étages** ([chantier](ameliorations/CHANTIER_v41.2_metabolisme_deux_etages.md) ·
-    [énergie modulatrice](ameliorations/CHANTIER_v41.2_energie_modulatrice.md)) : l'agent vivait
-    **400 ticks sur 400 en zone critique**, un vécu sans variance — cause amont plausible du
-    C2 déconnecté. L'agent **ne meurt plus et regagne** (26 victoires/65 j), mais le déficit
-    de **trouvabilité** est structurel (1,92 trouvée/jour pour 2,5 demandées).
-    ⏳ **Arbitrage ouvert** : caler le barème sur ce que l'agent trouve déjà ne démontrerait
-    rien — agir sur le **monde** est le seul levier qui ait jamais marché.
+| Document | Mécanique |
+|---|---|
+| [CHANTIER_v37_equilibre_c1_c2.md](ameliorations_appliquees/CHANTIER_v37_equilibre_c1_c2.md) | équilibre C1/C2 — ⚠️ contient le §5.6 à lire avant de toucher à l'échelle de C2 |
+| [CHANTIER_v38_monde_continu.md](ameliorations_appliquees/CHANTIER_v38_monde_continu.md) | monde continu |
+| [CHANTIER_v40_planification_emergente.md](ameliorations_appliquees/CHANTIER_v40_planification_emergente.md) | planification émergente |
+| [CONCEPTION_v22_audio.md](ameliorations_appliquees/CONCEPTION_v22_audio.md) · [CONCEPTION_v30_exo_sens.md](ameliorations_appliquees/CONCEPTION_v30_exo_sens.md) | audio, Exo-Sens |
+| [EXPLICATIONS_v29_sens.md](ameliorations_appliquees/EXPLICATIONS_v29_sens.md) · [Maj_V29_readme.md](ameliorations_appliquees/Maj_V29_readme.md) | les 5 sens |
 
 ---
 
-*Index créé le 14 août 2026. Si un document est ajouté, il doit apparaître ici — sinon il
-sera oublié. Dernier ajout : `etat_des_lieux/` (15/08/2026).*
+## `etat_des_lieux/` — photos datées, jamais réécrites
+
+| Date | Document |
+|---|---|
+| 22/08/2026 | [campagne v41.31, cursus complet](etat_des_lieux/22082026_campagne_v41.31_cursus_complet.md) |
+| 21/08/2026 | [anatomie du noyau](etat_des_lieux/21082026_anatomie_du_noyau.md) |
+| 19/08/2026 | [rapport de nuit](etat_des_lieux/19082026_rapport_de_nuit.md) |
+| 18/08/2026 | [revue du dogme avant publication](etat_des_lieux/18082026_revue_dogme_avant_publication.md) |
+| 16/08/2026 | [bilan de nuit](etat_des_lieux/16082026_bilan_nuit.md) |
+| 15/08/2026 | [v41.4](etat_des_lieux/15082026_v41.4.md) |

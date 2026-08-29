@@ -20,6 +20,37 @@ L'agent progresse à travers un **cursus académique** de **15 niveaux** MiniGri
 
 Ce n'est pas une application produit : c'est un script de recherche exécuté en continu (boucle de jours/ticks), instrumenté avec **Weights & Biases** pour le suivi expérimental — projet public [`Naulthene-AGI`](https://wandb.ai/naultadrien123-nvnc/Naulthene-AGI), ~90 métriques par nuit simulée. Pas de tests automatisés, pas de build — la validation passe par l'observation des courbes W&B et des logs console.
 
+### 🔴 L'ÉTAT RÉEL AU 29/08/2026 — le tableau des suspects est VIDE
+
+**Seize explications du plafond au niveau 4 ont été mesurées et réfutées.** La dernière
+(`maîtrise ~ énergie`, `r = +0,710`) est tombée le 29/08 en passant de n=10 à **n=20** :
+`r = −0,0588`. **Aucune cause mesurée ne survit.**
+
+Ce qui est **acquis** de la semaine du 23-29/08 — à ne pas retester :
+
+| Piste | Verdict |
+|---|---|
+| Thrashing du gradient (AB3, detach asymétrique) | ❌ niveau `t = −0,70`, son seul `t` significatif est une **tautologie** |
+| Crédit temporel (TD(0), GAE) | ❌ MC 1,275× · TD 1,125× · GAE 1,161× — le code actuel est le **moins mauvais** |
+| Agnosie proprioceptive (bit de portage) | 🟡 **levée** (d : −0,012 → +1,428) et **sans effet** comportemental |
+| Attention descendante (tronc connecté) | ❌ bruit perceptif **+48 %**, niveau δ = 0,00 |
+| Dérive de représentation | ❌ `r(dérive, maîtrise) = +0,1386` (NS), et **PPO dérive 10× plus en réussissant mieux** |
+| Coefficient d'entropie | ❌ son gradient pèse **0,44–1,05 %** de celui de l'avantage |
+| Métabolisme (`maîtrise ~ énergie`) | ❌ **r = −0,0588** à n=20 |
+
+⚠️ **La qualité de la représentation ne prédit RIEN** : `r(d', réussite) = −0,0368` chez PPO,
+qui réussit **2,3× mieux avec un d' 4,5× plus faible**. Le d' élevé de Naulthène (≈ 3,0),
+longtemps lu comme un signe de santé, est **décoratif**.
+
+⚠️ **La ligne de base existe enfin** (60 runs, δ_A/A = 0,000000) : un PPO **4× plus léger**
+que le cœur RL de Naulthène réussit **2,3× mieux**. Le mur informationnel de MiniGrid
+**n'existe pas** — le plafond est une pathologie de cette architecture. Voir
+`docs/recherche/campagnes/BASELINE_PPO_29082026_le_mur_n_existe_pas.md`.
+
+⚠️ **Cinq chiffres publiés ont été rétractés cette semaine** (cosinus saturant, ratio ×46,
+« couche en stase », plafond 18 % mesuré sur C1 seul, corrélation métabolique). Avant de
+citer une mesure de ce dépôt, **vérifier sa date et son `n`**.
+
 ### Le positionnement du projet (à préserver dans toute communication)
 
 **Naulthène a vocation à être un CERVEAU COMPLET EN ATTENTE D'UN CORPS**, et il est
@@ -311,6 +342,16 @@ n'établissent rien.
 
 ### 2. La taille d'échantillon — ne jamais conclure sous 20 graines
 
+> 🔴 **Le cas d'école, mesuré le 29/08/2026.** `maîtrise ~ énergie` a été citée **neuf jours
+> durant** dans les deux README et dans ce fichier comme la cause du plafond :
+> **r = +0,710, `t = +2,85`, SIG** — à **n = 10**. Recalculée sur **20 graines** :
+> **r = −0,0588, `t = −0,25`**. Le signe s'inverse. Un jackknife confirme qu'aucune graine
+> isolée ne portait le signal (r ∈ [−0,168 ; +0,055]).
+>
+> **Une corrélation à n=10 ne vaut rien, même avec un `t` qui passe un seuil non corrigé.**
+> C'est le même motif que la maîtrise du 22/08 (+4,95 à n=5 → +1,09 à n=20) et que le ratio
+> C2/C1 (`t = +3,68` à mi-parcours → +1,93 à la fin).
+
 Mesuré le 16/08 : le taux de franchissement de référence vaut **40 % avec un intervalle de
 confiance à 95 % de [22 % ; 61 %]** sur 20 graines.
 
@@ -527,7 +568,7 @@ tête avant toute nouvelle piste. **Couper C2 ne change le score de 0,0 point su
 20/08/2026** : la campagne v41.29 (10 graines × 1500 jours, cursus complet) donne **10/10 au
 niveau 4** et 2/10 au niveau 5 — le niveau 4 de g22 n'était donc pas une loterie natale. Voir
 `docs/fonctionnement/CHANGELOG.md` §[v41.29-resultats] et
-`docs/recherche/CAMPAGNE_v41_population_et_ablation_aout_2026.md`.
+`docs/recherche/campagnes/CAMPAGNE_v41_population_et_ablation_aout_2026.md`.
 
 ✅ **v41.30 — LES TROIS CONSTANTES POSÉES SONT SUPPRIMÉES** (20/08/2026). Quatre invariants.
 **(1) Le plafond de patience vient du MONDE, jamais d'une constante** : `_budget_natif_carte`
@@ -597,7 +638,9 @@ Le `4.0` vaut `400 ticks / patience ~95` — la patience d'un agent **neuf** ; m
 la patience réelle est de **258 ticks** (`t=+9,55`) et **9 graines sur 10 sont au plafond exact
 de 350**. Le rythme métabolique est donc calibré pour 4 épisodes/jour quand l'agent n'en joue
 que **1,55**, et l'écart **se creuse** au fil du run (×1,68 → ×2,58). Corrélation qui relie le
-tout : `maîtrise ~ énergie moyenne`, **r = +0,710** (`t=+2,85`, SIG). ⚠️ Le **sens** de la
+tout : ~~`maîtrise ~ énergie moyenne`, **r = +0,710** (`t=+2,85`, SIG)~~ 🔴 **RETIRÉ le
+29/08/2026** — mesuré à n=10 ; à **n=20** la corrélation vaut **r = −0,0588 (`t = −0,25`)**,
+le signe s'inverse et le signal disparaît (jackknife : r ∈ [−0,168 ; +0,055]). ⚠️ Le **sens** de la
 correction n'est **pas tranché** : suivre la patience réelle ferait *baisser* le besoin (2,80 →
 ~1,1/axe) donc *moins* de sources, alors que l'énergie est déjà au plancher — deux lectures
 opposées restent ouvertes, seule la mesure les départagera. Un **bras d'ablation par constante**

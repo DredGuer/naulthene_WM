@@ -35,7 +35,12 @@ plutôt que caché : **quatre récompenses posées**, ~25 constantes de calibrat
 explications successives de ce plafond ont été mesurées puis réfutées — thrashing du gradient,
 attribution du crédit, proprioception, attention descendante, dérive de représentation. Les
 seuls leviers qui aient jamais marché sont des propriétés du *monde*, pas du cerveau. Le seul
-prédicteur mesuré de la maîtrise reste l'**énergie** (`r = +0,710`, `t = +2,85`).
+seuls leviers qui aient jamais marché sont des propriétés du *monde*, pas du cerveau.
+🔴 **Et le 29/08/2026 la dernière est tombée aussi** : `maîtrise ~ énergie`, longtemps citée
+ici comme `r = +0,710` (`t = +2,85`), avait été mesurée à **n = 10**. Recalculée sur **20
+graines**, elle vaut **r = −0,0588 (`t = −0,25`)** — le signe s'inverse, le signal disparaît,
+et un jackknife confirme qu'aucune graine isolée ne le portait. **Le tableau des suspects est
+désormais vide**, et c'est le fait le plus utile que ce dépôt puisse énoncer.
 
 **⚠️ Et le banc d'essai lui-même était biaisé.** Une revue de code des 13-14 août a montré que
 jusqu'à **une carte sur deux** était gagnable **sans la clé** — l'agent passait un examen truqué.
@@ -186,7 +191,7 @@ la quinzième réfutation sur une **seconde architecture indépendante**.
 **Ce qui reste, c'est l'entropie.** PPO converge à **1,667–1,704** (86–88 % du maximum) ;
 Naulthène stagne à **1,930 — 99,2 % du bruit blanc** après 400 jours. C'est désormais l'écart
 mesuré le plus net entre les deux, et la prochaine piste.
-[Carnet complet](docs/recherche/BASELINE_PPO_29082026_le_mur_n_existe_pas.md).
+[Carnet complet](docs/recherche/campagnes/BASELINE_PPO_29082026_le_mur_n_existe_pas.md).
 
 ### Performance sur la tâche — **actuellement bloquée**
 
@@ -203,7 +208,7 @@ mesuré le plus net entre les deux, et la prochaine piste.
 | Ticks passés en gestes qui ne changent rien (`Empty-5x5`) | **57,2 %** — parce qu'un geste stérile coûtait **1,09** contre **4,00** pour le seul geste qui rapproche du but. La **v41.28** facture le travail *tenté* : pousser un mur coûte désormais le prix d'un pas. **Mesuré (n=20) : −2,5 pts, `t = −1,71`, non significatif** — le coût n'était pas le levier |
 | Mécaniques cognitives ayant amélioré quoi que ce soit | **1 sur 12 testées** — le brain-sparing |
 | Effet d'agrandir le cerveau (96 → 160 → 512 dims) | **aucun** sur 3 campagnes — et l'énergie chute ×11 |
-| **Pourquoi ça plafonne au niveau 4** | **Pas cognitif — métabolique.** `maîtrise ~ énergie moyenne` : **r = +0,710**, `t = +2,85` (SIG, n=10). Trois **constantes posées** calibrent le rythme métabolique sur un agent *neuf* : le code suppose **4 épisodes/jour**, l'agent en joue **1,55**, et l'écart **se creuse** au fil du run (×1,68 → ×2,58). **9 graines sur 10 sont au plafond exact `PATIENCE_MAX = 350`** |
+| **Pourquoi ça plafonne au niveau 4** | 🔴 **INCONNU — et la réponse métabolique a été retirée le 29/08/2026.** `maîtrise ~ énergie moyenne` a été citée neuf jours durant comme **r = +0,710** (`t = +2,85`) — mesurée à **n = 10**. À **n = 20** elle vaut **r = −0,0588 (`t = −0,25`)** : le signe s'inverse, le signal disparaît, et un jackknife montre qu'aucune graine ne le portait (r reste dans [−0,168 ; +0,055]). g77 a la 2ᵉ meilleure énergie et 17,3 % de maîtrise ; g144 la 2ᵉ pire et 22,5 %. **Seize explications mesurées, seize réfutées.** Ce qui reste vrai et inexpliqué : trois **constantes posées** calibrent encore le rythme métabolique d'un agent **nouveau-né** (4 épisodes/jour supposés, 1,55 joués), et **9 graines sur 10 sont au plafond exact de `PATIENCE_MAX = 350`** |
 | **v41.31 — le gradient causal** | Masquer le gradient de l'acteur sur les non-transitions donnait maîtrise **+2,57 pts** (`t = +2,68`) sur banc **forcé** `SimpleCrossing`, n=20. 🔴 **Il ne survit PAS au cursus complet.** 20 graines appariées × 1500 jours, cursus libre (40 runs) : niveau **+0,05 (`t = +0,37`)**, maîtrise **+1,09 (`t = +0,39`)**, énergie **+0,001 (`t = +0,07`)** — tout NS, et **0 run sur 40 ne dépasse le niveau 5**. Un banc forcé prouve qu'une mécanique marche *là où elle s'applique*, jamais qu'elle aide ailleurs |
 | **v41.32 — le detach asymétrique (AB3)** | Couper le gradient de C2 dans le tronc partagé assainit le gradient (+25 % d'alignement au banc) et **ne change rien** : 20 graines appariées × 1440 jours, niveau **−0,10 (`t = −0,70`)**, maîtrise **−6,09 (`t = −1,93`)**. La seule métrique significative (ratio C2/C1, `t = +3,82`) est une **tautologie** — la décomposition montre l'amplitude de C1 qui *chute* de 27 % (`t = −3,57`) alors que C2 ne bouge pas (`t = +1,70`, NS). **Dixième réfutation** |
 | **v41.33 — le bit de portage** | Le critique sépare très bien *objet en face* de *mur en face* (d de Cohen **+0,65 à +1,21**) mais **ne savait pas qu'il portait quelque chose** (d ≈ **0,1**, signe instable) — des 41 dims du vecteur bio, **zéro** n'encodait l'inventaire. Ajouter une 42ᵉ dimension **lève la cécité** : d passe de **−0,012 à +1,428**, 18/20 graines, 40 runs. 🔴 **Et ça ne change rien.** Le crédit reste plat (`\|A\| utile / \|A\| neutre` **1,11× → 1,18×**, `t = +1,97`, NS) et aucune métrique comportementale ne bouge. **Douzième réfutation** |
@@ -247,8 +252,8 @@ mesuré le plus net entre les deux, et la prochaine piste.
 > sur 400 jours, les deux bras bit-identiques : une **ablation vide, pas négative**, le piège
 > exact que décrit le §4 des règles de mesure. 16 runs jetés, et une étape obligatoire
 > ajoutée : *vérifier que la variable indépendante varie avant de lancer*.
-> [Conditionnement](docs/recherche/CONDITIONNEMENT_27082026_le_signal_arrive_et_ne_sert_a_rien.md) ·
-> [Crédit](docs/recherche/CREDIT_27082026_l_arrosage_confirme_et_la_vue_orpheline.md)
+> [Conditionnement](docs/recherche/enquetes_closes/CONDITIONNEMENT_27082026_le_signal_arrive_et_ne_sert_a_rien.md) ·
+> [Crédit](docs/recherche/enquetes_closes/CREDIT_27082026_l_arrosage_confirme_et_la_vue_orpheline.md)
 
 Un PPO standard résout `Empty-8x8` en quelques milliers d'épisodes. **Naulthène, non.**
 
@@ -332,7 +337,7 @@ c'est la thèse de l'unification, et elle tient.
   (Ramasser)`, où la vider coûte **−7,4**.
 
 Protocole complet et matrice :
-[carnet de campagne](docs/recherche/CAMPAGNE_v41_population_et_ablation_aout_2026.md).
+[carnet de campagne](docs/recherche/campagnes/CAMPAGNE_v41_population_et_ablation_aout_2026.md).
 
 ### Empreinte mémoire — ✅ **mesurée**
 
@@ -504,12 +509,21 @@ logique devient un `max` continu. L'exigence dérive de la fenêtre d'observatio
 [8–42], et le palier 5 est **tenu** — trois cerveaux y vivent de 521 à **1078 nuits** et y
 terminent leur run.
 
-### ⚠️ Le blocage n'a pas disparu — il s'est DÉPLACÉ, et sa cause est mesurée (20/08/2026)
+### ⚠️ Le blocage n'a pas disparu — il s'est DÉPLACÉ, et sa cause reste INCONNUE
 
-**La cause n'est pas cognitive.** `maîtrise ~ énergie moyenne` donne **r = +0,710**
-(`t = +2,85`, SIG, n=10) : les graines qui mangent sont celles qui maîtrisent. Et ce n'est
-**pas** la rareté des ressources — la densité **par case** est constante d'un niveau à
-l'autre (0,286 sur `Empty-5x5`, 0,293 sur `SimpleCrossingS9N1`).
+🔴 **Ce paragraphe affirmait, du 20/08 au 29/08/2026 : « la cause n'est pas cognitive,
+`maîtrise ~ énergie moyenne` donne r = +0,710 (SIG) — les graines qui mangent sont celles qui
+maîtrisent ». CETTE AFFIRMATION EST RETIRÉE.** Elle reposait sur **n = 10**. Recalculée sur
+**20 graines** (cohorte v41.34) : **r = −0,0588, `t = −0,25`** — le signe s'inverse et le
+signal disparaît. Jackknife : `r` reste dans [−0,168 ; +0,055] quelle que soit la graine
+retirée, donc aucun point aberrant ne l'explique. Lisible à l'œil nu : **g77** a la 2ᵉ
+meilleure énergie (0,3413) pour 17,27 % de maîtrise, **g144** la 2ᵉ pire (0,1774) pour
+**22,52 %**.
+
+Ce n'est **pas** non plus la rareté des ressources — la densité **par case** est constante
+d'un niveau à l'autre (0,286 sur `Empty-5x5`, 0,293 sur `SimpleCrossingS9N1`).
+
+**Aucune cause mesurée ne survit.** Seize explications ont été testées, seize réfutées.
 
 **Trois constantes posées décrivent le même agent d'août 2026 :**
 

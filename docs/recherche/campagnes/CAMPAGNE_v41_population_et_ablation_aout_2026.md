@@ -2,7 +2,7 @@
 
 > **Carnet de recherche — non normatif.** Il raconte une campagne de mesure, avec ses
 > révisions de lecture successives. Pour l'état courant, voir
-> [CHANGELOG.md](../fonctionnement/CHANGELOG.md).
+> [CHANGELOG.md](../../fonctionnement/CHANGELOG.md).
 >
 > Campagne lancée le **14 août 2026 à 19h31**, terminée le **15 août 2026**.
 > Code : `feat/v41-ligne-flottaison`, commits `04080c4` (code) + `1f3854f` (cas isolé).
@@ -13,7 +13,7 @@
 
 La v41 avait produit **le premier franchissement de palier du projet** : g22 atteint le
 niveau 4/15 et y tient 1223 jours, là où **zéro graine V40** n'avait quitté le niveau 1
-en 2000 jours ([chantier v41 §10](../ameliorations/CORRECTIFS_v41_ligne_de_flottaison.md)).
+en 2000 jours ([chantier v41 §10](../../ameliorations/CORRECTIFS_v41_ligne_de_flottaison.md)).
 
 Mais ce résultat reposait sur **3 graines**, dont une seule avait débloqué. Le chantier
 notait déjà l'ambiguïté (§10.3, « la loterie natale ») : la divergence entre les trois
@@ -101,7 +101,7 @@ le nombre de succès mais leur **régularité** sur la fenêtre glissante de 20 
 | Accord médian | **37 %** | 21 % | 4 % | **0,5 %** |
 
 Décroissance monotone. Au jalon 500, l'accord montait à 36–86 % contre **0 % historique**
-(mesure de référence du [chantier v37](../ameliorations_appliquees/CHANTIER_v37_equilibre_c1_c2.md),
+(mesure de référence du [chantier v37](../../ameliorations_appliquees/CHANTIER_v37_equilibre_c1_c2.md),
 où les deux têtes n'étaient d'accord sur *aucun tick*). C'était le gain le plus visible
 de la v41 — **il ne survit pas à 2000 jours** et retourne au niveau d'avant-correctif.
 
@@ -114,7 +114,7 @@ de la v41 — **il ne survit pas à 2000 jours** et retourne au niveau d'avant-c
 | accord C1/C2 | 0 % sur 7/10 |
 
 Trois des grandeurs censées piloter l'arbitrage ne portent plus d'information au terme du
-run. C'est le **fil n°2** de l'[INDEX](../INDEX.md) (« une variable saturée cesse de
+run. C'est le **fil n°2** de l'[INDEX](../../INDEX.md) (« une variable saturée cesse de
 porter de l'information ») rencontré pour la septième fois.
 
 ---
@@ -230,7 +230,7 @@ Ce que la v41 corrigeait — l'erreur comptable qui tuait C2 — était réel et
 Ce qu'elle n'a pas produit, c'est un effet de ce réveil sur les actes.
 
 **9ᵉ mécanique cognitive testée, 9ᵉ sans apport démontré.** Le constat de
-l'[ETAT_DU_PROJET](ETAT_DU_PROJET_aout_2026.md) — « les deux seuls leviers qui marchent
+l'[ETAT_DU_PROJET](../ETAT_DU_PROJET_aout_2026.md) — « les deux seuls leviers qui marchent
 sont des propriétés du MONDE » — sort renforcé de cette campagne.
 
 ---
@@ -248,4 +248,4 @@ sont des propriétés du MONDE » — sort renforcé de cette campagne.
 
 *Carnet ouvert le 15 août 2026. Les pistes de correctif issues de cette campagne sont
 tenues en réserve à la demande de l'utilisateur — voir
-[chantier v41 §11](../ameliorations/CORRECTIFS_v41_ligne_de_flottaison.md).*
+[chantier v41 §11](../../ameliorations/CORRECTIFS_v41_ligne_de_flottaison.md).*

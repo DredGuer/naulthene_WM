@@ -32,8 +32,12 @@ the same agent once expert. What remains hardcoded, and is documented rather tha
 **⚠️ It does not work yet.** The agent plateaus at **level 4 of 15**, and **fifteen**
 successive explanations for that plateau have been measured and refuted — thrashing, credit
 assignment, proprioception, top-down attention, representational drift. The only levers that
-ever worked are properties of the *world*, not of the brain. The one measured predictor of
-mastery remains **energy** (`r = +0.710`, `t = +2.85`).
+ever worked are properties of the *world*, not of the brain.
+🔴 **And on 29 Aug 2026 the last one fell too**: `mastery ~ energy`, long quoted here as
+`r = +0.710` (`t = +2.85`), was measured at **n = 10**. Recomputed on **20 seeds** it reads
+**r = −0.0588 (`t = −0.25`)** — the sign flips and the signal vanishes, jackknife confirming
+it was never carried by one outlier. **The suspect list is now empty**, and that is the most
+useful thing this repository can say.
 
 **⚠️ And the benchmark itself was biased.** A code review on 13-14 August found that up to
 **one map in two** was solvable without the key — the agent was passing a rigged exam. Fixed;
@@ -185,13 +189,13 @@ Two caveats, both measurable rather than rhetorical:
 | What unlocked level 4 | **brain-sparing**: 0 % [0–16] → 80 % [58–92], 18 wins / 0 losses (p < 0.001) |
 | Effect of severing C2 on the score | **0.0 points across all 6 levels** (78 cells) — and on `LavaGap`, severing it **triples** the success rate |
 | Learned valence of **water** | **+0.017 — below bare floor (+0.125)**, over ~7,800 confirmations, 10/10 brains. The agent drinks constantly and learns **nothing** from it. Same signature as the v41.7 bug (food valence stuck at zero over 4,004 meals): a suspiciously clean result on a high-volume channel. **Possibly a severed channel — unverified** |
-| Nights spent at **exactly zero satiety** | **82–87 %** in this campaign, and **78–100 % across every campaign in the repo**, all arms, all versions. ~38 % of ticks in the critical zone, `reserve = 0.000` on every brain measured. Yet surplus is arithmetically reachable (**+0.0025**/tick on a full stomach) — the stomach simply never stays full. To be read next to `mastery ~ energy`, **r = +0.710** |
+| Nights spent at **exactly zero satiety** | **82–87 %** in this campaign, and **78–100 % across every campaign in the repo**, all arms, all versions. ~38 % of ticks in the critical zone, `reserve = 0.000` on every brain measured. Yet surplus is arithmetically reachable (**+0.0025**/tick on a full stomach) — the stomach simply never stays full. ⚠️ The `mastery ~ energy` link once quoted here (**r = +0.710**, n=10) **does not survive n=20** (−0.0588) |
 | Learned valence of lava | **+0.072 — POSITIVE**, barely distinct from water (+0.069). Nociception (v41.25) flips it to **−0.761 on 20/20 seeds** — but survival **drops** 8.6 % → 6.7 %, because pain was **non-zero everywhere** (77 % of cells) and the agent fled its own food supply (**−25 % harvest**, two maps). Graded pain (v41.26) under test |
-| Cognitive mechanisms that improved anything | **1 out of 14 tested** — brain-sparing. Three pain models (v41.25/26/27) changed behaviour by **0 pt** (`t = −1.51`, n=20) |
+| Cognitive mechanisms that improved anything | **1 out of 19 tested** — brain-sparing. Three pain models (v41.25/26/27) changed behaviour by **0 pt** (`t = −1.51`, n=20); the five mechanisms of the 26-29 Aug series (asymmetric detach, carry bit, connected trunk, drift, metabolism) each measured at **zero effect or below significance** |
 | Navigation on an empty 5×5 room | **54.4 %** after 300 days vs **39.2 %** for a random policy *over the same 7 actions* — the agent **beats chance by 15 pts** |
 | Ticks spent on gestures that change nothing (`Empty-5x5`) | **57.2 %** — because a sterile gesture cost **1.09** against **4.00** for the one gesture that moves toward the goal. **v41.28** charges the work *attempted*: pushing a wall now costs a full step. **Measured (n=20): −2.5 pts, `t = −1.71`, not significant** — the cost was not the lever |
 | Effect of growing the brain (96 → 160 → 512 dims) | **none** across 3 campaigns — and energy drops 11× |
-| **Why it plateaus at level 4** | **Not cognitive — metabolic.** `mastery ~ mean energy`: **r = +0.710**, `t = +2.85` (SIG, n=10). Three **posed constants** calibrate the metabolic rhythm for a *newborn* agent: the code assumes **4 episodes/day**, the agent plays **1.55**, and the gap **widens** over the run (×1.68 → ×2.58). **9 seeds out of 10 sit at the exact `PATIENCE_MAX = 350` ceiling** |
+| **Why it plateaus at level 4** | 🔴 **UNKNOWN — and the metabolic answer was retracted on 29 Aug 2026.** `mastery ~ mean energy` was quoted for nine days as **r = +0.710** (`t = +2.85`) — measured at **n = 10**. At **n = 20** it is **r = −0.0588 (`t = −0.25`)**: the sign flips, the signal disappears, and a jackknife shows it was never carried by a single seed (r stays within [−0.168, +0.055]). g77 has the 2nd-best energy and 17.3 % mastery; g144 has the 2nd-worst and 22.5 %. **Sixteen explanations measured, sixteen refuted.** What remains true and unexplained: three **posed constants** still calibrate the metabolic rhythm for a *newborn* agent (4 episodes/day assumed, 1.55 played), and **9 seeds out of 10 sit at the exact `PATIENCE_MAX = 350` ceiling** |
 | **v41.31 — the causal gradient** | Masking the actor's gradient on non-transitions gave mastery **+2.57 pts** (`t = +2.68`) on a **forced** `SimpleCrossing` bench, n=20. 🔴 **It does not survive the full curriculum.** 20 paired seeds × 1500 days, free curriculum (40 runs): level **+0.05 (`t = +0.37`)**, mastery **+1.09 (`t = +0.39`)**, energy **+0.001 (`t = +0.07`)** — all NS, and **0 of 40 runs pass level 5**. A forced bench proves a mechanic works *where it applies*, never that it helps elsewhere |
 | **v41.32 — asymmetric detach (AB3)** | Cutting C2's gradient into the shared trunk cleans the gradient (+25 % alignment on the bench) and **changes nothing**: 20 paired seeds × 1440 days, level **−0.10 (`t = −0.70`)**, mastery **−6.09 (`t = −1.93`)**. The one significant metric (C2/C1 ratio, `t = +3.82`) is a **tautology** — decomposition shows C1's amplitude *falling* 27 % (`t = −3.57`) while C2 does not move (`t = +1.70`, NS). **Tenth refutation** |
 | **v41.33 — the carry bit** | The critic separates *object ahead* from *wall ahead* very well (Cohen's **d = +0.65 to +1.21**) but **could not tell it was carrying something** (d ≈ **0.1**, sign unstable) — of the 41 bio dimensions, **zero** encoded the inventory. Adding a 42nd dimension **lifts the blindness**: d goes **−0.012 → +1.428**, 18/20 seeds, 40 runs. 🔴 **And it changes nothing.** The credit stays flat (`\|A\| useful / \|A\| neutral` **1.11× → 1.18×**, `t = +1.97`, NS) and no behavioural metric moves. **Twelfth refutation** |
@@ -233,8 +237,8 @@ Two caveats, both measurable rather than rhetorical:
 > arms bit-identical: an **empty ablation, not a negative one**, the exact trap §4 of the
 > measurement rules describes. 16 runs discarded, and a new mandatory step added: *verify the
 > independent variable actually varies before launching*.
-> [Conditioning](docs/recherche/CONDITIONNEMENT_27082026_le_signal_arrive_et_ne_sert_a_rien.md) ·
-> [Credit](docs/recherche/CREDIT_27082026_l_arrosage_confirme_et_la_vue_orpheline.md)
+> [Conditioning](docs/recherche/enquetes_closes/CONDITIONNEMENT_27082026_le_signal_arrive_et_ne_sert_a_rien.md) ·
+> [Credit](docs/recherche/enquetes_closes/CREDIT_27082026_l_arrosage_confirme_et_la_vue_orpheline.md)
 
 A standard PPO solves `Empty-8x8` in a few thousand episodes. **Naulthène currently does not.**
 
@@ -338,9 +342,9 @@ unification claim, and it holds.
 
 All three are consistent with the [diagnostic](docs/recherche/dia_Aout_2026.md): the agent has not yet learned a
 policy worth planning over. Full protocol and matrix:
-[campaign notebook](docs/recherche/CAMPAGNE_v41_population_et_ablation_aout_2026.md).
+[campaign notebook](docs/recherche/campagnes/CAMPAGNE_v41_population_et_ablation_aout_2026.md).
 
-### 2. Memory footprint — ✅ **measured for Naulthène**, baseline pending
+### 2. Memory footprint — ✅ **measured for Naulthène**, baseline still pending
 
 | Component | Size |
 |---|---|
@@ -404,7 +408,7 @@ independent architecture**.
 **What is left is the entropy.** PPO converges to **1.667–1.704** (86–88 % of maximum);
 Naulthène sits at **1.930 — 99.2 % of white noise** after 400 days. That is now the sharpest
 measured difference between the two, and the next thing to investigate.
-[Full write-up](docs/recherche/BASELINE_PPO_29082026_le_mur_n_existe_pas.md).
+[Full write-up](docs/recherche/campagnes/BASELINE_PPO_29082026_le_mur_n_existe_pas.md).
 
 Across **20 seeds × 1500 simulated days** on a reproducible bench, **100 % [84–100]** of
 agents reach level 4 of the 15-level curriculum, and **20 % [8–42]** now hold level 5 — up
@@ -424,8 +428,9 @@ MiniGrid's `0.0` (measured by the engine itself; an earlier `−1.000` figure wa
 measurement error — the pain was cancelling itself out, fixed in v41.25-fix1). Whether that actually teaches avoidance is **being measured** (20 seeds
 × 2 arms, forced `LavaGap` bench) — at 5 days the deficit differs but behaviour does not.
 
-> Naulthène's own numbers are filled in. Until the baseline row is too, the comparison proves
-> nothing — a reader still cannot tell an elegant architecture from an underperforming one.
+> ✅ **This block used to read "until the baseline row is filled, the comparison proves
+> nothing".** It is filled now — see the table above. The reader can finally tell an elegant
+> architecture from an underperforming one, and on this task the answer is unflattering.
 
 ---
 
@@ -640,10 +645,12 @@ What that means concretely:
 - **⚠️ The blockage did not disappear — it MOVED to level 4, and its cause is now measured.**
   Nothing is learned on the level reached: the mastery trend over ~700 days is **never
   positive** (−0.44 pt `t=−0.26`; −4.57 `t=−2.85` SIG; −4.78 `t=−1.95`). More time does not
-  help — the "it just needs more days" hypothesis is contradicted by 700 days of data. And
-  the cause is **not cognitive**: `mastery ~ mean energy` gives **r = +0.710** (`t = +2.85`,
-  SIG). The seeds that eat are the seeds that master. Resource density is *not* the culprit
-  either — it is constant per cell across levels (0.286 → 0.293).
+  help — the "it just needs more days" hypothesis is contradicted by 700 days of data.
+  ⚠️ **This bullet used to continue "and the cause is not cognitive — `mastery ~ mean energy`
+  gives r = +0.710 (SIG)". That claim is RETRACTED (29 Aug 2026):** it was measured at n=10;
+  at **n=20** the correlation is **−0.0588 (`t = −0.25`)**. The seeds that eat are *not* the
+  seeds that master. Resource density is not the culprit either — it is constant per cell
+  across levels (0.286 → 0.293). **No measured cause survives.**
 - **⚠️ Three posed constants describe the same August-2026 agent, and must go.**
   `EPISODES_PAR_JOURNEE_REFERENCE = 4.0` sets the entire metabolic rhythm; it equals
   `400 ticks / patience ~95`, the patience of a **newborn** agent. Measured today: real
@@ -749,13 +756,18 @@ What that means concretely:
 - **C2, the deliberative system, is causally disconnected**: severing it changes the score by
   **0.0 points on all six levels** (78-cell ablation), and C1/C2 agreement decays to 0.5 %.
   A scan of 20 brains found C2 is **36 % larger in the agents that fail**.
-- **Nine cognitive mechanics tested, nine without demonstrated benefit** — but see the bench
-  caveat above. The only two levers that ever worked were properties of the *world*, not of
-  the brain.
+- **Nineteen cognitive mechanics tested, eighteen without demonstrated benefit.** The only
+  levers that ever worked were properties of the *world*, not of the brain.
+- 🔴 **The suspect list is empty (29 Aug 2026).** The last standing hypothesis —
+  `mastery ~ energy`, `r = +0.710` at n=10 — collapses to **r = −0.0588 (`t = −0.25`)** at
+  n=20. Nothing in this repository currently predicts why the agent plateaus at level 4.
+  That is a worse position to be in, and a more honest one.
 - The **v34–v39 mechanics are now in this repository** (`noyau.py` was versioned on 14 Aug 2026,
   closing the project's #1 structural risk).
-- Two of three benchmark tables are filled; the one that matters most (equal-budget comparison
-  against PPO) **has not been run**.
+- ✅ **All three benchmark tables are now filled** (29 Aug 2026). The one that mattered most —
+  the PPO comparison — took 60 runs and a deterministic bench (δ_A/A = 0.000000). Its verdict:
+  a PPO **4× lighter** than Naulthène's RL core succeeds **2.3× better**, so the plateau is a
+  pathology of this architecture, not a wall in MiniGrid.
 - The thesis defended here is **unification**, which is measured. Lightness is *not* yet
   demonstrated — Naulthène is currently 2.87× heavier than a PPO CNN baseline, and this README
   says so.

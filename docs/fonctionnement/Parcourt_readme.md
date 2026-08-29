@@ -539,7 +539,7 @@ deux ne sert**) et `Cursus_Jours_Stagnation`.
 
 > ⚠️ **Hors du cœur.** Cette mécanique vit dans `experiences/v39/v39_p17_gaussienne.py` et
 > **n'est pas** dans `noyau.py` ni `colab.py`. Aucune commande des §2 à §5 ne l'utilise.
-> Résultats complets et biais : [CAMPAGNE_P17_ABLATION](../recherche/CAMPAGNE_P17_ABLATION_aout_2026.md).
+> Résultats complets et biais : [CAMPAGNE_P17_ABLATION](../recherche/campagnes/CAMPAGNE_P17_ABLATION_aout_2026.md).
 
 ### L'idée
 

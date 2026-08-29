@@ -244,12 +244,12 @@ Le banc d'ablation, qui mesure **tick par tick**, trouve **0,26 à 0,31** sur le
 Le ratio, lui, n'est pas affecté par ce bug :
 
 C'est exactement le défaut que le chantier v37 devait corriger
-([CHANTIER_v37](../ameliorations_appliquees/CHANTIER_v37_equilibre_c1_c2.md), qui mesurait
+([CHANTIER_v37](../../ameliorations_appliquees/CHANTIER_v37_equilibre_c1_c2.md), qui mesurait
 0 % d'accord et un ratio de 9,9× à 22,1×). Le ratio a baissé, l'accord **pas du tout**.
 
-Et ça rejoint la [dissection de g22](DISSECTION_g22_aout_2026.md) : le cerveau *sait* que
+Et ça rejoint la [dissection de g22](../DISSECTION_g22_aout_2026.md) : le cerveau *sait* que
 le but vaut **16,2×** le reste — appris, jamais déclaré — mais
-[P12](../ameliorations/AVIS_ET_PROPOSITIONS_aout_2026.md) a mesuré que s'en servir
+[P12](../../ameliorations/AVIS_ET_PROPOSITIONS_aout_2026.md) a mesuré que s'en servir
 n'améliore rien (2 graines positives sur 5, p = 1,000).
 
 > **L'agent a une bonne carte et un mauvais volant.** La représentation est juste ; la voie
