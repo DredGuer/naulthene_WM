@@ -130,6 +130,7 @@ retester une idée déjà écartée.
 
 | Date | Document |
 |---|---|
+| 30/08/2026 | [**le génome — audit des constantes**](etat_des_lieux/30082026_le_genome_audit_des_constantes.md) — ce qui fixe la forme ET les désirs d'un cerveau avant tout vécu ; **95,6 % du signal vient de constantes posées** |
 | 22/08/2026 | [campagne v41.31, cursus complet](etat_des_lieux/22082026_campagne_v41.31_cursus_complet.md) |
 | 21/08/2026 | [anatomie du noyau](etat_des_lieux/21082026_anatomie_du_noyau.md) |
 | 19/08/2026 | [rapport de nuit](etat_des_lieux/19082026_rapport_de_nuit.md) |

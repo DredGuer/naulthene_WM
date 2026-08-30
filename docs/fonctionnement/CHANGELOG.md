@@ -4,6 +4,85 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.41] - 2026-08-30 — L'audit du génome : l'agent optimise un barème, pas une tâche
+
+### 95,6 % du signal vient de constantes posées · un instrument mentait · le compte de naissance était faux
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | fix (instrument) + docs (audit) |
+| **Impact** | Critique (corrige un chiffre publié et un instrument de diagnostic) |
+
+**[1] LE RÉSULTAT CENTRAL — L'AGENT N'OPTIMISE PAS LA TÂCHE.** Mesuré avec `sonde_recompense`
+sur un cerveau réel (`A_g11`, campagne AB3 du 26/08), 800 ticks × 3 niveaux :
+
+| Niveau | Récompense du monde | Total positif | Part du monde |
+|---|---:|---:|---:|
+| N0 `Empty-5x5` | 1,0272 | 15,4523 | 6,65 % |
+| N3 `SimpleCrossingS9N1` *(le plafond)* | **0,0000** | 14,5106 | **0,00 %** |
+| N4 `LavaGapS5` | 1,0382 | 17,0661 | 6,08 % |
+| **Ensemble (2 400 ticks)** | **2,0654** | **47,0290** | **4,39 %** |
+
+**Sur le niveau où l'agent plafonne, MiniGrid lui verse exactement `0.0000` sur 800 ticks.**
+La totalité de son signal vient de constantes posées : curiosité **50 %** du positif
+(`PLAFOND_ERREUR_DOPAMINE`), sous-objectifs bio 23,7 %, `r_bio` 20,6 %, et un unique coût —
+`PENALITE_STAGNATION_BASE = 0.015` — qui frappe **93 % des ticks**.
+
+⚠️ **Aucun lien causal avec le plafond n'est établi** (n = 1 cerveau, mesure directe et non
+comparaison appariée). Le tableau des suspects reste **vide**. Mais c'est la seule zone que
+seize réfutations n'ont jamais visitée.
+
+**[2] 🔴 L'INSTRUMENT MENTAIT — `MALUS_DOULEUR` FANTÔME.** `sonde_recompense` affichait un
+`MALUS_DOULEUR` de **−4,6200 sur 462 ticks (57,8 %)** alors que la v41.27 a **supprimé** cette
+constante du chemin. La sonde ne la **lisait** pas : elle la **reconstruisait**
+(`nx.MALUS_DOULEUR if mur_touche`).
+
+| Grandeur | Valeur |
+|---|---:|
+| Récompense **réelle** | **+0,4579** |
+| Solde **affiché** | **−4,1621** |
+| Écart | −4,6200 |
+| Fantôme | −4,6200 |
+| **Écart − fantôme** | **−0,0001** |
+
+Le terme inventé expliquait **la totalité** de l'écart et **retournait le signe** de la
+conclusion (« SOLDE NÉGATIF » là où la récompense est positive). Pire : la douleur v41.27 passe
+par `calculer_deficit`, donc elle était **déjà comptée dans `r_bio`** — double comptage d'un
+coût supprimé. **Corrigé** : après correctif, `SOLDE = +0,4579`, exactement la récompense réelle.
+
+> **Leçon de méthode** : un instrument qui **reconstruit** une grandeur au lieu de la **lire**
+> survit à la suppression de cette grandeur, **en silence**. Le code mort est visible ;
+> l'instrument mort ne l'est pas — il continue de produire des chiffres plausibles.
+
+**[3] 🔴 LE COMPTE DE NAISSANCE ÉTAIT FAUX — 55 616 → 7 760.** Les deux README annonçaient
+« 55 616 paramètres à la naissance », en insistant (« ce chiffre est celui d'un cerveau NEUF »).
+Mesuré : un cerveau naît à `BUS_REFERENCE_INITIAL = 16`, soit **7 760 paramètres**. 55 616 est
+le même cerveau à `dim_bus = 64`, quatre neurogenèses plus tard.
+
+| `dim_bus` | Paramètres |
+|---:|---:|
+| **16 (naissance réelle)** | **7 760** |
+| 32 | 19 616 |
+| **64** | **55 616** |
+
+Conséquence sur les baselines : à sa taille de naissance réelle, Naulthène est **2,5× plus
+LÉGER** qu'un PPO CNN (0,40×), et non 2,87× plus lourd. L'erreur jouait donc **contre** le
+projet. En revanche le facteur de croissance passe de 22,4× à **160×** — l'argument de taille
+n'est pas sauvé pour autant.
+
+**[4] `MALUS_DOULEUR` : la définition morte subsiste** (`noyau.py` l. 4901), lue par aucun code
+du noyau — mais ressuscitée par un instrument pendant trois versions. Proposition P7 de l'audit.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/instruments/sonde_recompense.py` | terme `MALUS_DOULEUR` fantôme retiré de `TERMES` et de la reconstruction ; leçon de méthode documentée en tête |
+| `docs/etat_des_lieux/30082026_le_genome_audit_des_constantes.md` | **nouveau** — audit complet du génome, 9 propositions de remplacement |
+| `readme.md` / `readme_fr.md` | compte de naissance corrigé (7 760), colonne « à la naissance » ajoutée au tableau des paramètres, tableau des baselines refait sur 3 colonnes, résultat des 95,6 % ajouté à l'en-tête, « quatre récompenses posées » → **trois** |
+| `docs/INDEX.md` | audit du génome indexé |
+
+---
+
 ## [v41.40] - 2026-08-29 — Le tableau des suspects est vide, et la doc est rangée
 
 ### La dernière cause tombe à n=20 · `docs/` réorganisé · 76 documents indexés

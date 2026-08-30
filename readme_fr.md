@@ -7,10 +7,13 @@ La vue, l'ouïe, le toucher, l'odorat, le goût, le contrôle moteur, un modèle
 épisodique et la parole lisent et écrivent tous dans **un seul bus latent**. Ajouter un sens, c'est
 ajouter des dimensions à un vecteur — pas greffer un sous-système.
 
-**55 616 paramètres à la naissance. 0,21 Mo.** Un seul `nn.Module`, douze couches, mille trois
-cents jours simulés de vie continue. ⚠️ **Ce chiffre est celui d'un cerveau NEUF** : la
-neurogenèse le fait grossir en cours de vie, et un cerveau à 1500 jours pèse en moyenne
-**1 241 790 paramètres — 22,4×** (mesuré sur 35 cerveaux, voir plus bas).
+**7 760 paramètres à la naissance. 55 616 une fois parvenu à `dim_bus = 64`.** Un seul
+`nn.Module`, douze couches, mille trois cents jours simulés de vie continue. 🔴 **Corrigé le
+30/08/2026** : cette ligne annonçait « 55 616 à la naissance » depuis des mois, et c'était
+faux — un cerveau naît à `BUS_REFERENCE_INITIAL = 16`, soit **7 760 paramètres** ; 55 616 est
+le même cerveau quatre neurogenèses plus tard. Mesuré, jamais estimé. La croissance ne s'arrête
+pas là : un cerveau à 1500 jours pèse en moyenne **1 241 790 paramètres — 160×** sa taille de
+naissance réelle (35 cerveaux, voir plus bas).
 
 ### Ce que ce projet a vocation à devenir
 
@@ -27,9 +30,21 @@ et le même `nn.Module` devrait continuer de tourner.
 chemin de décision ne contient **aucun seuil de déclenchement**, et les grandeurs
 d'apprentissage sont **dérivées du vécu**, jamais réglées — la même récompense vaut 100 %
 pour un débutant et 11 % pour le même agent devenu expert. Ce qui reste en dur, documenté
-plutôt que caché : **quatre récompenses posées**, ~25 constantes de calibration, et la
-**nourriture/eau identifiées par couleur** (`"red"`/`"blue"`) dans le cœur. Audit complet :
-[revue du dogme](docs/etat_des_lieux/18082026_revue_dogme_avant_publication.md).
+plutôt que caché : **trois récompenses posées** (quatre auparavant — `MALUS_DOULEUR` a été
+retirée du chemin de récompense en v41.27), ~25 constantes de calibration, et la
+**nourriture/eau identifiées par couleur** (`"red"`/`"blue"`) dans le cœur.
+
+🔴 **Et un second audit, le 30/08/2026, a mesuré ce que ces constantes pèsent réellement.**
+Sur 2 400 ticks d'un cerveau entraîné et trois niveaux, **95,6 % du signal d'apprentissage
+vient de constantes posées, contre 4,4 % du monde**. Sur le niveau même où il plafonne,
+MiniGrid lui verse **exactement `0,0000` sur 800 ticks** : la moitié de tout ce qu'il veut
+est de la curiosité (`PLAFOND_ERREUR_DOPAMINE`), et son unique coût est une pénalité de
+stagnation posée qui frappe 93 % des ticks. **L'agent n'échoue pas à la tâche — il réussit
+un barème.** Que ce soit la cause du plafond n'est **pas établi** (n = 1 cerveau, mesure
+directe et non comparaison appariée), mais c'est la seule zone que seize réfutations n'ont
+jamais visitée. Audits :
+[dogme](docs/etat_des_lieux/18082026_revue_dogme_avant_publication.md) ·
+[génome](docs/etat_des_lieux/30082026_le_genome_audit_des_constantes.md).
 
 **⚠️ Cela ne fonctionne pas encore.** L'agent plafonne au **niveau 4 sur 15**, et **quinze**
 explications successives de ce plafond ont été mesurées puis réfutées — thrashing du gradient,
@@ -68,21 +83,25 @@ datacenter.*
 
 ### Nombre de paramètres — mesuré
 
-| Composant | Paramètres |
-|---|---|
-| `porte_visuelle` (147 → 64) | 9 408 |
-| `porte_auditive` (130 → 64) | 8 320 |
-| `hippocampe` (128 → 64) | 8 192 |
-| `fusion_memoire` (128 → 64) | 8 192 |
-| `integrateur_bio` (106 → 64) — 5 sens + homéostasie + proprioception | 6 784 |
-| `generateur_attente` (72 → 64) — modèle du monde JEPA | 4 608 |
-| `generateur_attente_audio` (72 → 64) | 4 608 |
-| `analyseur` (64 → 64) | 4 096 |
-| `tete_motrice` (64 → 8) — C1 | 512 |
-| `tete_vocale` (64 → 8) | 512 |
-| `tete_requete` (64 → 5) — routage C3 | 320 |
-| `cortex_prefrontal` (64 → 1) — C2 | 64 |
-| **Total** | **55 616** (0,212 Mo en fp32) |
+**Lire l'en-tête attentivement** : ce tableau décrit un cerveau à **`dim_bus = 64`**, donc
+déjà grandi. Un cerveau *neuf* tourne à `dim_bus = 16` et totalise **7 760** paramètres —
+voir l'[audit du génome](docs/etat_des_lieux/30082026_le_genome_audit_des_constantes.md).
+
+| Composant (à `dim_bus = 64`) | Paramètres | À la naissance (`dim_bus = 16`) |
+|---|---|---|
+| `porte_visuelle` (147 → bus) | 9 408 | 2 352 |
+| `porte_auditive` (130 → bus) | 8 320 | 2 080 |
+| `hippocampe` (2·bus → bus) | 8 192 | 512 |
+| `fusion_memoire` (2·bus → bus) | 8 192 | 512 |
+| `integrateur_bio` (bus+42 → bus) — 5 sens + homéostasie + proprioception | 6 784 | 928 |
+| `generateur_attente` (8+bus → bus) — modèle du monde JEPA | 4 608 | 384 |
+| `generateur_attente_audio` (8+bus → bus) | 4 608 | 384 |
+| `analyseur` (bus → bus) | 4 096 | 256 |
+| `tete_motrice` (bus → 8) — C1 | 512 | 128 |
+| `tete_vocale` (bus → 8) | 512 | 128 |
+| `tete_requete` (bus → 5) — routage C3 | 320 | 80 |
+| `cortex_prefrontal` (bus → 1) — C2 | 64 | 16 |
+| **Total** | **55 616** (0,212 Mo en fp32) | **7 760** |
 
 > ⚠️ **Recompté le 27/08/2026.** La v41.33 ajoute un **bit proprioceptif** (l'agent porte-t-il
 > quelque chose ?) en queue du vecteur bio, qui passe de 41 à **42** dimensions : la couche est
@@ -115,22 +134,26 @@ datacenter.*
 > Le levier n'est pas le nombre de dimensions que C2 reçoit — c'est qu'il n'a **qu'une
 > sortie**.
 
-### Face aux baselines MiniGrid — **la thèse ne tient PAS sur la taille**
+### Face aux baselines MiniGrid — **plus léger à la naissance, bien plus lourd une fois grandi**
 
-| Architecture | Paramètres | Rapport |
-|---|---|---|
-| `rl-starter-files` CNN acteur-critique | 19 384 | **2,87×** à la naissance · **64,1×** à 1500 j |
-| PPO `MlpPolicy` (défaut SB3) | 27 784 | **1,99×** à la naissance · **44,7×** à 1500 j |
-| `rl-starter-files` CNN + LSTM | 52 664 | **1,05×** à la naissance · **23,6×** à 1500 j |
+| Architecture | Paramètres | vs naissance (7 760) | vs `dim_bus=64` (55 616) | vs 1500 j (1 241 790) |
+|---|---|---|---|---|
+| `rl-starter-files` CNN acteur-critique | 19 384 | **0,40×** | 2,87× | **64,1×** |
+| PPO `MlpPolicy` (défaut SB3) | 27 784 | **0,28×** | 2,00× | **44,7×** |
+| `rl-starter-files` CNN + LSTM | 52 664 | **0,15×** | 1,06× | **23,6×** |
 
-**Naulthène n'est pas plus léger qu'un baseline RL standard.** C'est écrit noir sur blanc parce
-que le calcul est à un `grep` de n'importe quel lecteur.
+> 🔴 **Ce tableau était FAUX jusqu'au 30/08/2026**, et l'erreur jouait *contre* le projet : la
+> colonne « à la naissance » portait des rapports calculés à `dim_bus = 64`, soit un cerveau
+> vieux de quatre neurogenèses. À sa taille de naissance **réelle** (7 760), Naulthène est
+> **2,5× plus LÉGER** qu'un PPO CNN, et non 2,87× plus lourd. Corrigé ici plutôt que discrètement
+> effacé — [audit du génome](docs/etat_des_lieux/30082026_le_genome_audit_des_constantes.md).
 
-> 🔴 **Et le chiffre de naissance flatte l'architecture.** Mesuré le 22/08/2026 sur **35 cerveaux
-> à 1500 jours** : `dim_bus` passe de **16 à 139** en moyenne (max 160) et le total atteint
-> **1 241 790 paramètres**, soit **22,4×** la taille de naissance. Un baseline RL, lui, garde la
-> taille qu'on lui a donnée. **La comparaison honnête sur un agent entraîné est donc 64×, pas
-> 2,87×** — et elle s'accompagne d'un blocage au niveau 4/15.
+**Mais cela ne sauve pas l'argument de taille, car l'agent ne reste pas nouveau-né.** Mesuré le
+22/08/2026 sur **35 cerveaux à 1500 jours** : `dim_bus` passe de **16 à 139** en moyenne (max
+160) et le total atteint **1 241 790 paramètres — 160×** sa taille de naissance réelle. Un
+baseline RL, lui, garde la taille qu'on lui a donnée. **La comparaison honnête sur un agent
+entraîné est 64×**, et elle s'accompagne d'un blocage au niveau 4/15. Naulthène part plus petit
+et finit bien plus gros.
 >
 > Le coût n'achète rien de mesurable : le cerveau le plus lourd de la campagne (1 570 648) et le
 > plus léger (402 712) finissent **au même niveau**, la taille corrèle au niveau à

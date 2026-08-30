@@ -6,10 +6,12 @@ Vision, hearing, touch, smell, taste, motor control, a world model, episodic mem
 all read from and write to a **single latent bus**. Adding a sense means appending dimensions to
 one vector, not bolting on a subsystem.
 
-**55,616 parameters at birth. 0.21 MB.** One `nn.Module`, twelve layers, twelve hundred
-simulated days of continuous life. ⚠️ **That figure is a NEWBORN brain**: neurogenesis grows it
-during life, and a brain at 1500 days averages **1,241,790 parameters — 22.4×** (measured over
-35 brains, see below).
+**7,760 parameters at birth. 55,616 once grown to `dim_bus = 64`.** One `nn.Module`, twelve
+layers, twelve hundred simulated days of continuous life. 🔴 **Corrected 30 Aug 2026**: this
+line read "55,616 at birth" for months, and that was wrong — a brain is born at
+`BUS_REFERENCE_INITIAL = 16`, which is **7,760 parameters**; 55,616 is the same brain four
+neurogenesis events later. Measured, never estimated. Growth does not stop there: a brain at
+1500 days averages **1,241,790 parameters — 160×** its true birth size (35 brains, see below).
 
 ### What this is meant to become
 
@@ -25,9 +27,21 @@ camera, a microphone and a motor bus, and the same `nn.Module` should keep runni
 contains **no triggering threshold**, and learning quantities are **derived from what the
 agent has lived**, not tuned — the same reward is worth 100 % to a beginner and 11 % to
 the same agent once expert. What remains hardcoded, and is documented rather than hidden:
-**four posed rewards**, ~25 calibration constants, and **food/water identified by colour**
-(`"red"`/`"blue"`) inside the core. Full audit:
-[dogma review](docs/etat_des_lieux/18082026_revue_dogme_avant_publication.md).
+**three posed rewards** (down from four — `MALUS_DOULEUR` was removed from the reward path
+in v41.27), ~25 calibration constants, and **food/water identified by colour**
+(`"red"`/`"blue"`) inside the core.
+
+🔴 **And a second audit, 30 Aug 2026, measured what those constants are actually worth.**
+Over 2,400 ticks on a trained brain across three levels, **95.6 % of the agent's learning
+signal comes from posed constants and 4.4 % from the world**. On the very level where it
+plateaus, MiniGrid pays it **exactly `0.0000` over 800 ticks**: half of everything it wants
+is curiosity (`PLAFOND_ERREUR_DOPAMINE`), and its only cost is a posed stagnation penalty
+firing on 93 % of ticks. **The agent is not failing at the task — it is succeeding at a
+scoring scheme.** Whether that causes the plateau is **not established** (n = 1 brain, a
+direct reading, not a paired comparison), but it is the one area sixteen refutations never
+visited. Audits:
+[dogma](docs/etat_des_lieux/18082026_revue_dogme_avant_publication.md) ·
+[genome](docs/etat_des_lieux/30082026_le_genome_audit_des_constantes.md).
 
 **⚠️ It does not work yet.** The agent plateaus at **level 4 of 15**, and **fifteen**
 successive explanations for that plateau have been measured and refuted — thrashing, credit
@@ -104,21 +118,25 @@ This section exists because the thesis above is only worth stating if it can be 
 
 ### Parameter count — measured
 
-| Component | Parameters |
-|---|---|
-| `porte_visuelle` (147 → 64) | 9,408 |
-| `porte_auditive` (130 → 64) | 8,320 |
-| `hippocampe` (128 → 64) | 8,192 |
-| `fusion_memoire` (128 → 64) | 8,192 |
-| `integrateur_bio` (106 → 64) — 5 senses + homeostasis + proprioception | 6,784 |
-| `generateur_attente` (72 → 64) — JEPA world model | 4,608 |
-| `generateur_attente_audio` (72 → 64) | 4,608 |
-| `analyseur` (64 → 64) | 4,096 |
-| `tete_motrice` (64 → 8) — C1 | 512 |
-| `tete_vocale` (64 → 8) | 512 |
-| `tete_requete` (64 → 5) — C3 routing ⚠️ **dead at runtime** | 320 |
-| `cortex_prefrontal` (64 → 1) — C2 | 64 |
-| **Total** | **55,616** (0.212 MB fp32) |
+**Read the header carefully**: this table describes a brain at **`dim_bus = 64`**, i.e. one
+that has already grown. A *newborn* brain runs at `dim_bus = 16` and totals **7,760**
+parameters — see the [genome audit](docs/etat_des_lieux/30082026_le_genome_audit_des_constantes.md).
+
+| Component (at `dim_bus = 64`) | Parameters | At birth (`dim_bus = 16`) |
+|---|---|---|
+| `porte_visuelle` (147 → bus) | 9,408 | 2,352 |
+| `porte_auditive` (130 → bus) | 8,320 | 2,080 |
+| `hippocampe` (2·bus → bus) | 8,192 | 512 |
+| `fusion_memoire` (2·bus → bus) | 8,192 | 512 |
+| `integrateur_bio` (bus+42 → bus) — 5 senses + homeostasis + proprioception | 6,784 | 928 |
+| `generateur_attente` (8+bus → bus) — JEPA world model | 4,608 | 384 |
+| `generateur_attente_audio` (8+bus → bus) | 4,608 | 384 |
+| `analyseur` (bus → bus) | 4,096 | 256 |
+| `tete_motrice` (bus → 8) — C1 | 512 | 128 |
+| `tete_vocale` (bus → 8) | 512 | 128 |
+| `tete_requete` (bus → 5) — C3 routing ⚠️ **dead at runtime** | 320 | 80 |
+| `cortex_prefrontal` (bus → 1) — C2 | 64 | 16 |
+| **Total** | **55,616** (0.212 MB fp32) | **7,760** |
 
 > ⚠️ **Recounted 27 Aug 2026.** v41.33 adds a **proprioceptive bit** (does the agent carry
 > something?) in queue of the bio vector, taking it from 41 to **42** dimensions, so
@@ -150,22 +168,25 @@ This section exists because the thesis above is only worth stating if it can be 
 > **29,952** (**×312**). The lever is not how many dimensions C2 receives — it is that C2
 > has **one output**.
 
-### Versus MiniGrid baselines — **the thesis does not yet hold on size**
+### Versus MiniGrid baselines — **lighter at birth, far heavier once grown**
 
-| Architecture | Parameters | Ratio |
-|---|---|---|
-| `rl-starter-files` CNN actor-critic | 19,384 | **2.87×** at birth · **64.1×** at 1500 d |
-| PPO `MlpPolicy` (SB3 default) | 27,784 | **2.00×** at birth · **44.7×** at 1500 d |
-| `rl-starter-files` CNN + LSTM | 52,664 | **1.05×** at birth · **23.6×** at 1500 d |
+| Architecture | Parameters | vs birth (7,760) | vs `dim_bus=64` (55,616) | vs 1500 d (1,241,790) |
+|---|---|---|---|---|
+| `rl-starter-files` CNN actor-critic | 19,384 | **0.40×** | 2.87× | **64.1×** |
+| PPO `MlpPolicy` (SB3 default) | 27,784 | **0.28×** | 2.00× | **44.7×** |
+| `rl-starter-files` CNN + LSTM | 52,664 | **0.15×** | 1.06× | **23.6×** |
 
-**Naulthène is not smaller than a standard RL baseline.** Stated plainly, because the numbers are
-one `grep` away for any reader.
+> 🔴 **This table was wrong until 30 Aug 2026** and the error cut *against* the project: the
+> column labelled "at birth" held ratios computed at `dim_bus = 64`, a brain four neurogenesis
+> events old. At its **real** birth size (7,760) Naulthène is **2.5× lighter** than a PPO CNN,
+> not 2.87× heavier. Corrected here rather than quietly dropped —
+> [genome audit](docs/etat_des_lieux/30082026_le_genome_audit_des_constantes.md).
 
-> 🔴 **And the birth figure flatters the architecture.** Measured 22 Aug 2026 over **35 brains at
-> 1500 days**: `dim_bus` grows from **16 to 139** on average (max 160) and the total reaches
-> **1,241,790 parameters**, i.e. **22.4×** its birth size. An RL baseline keeps the size it was
-> given. **The honest comparison on a trained agent is therefore 64×, not 2.87×** — and it comes
-> with a hard block at level 4/15.
+**But that does not rescue the size claim, because the agent does not stay newborn.** Measured
+22 Aug 2026 over **35 brains at 1500 days**: `dim_bus` grows from **16 to 139** on average (max
+160) and the total reaches **1,241,790 parameters — 160×** its true birth size. An RL baseline
+keeps the size it was given. **The honest comparison on a trained agent is 64×**, and it comes
+with a hard block at level 4/15. Naulthène starts smaller and ends far larger.
 >
 > The cost buys nothing measurable: the heaviest brain in the campaign (1,570,648) and the
 > lightest (402,712) both end at **the same level**, size correlates with level at

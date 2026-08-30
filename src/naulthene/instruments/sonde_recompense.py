@@ -69,8 +69,17 @@ TERMES = [
     ("micro_recompense_vocale",  "production vocale"),
     ("cout_requete_c3",          "coût d'une requête C3 (soustrait)"),
     ("recompense_continue",      "guidage vers le But (hors Mode Libre)"),
-    ("MALUS_DOULEUR",            "choc contre un mur"),
 ]
+# ⚠️ v41.41 — `MALUS_DOULEUR` A ÉTÉ RETIRÉ DE CETTE TABLE (30/08/2026).
+# La sonde ne le LISAIT pas : elle le RECONSTRUISAIT (`nx.MALUS_DOULEUR if mur_touche`),
+# alors que la v41.27 l'a supprimé du chemin de récompense — la douleur passe désormais
+# par `calculer_deficit`, donc elle est DÉJÀ comptée dans `r_bio`. L'instrument facturait
+# donc un coût mort, et une seconde fois ce qui était déjà compté.
+# Mesuré sur 800 ticks : récompense réelle **+0,4579**, solde affiché **−4,1621**,
+# écart **−4,6200** contre un fantôme de **−4,6200** — à 0,0001 près, le terme inventé
+# expliquait la TOTALITÉ de l'écart, et retournait le signe de la conclusion.
+# Leçon : un instrument qui RECONSTRUIT une grandeur au lieu de la LIRE survit à la
+# suppression de cette grandeur, en silence. Ne lire que des locales réelles.
 
 
 def instrumenter(journal):
@@ -99,9 +108,7 @@ def instrumenter(journal):
             loc = frame.f_locals
             ligne = {}
             for nom, _ in TERMES:
-                if nom == "MALUS_DOULEUR":
-                    ligne[nom] = (nx.MALUS_DOULEUR if loc.get("mur_touche") else 0.0)
-                elif nom == "recompense_continue":
+                if nom == "recompense_continue":
                     # N'entre dans la somme QUE hors Mode Libre.
                     v = loc.get("recompense_continue", 0.0)
                     etat = loc.get("etat")

@@ -11,8 +11,8 @@ le Bus Sensoriel des 5 sens (`src/naulthene/cerveau/bus_sensoriel.py`, v29.0-exp
 §9), l'Exo-Sens — le 6ᵉ sens (v30.0-expérimental, voir §10) et les métriques de calibrage
 (v30.1, voir §11), et l'Odorat Topologique & la Clinotaxie (v32.0-expérimental, voir §13).
 Voir `readme_fr.md` pour l'architecture complète, `CHANGELOG.md` pour
-l'historique des versions, et [Old_Archive_rmd/](Old_Archive_rmd/) pour les documents de
-conception historiques.
+l'historique des versions, et [`ameliorations_appliquees/`](../ameliorations_appliquees/) pour
+les documents de conception historiques.
 
 > 🆕 **v29.0/v29.1 — rien à configurer.** Le Bus Sensoriel (toucher, odorat, goût) est **actif
 > automatiquement** dans tous les modes ci-dessous : aucune option de ligne de commande, aucun
