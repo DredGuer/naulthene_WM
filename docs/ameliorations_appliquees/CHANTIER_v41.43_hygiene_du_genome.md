@@ -130,6 +130,45 @@ n'ont été mesurés.
 
 ---
 
+## Validation — ce qui a été testé, et ce qui ne l'a pas été
+
+> ⚠️ **Ce bloc a été ajouté après coup, sur la question « as-tu fait assez de tests ? ».**
+> La réponse honnête au moment où elle a été posée était **non** : le chantier avait été
+> commité avec des tests unitaires mais **sans une seule nuit complète** — alors que
+> `CLAUDE.md` l'exige explicitement depuis le bug v32.0 (*« le crash ne survient ni au
+> chargement, ni pendant la journée, mais à la première `executer_nuit` »*). Les tests
+> manquants ont été passés ensuite ; ils sont consignés ici.
+
+### ✅ Couvert
+
+| Test | Résultat |
+|---|---|
+| Dérivation exacte sur 3 cartes | conforme à `0.1/max_steps` à **1e-12** |
+| Témoin `--stagnation-fossile` | restitue −14,0527 / +0,4579 **au dix-millième** |
+| Repli hors MiniGrid (`env=None`) | 0,015000 |
+| Drapeau atteint le module | assertion runtime, patron v41.28 |
+| **Nuit complète — run réel, 3 nuits** | `exit=0`, cerveau cristallisé |
+| Télémétrie `Stagnation` dans les bilans | visible, **−0,0013/tick** (contre ~−0,018 avant) |
+| **Test A/A** | **δ_A/A = 0** — le banc reste déterministe |
+| Bascule de carte **en cours de vie** | 100 → 324 → 640 → 100, **revient sans cliquet** |
+| Usage réel dans `evaluer_tick` | 12 ticks de piétinement : rapport fossile/dérivé **15,0× exact** |
+| Rétrocompatibilité `.brain` du 26/08 | greffe + **2 nuits complètes**, aucune erreur |
+
+### ❌ Non couvert — et hors de portée d'une validation unitaire
+
+| Manque | Pourquoi |
+|---|---|
+| Effet sur le **niveau atteint** | exige 20 graines × cursus complet, ~2 j |
+| Effet sur la **maîtrise** | idem |
+| Comportement **au-delà du niveau 4** | l'agent n'y parvient pas |
+| `colab.py` | **non modifié** — garde `MALUS_DOULEUR`, séparation essai/référence |
+
+**Conclusion honnête** : le correctif est **techniquement validé** (il fait ce qu'il dit,
+sans rien casser, et le témoin permet de l'ablater). Il n'est **pas validé
+comportementalement**, et rien ici n'autorise à dire qu'il aide.
+
+---
+
 ## Ce qui reste ouvert
 
 - **Aucune mesure comportementale.** Le niveau atteint et la maîtrise sous échelle dérivée
