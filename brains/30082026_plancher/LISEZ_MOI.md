@@ -1,0 +1,51 @@
+# Le plancher géométrique — 30/08/2026
+
+Analyse : [PLANCHER_30082026](../../docs/recherche/campagnes/PLANCHER_30082026_la_competence_existe_et_la_maitrise_ment.md).
+
+## Ce qu'on cherchait
+
+Les ~15 % du niveau 4 sont-ils une compétence ou le plancher géométrique de la carte ?
+
+**Réponse : une compétence.** L'aléatoire fait 5,67 %, les entraînés 25,83 % agrégé
+(`z = +13,56`). Mais les victoires restent **browniennes** (14–18× le plus court chemin).
+
+## Protocole
+
+```bash
+WANDB_MODE=offline PYTHONPATH=src venv/bin/python \
+    -m naulthene.instruments.sonde_plancher_geometrique \
+    --brain brains/30082026_plancher/p_<graine>.brain --episodes 300
+```
+
+4 cerveaux (A_g155, A_g122, A_g166, A_g66) · `SimpleCrossingS9N1` · 300 épisodes ·
+3 politiques (entraîné `eval()`, neuf Xavier, aléatoire) · **graines de carte appariées**.
+Chaque `.brain` lu depuis une **copie** (`p_*.brain`), jamais en place.
+
+## Résultats
+
+| Cerveau | bus | Maîtrise run | Banc | z | Directivité |
+|---|---:|---:|---:|---:|---:|
+| A_g155 | 145 | 45,0 % | 7,67 % | +0,98 | 18,08× |
+| A_g122 | 137 | 35,0 % | 27,33 % | +7,15 | 16,33× |
+| A_g166 | 132 | 25,0 % | 31,00 % | +8,02 | 16,42× |
+| A_g66 | 158 | 30,0 % | **37,33 %** | +9,44 | 14,21× |
+| aléatoire | | | **5,67 %** | | 20,17× |
+
+Marcheur aléatoire mesuré séparément sur **600 épisodes** : 4,50 % IC95 [3,1 ; 6,5].
+
+## ⚠️ Trois avertissements
+
+1. **Le témoin « neuf » (Xavier) est INUTILISABLE** : un réseau non entraîné a un biais
+   d'action arbitraire selon sa graine (42 % avancer / 70 % tourner / 87 % done). Scores
+   observés : 4,33 · 5,67 · 7,00 · **22,67 %**. Le témoin fiable est l'**aléatoire**
+   (17/300 sur les 4 runs).
+2. **`n = 4`** — sous la barre des 20 graines. L'inversion `r(maîtrise, banc) = −0,89`
+   n'est **pas** significative (`t = −2,72` contre 4,30).
+3. **Deux versions du banc ont été jetées** (vecteur bio nul ; fuite de mémoire de travail
+   + contexte épisodique nul). Tout chiffre antérieur aux correctifs est **caduc**.
+
+## Fichiers
+
+- `resultats.log` — sortie brute des 4 cerveaux
+- les `p_*.brain` sont des **copies de travail**, supprimées après mesure ; les sources
+  restent dans `brains/26082026_v4132_AB3_cursus/`, intactes.

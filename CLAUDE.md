@@ -53,6 +53,28 @@ Ce qui est **acquis** de la semaine du 23-30/08 — à ne pas retester :
 | **Récompense creuse / attribution du crédit** | ❌ **la prémisse est FAUSSE** — 86 % du signal est **dense** (versé chaque tick), 14 % seulement vient du monde. Normaliser les retours **par épisode** est mesuré **PIRE** que le code actuel (contraste 3,00× → 0,94× ; **60 tirages sur 60**). MC reste le moins mauvais des trois avantages (mesuré 27/08) |
 | **Le barème** (`part_monde`, `part_curiosité`) | ❌ **tautologie** — signal sous Bonferroni une fois conditionné (n=40, 2 bras) ; la curiosité **change de signe** entre bras (+0,23 / −0,26) |
 
+✅ **MAIS LA COMPÉTENCE EST RÉELLE — mesuré le 30/08/2026.** Le plafond n'est **pas** un
+plancher géométrique : sur `SimpleCrossingS9N1`, un marcheur aléatoire fait **5,67 %**
+(600 ép. : 4,50 % IC95 [3,1 ; 6,5]) quand les cerveaux entraînés font **25,83 %** agrégé
+(`z = +13,56`), et **A_g66 atteint 37,33 %** — dans la fourchette de PPO (27–40 %).
+⚠️ **Mais les victoires restent BROWNIENNES** : 14,2× à 18,1× le plus court chemin
+(trajet optimal médian **12 pas**, budget 324 ticks). `r(succès, directivité) = −0,92` — la
+compétence existe et n'est **pas** une trajectoire dirigée.
+
+🟡 **Un fait non expliqué, à n=4 donc SANS VALEUR encore** : le succès au banc est
+**inversement** ordonné à la maîtrise en run (`r = −0,89`, `t = −2,72` contre un seuil de
+4,30). Si cela se confirmait sur 20 cerveaux, `historique_episodes_niveau` — la maîtrise qui
+déclenche les promotions et à laquelle **dix-huit hypothèses ont été corrélées** — ne
+mesurerait pas la compétence. ⚠️ Un confondage a failli produire une fausse découverte : sur
+les 3 premiers cerveaux `dim_bus` décroissait exactement dans l'ordre (`r = +0,99` avec la
+maîtrise) ; le 4ᵉ l'a cassé (`r(dim_bus, banc)` : −0,97 → **+0,16**).
+
+⚠️ **LE TÉMOIN « CERVEAU NEUF » EST INUTILISABLE** : un réseau Xavier non entraîné a un
+**biais d'action arbitraire** selon sa graine (42 % avancer · 70 % tourner · 87 % done),
+d'où des scores de 4,33 % à **22,67 %**. Une seule initialisation ne le représente pas —
+utiliser le témoin **aléatoire**, stable (17/300 sur 4 runs).
+Voir `docs/recherche/campagnes/PLANCHER_30082026_la_competence_existe_et_la_maitrise_ment.md`.
+
 ⚠️ **La qualité de la représentation ne prédit RIEN** : `r(d', réussite) = −0,0368` chez PPO,
 qui réussit **2,3× mieux avec un d' 4,5× plus faible**. Le d' élevé de Naulthène (≈ 3,0),
 longtemps lu comme un signe de santé, est **décoratif**.
