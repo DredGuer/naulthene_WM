@@ -2305,6 +2305,9 @@ class ThermostatCinetiqueMultimodal:
                  facteur_manipulation=0.30, facteur_interaction=0.05, facteur_libre=1.00):
         self.taille_memoire_pos = taille_memoire_pos
         self.penalite_base = penalite_base
+        # v41.43 — repli pour les contextes SANS carte (vocal isolé, rêve), où
+        # `max_steps` n'existe pas : on retombe sur la valeur reçue à la construction.
+        self._penalite_base_initiale = penalite_base
         self.facteur_manipulation = facteur_manipulation
         self.facteur_interaction = facteur_interaction
         self.facteur_libre = facteur_libre
@@ -2320,6 +2323,15 @@ class ThermostatCinetiqueMultimodal:
 
     def reinitialiser_episode(self, env):
         self.historique_positions = []
+        # v41.43 — L'ÉCHELLE SE RECALCULE À CHAQUE CARTE, jamais par tick.
+        # Le budget (`max_steps`) est une propriété du monde courant : il change au
+        # changement de niveau, et c'est le SEUL moment où il peut changer. Même
+        # discipline que `ajuster_capacite` (v31.0, une fois par nuit) et que le rythme
+        # métabolique (v41.30, une fois par nuit) — une échelle qui fluctuerait en cours
+        # d'épisode rendrait la douleur illisible pour l'agent comme pour le diagnostic.
+        if env is not None:
+            self.penalite_base = _penalite_stagnation_du_monde(
+                env, defaut=self._penalite_base_initiale)
 
     def evaluer_tick(self, env, action_item):
         """Retourne une pénalité (valeur <= 0) à ajouter à la récompense interne."""
@@ -4898,7 +4910,16 @@ INERTIE_OUBLI_RENDEMENT = 50.0  # le cliquet du rendement de référence : mont�
                                 # descente ~50× plus lente. Même discipline que
                                 # `INERTIE_OUBLI_REFERENCE_CHOC` (v37.1-fix1) — une
                                 # référence qui suit la décroissance ne borne plus rien.
-MALUS_DOULEUR = -0.01
+# v41.43 — `MALUS_DOULEUR = -0.01` SUPPRIMÉ (P7 de l'audit du génome).
+# Retiré du CHEMIN de récompense en v41.27 (la douleur passe par `calculer_deficit`,
+# donc par `r_bio`), la DÉFINITION subsistait ici, morte — lue par aucun code du noyau.
+# ⚠️ Une constante morte n'est pas inerte : `sonde_recompense` l'a RESSUSCITÉE pendant
+# trois versions, facturant un coût disparu sur 57,8 % des ticks et retournant le signe
+# de sa conclusion (mesuré le 30/08 : solde affiché −4,1621 contre +0,4579 réel).
+# C'était l'une des quatre récompenses posées de l'audit du dogme, et celle qui rendait
+# `mourir` (0.0) MOINS CHER que `se cogner` (−0.01).
+# ⚠️ `colab.py` (script de référence) la conserve et l'utilise : la suppression ne vaut
+# que pour `noyau.py`, conformément à la séparation essai/référence du projet.
 
 # --- CRISTALLISATION SOUPLE (v26.0-experimental, §A.5 AMELIORATION_V1.md, correctif
 # "Falaise" sigmoïde) ---
@@ -5336,7 +5357,70 @@ GAMMA_PLANIFICATION = 0.9
 # La pénalité brute reste identique à la v15.0, mais elle est désormais ATTÉNUÉE selon
 # le contexte multimodal du tick (voir ThermostatCinetiqueMultimodal) plutôt
 # qu'appliquée uniformément partout.
-PENALITE_STAGNATION_BASE = 0.015
+# v41.43 — L'ÉCHELLE DE LA DOULEUR DE STAGNATION EST DÉRIVÉE DU MONDE (P3 de l'audit
+# du génome, reformulé après mesure).
+#
+# 🔴 CE QUE LA MESURE A DIT, ET QUI A CORRIGÉ LA PROPOSITION INITIALE (30/08/2026).
+# P3 supposait un DOUBLON avec le métabolisme basal (« l'inaction est facturée deux
+# fois »). **C'est FAUX, et mesuré** : le basal facture le TEMPS (0,003250/tick, quoi
+# qu'il arrive), la stagnation facture la REDONDANCE SPATIALE (revenir sur ses pas,
+# en `1.5 ** occurrences`). Un agent qui avance en ligne droite paie le basal et
+# **rien** en stagnation. Ce ne sont pas les mêmes grandeurs — supprimer la seconde
+# aurait retiré le seul signal anti-piétinement du barème.
+#
+# 🔴 LE VRAI DÉFAUT EST L'ÉCHELLE, et il est sévère. `0.015` n'était relié à RIEN —
+# ni à ce que vaut une victoire, ni au vécu de l'agent. Mesuré sur 40 cerveaux
+# (800 ticks) : la stagnation cumulée vaut **14,44**, soit l'équivalent de
+# **14,4 VICTOIRES effacées**, quand l'agent en obtient au mieux 2 ou 3. Neuf ticks
+# de piétinement annulent une victoire entière.
+#
+# LA DÉRIVATION. Une victoire MiniGrid rapporte `1 − 0.9 × (pas/max_steps)`, donc au
+# PIRE `0.1` (victoire à l'ultime tick). Le budget de douleur d'un épisode entièrement
+# piétiné ne doit pas dépasser ce pire gain : sinon l'échec rapide devient préférable à
+# l'exploration, et l'agent a RAISON de renoncer.
+#
+#     pénalité_unitaire = GAIN_MINIMAL_VICTOIRE / max_steps
+#
+# `max_steps` est une propriété DU MONDE, déjà lue par `_budget_natif_carte` (v41.30,
+# même précédent que la patience) — ce n'est pas un réglage. L'écart avec la constante
+# posée grandit avec la carte, ce qui explique que les grands niveaux soient invivables :
+#
+#     max_steps=100 -> 0,001000 (posé 15,0x trop cher)
+#     max_steps=324 -> 0,000309 (posé 48,6x trop cher)
+#     max_steps=640 -> 0,000156 (posé 96,0x trop cher)
+#
+# ⚠️ CE QUI RESTE UNE BORNE, ASSUMÉE : `GAIN_MINIMAL_VICTOIRE = 0.1` n'est pas posé —
+# c'est la valeur plancher que MiniGrid lui-même attribue à une victoire (`1 − 0.9`).
+# Le choix conservateur est de prendre ce PIRE cas plutôt que la victoire moyenne :
+# une pénalité trop faible laisse l'agent piétiner, une pénalité trop forte le fait
+# renoncer — et c'est le second défaut qui a été mesuré.
+#
+# ⚠️ NON MESURÉ EN COMPORTEMENT. Cette correction aligne le code sur le dogme et sur
+# une échelle vérifiable ; elle n'est PAS une hypothèse sur le plafond, et rien ne dit
+# qu'elle changera le niveau atteint. Dix-sept réfutations invitent à ne rien promettre.
+# Le drapeau `--stagnation-fossile` conserve l'ancien comportement pour le témoin.
+GAIN_MINIMAL_VICTOIRE = 0.1   # borne : ce que MiniGrid paie une victoire in extremis
+                              # (`1 − 0.9`), lu dans la formule de l'environnement.
+PENALITE_STAGNATION_FOSSILE = 0.015   # la valeur posée d'avant la v41.43 — conservée
+                                      # comme TÉMOIN d'ablation, jamais sur le chemin.
+STAGNATION_DERIVEE_ACTIVE = True      # --stagnation-fossile pour le bras témoin
+
+
+def _penalite_stagnation_du_monde(env, defaut: float = PENALITE_STAGNATION_FOSSILE) -> float:
+    """v41.43 — L'échelle de la pénalité, dérivée du budget que le MONDE accorde.
+
+    Le coût d'un épisode entièrement piétiné est borné par ce qu'une victoire
+    rapporte au pire. Hors MiniGrid (vocal isolé, rêve), on retombe sur la valeur
+    historique : même lecture défensive que `_budget_natif_carte`.
+    """
+    if not STAGNATION_DERIVEE_ACTIVE:
+        return defaut
+    budget = _budget_natif_carte(env, defaut=0)
+    if budget <= 0:
+        return defaut
+    return GAIN_MINIMAL_VICTOIRE / float(budget)
+
+
 FACTEUR_ATTENUATION_MANIPULATION = 0.30  # objet en main (carrying) : arrêts légitimes
 FACTEUR_ATTENUATION_INTERACTION = 0.05   # face à un objet clé + action de ciblage
 FACTEUR_ATTENUATION_LIBRE = 1.00         # déplacement libre : pénalité pleine
@@ -5910,7 +5994,7 @@ ACTION_ENV_NEUTRE_C3 = 6      # action MiniGrid "done" (Actions.done) — substi
                                # documentée comme telle dans docs/fonctionnement/CHANGELOG.md v27.4),
                                # jamais une action inventée.
 COUT_REQUETE_C3 = 0.01        # pénalité en recompense_interne à chaque ACTION_DEMANDER —
-                               # même ordre de grandeur que PENALITE_STAGNATION_BASE.
+                               # même ordre de grandeur que PENALITE_STAGNATION_FOSSILE.
                                # Sans coût, REINFORCE apprendrait à spammer le bus
                                # (l'action ne coûterait jamais rien à essayer) ; ce coût
                                # est ce qui rend "demander" un choix réellement économique,
@@ -6711,7 +6795,10 @@ class EtatCognitif:
         self.detecteur_portes = DetecteurFranchissementPortes()   # générique, actif partout
         self.detecteur_progres = DetecteurProgresPersonnel()       # générique, inactif sur DoorKey
         self.thermostat_cinetique = ThermostatCinetiqueMultimodal(
-            penalite_base=PENALITE_STAGNATION_BASE,
+            # v41.43 — valeur de CONSTRUCTION seulement : elle sert de repli hors
+            # MiniGrid. Sur une carte, `reinitialiser_episode` la remplace par
+            # l'échelle dérivée du budget du monde.
+            penalite_base=PENALITE_STAGNATION_FOSSILE,
             facteur_manipulation=FACTEUR_ATTENUATION_MANIPULATION,
             facteur_interaction=FACTEUR_ATTENUATION_INTERACTION,
             facteur_libre=FACTEUR_ATTENUATION_LIBRE,
@@ -11499,6 +11586,9 @@ if __name__ == "__main__":
                     help="témoin v41.29 : besoin métabolique figé à 4,0 épisodes/jour")
     _p.add_argument("--travail-reussi", action="store_true",
                     help="ABLATION : un geste stérile ne coûte rien (barème v41.27)")
+    # v41.43 — témoin de l'échelle de stagnation dérivée (P3 de l'audit du génome).
+    _p.add_argument("--stagnation-fossile", action="store_true",
+                    help="témoin v41.42 : pénalité de stagnation figée à 0,015 (posée)")
     # v41.27 — témoin de l'option (b), voir MORT_COUTE_LA_JOURNEE.
     _p.add_argument("--mort-sans-cout", action="store_true",
                     help="ABLATION : mourir ne coûte plus la journée (comportement < v41.27)")
@@ -11587,6 +11677,19 @@ if __name__ == "__main__":
         print("🔬 [ABLATION] travail tenté v41.28 COUPÉ — geste stérile gratuit (v41.27)")
         from naulthene.cerveau.noyau import TRAVAIL_TENTE_ACTIF as _vt
         assert _vt is False, "l'ablation n'a pas atteint le module — campagne invalide"
+
+    # v41.43 — témoin de l'échelle de stagnation dérivée. Même discipline : écriture
+    # dans le module NOMMÉ puis assertion runtime, faute de quoi les deux bras seraient
+    # identiques sans que rien ne le signale (bug v41.4, trois bras confondus).
+    _stag = not _args.stagnation_fossile
+    globals()["STAGNATION_DERIVEE_ACTIVE"] = _stag
+    if _module_reel is not None:
+        _module_reel.STAGNATION_DERIVEE_ACTIVE = _stag
+    if not _stag:
+        print("🔬 [TÉMOIN] stagnation FOSSILE — pénalité figée à "
+              f"{PENALITE_STAGNATION_FOSSILE} (posée, d'avant la v41.43)")
+        from naulthene.cerveau.noyau import STAGNATION_DERIVEE_ACTIVE as _vs
+        assert _vs is False, "le témoin n'a pas atteint le module — campagne invalide"
 
     if _args.gain_acteur != 1.0:
         globals()["GAIN_ACTEUR_CONTROLE"] = float(_args.gain_acteur)

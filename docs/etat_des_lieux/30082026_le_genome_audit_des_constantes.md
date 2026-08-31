@@ -243,7 +243,21 @@ protocole existe déjà : trois bras (`--sans-curiosite`, `--sans-stagnation`, t
 ⚠️ Ce n'est **pas** une hypothèse sur le plafond : c'est la zone que seize réfutations
 n'ont jamais visitée.
 
-### P3 — Dériver `PENALITE_STAGNATION_BASE` du coût métabolique réel ⭐⭐⭐ · 3 h
+### P3 — Dériver `PENALITE_STAGNATION_BASE` ⭐⭐⭐ · ✅ **LIVRÉ v41.43 — mais REFORMULÉ**
+
+> 🔴 **La proposition ci-dessous était FAUSSE et la mesure l'a corrigée le 30/08 au soir.**
+> Le basal facture le **TEMPS** (0,003250/tick), la stagnation la **REDONDANCE SPATIALE**
+> (`1.5 ** occurrences`) : **un agent qui avance en ligne droite paie le basal et RIEN en
+> stagnation.** Ce n'est **pas** un doublon, et supprimer la pénalité aurait retiré le seul
+> signal anti-piétinement du barème.
+>
+> Le vrai défaut est **l'échelle**, non reliée à ce que vaut une victoire : mesuré sur
+> 40 cerveaux, la stagnation efface l'équivalent de **14,4 victoires** quand l'agent en
+> obtient 2 ou 3. Livré : `pénalité = GAIN_MINIMAL_VICTOIRE / max_steps`, dérivé du monde.
+> Voir [chantier v41.43](../ameliorations_appliquees/CHANTIER_v41.43_hygiene_du_genome.md).
+
+<details><summary>La proposition initiale, conservée parce qu'elle était fausse</summary>
+
 
 **Aujourd'hui** : `0.015` posé, 100 % du coût, 93 % des ticks.
 **Proposition** : la stagnation n'a pas besoin d'être *punie* — elle **coûte déjà**, par le
@@ -251,12 +265,13 @@ métabolisme basal (`METABOLISME_BASAL_PART`, mesuré : `0,325` par 100 ticks d'
 Poser la pénalité **en plus** facture deux fois la même chose.
 
 ```python
-PENALITE_STAGNATION_BASE = depense_basale_par_tick   # dérivée, plus posée
+PENALITE_STAGNATION_BASE = depense_basale_par_tick   # ❌ REJETÉ — pas le même objet
 ```
 
-Précédent exact : `MALUS_DOULEUR`, dont la valeur posée produisait « mourir coûte moins
-cher que se cogner ». Une valeur posée sur un coût **déjà** facturé par la physiologie est
-la même faute.
+Précédent invoqué à tort : `MALUS_DOULEUR`. La faute réelle n'était pas le double
+comptage, mais l'échelle arbitraire.
+
+</details>
 
 ### P4 — Dériver `PLAFOND_ERREUR_DOPAMINE` de l'erreur vécue ⭐⭐⭐ · 3 h
 
@@ -290,7 +305,7 @@ Vivant dans le code (3 usages effectifs), **jamais franchi** : myéline réelle 
 **0,0038** contre un seuil de **0,80**, soit **210× moins**. Même défaut que le `q_ref = 1.0`
 corrigé en v37.0. Soit le rendre relatif (quantile de la couche), soit le retirer.
 
-### P7 — Supprimer la définition morte `MALUS_DOULEUR` ⭐⭐ · 5 min
+### P7 — Supprimer la définition morte `MALUS_DOULEUR` ⭐⭐ · ✅ **LIVRÉ v41.43**
 
 Plus lue par le noyau, mais elle a **ressuscité dans un instrument** pendant trois
 versions. Supprimer la ligne 4901.

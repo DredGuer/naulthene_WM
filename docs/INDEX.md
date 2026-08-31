@@ -122,6 +122,7 @@ retester une idée déjà écartée.
 |---|---|
 | [CHANTIER_v37_equilibre_c1_c2.md](ameliorations_appliquees/CHANTIER_v37_equilibre_c1_c2.md) | équilibre C1/C2 — ⚠️ contient le §5.6 à lire avant de toucher à l'échelle de C2 |
 | [CHANTIER_v38_monde_continu.md](ameliorations_appliquees/CHANTIER_v38_monde_continu.md) | monde continu |
+| [CHANTIER_v41.43](ameliorations_appliquees/CHANTIER_v41.43_hygiene_du_genome.md) | hygiène du génome : `MALUS_DOULEUR` supprimé, échelle de stagnation **dérivée du monde** |
 | [CHANTIER_v40_planification_emergente.md](ameliorations_appliquees/CHANTIER_v40_planification_emergente.md) | planification émergente |
 | [CONCEPTION_v22_audio.md](ameliorations_appliquees/CONCEPTION_v22_audio.md) · [CONCEPTION_v30_exo_sens.md](ameliorations_appliquees/CONCEPTION_v30_exo_sens.md) | audio, Exo-Sens |
 | [EXPLICATIONS_v29_sens.md](ameliorations_appliquees/EXPLICATIONS_v29_sens.md) · [Maj_V29_readme.md](ameliorations_appliquees/Maj_V29_readme.md) | les 5 sens |

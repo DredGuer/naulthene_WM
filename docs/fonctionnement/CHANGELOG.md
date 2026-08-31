@@ -4,6 +4,68 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.43] - 2026-08-30 — L'hygiène du génome : une constante morte, une échelle dérivée
+
+### P7 · P3 — et une proposition à moi réfutée par la mesure avant d'être codée
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | fix (dogme) + refactor |
+| **Impact** | Fonctionnel (chemin de récompense) |
+
+⚠️ **Ce chantier ne promet RIEN sur le plafond.** Dix-sept réfutations invitent à ne pas
+présenter une correction de cohérence comme une piste de performance. Aucune mesure
+comportementale n'a été faite ici.
+
+**[1] P7 — `MALUS_DOULEUR` SUPPRIMÉ de `noyau.py`.** Retirée du *chemin* en v41.27, la
+*définition* subsistait, morte. Elle n'était pas inoffensive : `sonde_recompense` l'a
+**ressuscitée pendant trois versions** (v41.41). ⚠️ `colab.py` la conserve et l'utilise —
+la suppression ne vaut que pour le terrain d'essai, séparation essai/référence respectée.
+
+**[2] 🔴 P3 ÉTAIT FAUX, ET LA MESURE L'A CORRIGÉ AVANT LE CODE.** La proposition écrite le
+matin même annonçait un **doublon** avec le métabolisme basal. Mesuré :
+
+| Grandeur | Facture | Valeur |
+|---|---|---|
+| Métabolisme basal | le **TEMPS** (chaque tick) | 0,003250/tick |
+| Pénalité stagnation | la **REDONDANCE SPATIALE** | `1.5 ** occurrences` |
+
+**Un agent qui avance en ligne droite paie le basal et RIEN en stagnation.** Supprimer la
+pénalité aurait retiré le **seul signal anti-piétinement** du barème. Proposition écartée,
+et consignée comme telle pour qu'elle ne soit pas ré-proposée.
+
+**[3] LE VRAI DÉFAUT ÉTAIT L'ÉCHELLE.** `0.015` n'était relié à rien. Mesuré sur
+**40 cerveaux** : la stagnation cumulée vaut **−14,44**, soit **14,4 victoires effacées**
+quand l'agent en obtient 2 ou 3 — **8,8 ticks** de piétinement annulent une victoire.
+
+Dérivation livrée : `pénalité = GAIN_MINIMAL_VICTOIRE / max_steps`, où `0.1` est ce que
+MiniGrid paie une victoire in extremis (`1 − 0.9`) et `max_steps` une propriété **du
+monde**, déjà lue par `_budget_natif_carte` (v41.30). L'écart **grandit avec la carte** :
+
+| Carte | `max_steps` | Dérivé | Posé | Écart |
+|---|---:|---:|---:|---:|
+| `Empty-5x5` | 100 | 0,001000 | 0,015 | **15,0×** |
+| `SimpleCrossingS9N1` | 324 | 0,000309 | 0,015 | **48,6×** |
+| `DoorKey-8x8` | 640 | 0,000156 | 0,015 | **96,0×** |
+
+**[4] EFFET SUR LE BARÈME** (A/B, `A_g11`, niveau 3, 800 ticks, un seul facteur) :
+stagnation **−14,0527 → −0,4156** (÷33,8), solde **+0,4579 → +15,5029** (×33,9).
+⚠️ Correction d'**échelle** mesurée sur **un** cerveau, **sans run** — ni niveau ni
+maîtrise mesurés.
+
+**[5] TÉMOIN VÉRIFIÉ.** `--stagnation-fossile` restitue **exactement** l'ancien
+comportement (−14,0527 / +0,4579, au dix-millième), branché dans le module **nommé** avec
+assertion runtime — sans quoi les deux bras seraient identiques en silence (bug v41.4).
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `MALUS_DOULEUR` supprimé ; `GAIN_MINIMAL_VICTOIRE`, `PENALITE_STAGNATION_FOSSILE`, `STAGNATION_DERIVEE_ACTIVE`, `_penalite_stagnation_du_monde()` ; échelle recalculée dans `reinitialiser_episode` ; drapeau `--stagnation-fossile` branché + assertion |
+| `docs/ameliorations_appliquees/CHANTIER_v41.43_hygiene_du_genome.md` | **nouveau** — le livré, les invariants, et la proposition **écartée** avec sa raison |
+| `docs/etat_des_lieux/30082026_...genome...md` | P3 et P7 marqués livrés ; P3 **reformulé**, version fausse conservée en `<details>` |
+
+---
+
 ## [v41.42] - 2026-08-30 — La cohorte du barème : dix-septième réfutation, en une heure
 
 ### 40 cerveaux lus, 0 run lancé · la corrélation était une TAUTOLOGIE
