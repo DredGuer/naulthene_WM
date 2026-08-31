@@ -299,7 +299,9 @@ est déjà dérivé de la machine ; le **plancher** ne l'est pas. Et trois campa
 que **grossir le bus ne change rien** — donc ce chantier est de cohérence, pas de
 performance.
 
-### P6 — Retirer `SEUIL_CRISTAL` ou le rendre relatif ⭐⭐ · 1 h
+### P6 — Retirer `SEUIL_CRISTAL` ou le rendre relatif ⭐⭐ · ✅ **LIVRÉ v41.44**
+
+> Rendu **relatif** (`echelle_myeline × 3.0`). Mesuré : **0 synapse sur 1 906 360** franchissait le seuil absolu ; après correctif, **3 071** cristallisent sur un cerveau mature. Voir [chantier v41.44](../ameliorations_appliquees/CHANTIER_v41.44_p6_p8_audit_solde.md).
 
 Vivant dans le code (3 usages effectifs), **jamais franchi** : myéline réelle max mesurée
 **0,0038** contre un seuil de **0,80**, soit **210× moins**. Même défaut que le `q_ref = 1.0`
@@ -310,7 +312,9 @@ corrigé en v37.0. Soit le rendre relatif (quantile de la couche), soit le retir
 Plus lue par le noyau, mais elle a **ressuscité dans un instrument** pendant trois
 versions. Supprimer la ligne 4901.
 
-### P8 — Déplacer `COULEUR_FOOD` / `COULEUR_WATER` / test `ball` ⭐⭐ · 1 h
+### P8 — Déplacer `COULEUR_FOOD` / `COULEUR_WATER` / test `ball` ⭐⭐ · ✅ **LIVRÉ v41.44 (partiel)**
+
+> Les trois sites pointent désormais `bus_sensoriel`. ⚠️ Les tables `MOT_PAR_*` restent (télémétrie vocale : nommer y est la fonction) et **le cœur reste le jardinier du monde** — le nom a quitté le cœur, pas la dépendance.
 
 **Inchangé depuis le 18/08** : `noyau.py` l. 3727-3728, 3781-3784, 3839-3844, 7815. Leur
 place est `bus_sensoriel.py`, la frontière corps/monde, où `lava` a déjà droit de cité.

@@ -4,6 +4,65 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.44] - 2026-08-30 — P6 et P8 : l'audit du génome est soldé
+
+### Une mécanique morte depuis la v26.0 réanimée · le cœur ne nomme plus les couleurs
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | fix (dogme) |
+| **Impact** | Fonctionnel (érosion nocturne) |
+
+⚠️ **Aucune mesure comportementale.** Ni niveau ni maîtrise.
+
+**[1] P6 — `SEUIL_CRISTAL` ÉTAIT MORT DEPUIS LA v26.0.** Mesuré sur 10 cerveaux :
+**0 synapse cristallisée sur 1 906 360**, `myeline_cumul` max **0,0119** contre un seuil de
+**0,80** — **67× trop loin**. Ce n'était pas une protection dormante : du code mort exécuté
+chaque nuit sur chaque synapse.
+
+**C'est le bug de la v37.0, resté quatre versions de plus** : `q_ref = 1.0` supposait une
+myéline d'ordre 1 (corrigé par `echelle_myeline`, un quantile). `SEUIL_CRISTAL` est le même
+défaut au même endroit — une échelle absolue jamais confrontée à une mesure.
+
+Correction : `seuil = echelle_myeline × FRACTION_SEUIL_CRISTAL`, en **réutilisant**
+l'échelle déjà calculée deux lignes plus haut.
+
+| Cerveau | Avant | Après |
+|---|---:|---:|
+| Neuf (3 nuits) | 0 / 19 616 | 0 / 19 616 *(attendu)* |
+| **Mature (26/08)** | **0 / 219 965** | **3 071 / 219 965 (1,4 %)** |
+
+⚠️ Figer une synapse est **irréversible**. Deux témoins : `--cristallisation-fossile`
+(reproduit le zéro de la v26.0, vérifié) et `--sans-cristallisation`.
+
+**[2] P8 — LE CŒUR NE NOMME PLUS LES COULEURS.** `COULEUR_FOOD`/`COULEUR_WATER` étaient une
+**duplication pure** de `bus_sensoriel` (déjà importé) ; `type == "ball"` devient
+`TYPE_RESSOURCE`. Invariant v29.0 préservé : `bus_sensoriel.py` reste pur numpy et
+n'importe jamais `noyau.py`.
+
+⚠️ **Ce que P8 ne corrige pas, et qui est dit** : les tables `MOT_PAR_*` restent (le
+`LecteurCaseFrontale` renvoie un **mot** pour l'apprentissage vocal — nommer y est la
+fonction), et **le cœur reste le jardinier du monde** : il sème les ressources, donc dépend
+de la convention. Le **nom** a quitté le cœur, la **dépendance** demeure.
+
+**[3] VALIDATION** — nuit complète (3 nuits, `exit=0`, aucun `NameError`), **test A/A
+δ_A/A = 0**, rétrocompat `.brain` du 26/08 (2 nuits), les 3 drapeaux CLI atteignent le
+module avec assertion, naissance inchangée à 7 760.
+
+**[4] L'AUDIT DU GÉNOME EST SOLDÉ** sur ses propositions prioritaires : P1, P2 (réfuté),
+P3, P6, P7, P8 livrés. **Restent ouverts** : P4 (la curiosité, 40 % du signal pour un effet
+mesuré **nul**), P5, P9.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | seuil de cristallisation relatif + 2 drapeaux ; `COULEUR_*` en alias ; `TYPE_RESSOURCE` importé |
+| `src/naulthene/cerveau/bus_sensoriel.py` | `TYPE_RESSOURCE` exposé à côté des deux couleurs |
+| `docs/ameliorations_appliquees/CHANTIER_v41.44_p6_p8_audit_solde.md` | **nouveau** |
+| `docs/etat_des_lieux/30082026_...genome...md` | P6 et P8 marqués livrés |
+
+---
+
 ## [v41.43] - 2026-08-30 — L'hygiène du génome : une constante morte, une échelle dérivée
 
 ### P7 · P3 — et une proposition à moi réfutée par la mesure avant d'être codée

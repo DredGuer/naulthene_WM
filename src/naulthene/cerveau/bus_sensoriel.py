@@ -363,6 +363,12 @@ PORTEE_ODORAT = 4.0
 # CLAUDE.md §3b, il fonctionne sur n'importe quelle carte du PROGRAMME.
 COULEUR_NOURRITURE = "red"
 COULEUR_EAU = "blue"
+# v41.44 — P8 de l'audit du génome : le TYPE d'objet porteur de ressource rejoint les
+# deux couleurs, au même endroit et pour la même raison. Un `type == "ball"` restait
+# écrit en dur dans `noyau.py` pour compter les ressources — un nom du monde dans le
+# cœur cognitif. Sa place est ici, à la frontière corps/monde : c'est l'organe sensoriel
+# qui sait à quoi ressemble une ressource, comme il sait déjà que `lava` brûle.
+TYPE_RESSOURCE = "ball"
 
 
 class BusSensoriel:

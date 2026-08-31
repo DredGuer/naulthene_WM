@@ -40,6 +40,7 @@ from naulthene.cerveau.bus_sensoriel import (BusSensoriel, DIM_TOUCHER, DIM_CHIM
                                              DIM_EXO, DIM_ODORAT_DELTA,
                                              DIM_THERMOCEPTION, DIM_PRESSION,
                                              COULEUR_NOURRITURE, COULEUR_EAU,
+                                             TYPE_RESSOURCE,   # v41.44 — P8
                                              # v41.27 — signatures nociceptives : le
                                              # « type » de douleur est un couple de
                                              # nombres, jamais un nom (le cœur ignore ce
@@ -263,7 +264,16 @@ class NaultheneLinearSynaptique(nn.Module):
             # seul un myeline_cumul consolidé peut avoir levé le flag, donc une synapse
             # cristallisée reste dans la zone p_protection≈1.0 par construction (elle ne peut
             # plus reculer sous le seuil au sens du flag, même si myeline_cumul fluctue ensuite).
-            p_protection = torch.sigmoid(K_RAIDEUR_CRISTAL * (self.myeline_cumul - SEUIL_CRISTAL))
+            # v41.44 — le seuil est RELATIF à ce que cette couche a atteint, jamais un
+            # chiffre absolu (mesuré : 0 synapse sur 1 906 360 franchissait le 0,80 posé).
+            # `echelle` est déjà calculée juste au-dessus : quantile 0,75 de `myeline_M`,
+            # monotone croissante. On la réutilise pour ne pas dériver deux échelles.
+            seuil_cristal = (echelle * FRACTION_SEUIL_CRISTAL
+                             if CRISTALLISATION_RELATIVE_ACTIVE
+                             else torch.as_tensor(SEUIL_CRISTAL_FOSSILE,
+                                                  device=echelle.device,
+                                                  dtype=echelle.dtype))
+            p_protection = torch.sigmoid(K_RAIDEUR_CRISTAL * (self.myeline_cumul - seuil_cristal))
             plancher_cristal = self.cristallisee.float() * p_protection
             myeline_norm_effectif = torch.max(myeline_norm, plancher_cristal)
 
@@ -328,7 +338,11 @@ class NaultheneLinearSynaptique(nn.Module):
             # et tombent sous le masque de mort (Étape 4) sans traîner pendant des centaines
             # de nuits — "zéro synapse fantôme".
             self.myeline_cumul += (self.myeline_M - self.myeline_cumul) * (1.0 - ALPHA_CRISTAL)
-            self.cristallisee |= (self.myeline_cumul >= SEUIL_CRISTAL)
+            # v41.44 — même seuil relatif que la falaise ci-dessus. Le cliquet reste à
+            # SENS UNIQUE (`|=`) : une synapse cristallisée ne se décristallise jamais,
+            # même si l'échelle de sa couche continue de monter ensuite.
+            if CRISTALLISATION_ACTIVE:
+                self.cristallisee |= (self.myeline_cumul >= seuil_cristal)
 
             # --- Étape 4 : élagage des synapses mortes ---
             #
@@ -3736,8 +3750,17 @@ class DetecteurRessourcesBiologiques:
     jauge à 0.0 de façon quasi permanente, plombant `r_bio` (donc la motivation nette) en
     continu. L'Eau suit donc désormais le même cycle de forage que la Nourriture.
     """
-    COULEUR_FOOD = "red"
-    COULEUR_WATER = "blue"
+    # v41.44 — P8 de l'audit du génome : LE CŒUR NE NOMME PLUS LES COULEURS DU MONDE.
+    # Ces deux constantes étaient une DUPLICATION de `bus_sensoriel.COULEUR_NOURRITURE` /
+    # `COULEUR_EAU`, déjà importées en tête de ce fichier. Elles sont désormais un simple
+    # alias de la source unique : la traduction « ce qui est rouge est de la nourriture »
+    # appartient à l'organe sensoriel — la frontière corps/monde, où `lava` a déjà droit
+    # de cité — pas au cœur cognitif.
+    # ⚠️ Le cœur reste néanmoins DÉPENDANT de cette convention pour SEMER les ressources
+    # (il est le jardinier du monde, pas seulement son habitant) : le nom a disparu du
+    # cœur, la dépendance non. C'est ce que P8 corrige, et ce qu'il ne corrige pas.
+    COULEUR_FOOD = COULEUR_NOURRITURE
+    COULEUR_WATER = COULEUR_EAU
     PROBABILITE_RESPAWN_AU_NID = 0.80
 
     def __init__(self, nb_sources_food=2, nb_sources_water=2):
@@ -4933,7 +4956,45 @@ INERTIE_OUBLI_RENDEMENT = 50.0  # le cliquet du rendement de référence : mont�
 # indestructible). Le gradient diurne (annexe_weight) reste totalement inchangé, cristallisée
 # ou non.
 ALPHA_CRISTAL = 0.95
-SEUIL_CRISTAL = 0.80
+# v41.44 — LE SEUIL DE CRISTALLISATION EST RELATIF À LA COUCHE (P6 de l'audit du génome).
+#
+# 🔴 CE QUE LA MESURE DIT (30/08/2026, 10 cerveaux de la cohorte AB3) :
+#
+#     0 synapse cristallisée sur 1 906 360        (0,0000 %)
+#     myeline_cumul maximum observé : 0,01193434
+#     SEUIL_CRISTAL posé            : 0,80        -> 67× trop loin
+#
+# La Cristallisation Souple v26.0 ne s'est enclenchée sur AUCUN cerveau du dépôt, jamais.
+# Ce n'était pas une protection dormante « au cas où » : c'était du code mort exécuté à
+# chaque nuit, sur chaque synapse, pour un résultat toujours nul.
+#
+# C'EST EXACTEMENT LE DÉFAUT QUE LA v37.0 A CORRIGÉ AILLEURS. `q_ref = 1.0` supposait une
+# myéline d'ordre 1 alors qu'elle vaut ~0,002 — échelle 500× trop grande, `myeline_norm`
+# collée à 0. Le correctif fut `echelle_myeline`, un QUANTILE de la couche. `SEUIL_CRISTAL`
+# est le même bug, au même endroit, resté en place quatre versions de plus : une échelle
+# absolue posée a priori, jamais confrontée à une mesure.
+#
+# LA CORRECTION suit le patron déjà validé : le seuil devient une FRACTION de l'échelle
+# que la couche a elle-même atteinte (`echelle_myeline`, monotone croissante, quantile 0,75
+# de `myeline_M`). Une synapse cristallise quand son `myeline_cumul` dépasse nettement ce
+# que sa propre couche a connu — jamais quand il dépasse un chiffre venu d'ailleurs.
+#
+# ⚠️ CE QUI RESTE UNE BORNE, ASSUMÉE : `FRACTION_SEUIL_CRISTAL` dit « nettement au-dessus
+# de l'ordinaire de cette couche », pas une valeur de myéline. Elle est > 1 par
+# construction : cristalliser DOIT rester exceptionnel, sinon le cliquet fige tout le
+# réseau et l'érosion nocturne — donc l'oubli — cesse d'exister.
+#
+# ⚠️ NON MESURÉ EN COMPORTEMENT. Ce correctif REND POSSIBLE une mécanique qui n'a jamais
+# tourné ; il ne démontre pas qu'elle aide. Elle peut très bien nuire — figer des synapses
+# est irréversible (cliquet à sens unique). D'où le drapeau `--sans-cristallisation`, et
+# d'où le choix d'un seuil volontairement haut.
+FRACTION_SEUIL_CRISTAL = 3.0   # borne : « 3× l'ordinaire de la couche ». Au-dessus de
+                               # l'échelle (quantile 0,75), donc réservé aux synapses
+                               # nettement plus myélinisées que leurs voisines.
+SEUIL_CRISTAL_FOSSILE = 0.80   # la valeur absolue d'avant la v41.44 — conservée comme
+                               # TÉMOIN, et comme trace du chiffre jamais franchi.
+CRISTALLISATION_RELATIVE_ACTIVE = True   # --cristallisation-fossile pour le témoin
+CRISTALLISATION_ACTIVE = True            # --sans-cristallisation coupe la mécanique
 K_RAIDEUR_CRISTAL = 10.0
 
 # --- v34.0-fix1 : LE PLANCHER VITAL (correctif de l'EXTINCTION SYNAPTIQUE) ---
@@ -7899,7 +7960,7 @@ def _compter_ressources_grille(etat) -> int:
         for x in range(grille.width):
             for y in range(grille.height):
                 objet = grille.get(x, y)
-                if objet is not None and getattr(objet, "type", None) == "ball" \
+                if objet is not None and getattr(objet, "type", None) == TYPE_RESSOURCE \
                    and getattr(objet, "color", None) in (COULEUR_NOURRITURE, COULEUR_EAU):
                     total += 1
         return total
@@ -11589,6 +11650,11 @@ if __name__ == "__main__":
     # v41.43 — témoin de l'échelle de stagnation dérivée (P3 de l'audit du génome).
     _p.add_argument("--stagnation-fossile", action="store_true",
                     help="témoin v41.42 : pénalité de stagnation figée à 0,015 (posée)")
+    # v41.44 — témoins de la cristallisation, voir P6 de l'audit du génome.
+    _p.add_argument("--cristallisation-fossile", action="store_true",
+                    help="témoin v26.0 : SEUIL_CRISTAL absolu à 0,80 (jamais franchi)")
+    _p.add_argument("--sans-cristallisation", action="store_true",
+                    help="ABLATION : aucune synapse ne cristallise jamais")
     # v41.27 — témoin de l'option (b), voir MORT_COUTE_LA_JOURNEE.
     _p.add_argument("--mort-sans-cout", action="store_true",
                     help="ABLATION : mourir ne coûte plus la journée (comportement < v41.27)")
@@ -11690,6 +11756,26 @@ if __name__ == "__main__":
               f"{PENALITE_STAGNATION_FOSSILE} (posée, d'avant la v41.43)")
         from naulthene.cerveau.noyau import STAGNATION_DERIVEE_ACTIVE as _vs
         assert _vs is False, "le témoin n'a pas atteint le module — campagne invalide"
+
+    # v41.44 — mêmes deux disciplines : module NOMMÉ + assertion runtime.
+    _cris_rel = not _args.cristallisation_fossile
+    globals()["CRISTALLISATION_RELATIVE_ACTIVE"] = _cris_rel
+    if _module_reel is not None:
+        _module_reel.CRISTALLISATION_RELATIVE_ACTIVE = _cris_rel
+    if not _cris_rel:
+        print(f"🔬 [TÉMOIN] cristallisation FOSSILE — seuil absolu {SEUIL_CRISTAL_FOSSILE} "
+              "(mesuré : 0 synapse sur 1 906 360 le franchit)")
+        from naulthene.cerveau.noyau import CRISTALLISATION_RELATIVE_ACTIVE as _vcr
+        assert _vcr is False, "le témoin n'a pas atteint le module — campagne invalide"
+
+    _cris = not _args.sans_cristallisation
+    globals()["CRISTALLISATION_ACTIVE"] = _cris
+    if _module_reel is not None:
+        _module_reel.CRISTALLISATION_ACTIVE = _cris
+    if not _cris:
+        print("🔬 [ABLATION] cristallisation COUPÉE — aucune synapse ne se fige")
+        from naulthene.cerveau.noyau import CRISTALLISATION_ACTIVE as _vc
+        assert _vc is False, "l'ablation n'a pas atteint le module — campagne invalide"
 
     if _args.gain_acteur != 1.0:
         globals()["GAIN_ACTEUR_CONTROLE"] = float(_args.gain_acteur)
