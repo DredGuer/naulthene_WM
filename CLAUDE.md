@@ -22,8 +22,11 @@ Ce n'est pas une application produit : c'est un script de recherche exécuté en
 
 ### 🔴 L'ÉTAT RÉEL AU 30/08/2026 — le tableau des suspects est VIDE
 
-**Dix-sept explications du plafond au niveau 4 ont été mesurées et réfutées.** La dernière
-— **le barème lui-même** — est tombée le 30/08 : `r(part_monde, maîtrise) = +0,4191`
+**Dix-huit explications du plafond au niveau 4 ont été mesurées et réfutées.** Les trois
+dernières sont tombées le **30/08** : la **récompense creuse** (prémisse fausse — 86 % du
+signal est **dense**, et normaliser par épisode est **pire**, 60 tirages sur 60), la
+**curiosité** (rente confirmée à 40 % du signal, mais **15,0 % vs 15,0 %** de maîtrise entre
+curiosité faible et forte), et le **barème** : `r(part_monde, maîtrise) = +0,4191`
 (`t = +2,85`, n=40, répliquée dans les deux bras) est une **TAUTOLOGIE**. MiniGrid ne paie
 qu'à la victoire, donc `part_monde > 0` signifie « ce cerveau a gagné », et la maîtrise
 **est** un taux de victoire. Conditionnellement au fait d'avoir gagné, le signal passe sous
@@ -46,6 +49,7 @@ Ce qui est **acquis** de la semaine du 23-30/08 — à ne pas retester :
 | Dérive de représentation | ❌ `r(dérive, maîtrise) = +0,1386` (NS), et **PPO dérive 10× plus en réussissant mieux** |
 | Coefficient d'entropie | ❌ son gradient pèse **0,44–1,05 %** de celui de l'avantage |
 | Métabolisme (`maîtrise ~ énergie`) | ❌ **r = −0,0588** à n=20 |
+| **La curiosité** (rente, 40 % du signal) | ❌ **rente confirmée** (erreur JEPA ratio **1,11×** sur 1440 j, 19/40 décroissent) mais **sans effet** : `r(part_curio, maîtrise) = −0,0173`, signe **inversé** entre bras, et maîtrise **15,0 % vs 15,0 %** entre curiosité faible et forte (n=40) |
 | **Récompense creuse / attribution du crédit** | ❌ **la prémisse est FAUSSE** — 86 % du signal est **dense** (versé chaque tick), 14 % seulement vient du monde. Normaliser les retours **par épisode** est mesuré **PIRE** que le code actuel (contraste 3,00× → 0,94× ; **60 tirages sur 60**). MC reste le moins mauvais des trois avantages (mesuré 27/08) |
 | **Le barème** (`part_monde`, `part_curiosité`) | ❌ **tautologie** — signal sous Bonferroni une fois conditionné (n=40, 2 bras) ; la curiosité **change de signe** entre bras (+0,23 / −0,26) |
 
