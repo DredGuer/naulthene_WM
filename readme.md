@@ -37,13 +37,22 @@ signal comes from posed constants and 4.4 % from the world**. On the very level 
 plateaus, MiniGrid pays it **exactly `0.0000` over 800 ticks**: half of everything it wants
 is curiosity (`PLAFOND_ERREUR_DOPAMINE`), and its only cost is a posed stagnation penalty
 firing on 93 % of ticks. **The agent is not failing at the task — it is succeeding at a
-scoring scheme.** Whether that causes the plateau is **not established** (n = 1 brain, a
-direct reading, not a paired comparison), but it is the one area sixteen refutations never
-visited. Audits:
+scoring scheme.** Audits:
 [dogma](docs/etat_des_lieux/18082026_revue_dogme_avant_publication.md) ·
 [genome](docs/etat_des_lieux/30082026_le_genome_audit_des_constantes.md).
 
-**⚠️ It does not work yet.** The agent plateaus at **level 4 of 15**, and **fifteen**
+🔴 **And the causal hypothesis that followed from it died the next hour — seventeenth
+refutation.** Replicated across **40 brains** (no run launched; the AB3 cohort already
+existed): the descriptive finding holds, but "listening to the world predicts success" is a
+**tautology**. MiniGrid pays only on a win, so `part_world > 0` *means* "this brain won",
+and mastery *is* a win rate — the two count the same thing. Conditioned on having won at
+all, the signal falls below Bonferroni (`t = +2.34` against 2.39, n = 36). Curiosity
+predicts nothing and **its sign flips between the two arms** (+0.23 / −0.26). Same trap as
+the C2/C1 ratio in v41.32: a metric derived from the reward cannot predict success, because
+the reward *is* success. **The suspect list stays empty** —
+[cohort](docs/recherche/campagnes/COHORTE_30082026_le_bareme_ne_predit_rien.md).
+
+**⚠️ It does not work yet.** The agent plateaus at **level 4 of 15**, and **seventeen**
 successive explanations for that plateau have been measured and refuted — thrashing, credit
 assignment, proprioception, top-down attention, representational drift. The only levers that
 ever worked are properties of the *world*, not of the brain.
@@ -216,7 +225,7 @@ Two caveats, both measurable rather than rhetorical:
 | Navigation on an empty 5×5 room | **54.4 %** after 300 days vs **39.2 %** for a random policy *over the same 7 actions* — the agent **beats chance by 15 pts** |
 | Ticks spent on gestures that change nothing (`Empty-5x5`) | **57.2 %** — because a sterile gesture cost **1.09** against **4.00** for the one gesture that moves toward the goal. **v41.28** charges the work *attempted*: pushing a wall now costs a full step. **Measured (n=20): −2.5 pts, `t = −1.71`, not significant** — the cost was not the lever |
 | Effect of growing the brain (96 → 160 → 512 dims) | **none** across 3 campaigns — and energy drops 11× |
-| **Why it plateaus at level 4** | 🔴 **UNKNOWN — and the metabolic answer was retracted on 29 Aug 2026.** `mastery ~ mean energy` was quoted for nine days as **r = +0.710** (`t = +2.85`) — measured at **n = 10**. At **n = 20** it is **r = −0.0588 (`t = −0.25`)**: the sign flips, the signal disappears, and a jackknife shows it was never carried by a single seed (r stays within [−0.168, +0.055]). g77 has the 2nd-best energy and 17.3 % mastery; g144 has the 2nd-worst and 22.5 %. **Sixteen explanations measured, sixteen refuted.** What remains true and unexplained: three **posed constants** still calibrate the metabolic rhythm for a *newborn* agent (4 episodes/day assumed, 1.55 played), and **9 seeds out of 10 sit at the exact `PATIENCE_MAX = 350` ceiling** |
+| **Why it plateaus at level 4** | 🔴 **UNKNOWN — and the metabolic answer was retracted on 29 Aug 2026.** `mastery ~ mean energy` was quoted for nine days as **r = +0.710** (`t = +2.85`) — measured at **n = 10**. At **n = 20** it is **r = −0.0588 (`t = −0.25`)**: the sign flips, the signal disappears, and a jackknife shows it was never carried by a single seed (r stays within [−0.168, +0.055]). g77 has the 2nd-best energy and 17.3 % mastery; g144 has the 2nd-worst and 22.5 %. **Seventeen explanations measured, seventeen refuted** — the latest, the scoring scheme itself, fell on 30 Aug 2026 as a tautology. What remains true and unexplained: three **posed constants** still calibrate the metabolic rhythm for a *newborn* agent (4 episodes/day assumed, 1.55 played), and **9 seeds out of 10 sit at the exact `PATIENCE_MAX = 350` ceiling** |
 | **v41.31 — the causal gradient** | Masking the actor's gradient on non-transitions gave mastery **+2.57 pts** (`t = +2.68`) on a **forced** `SimpleCrossing` bench, n=20. 🔴 **It does not survive the full curriculum.** 20 paired seeds × 1500 days, free curriculum (40 runs): level **+0.05 (`t = +0.37`)**, mastery **+1.09 (`t = +0.39`)**, energy **+0.001 (`t = +0.07`)** — all NS, and **0 of 40 runs pass level 5**. A forced bench proves a mechanic works *where it applies*, never that it helps elsewhere |
 | **v41.32 — asymmetric detach (AB3)** | Cutting C2's gradient into the shared trunk cleans the gradient (+25 % alignment on the bench) and **changes nothing**: 20 paired seeds × 1440 days, level **−0.10 (`t = −0.70`)**, mastery **−6.09 (`t = −1.93`)**. The one significant metric (C2/C1 ratio, `t = +3.82`) is a **tautology** — decomposition shows C1's amplitude *falling* 27 % (`t = −3.57`) while C2 does not move (`t = +1.70`, NS). **Tenth refutation** |
 | **v41.33 — the carry bit** | The critic separates *object ahead* from *wall ahead* very well (Cohen's **d = +0.65 to +1.21**) but **could not tell it was carrying something** (d ≈ **0.1**, sign unstable) — of the 41 bio dimensions, **zero** encoded the inventory. Adding a 42nd dimension **lifts the blindness**: d goes **−0.012 → +1.428**, 18/20 seeds, 40 runs. 🔴 **And it changes nothing.** The credit stays flat (`\|A\| useful / \|A\| neutral` **1.11× → 1.18×**, `t = +1.97`, NS) and no behavioural metric moves. **Twelfth refutation** |

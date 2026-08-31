@@ -40,13 +40,23 @@ vient de constantes posées, contre 4,4 % du monde**. Sur le niveau même où il
 MiniGrid lui verse **exactement `0,0000` sur 800 ticks** : la moitié de tout ce qu'il veut
 est de la curiosité (`PLAFOND_ERREUR_DOPAMINE`), et son unique coût est une pénalité de
 stagnation posée qui frappe 93 % des ticks. **L'agent n'échoue pas à la tâche — il réussit
-un barème.** Que ce soit la cause du plafond n'est **pas établi** (n = 1 cerveau, mesure
-directe et non comparaison appariée), mais c'est la seule zone que seize réfutations n'ont
-jamais visitée. Audits :
+un barème.** Audits :
 [dogme](docs/etat_des_lieux/18082026_revue_dogme_avant_publication.md) ·
 [génome](docs/etat_des_lieux/30082026_le_genome_audit_des_constantes.md).
 
-**⚠️ Cela ne fonctionne pas encore.** L'agent plafonne au **niveau 4 sur 15**, et **quinze**
+🔴 **Et l'hypothèse causale qui en découlait est morte dans l'heure — dix-septième
+réfutation.** Répliquée sur **40 cerveaux** (aucun run lancé ; la cohorte AB3 existait
+déjà) : la mesure descriptive tient, mais « écouter le monde prédit la réussite » est une
+**tautologie**. MiniGrid ne paie qu'à la victoire, donc `part_monde > 0` *signifie* « ce
+cerveau a gagné », et la maîtrise *est* un taux de victoire — les deux comptent la même
+chose. Conditionnellement au fait d'avoir gagné, le signal passe sous Bonferroni
+(`t = +2,34` contre 2,39, n = 36). La curiosité ne prédit rien et **son signe s'inverse
+entre les deux bras** (+0,23 / −0,26). Même piège que le ratio C2/C1 en v41.32 : une
+métrique dérivée de la récompense ne peut pas prédire la réussite, puisque la récompense
+*est* la réussite. **Le tableau des suspects reste vide** —
+[cohorte](docs/recherche/campagnes/COHORTE_30082026_le_bareme_ne_predit_rien.md).
+
+**⚠️ Cela ne fonctionne pas encore.** L'agent plafonne au **niveau 4 sur 15**, et **dix-sept**
 explications successives de ce plafond ont été mesurées puis réfutées — thrashing du gradient,
 attribution du crédit, proprioception, attention descendante, dérive de représentation. Les
 seuls leviers qui aient jamais marché sont des propriétés du *monde*, pas du cerveau. Le seul
@@ -231,7 +241,7 @@ mesuré le plus net entre les deux, et la prochaine piste.
 | Ticks passés en gestes qui ne changent rien (`Empty-5x5`) | **57,2 %** — parce qu'un geste stérile coûtait **1,09** contre **4,00** pour le seul geste qui rapproche du but. La **v41.28** facture le travail *tenté* : pousser un mur coûte désormais le prix d'un pas. **Mesuré (n=20) : −2,5 pts, `t = −1,71`, non significatif** — le coût n'était pas le levier |
 | Mécaniques cognitives ayant amélioré quoi que ce soit | **1 sur 12 testées** — le brain-sparing |
 | Effet d'agrandir le cerveau (96 → 160 → 512 dims) | **aucun** sur 3 campagnes — et l'énergie chute ×11 |
-| **Pourquoi ça plafonne au niveau 4** | 🔴 **INCONNU — et la réponse métabolique a été retirée le 29/08/2026.** `maîtrise ~ énergie moyenne` a été citée neuf jours durant comme **r = +0,710** (`t = +2,85`) — mesurée à **n = 10**. À **n = 20** elle vaut **r = −0,0588 (`t = −0,25`)** : le signe s'inverse, le signal disparaît, et un jackknife montre qu'aucune graine ne le portait (r reste dans [−0,168 ; +0,055]). g77 a la 2ᵉ meilleure énergie et 17,3 % de maîtrise ; g144 la 2ᵉ pire et 22,5 %. **Seize explications mesurées, seize réfutées.** Ce qui reste vrai et inexpliqué : trois **constantes posées** calibrent encore le rythme métabolique d'un agent **nouveau-né** (4 épisodes/jour supposés, 1,55 joués), et **9 graines sur 10 sont au plafond exact de `PATIENCE_MAX = 350`** |
+| **Pourquoi ça plafonne au niveau 4** | 🔴 **INCONNU — et la réponse métabolique a été retirée le 29/08/2026.** `maîtrise ~ énergie moyenne` a été citée neuf jours durant comme **r = +0,710** (`t = +2,85`) — mesurée à **n = 10**. À **n = 20** elle vaut **r = −0,0588 (`t = −0,25`)** : le signe s'inverse, le signal disparaît, et un jackknife montre qu'aucune graine ne le portait (r reste dans [−0,168 ; +0,055]). g77 a la 2ᵉ meilleure énergie et 17,3 % de maîtrise ; g144 la 2ᵉ pire et 22,5 %. **Dix-sept explications mesurées, dix-sept réfutées** — la dernière, le barème lui-même, est tombée le 30/08/2026 comme tautologie. Ce qui reste vrai et inexpliqué : trois **constantes posées** calibrent encore le rythme métabolique d'un agent **nouveau-né** (4 épisodes/jour supposés, 1,55 joués), et **9 graines sur 10 sont au plafond exact de `PATIENCE_MAX = 350`** |
 | **v41.31 — le gradient causal** | Masquer le gradient de l'acteur sur les non-transitions donnait maîtrise **+2,57 pts** (`t = +2,68`) sur banc **forcé** `SimpleCrossing`, n=20. 🔴 **Il ne survit PAS au cursus complet.** 20 graines appariées × 1500 jours, cursus libre (40 runs) : niveau **+0,05 (`t = +0,37`)**, maîtrise **+1,09 (`t = +0,39`)**, énergie **+0,001 (`t = +0,07`)** — tout NS, et **0 run sur 40 ne dépasse le niveau 5**. Un banc forcé prouve qu'une mécanique marche *là où elle s'applique*, jamais qu'elle aide ailleurs |
 | **v41.32 — le detach asymétrique (AB3)** | Couper le gradient de C2 dans le tronc partagé assainit le gradient (+25 % d'alignement au banc) et **ne change rien** : 20 graines appariées × 1440 jours, niveau **−0,10 (`t = −0,70`)**, maîtrise **−6,09 (`t = −1,93`)**. La seule métrique significative (ratio C2/C1, `t = +3,82`) est une **tautologie** — la décomposition montre l'amplitude de C1 qui *chute* de 27 % (`t = −3,57`) alors que C2 ne bouge pas (`t = +1,70`, NS). **Dixième réfutation** |
 | **v41.33 — le bit de portage** | Le critique sépare très bien *objet en face* de *mur en face* (d de Cohen **+0,65 à +1,21**) mais **ne savait pas qu'il portait quelque chose** (d ≈ **0,1**, signe instable) — des 41 dims du vecteur bio, **zéro** n'encodait l'inventaire. Ajouter une 42ᵉ dimension **lève la cécité** : d passe de **−0,012 à +1,428**, 18/20 graines, 40 runs. 🔴 **Et ça ne change rien.** Le crédit reste plat (`\|A\| utile / \|A\| neutre` **1,11× → 1,18×**, `t = +1,97`, NS) et aucune métrique comportementale ne bouge. **Douzième réfutation** |
@@ -546,7 +556,7 @@ meilleure énergie (0,3413) pour 17,27 % de maîtrise, **g144** la 2ᵉ pire (0,
 Ce n'est **pas** non plus la rareté des ressources — la densité **par case** est constante
 d'un niveau à l'autre (0,286 sur `Empty-5x5`, 0,293 sur `SimpleCrossingS9N1`).
 
-**Aucune cause mesurée ne survit.** Seize explications ont été testées, seize réfutées.
+**Aucune cause mesurée ne survit.** Dix-sept explications ont été testées, dix-sept réfutées.
 
 **Trois constantes posées décrivent le même agent d'août 2026 :**
 

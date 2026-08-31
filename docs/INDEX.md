@@ -24,6 +24,7 @@ de n=10 à n=20 : **r = −0,0588**.
 | Question | Document |
 |---|---|
 | Où en est le projet, sans enjolivure ? | [`../readme_fr.md`](../readme_fr.md) · [`../readme.md`](../readme.md) (EN) |
+| Le barème posé explique-t-il le plafond ? | [campagnes/COHORTE_30082026](recherche/campagnes/COHORTE_30082026_le_bareme_ne_predit_rien.md) — **non, tautologie** |
 | Que vaut l'agent face à un PPO ? | [campagnes/BASELINE_PPO_29082026](recherche/campagnes/BASELINE_PPO_29082026_le_mur_n_existe_pas.md) |
 | Qu'est-ce qui a changé, version par version ? | [fonctionnement/CHANGELOG.md](fonctionnement/CHANGELOG.md) |
 | Comment lancer quoi que ce soit ? | [fonctionnement/LANCEMENT.md](fonctionnement/LANCEMENT.md) |
@@ -65,6 +66,7 @@ retester une idée déjà écartée.
 
 | Document | Ce qu'il mesure |
 |---|---|
+| [COHORTE_30082026](recherche/campagnes/COHORTE_30082026_le_bareme_ne_predit_rien.md) | 🔴 **17ᵉ réfutation** — le barème ne prédit rien, la corrélation est une **tautologie** (n=40, 0 run) |
 | [BASELINE_PPO_29082026](recherche/campagnes/BASELINE_PPO_29082026_le_mur_n_existe_pas.md) | 🔴 **la ligne de base**, 60 runs — le mur informationnel n'existe pas |
 | [CAMPAGNE_v41_population_et_ablation](recherche/campagnes/CAMPAGNE_v41_population_et_ablation_aout_2026.md) | population + ablation sensorielle, 78 cellules |
 | [CAMPAGNE_n20_17082026](recherche/campagnes/CAMPAGNE_n20_17082026_brain_sparing_valide.md) | brain-sparing validé à n=20 |

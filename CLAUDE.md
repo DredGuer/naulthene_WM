@@ -20,13 +20,22 @@ L'agent progresse à travers un **cursus académique** de **15 niveaux** MiniGri
 
 Ce n'est pas une application produit : c'est un script de recherche exécuté en continu (boucle de jours/ticks), instrumenté avec **Weights & Biases** pour le suivi expérimental — projet public [`Naulthene-AGI`](https://wandb.ai/naultadrien123-nvnc/Naulthene-AGI), ~90 métriques par nuit simulée. Pas de tests automatisés, pas de build — la validation passe par l'observation des courbes W&B et des logs console.
 
-### 🔴 L'ÉTAT RÉEL AU 29/08/2026 — le tableau des suspects est VIDE
+### 🔴 L'ÉTAT RÉEL AU 30/08/2026 — le tableau des suspects est VIDE
 
-**Seize explications du plafond au niveau 4 ont été mesurées et réfutées.** La dernière
-(`maîtrise ~ énergie`, `r = +0,710`) est tombée le 29/08 en passant de n=10 à **n=20** :
-`r = −0,0588`. **Aucune cause mesurée ne survit.**
+**Dix-sept explications du plafond au niveau 4 ont été mesurées et réfutées.** La dernière
+— **le barème lui-même** — est tombée le 30/08 : `r(part_monde, maîtrise) = +0,4191`
+(`t = +2,85`, n=40, répliquée dans les deux bras) est une **TAUTOLOGIE**. MiniGrid ne paie
+qu'à la victoire, donc `part_monde > 0` signifie « ce cerveau a gagné », et la maîtrise
+**est** un taux de victoire. Conditionnellement au fait d'avoir gagné, le signal passe sous
+Bonferroni (`t = +2,34` contre 2,39, n=36). **Aucune cause mesurée ne survit.**
 
-Ce qui est **acquis** de la semaine du 23-29/08 — à ne pas retester :
+⚠️ **Deuxième tautologie en une semaine**, après le ratio C2/C1 (v41.32). **Règle qui en
+découle : une métrique DÉRIVÉE DE LA RÉCOMPENSE ne peut pas prédire la réussite**, puisque
+la récompense *est* la réussite. Avant de corréler quoi que ce soit à la maîtrise, vérifier
+que le prédicteur n'est pas une mesure de victoire déguisée — le test est de conditionner
+sur « a gagné au moins une fois » et de regarder si le signal survit.
+
+Ce qui est **acquis** de la semaine du 23-30/08 — à ne pas retester :
 
 | Piste | Verdict |
 |---|---|
@@ -37,6 +46,7 @@ Ce qui est **acquis** de la semaine du 23-29/08 — à ne pas retester :
 | Dérive de représentation | ❌ `r(dérive, maîtrise) = +0,1386` (NS), et **PPO dérive 10× plus en réussissant mieux** |
 | Coefficient d'entropie | ❌ son gradient pèse **0,44–1,05 %** de celui de l'avantage |
 | Métabolisme (`maîtrise ~ énergie`) | ❌ **r = −0,0588** à n=20 |
+| **Le barème** (`part_monde`, `part_curiosité`) | ❌ **tautologie** — signal sous Bonferroni une fois conditionné (n=40, 2 bras) ; la curiosité **change de signe** entre bras (+0,23 / −0,26) |
 
 ⚠️ **La qualité de la représentation ne prédit RIEN** : `r(d', réussite) = −0,0368` chez PPO,
 qui réussit **2,3× mieux avec un d' 4,5× plus faible**. Le d' élevé de Naulthène (≈ 3,0),

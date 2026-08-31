@@ -4,6 +4,69 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.42] - 2026-08-30 — La cohorte du barème : dix-septième réfutation, en une heure
+
+### 40 cerveaux lus, 0 run lancé · la corrélation était une TAUTOLOGIE
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | feat (instrument) + docs (réfutation) |
+| **Impact** | Critique (ferme la piste ouverte par l'audit du génome la veille) |
+
+**[1] LA PISTE EST FERMÉE.** L'audit v41.41 avait mesuré, sur **un** cerveau, que 95,6 % du
+signal vient de constantes posées. L'hypothèse causale qui en découlait — *« un cerveau qui
+écoute un peu plus le monde s'en sort mieux »* — est **réfutée à n=40**.
+
+| Prédicteur | r (n=40) | t | Réplique A/B ? |
+|---|---:|---:|---|
+| **part du MONDE** | **+0,4191** | **+2,85** 🔴 | ✅ oui (+0,45 / +0,41) |
+| part CURIOSITÉ | −0,0173 | −0,11 | ❌ **le signe s'inverse** (+0,23 / −0,26) |
+| solde hors monde | +0,3745 | +2,49 🔴 | ✅ oui |
+
+**[2] 🔴 MAIS C'EST UNE TAUTOLOGIE.** MiniGrid ne verse `recompense_env` **qu'à la
+victoire**. Donc `part_monde > 0` signifie « ce cerveau a gagné pendant les 800 ticks », et
+`maîtrise` **est** un taux de victoire : les deux comptent la même chose.
+
+| Vérification | r | t | n |
+|---|---:|---:|---|
+| Toute la cohorte | +0,4191 | **+2,85** 🔴 | 40 |
+| **Conditionné sur « a gagné »** | +0,3722 | **+2,34** | **36** |
+
+Sous le seuil de Bonferroni (2,39). Toute la corrélation tenait dans **4 cerveaux** n'ayant
+jamais gagné (maîtrise moyenne 5,00 % contre 14,17 %).
+
+> **Deuxième tautologie en une semaine**, après le ratio C2/C1 (v41.32). Règle qui en
+> découle : **une métrique dérivée de la récompense ne peut pas prédire la réussite**,
+> puisque la récompense *est* la réussite.
+
+**[3] CE QUI SURVIT, NON TAUTOLOGIQUE.** (a) La curiosité ne prédit rien et **son signe
+s'inverse entre les deux bras** — c'est du bruit, alors qu'elle pèse **40,4 %** du signal
+positif. (b) `PENALITE_STAGNATION_BASE` porte **100 % du coût sur 40 cerveaux sur 40** :
+une seule constante posée, sans aucune variation. (c) La part du monde reste dérisoire
+(moyenne **13,0 %**, 4 cerveaux à **0,00 %**) — le constat descriptif de v41.41 **tient à
+n=40**, il est seulement sans pouvoir prédictif.
+
+**[4] MÉTHODE — L'ABLATION QUI N'A PAS ÉTÉ LANCÉE.** Couper la curiosité aurait retiré
+~40 % du signal : effondrement garanti, donc **ininterprétable**. À la place, lecture de la
+variation naturelle sur des cerveaux **déjà existants** : **aucun run**, ~25 min contre
+~48 h. Même méthode que la quinzième réfutation (la dérive).
+
+⚠️ **Vérification préalable exigée par l'utilisateur et effectuée** : que la sonde nettoyée
+en v41.41 soit bien celle qui lit la cohorte — contrôlée sur disque, `__pycache__` **purgé**,
+et module réellement chargé en mémoire (`False`).
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/instruments/cohorte_bareme.py` | **nouveau** — lecture d'une cohorte, test préalable de variation, corrélations avec Bonferroni, sous-processus isolé par cerveau |
+| `docs/recherche/campagnes/COHORTE_30082026_le_bareme_ne_predit_rien.md` | **nouveau** — protocole, résultats, test de tautologie, limites |
+| `brains/30082026_cohorte_bareme/` | `LISEZ_MOI.md` + 2 JSON + 2 logs (agrégats versionnés) |
+| `readme.md` / `readme_fr.md` | réfutation ajoutée en miroir ; compteur 15/16 → **17** |
+| `CLAUDE.md` | état réel au 30/08 ; ligne « barème » au tableau des pistes mortes ; **règle anti-tautologie** |
+| `docs/INDEX.md` | campagne indexée |
+
+---
+
 ## [v41.41] - 2026-08-30 — L'audit du génome : l'agent optimise un barème, pas une tâche
 
 ### 95,6 % du signal vient de constantes posées · un instrument mentait · le compte de naissance était faux
