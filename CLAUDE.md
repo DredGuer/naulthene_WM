@@ -46,6 +46,7 @@ Ce qui est **acquis** de la semaine du 23-30/08 — à ne pas retester :
 | Dérive de représentation | ❌ `r(dérive, maîtrise) = +0,1386` (NS), et **PPO dérive 10× plus en réussissant mieux** |
 | Coefficient d'entropie | ❌ son gradient pèse **0,44–1,05 %** de celui de l'avantage |
 | Métabolisme (`maîtrise ~ énergie`) | ❌ **r = −0,0588** à n=20 |
+| **Récompense creuse / attribution du crédit** | ❌ **la prémisse est FAUSSE** — 86 % du signal est **dense** (versé chaque tick), 14 % seulement vient du monde. Normaliser les retours **par épisode** est mesuré **PIRE** que le code actuel (contraste 3,00× → 0,94× ; **60 tirages sur 60**). MC reste le moins mauvais des trois avantages (mesuré 27/08) |
 | **Le barème** (`part_monde`, `part_curiosité`) | ❌ **tautologie** — signal sous Bonferroni une fois conditionné (n=40, 2 bras) ; la curiosité **change de signe** entre bras (+0,23 / −0,26) |
 
 ⚠️ **La qualité de la représentation ne prédit RIEN** : `r(d', réussite) = −0,0368` chez PPO,

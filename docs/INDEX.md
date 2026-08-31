@@ -56,6 +56,7 @@ retester une idée déjà écartée.
 | [CONDITIONNEMENT_27082026](recherche/enquetes_closes/CONDITIONNEMENT_27082026_le_signal_arrive_et_ne_sert_a_rien.md) | le signal perceptif **arrive** aux logits — pas un défaut de câblage |
 | [CREDIT_27082026](recherche/enquetes_closes/CREDIT_27082026_l_arrosage_confirme_et_la_vue_orpheline.md) | l'arrosage du crédit ; l'acteur/critique envoient **0,000000** à la vue |
 | [CLIC_27082026](recherche/enquetes_closes/CLIC_27082026_le_td_error_ne_sauve_rien.md) | TD(0) et GAE ne contrastent pas — **mesuré avant d'être codé** |
+| [CREUX_30082026](recherche/enquetes_closes/CREUX_30082026_la_recompense_n_est_pas_creuse.md) | 🔴 la récompense **n'est pas creuse** (86 % dense) — et normaliser par épisode est **pire** (60/60) |
 | [COLLAPSE_28082026](recherche/enquetes_closes/COLLAPSE_28082026_le_plafond_est_geometrique.md) | ⚠️ **contient sa propre rétractation** : le cosinus saturait |
 | [CIBLE_MOBILE_28082026](recherche/enquetes_closes/CIBLE_MOBILE_28082026_la_tete_poursuit_un_axe_qui_fuit.md) | la dérive de représentation ⚠️ chiffres ×46 **retirés** |
 | [COURSE_29082026](recherche/enquetes_closes/COURSE_29082026_le_predateur_recule.md) | la course mesurée proprement : ×11,7, l'alignement **recule** |
