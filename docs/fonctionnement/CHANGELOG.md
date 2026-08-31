@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `4fdfb31` |
 | **Catégorie** | feat (instrument) + docs (réfutation) |
 | **Impact** | Critique (ferme la piste ouverte par l'audit du génome la veille) |
 
