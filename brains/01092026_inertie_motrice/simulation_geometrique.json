@@ -1,0 +1,91 @@
+{
+  "description": "Simulation geometrique pure, sans cerveau : 324 ticks, 200 graines.",
+  "n_graines": 200,
+  "n_ticks": 324,
+  "points": [
+    {
+      "mode": "logits",
+      "k": 0,
+      "deplacement_net_moyen": 8.646229067507877,
+      "cases_distinctes": 33.915,
+      "taux_repetition": 0.14155864197530865
+    },
+    {
+      "mode": "logits",
+      "k": 0.5,
+      "deplacement_net_moyen": 8.329467689443469,
+      "cases_distinctes": 33.72,
+      "taux_repetition": 0.16077160493827158
+    },
+    {
+      "mode": "logits",
+      "k": 0.7,
+      "deplacement_net_moyen": 8.793731050443263,
+      "cases_distinctes": 33.97,
+      "taux_repetition": 0.15640432098765433
+    },
+    {
+      "mode": "logits",
+      "k": 0.9,
+      "deplacement_net_moyen": 8.677619306914245,
+      "cases_distinctes": 34.055,
+      "taux_repetition": 0.14976851851851852
+    },
+    {
+      "mode": "logits",
+      "k": 0.97,
+      "deplacement_net_moyen": 9.622010697064736,
+      "cases_distinctes": 35.11,
+      "taux_repetition": 0.14964506172839506
+    },
+    {
+      "mode": "proba",
+      "k": 0.5,
+      "deplacement_net_moyen": 9.17364370636398,
+      "cases_distinctes": 34.015,
+      "taux_repetition": 0.1612962962962963
+    },
+    {
+      "mode": "proba",
+      "k": 0.7,
+      "deplacement_net_moyen": 9.091712153992967,
+      "cases_distinctes": 34.265,
+      "taux_repetition": 0.15626543209876545
+    },
+    {
+      "mode": "proba",
+      "k": 0.9,
+      "deplacement_net_moyen": 8.652390532633957,
+      "cases_distinctes": 34.21,
+      "taux_repetition": 0.15003086419753087
+    },
+    {
+      "mode": "repet",
+      "k": 1,
+      "deplacement_net_moyen": 9.537983232253259,
+      "cases_distinctes": 35.785,
+      "taux_repetition": 0.2776851851851852
+    },
+    {
+      "mode": "repet",
+      "k": 2,
+      "deplacement_net_moyen": 11.587198474961843,
+      "cases_distinctes": 36.58,
+      "taux_repetition": 0.4625617283950617
+    },
+    {
+      "mode": "repet",
+      "k": 3,
+      "deplacement_net_moyen": 16.25111110818367,
+      "cases_distinctes": 38.84,
+      "taux_repetition": 0.6569753086419752
+    },
+    {
+      "mode": "repet",
+      "k": 5,
+      "deplacement_net_moyen": 27.84768485628133,
+      "cases_distinctes": 42.265,
+      "taux_repetition": 0.9104629629629629
+    }
+  ]
+}

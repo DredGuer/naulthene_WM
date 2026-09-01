@@ -223,10 +223,22 @@ def main() -> None:
                                        horizons_planification=(1, 3, 7),
                                        gamma_planif=0.9)
                 logits = sortie[0]
-                memoire = sortie[1] if torch.is_tensor(sortie[1]) and \
-                    sortie[1].shape[-1] == modele.dim_bus else memoire
-                if torch.is_tensor(memoire) and memoire.shape[-1] == modele.dim_bus:
-                    episodiques.append(memoire.detach())
+                # ⚠️ CORRIGÉ le 01/09/2026 — la mémoire de travail est en **[4]**
+                # (`memoire_actuelle`), pas en [1] qui est la VALEUR d'état (1,1). Le
+                # garde-fou `shape[-1] == dim_bus` rejetait donc [1] à CHAQUE tick et
+                # l'agent jouait à mémoire NULLE et contexte épisodique VIDE. Les
+                # chiffres publiés les 30-31/08 sont mesurés dans ce régime : ils
+                # décrivent un agent amputé, pas la politique réelle. Voir
+                # docs/recherche/enquetes_closes/INSTRUMENT_01092026_la_memoire_du_banc.md
+                memoire = sortie[4]
+                # ⚠️ Un banc qui rejoue une politique DOIT vérifier que son état interne
+                # évolue. Une mémoire restée nulle est le symptôme d'un canal débranché,
+                # au même titre qu'une ablation à delta +0,0 sur toutes ses cellules.
+                if memoire.shape[-1] != modele.dim_bus:
+                    raise RuntimeError(
+                        f"mémoire de travail de forme {tuple(memoire.shape)} au lieu de "
+                        f"(1, {modele.dim_bus}) — le banc mesurerait un agent amputé")
+                episodiques.append(memoire.detach())
                 pr = torch.softmax(logits.squeeze(0)[:7], dim=-1).cpu().numpy()
                 if not np.isfinite(pr).all() or pr.sum() <= 0:
                     raise RuntimeError("politique dégénérée — le banc mesurerait du bruit")

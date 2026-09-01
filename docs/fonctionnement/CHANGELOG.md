@@ -4,6 +4,84 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.47] - 2026-09-01 — L'inertie motrice réfutée, et le banc qui jouait sans mémoire
+
+### La prémisse était fausse · un défaut d'instrument qui touche les 30-31/08
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | fix (instrument) + docs (mesure) |
+| **Impact** | Critique (invalide des chiffres publiés) |
+
+**[1] ❌ L'INERTIE MOTRICE EST RÉFUTÉE — SUR SA PRÉMISSE.** Proposition testée :
+`L_t = λ·L_{t-1} + (1−λ)·logits_t` pour donner une masse cinématique à la décision et
+tendre le trajet (directivité 18× → 3–5× visé).
+
+**La prémisse — « la tête motrice tire dans une multinomiale INDÉPENDANTE à chaque tick » —
+est FAUSSE.** Mesuré sur 400 ticks : l'**autocorrélation lag-1 des logits vaut 0,685 à
+0,847** selon l'action. La mémoire de travail et le contexte épisodique fournissent déjà le
+lissage temporel. La variation temporelle (σ 0,066–0,223) est **2,5× à 8× plus petite** que
+l'écart entre actions au même tick (σ = 0,567) : la politique est **stable dans le temps et
+tranchée dans l'espace**. `P(forward) = 0,409`, soit 2,9× l'uniforme.
+
+**Le mécanisme du non-effet est algébrique** : le filtre AR corrèle les logits MAIS divise
+leur variance par `√((1−λ)/(1+λ))`, ce qui aplatit le softmax vers l'uniforme. Les deux
+effets s'annulent — mesuré : à λ=0,9 le taux de répétition revient à **0,1481**, soit
+l'uniforme (1/7 = 0,1429). Simulation géométrique (200 graines × 324 ticks, sans cerveau) :
+déplacement net **8,65 → 8,68 cases** de λ=0 à λ=0,9. Formulation alternative sur les
+probabilités : **identique**. Température : **identique**.
+
+**Ce qui marcherait, et que le projet n'a pas** : un bonus sur l'action EFFECTIVEMENT jouée
+au tick précédent — déplacement **8,65 → 27,85 cases** (×3,2), répétition 0,14 → 0,91.
+Moyenner les ENTRÉES n'est pas biaiser vers la SORTIE.
+
+**[2] 🔴 DÉFAUT D'INSTRUMENT — LE BANC JOUAIT À MÉMOIRE NULLE.** Trouvé par accident en
+cherchant autre chose. `penser()` retourne 8 valeurs ; la mémoire de travail est en **[4]**
+(`memoire_actuelle`), les trois sondes de banc lisaient **[1]** (`valeur_etat_courant`, un
+scalaire de forme `(1,1)`). Un garde-fou `shape[-1] == dim_bus` la rejetait donc **à chaque
+tick, en silence** : `memoire` restait à zéro et `episodiques` n'était jamais alimenté.
+
+**L'agent mesuré était amputé de sa mémoire de travail ET de son contexte épisodique.**
+
+| Grandeur (`A_g66`) | Mesuré amputé | Corrigé | δ |
+|---|---|---|---|
+| Succès au banc | 37,33 % | **40,00 %** | **+2,67 pt** |
+| Directivité | 14,21× | **14,92×** | +0,71 |
+| Témoin neuf (Xavier) | 22,67 % | 22,67 % | — |
+| Témoin aléatoire | 5,67 % | **5,67 %** | **0,00** |
+
+⚠️ **Ni l'A/A ni les 20 graines n'ont attrapé ce défaut** : le banc était parfaitement
+déterministe (δ_A/A = 0,000000) et reproductible. Il mesurait juste, avec constance,
+**autre chose que ce qu'il annonçait**. Règle qui en découle : **un garde-fou de forme doit
+CRIER quand il rejette**, jamais retomber en silence sur une valeur par défaut — même motif
+que le bug v41.4 (drapeau n'atteignant pas le module) et que `SEUIL_CRISTAL` (branche
+exécutée chaque nuit, jamais déclenchée).
+
+**Portée** : tous les chiffres de banc des 30-31/08. `r(directivité, succès) = −0,8225` est
+**NON ÉTABLIE** jusqu'à réexécution de la cohorte. **Non affecté** : mesures lues dans les
+`.brain`, ligne de base PPO, témoin aléatoire, simulation géométrique, `sonde_recompense`.
+Le **sens** des conclusions tient (la compétence reste réelle, et l'écart à l'aléatoire ne
+peut que grandir), les **valeurs** sont à reprendre.
+
+**[3] 🟡 42 % DU BUDGET EN GESTES STÉRILES** (mesure directe, n=1, à porter à n=20).
+Sur 15 738 ticks : `forward` 41,0 %, rotations 17,0 %, **stériles 42,0 %**
+(`pickup`/`drop`/`toggle`/`done`, impossibles sur `SimpleCrossing`). L'hypothèse « le cap
+n'est pas maintenu à travers les rotations » est **réfutée** : salves de rotations de
+longueur médiane **1**, et seulement **8,3 %** s'annulent deux à deux. La v41.28 avait
+mesuré 57,2 % de stériles et corrigé leur **coût** ; le taux n'a baissé que d'un quart.
+⚠️ Ce chiffre est mesuré avec le défaut [2] et devra être repris.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/instruments/sonde_plancher_geometrique.py` | mémoire lue en `[4]` + garde-fou **bruyant** |
+| `src/naulthene/instruments/sonde_inertie_motrice.py` | **nouveau** — banc d'inertie, témoin aléatoire sous inertie |
+| `src/naulthene/instruments/sonde_gestes_steriles.py` | **nouveau** — part des gestes stériles et sans effet |
+| `CLAUDE.md`, `readme.md`, `readme_fr.md` | réserve d'instrument (règle de miroir respectée) |
+| `docs/recherche/enquetes_closes/` | 2 documents neufs (inertie, instrument) |
+
+---
+
 ## [v41.46] - 2026-09-01 — La Règle de Trace, et la valence qui n'atteint pas la décision
 
 ### Troisième dogme : « rien sans écrit » · le renforcement secondaire existe déjà

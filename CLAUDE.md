@@ -61,6 +61,18 @@ plancher géométrique : sur `SimpleCrossingS9N1`, un marcheur aléatoire fait *
 (trajet optimal médian **12 pas**, budget 324 ticks). `r(succès, directivité) = −0,92` — la
 compétence existe et n'est **pas** une trajectoire dirigée.
 
+🔴 **RÉSERVE D'INSTRUMENT (01/09/2026) — les deux blocs qui suivent sont à re-mesurer.**
+La sonde de banc lisait la mémoire de travail en `penser()[1]` (la VALEUR, un scalaire) au
+lieu de `[4]`, et un garde-fou sur `dim_bus` la rejetait **en silence** : tous les chiffres
+de banc des 30-31/08 décrivent un agent **sans mémoire de travail ni contexte épisodique**.
+Re-mesuré sur `A_g66` : succès **37,33 % → 40,00 %**, directivité **14,21× → 14,92×**. Le
+**sens** tient (l'aléatoire reste à 5,67 %, la compétence reste réelle, et l'écart avec
+l'aléatoire ne peut que grandir), mais **`r(directivité, succès) = −0,8225` est NON ÉTABLIE**
+tant que la cohorte n'est pas rejouée. ⚠️ Ni l'A/A (δ = 0,000000) ni les 20 graines n'ont
+attrapé ce défaut : le banc était déterministe et reproductible, il mesurait simplement
+**autre chose que ce qu'il annonçait**. Voir
+`docs/recherche/enquetes_closes/INSTRUMENT_01092026_la_memoire_du_banc.md`.
+
 🔴 **LE GOULOT EST MOTEUR — mesuré à n=20 le 31/08/2026.** La **directivité** (longueur du
 trajet victorieux rapportée au plus court chemin réel) est le **premier prédicteur
 significatif du dépôt** : `r(directivité, succès) = −0,8225`, `t = −5,96`, n=19 —

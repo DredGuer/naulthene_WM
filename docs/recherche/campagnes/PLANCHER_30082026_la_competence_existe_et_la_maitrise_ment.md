@@ -2,6 +2,17 @@
 
 **30/08/2026** · `recherche/campagnes/` · ⚠️ **n = 4 cerveaux** — sous la barre des 20
 
+
+> 🔴 **RÉSERVE D'INSTRUMENT — ajoutée le 01/09/2026.** Les chiffres de banc de ce document
+> ont été produits par une sonde qui lisait la mémoire de travail au mauvais index
+> (`penser()[1]`, la VALEUR, au lieu de `[4]`), un garde-fou la rejetant **en silence** :
+> l'agent jouait **sans mémoire de travail ni contexte épisodique**. Re-mesuré sur `A_g66`,
+> le succès passe de **37,33 % à 40,00 %** et la directivité de **14,21× à 14,92×**.
+> Le **sens** des conclusions n'est pas inversé (l'aléatoire reste à 5,67 %, la compétence
+> reste réelle), mais **les valeurs numériques sont à reprendre** et `r = −0,8225` est
+> **non établie** tant que la cohorte n'est pas rejouée.
+> Voir `docs/recherche/enquetes_closes/INSTRUMENT_01092026_la_memoire_du_banc.md`.
+
 ## La question posée
 
 Dix-huit variables internes ne corrèlent avec la maîtrise. D'où l'hypothèse :

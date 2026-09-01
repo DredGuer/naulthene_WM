@@ -1,0 +1,50 @@
+{
+  "cerveau": "A_g66",
+  "env": "MiniGrid-SimpleCrossingS9N1-v0",
+  "episodes": 300,
+  "graine": 90210,
+  "dim_bus": 158,
+  "bras": {
+    "cerveau_lam0.0": {
+      "lambda": 0.0,
+      "politique": "cerveau",
+      "taux": 0.37333333333333335,
+      "lo": 0.32052375567605285,
+      "hi": 0.4293459132567069,
+      "n_victoires": 112,
+      "directivite_mediane": 14.208333333333334,
+      "part_forward": 0.41017423154976984,
+      "distribution_actions": [
+        7108,
+        6742,
+        33147,
+        5217,
+        8413,
+        9982,
+        10203
+      ]
+    },
+    "aleatoire_lam0.0": {
+      "lambda": 0.0,
+      "politique": "aleatoire",
+      "taux": 0.056666666666666664,
+      "lo": 0.03567717591318777,
+      "hi": 0.08886666535147117,
+      "n_victoires": 17,
+      "directivite_mediane": 21.416666666666668,
+      "part_forward": 0.14370813946209862,
+      "distribution_actions": [
+        13664,
+        13749,
+        13775,
+        13776,
+        13739,
+        13520,
+        13631
+      ]
+    }
+  },
+  "maitrise_run": 30.0,
+  "jour": 1440,
+  "niveau": 3
+}

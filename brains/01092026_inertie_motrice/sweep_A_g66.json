@@ -1,0 +1,126 @@
+{
+  "cerveau": "A_g66",
+  "env": "MiniGrid-SimpleCrossingS9N1-v0",
+  "episodes": 300,
+  "graine": 90210,
+  "dim_bus": 158,
+  "bras": {
+    "cerveau_lam0.5": {
+      "lambda": 0.5,
+      "politique": "cerveau",
+      "taux": 0.36666666666666664,
+      "lo": 0.3141405831655016,
+      "hi": 0.4225643315005612,
+      "n_victoires": 110,
+      "directivite_mediane": 14.083333333333334,
+      "part_forward": 0.41058954669308895,
+      "distribution_actions": [
+        7057,
+        6834,
+        33151,
+        5161,
+        8368,
+        10019,
+        10150
+      ]
+    },
+    "cerveau_lam0.7": {
+      "lambda": 0.7,
+      "politique": "cerveau",
+      "taux": 0.32,
+      "lo": 0.26977448682270544,
+      "hi": 0.37477714797647943,
+      "n_victoires": 96,
+      "directivite_mediane": 13.583333333333334,
+      "part_forward": 0.41052889624318195,
+      "distribution_actions": [
+        7169,
+        6866,
+        33493,
+        5232,
+        8450,
+        10168,
+        10207
+      ]
+    },
+    "cerveau_lam0.9": {
+      "lambda": 0.9,
+      "politique": "cerveau",
+      "taux": 0.3333333333333333,
+      "lo": 0.2823925597902556,
+      "hi": 0.3884885835423229,
+      "n_victoires": 100,
+      "directivite_mediane": 13.041666666666666,
+      "part_forward": 0.41079677028070133,
+      "distribution_actions": [
+        7103,
+        6864,
+        33528,
+        5305,
+        8438,
+        10115,
+        10264
+      ]
+    },
+    "aleatoire_lam0.5": {
+      "lambda": 0.5,
+      "politique": "aleatoire",
+      "taux": 0.05333333333333334,
+      "lo": 0.03309162538404202,
+      "hi": 0.08486983874726851,
+      "n_victoires": 16,
+      "directivite_mediane": 22.791666666666664,
+      "part_forward": 0.1422282954509894,
+      "distribution_actions": [
+        13657,
+        13653,
+        13635,
+        13870,
+        13830,
+        13562,
+        13660
+      ]
+    },
+    "aleatoire_lam0.7": {
+      "lambda": 0.7,
+      "politique": "aleatoire",
+      "taux": 0.04,
+      "lo": 0.02302709213793877,
+      "hi": 0.06860486345997804,
+      "n_victoires": 12,
+      "directivite_mediane": 21.166666666666664,
+      "part_forward": 0.14179189730914227,
+      "distribution_actions": [
+        13746,
+        13739,
+        13653,
+        13833,
+        13998,
+        13663,
+        13657
+      ]
+    },
+    "aleatoire_lam0.9": {
+      "lambda": 0.9,
+      "politique": "aleatoire",
+      "taux": 0.056666666666666664,
+      "lo": 0.03567717591318777,
+      "hi": 0.08886666535147117,
+      "n_victoires": 17,
+      "directivite_mediane": 19.833333333333332,
+      "part_forward": 0.1415873679807592,
+      "distribution_actions": [
+        13712,
+        13677,
+        13540,
+        13778,
+        13651,
+        13696,
+        13576
+      ]
+    }
+  },
+  "maitrise_run": 30.0,
+  "jour": 1440,
+  "niveau": 3
+}

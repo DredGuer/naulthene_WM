@@ -59,6 +59,8 @@ retester une idée déjà écartée.
 | [CREUX_30082026](recherche/enquetes_closes/CREUX_30082026_la_recompense_n_est_pas_creuse.md) | 🔴 la récompense **n'est pas creuse** (86 % dense) — et normaliser par épisode est **pire** (60/60) |
 | [DIETE_30082026](recherche/enquetes_closes/DIETE_30082026_la_curiosite_est_une_rente_sans_effet.md) | 🔴 la curiosité est une **rente permanente** (40 % du signal) qui **ne prédit rien** — 15,0 % vs 15,0 % |
 | [VALENCE_31082026](recherche/enquetes_closes/VALENCE_31082026_la_carte_est_vide_a_cet_endroit.md) | le renforcement secondaire **existe** (+0,84 sur les portes) mais **n'atteint pas la décision** — la carte est presque vide (6 confirmations contre 8 621) |
+| [INERTIE_01092026](recherche/enquetes_closes/INERTIE_01092026_la_decision_est_deja_lisse.md) | ❌ l'inertie motrice réfutée **sur sa prémisse** — la décision est déjà autocorrélée à **0,69–0,85** |
+| [INSTRUMENT_01092026](recherche/enquetes_closes/INSTRUMENT_01092026_la_memoire_du_banc.md) | 🔴 **correction d'instrument** — le banc jouait à **mémoire nulle** depuis le 30/08 ; `r = −0,8225` non établie |
 | [COLLAPSE_28082026](recherche/enquetes_closes/COLLAPSE_28082026_le_plafond_est_geometrique.md) | ⚠️ **contient sa propre rétractation** : le cosinus saturait |
 | [CIBLE_MOBILE_28082026](recherche/enquetes_closes/CIBLE_MOBILE_28082026_la_tete_poursuit_un_axe_qui_fuit.md) | la dérive de représentation ⚠️ chiffres ×46 **retirés** |
 | [COURSE_29082026](recherche/enquetes_closes/COURSE_29082026_le_predateur_recule.md) | la course mesurée proprement : ×11,7, l'alignement **recule** |
