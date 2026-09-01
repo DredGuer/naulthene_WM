@@ -69,6 +69,7 @@ retester une idée déjà écartée.
 | Document | Ce qu'il mesure |
 |---|---|
 | [COHORTE_30082026](recherche/campagnes/COHORTE_30082026_le_bareme_ne_predit_rien.md) | 🔴 **17ᵉ réfutation** — le barème ne prédit rien, la corrélation est une **tautologie** (n=40, 0 run) |
+| [DIRECTIVITE_31082026](recherche/campagnes/DIRECTIVITE_31082026_le_goulot_est_moteur.md) | 🔴 **le premier prédicteur significatif** — `r(directivité, succès) = −0,82` (`t = −5,96`, n=19), **68 % de la variance** |
 | [PLANCHER_30082026](recherche/campagnes/PLANCHER_30082026_la_competence_existe_et_la_maitrise_ment.md) | ✅ la compétence **existe** (25,8 % vs 5,7 % aléatoire) mais les victoires sont **browniennes** (14–18× l'optimal) — n=4 |
 | [BASELINE_PPO_29082026](recherche/campagnes/BASELINE_PPO_29082026_le_mur_n_existe_pas.md) | 🔴 **la ligne de base**, 60 runs — le mur informationnel n'existe pas |
 | [CAMPAGNE_v41_population_et_ablation](recherche/campagnes/CAMPAGNE_v41_population_et_ablation_aout_2026.md) | population + ablation sensorielle, 78 cellules |

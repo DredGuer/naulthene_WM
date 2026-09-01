@@ -61,13 +61,30 @@ plancher géométrique : sur `SimpleCrossingS9N1`, un marcheur aléatoire fait *
 (trajet optimal médian **12 pas**, budget 324 ticks). `r(succès, directivité) = −0,92` — la
 compétence existe et n'est **pas** une trajectoire dirigée.
 
-🟡 **Un fait non expliqué, à n=4 donc SANS VALEUR encore** : le succès au banc est
-**inversement** ordonné à la maîtrise en run (`r = −0,89`, `t = −2,72` contre un seuil de
-4,30). Si cela se confirmait sur 20 cerveaux, `historique_episodes_niveau` — la maîtrise qui
-déclenche les promotions et à laquelle **dix-huit hypothèses ont été corrélées** — ne
-mesurerait pas la compétence. ⚠️ Un confondage a failli produire une fausse découverte : sur
-les 3 premiers cerveaux `dim_bus` décroissait exactement dans l'ordre (`r = +0,99` avec la
-maîtrise) ; le 4ᵉ l'a cassé (`r(dim_bus, banc)` : −0,97 → **+0,16**).
+🔴 **LE GOULOT EST MOTEUR — mesuré à n=20 le 31/08/2026.** La **directivité** (longueur du
+trajet victorieux rapportée au plus court chemin réel) est le **premier prédicteur
+significatif du dépôt** : `r(directivité, succès) = −0,8225`, `t = −5,96`, n=19 —
+**68 % de la variance** (contre 16 % pour la maîtrise). Trois vérifications passées : pas de
+saturation de budget (plafond 27,0×, pire cerveau 22,83×, 0 au plafond), pas de tautologie
+(`B_g122` a 0,00 % de succès et **aucune** directivité définie), et le lien **survit au
+retrait des 4 extrêmes** (`r = −0,78`, `t = −3,27`). Ce qui sépare un cerveau à 3 % d'un
+cerveau à 37 % est son **coefficient de diffusion spatiale** (22,8× contre 13,9×) — ni la
+perception, ni la taille, ni le métabolisme, ni le barème. ⚠️ Corrélationnel : la causalité
+n'est **pas** établie.
+
+⚠️ **RÉTRACTATION du 31/08** : j'ai rapporté le 30/08 une **inversion** `r = −0,89` entre
+maîtrise en run et succès au banc, sur **4 cerveaux**. C'était un **biais de sélection que
+j'avais introduit** — ces quatre-là avaient tous une maîtrise élevée (25–45 %, écart-type
+7,4). Dès le 5ᵉ point, `r` passait de **−0,89 à +0,35** ; à n=20 il vaut **+0,3961**
+(`t = +1,83`, NS). Même mécanisme que `maîtrise ~ énergie` (+0,710 à n=10 → −0,059 à n=20).
+**Sur une plage étroite et tronquée, le bruit domine la pente.**
+
+🟡 **Ce qui reste vrai, et qui compte** : `historique_episodes_niveau` n'est pas faux, il est
+**BRUITÉ** — variance inter-strates 1425 contre intra-strate 1235 (ratio **1,15**), et il
+n'explique que **16 %** de la variance de la compétence réelle. À maîtrise identique, deux
+cerveaux vont de **3,00 % à 28,67 %**. Les dix-huit réfutations ne sont pas invalidées, mais
+celles qui reposaient sur cette seule sortie avaient une **puissance plus faible
+qu'annoncé**.
 
 ⚠️ **LE TÉMOIN « CERVEAU NEUF » EST INUTILISABLE** : un réseau Xavier non entraîné a un
 **biais d'action arbitraire** selon sa graine (42 % avancer · 70 % tourner · 87 % done),

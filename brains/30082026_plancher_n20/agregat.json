@@ -1,0 +1,184 @@
+{
+  "n": 20,
+  "env": "MiniGrid-SimpleCrossingS9N1-v0",
+  "episodes": 300,
+  "temoin_aleatoire": "17/300 = 5,67 % sur les 20 runs",
+  "points": [
+    {
+      "nom": "A_g155",
+      "bus": 145,
+      "maitrise_run": 45.0,
+      "banc": 7.67,
+      "directivite": 18.08,
+      "vague": 1
+    },
+    {
+      "nom": "A_g122",
+      "bus": 137,
+      "maitrise_run": 35.0,
+      "banc": 27.33,
+      "directivite": 16.33,
+      "vague": 1
+    },
+    {
+      "nom": "A_g166",
+      "bus": 132,
+      "maitrise_run": 25.0,
+      "banc": 31.0,
+      "directivite": 16.42,
+      "vague": 1
+    },
+    {
+      "nom": "A_g66",
+      "bus": 158,
+      "maitrise_run": 30.0,
+      "banc": 37.33,
+      "directivite": 14.21,
+      "vague": 1
+    },
+    {
+      "nom": "A_g11",
+      "bus": 145,
+      "maitrise_run": 5.0,
+      "banc": 1.0,
+      "directivite": 20.5,
+      "alea_k": 17,
+      "vague": 2
+    },
+    {
+      "nom": "A_g111",
+      "bus": 78,
+      "maitrise_run": 5.0,
+      "banc": 15.0,
+      "directivite": 14.833333333333334,
+      "alea_k": 17,
+      "vague": 2
+    },
+    {
+      "nom": "A_g133",
+      "bus": 147,
+      "maitrise_run": 25.0,
+      "banc": 28.999999999999996,
+      "directivite": 13.833333333333334,
+      "alea_k": 17,
+      "vague": 2
+    },
+    {
+      "nom": "A_g144",
+      "bus": 91,
+      "maitrise_run": 0.0,
+      "banc": 1.3333333333333335,
+      "directivite": 22.25,
+      "alea_k": 17,
+      "vague": 2
+    },
+    {
+      "nom": "A_g177",
+      "bus": 149,
+      "maitrise_run": 25.0,
+      "banc": 3.3333333333333335,
+      "directivite": 19.208333333333336,
+      "alea_k": 17,
+      "vague": 2
+    },
+    {
+      "nom": "A_g188",
+      "bus": 149,
+      "maitrise_run": 5.0,
+      "banc": 20.666666666666668,
+      "directivite": 13.916666666666666,
+      "alea_k": 17,
+      "vague": 2
+    },
+    {
+      "nom": "A_g222",
+      "bus": 145,
+      "maitrise_run": 20.0,
+      "banc": 7.333333333333333,
+      "directivite": 16.791666666666664,
+      "alea_k": 17,
+      "vague": 2
+    },
+    {
+      "nom": "A_g33",
+      "bus": 141,
+      "maitrise_run": 20.0,
+      "banc": 11.0,
+      "directivite": 19.166666666666668,
+      "alea_k": 17,
+      "vague": 2
+    },
+    {
+      "nom": "A_g44",
+      "bus": 157,
+      "maitrise_run": 0.0,
+      "banc": 1.3333333333333335,
+      "directivite": 22.75,
+      "alea_k": 17,
+      "vague": 2
+    },
+    {
+      "nom": "A_g77",
+      "bus": 145,
+      "maitrise_run": 10.0,
+      "banc": 9.333333333333334,
+      "directivite": 18.541666666666668,
+      "alea_k": 17,
+      "vague": 2
+    },
+    {
+      "nom": "B_g11",
+      "bus": 92,
+      "maitrise_run": 35.0,
+      "banc": 3.0,
+      "directivite": 22.166666666666668,
+      "alea_k": 17,
+      "vague": 2
+    },
+    {
+      "nom": "B_g122",
+      "bus": 145,
+      "maitrise_run": 20.0,
+      "banc": 0.0,
+      "directivite": null,
+      "alea_k": 17,
+      "vague": 2
+    },
+    {
+      "nom": "B_g144",
+      "bus": 150,
+      "maitrise_run": 35.0,
+      "banc": 28.666666666666668,
+      "directivite": 14.666666666666668,
+      "alea_k": 17,
+      "vague": 2
+    },
+    {
+      "nom": "B_g188",
+      "bus": 153,
+      "maitrise_run": 25.0,
+      "banc": 13.0,
+      "directivite": 15.666666666666666,
+      "alea_k": 17,
+      "vague": 2
+    },
+    {
+      "nom": "B_g211",
+      "bus": 155,
+      "maitrise_run": 40.0,
+      "banc": 15.333333333333332,
+      "directivite": 18.041666666666664,
+      "alea_k": 17,
+      "vague": 2
+    },
+    {
+      "nom": "B_g44",
+      "bus": 147,
+      "maitrise_run": 10.0,
+      "banc": 2.3333333333333335,
+      "directivite": 22.833333333333332,
+      "alea_k": 17,
+      "vague": 2
+    }
+  ]
+}

@@ -157,6 +157,8 @@ def main() -> None:
     p.add_argument("--env", default=ENV_DEFAUT)
     p.add_argument("--episodes", type=int, default=300)
     p.add_argument("--graine", type=int, default=90210)
+    p.add_argument("--json", default=None,
+                   help="chemin d'un JSON de résultats (agrégation sans reparser les logs)")
     p.add_argument("--patience", type=int, default=None,
                    help="troncature volontaire (défaut : max_steps de la carte). "
                         "La patience réelle mesurée en run est de ~258 ticks.")
@@ -272,6 +274,28 @@ def main() -> None:
         print("     tirage. Le score mesure une compétence réelle, si faible soit-elle.")
     print("\n  ⚠️ Référence : sur ce même niveau et ce même budget, PPO atteint 27,1–39,8 %")
     print("     (60 runs, δ_A/A = 0,000000).")
+    if a.json:
+        import json as _json
+        # La maîtrise est lue DANS le .brain, jamais recalculée — même règle que
+        # `cohorte_bareme` : l'agrégat doit survivre à la perte des logs (leçon du 22/08).
+        ck = torch.load(a.brain, map_location="cpu", weights_only=False)
+        h = ck.get("historique_episodes_niveau", []) or []
+        charge = {
+            "cerveau": os.path.basename(a.brain).replace(".brain", ""),
+            "env": a.env, "episodes": a.episodes,
+            "dim_bus": ck.get("dim_bus"), "jour": ck.get("jour"),
+            "niveau": ck.get("niveau_actuel"),
+            "maitrise_run": (100.0 * sum(1 for x in h if x) / len(h)) if h else None,
+            "resultats": {
+                lab: {"taux": t, "lo": lo, "hi": hi, "n_victoires": len(tr),
+                      "directivite_mediane": (float(np.median([x / y for x, y in tr]))
+                                              if tr else None)}
+                for lab, (t, tr, lo, hi) in resultats.items()
+            },
+        }
+        with open(a.json, "w", encoding="utf-8") as f:
+            _json.dump(charge, f, ensure_ascii=False, indent=2)
+        print(f"\n  📄 {a.json}")
     try:
         os.remove(copie)
     except OSError:

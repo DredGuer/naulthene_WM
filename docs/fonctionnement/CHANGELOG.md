@@ -4,6 +4,74 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.45] - 2026-08-31 — La directivité : le premier prédicteur significatif du dépôt
+
+### n=20 · le goulot est MOTEUR · et une rétractation de ma part
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | feat (instrument) + docs (mesure) |
+| **Impact** | Critique (réoriente la question du projet) |
+
+**[1] 🔴 LE PREMIER PRÉDICTEUR SIGNIFICATIF.** Sur **20 cerveaux**, `SimpleCrossingS9N1`,
+300 épisodes, graines de carte appariées :
+
+| Prédicteur | `r` | `t` | `r²` | Verdict (seuil 2,39) |
+|---|---:|---:|---:|---|
+| **Directivité** | **−0,8225** | **−5,96** | **0,677** | 🔴 **SIGNIFICATIF** |
+| Maîtrise run | +0,3961 | +1,83 | 0,157 | non significatif |
+| `dim_bus` | +0,1936 | +0,84 | 0,037 | non significatif |
+
+Trois vérifications passées : **pas de saturation de budget** (plafond `324/12 = 27,0×`,
+pire cerveau **22,83×**, 0 sur 13 au-dessus de 24×) ; **pas de tautologie** (`B_g122` fait
+**0,00 %** de succès avec **aucune** directivité définie — les grandeurs sont
+indépendantes) ; **survit au retrait des 4 extrêmes** (`r = −0,7771`, `t = −3,27`, n=9).
+
+**[2] ✅ LA COMPÉTENCE EST RÉELLE.** Succès moyen **12,33 %** contre **5,67 %** pour le
+marcheur aléatoire (témoin **17/300 identique sur les 20 runs**, vérifié par assertion).
+**7 cerveaux sur 20** dépassent l'IC du hasard, le meilleur à **37,33 %** — dans la
+fourchette de PPO (27–40 %). L'hypothèse du plancher géométrique est **réfutée**.
+
+**[3] ⚠️ RÉTRACTATION.** Le 30/08 j'ai rapporté une **inversion** `r = −0,89` entre maîtrise
+en run et succès au banc, sur **4 cerveaux**, en évoquant que la variable de sortie de tout
+le dépôt pourrait être fausse. **C'était un biais de sélection que j'avais introduit** :
+ces quatre cerveaux avaient tous une maîtrise **élevée** (25–45 %, écart-type 7,4 contre
+12,5 pour la population). Dès le 5ᵉ point, `r` passait de **−0,89 à +0,35** ; à n=20 il vaut
+**+0,3961**. Même mécanisme que `maîtrise ~ énergie` (+0,710 à n=10 → −0,059 à n=20,
+rétracté le 29/08) : **sur une plage étroite et tronquée, le bruit domine la pente**.
+
+**[4] 🟡 CE QUI RESTE VRAI : la maîtrise est BRUITÉE, pas fausse.** Variance inter-strates
+**1425** contre intra-strate **1235** (ratio **1,15**) ; elle explique **16 %** de la
+variance. À maîtrise identique, deux cerveaux vont de **3,00 % à 28,67 %**. Les dix-huit
+réfutations ne sont pas invalidées, mais celles qui reposaient sur cette seule sortie avaient
+une **puissance plus faible qu'annoncé**.
+
+**[5] LA QUESTION DU PROJET CHANGE.** L'amont est disculpé (`d' ≈ 3`, gradient présent,
+signal dense à 86 %). Ce qui sépare un cerveau à 3 % d'un cerveau à 37 % est son
+**coefficient de diffusion spatiale** (22,8× contre 13,9× le plus court chemin). Même le
+meilleur consomme **14× la distance minimale** — ~167 ticks pour un trajet de 12 pas.
+L'agent **resserre sa marche aléatoire**, il ne la remplace pas par une trajectoire.
+
+⚠️ **Deux versions du banc ont été jetées** avant celle-ci : vecteur bio **nul** alors que
+cinq dimensions ont un neutre à **0,5** (clinotaxie v32.0, thermique v41.11, rappel marquant
+v36.0) ; **fuite de mémoire de travail** entre épisodes (`reset()` écrit mais jamais appelé)
+et contexte épisodique nul. Tout chiffre antérieur est **caduc**.
+
+⚠️ **Le témoin « cerveau neuf » est inutilisable** : un réseau Xavier a un biais d'action
+arbitraire selon sa graine (42 % avancer · 70 % tourner · **87 % done**), d'où des scores de
+4,33 % à **22,67 %**. Seul le témoin **aléatoire** est stable.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/instruments/sonde_plancher_geometrique.py` | sortie `--json`, option `--patience`, `reset()` de la mémoire par épisode, contexte épisodique reproduit du run |
+| `docs/recherche/campagnes/DIRECTIVITE_31082026_le_goulot_est_moteur.md` | **nouveau** — les 20 mesures, les 3 vérifications, les limites |
+| `brains/30082026_plancher_n20/` | `LISEZ_MOI.md` + `agregat.json` (20 points) + 16 `res_*.json` |
+| `readme.md` / `readme_fr.md` | résultat et rétractation, en miroir |
+| `CLAUDE.md` | le goulot moteur ; rétractation de l'inversion ; la maîtrise est bruitée |
+
+---
+
 ## [v41.44] - 2026-08-30 — P6 et P8 : l'audit du génome est soldé
 
 ### Une mécanique morte depuis la v26.0 réanimée · le cœur ne nomme plus les couleurs
