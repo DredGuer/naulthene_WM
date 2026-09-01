@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `bdd5e20` |
 | **Catégorie** | docs (dogme) + docs (mesure) |
 | **Impact** | Critique (règle de travail) |
 
