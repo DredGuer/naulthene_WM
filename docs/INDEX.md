@@ -62,6 +62,7 @@ retester une idée déjà écartée.
 | [INERTIE_01092026](recherche/enquetes_closes/INERTIE_01092026_la_decision_est_deja_lisse.md) | ❌ l'inertie motrice réfutée **sur sa prémisse** — la décision est déjà autocorrélée à **0,69–0,85** |
 | [INSTRUMENT_01092026](recherche/enquetes_closes/INSTRUMENT_01092026_la_memoire_du_banc.md) | 🔴 **correction d'instrument** — le banc jouait à **mémoire nulle** depuis le 30/08 ; `r = −0,8225` non établie |
 | [RENDEMENT_01092026](recherche/campagnes/RENDEMENT_01092026_le_gradient_assaini_ne_change_rien.md) | ❌ assainir **64,6 % du gradient** ne change RIEN — directivité 19,25× contre un seuil d'échec à 12× (n=20) |
+| [BOUSSOLE_01092026](recherche/BOUSSOLE_01092026_le_latent_n_est_pas_metrique.md) | 🟡 l'agent est **aveugle au but 84 %** du temps et le reconnaît à **d' = 8,89** — mais le latent **n'est pas métrique** (`r = +0,13`) |
 | [COLLAPSE_28082026](recherche/enquetes_closes/COLLAPSE_28082026_le_plafond_est_geometrique.md) | ⚠️ **contient sa propre rétractation** : le cosinus saturait |
 | [CIBLE_MOBILE_28082026](recherche/enquetes_closes/CIBLE_MOBILE_28082026_la_tete_poursuit_un_axe_qui_fuit.md) | la dérive de représentation ⚠️ chiffres ×46 **retirés** |
 | [COURSE_29082026](recherche/enquetes_closes/COURSE_29082026_le_predateur_recule.md) | la course mesurée proprement : ×11,7, l'alignement **recule** |
