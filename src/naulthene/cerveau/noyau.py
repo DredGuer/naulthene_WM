@@ -1725,7 +1725,7 @@ class AGI_Naulthene(nn.Module):
 
     def apprendre_journee(self, jepa_losses, log_probs, entropies, valeurs, rewards, dones,
                           gamma=0.95, coeff_entropie=0.02, pertes_vocales=None,
-                          chocs_dopamine=None, transitions=None):
+                          chocs_dopamine=None, transitions=None, rendements=None):
         self.optimizer.zero_grad(set_to_none=True)
         perte_totale = torch.zeros((), device=DEVICE)
 
@@ -1755,6 +1755,32 @@ class AGI_Naulthene(nn.Module):
 
             log_probs_tensor = torch.cat(log_probs).squeeze(-1)
             entropies_tensor = torch.cat(entropies).squeeze(-1)
+
+            # --- v41.48 : LE RENDEMENT MÉCANIQUE ASYMÉTRIQUE (brique C) ---
+            #
+            #     A_t > 0  →  A_t × rendement_t     un succès stérile n'ancre RIEN
+            #     A_t ≤ 0  →  A_t                   un échec stérile reste PUNI
+            #
+            # ⚠️ L'ASYMÉTRIE N'EST PAS UN DÉTAIL. Pondérer les deux signes rendrait le
+            # geste stérile INVISIBLE à l'apprentissage au lieu de le rendre indésirable :
+            # son gradient serait nul dans les deux sens, donc la politique n'aurait
+            # aucune raison de cesser de le jouer. C'est la faute symétrique de celle que
+            # la v41.28 a corrigée côté COÛT (`travail = 0.0` faisait du geste inutile le
+            # MOINS CHER du barème) — ici elle en ferait le moins INSTRUCTIF.
+            # `RENDEMENT_SYMETRIQUE_TEMOIN` existe pour mesurer précisément ça.
+            #
+            # ⚠️ Le rendement pondère l'AVANTAGE, jamais la log-probabilité ni l'entropie :
+            # l'exploration doit rester libre de tenter un geste au rendement inconnu.
+            # C'est la même frontière qu'en v41.31, où le masque épargne explicitement
+            # l'entropie, le critique et JEPA.
+            if (RENDEMENT_MECANIQUE_ACTIF and rendements is not None
+                    and len(rendements) == log_probs_tensor.numel()):
+                rendement_t = torch.tensor(rendements, dtype=torch.float32, device=DEVICE)
+                if RENDEMENT_SYMETRIQUE_TEMOIN:
+                    avantages = avantages * rendement_t
+                else:
+                    positif = (avantages > 0).float()
+                    avantages = avantages * (positif * rendement_t + (1.0 - positif))
 
             # --- v41.31 : LE GRADIENT CAUSAL — la politique n'apprend que des gestes
             # qui ont CHANGÉ QUELQUE CHOSE ---
@@ -5501,6 +5527,51 @@ FACTEUR_ATTENUATION_LIBRE = 1.00         # déplacement libre : pénalité plein
 # les couper ensemble produirait une ablation CONFONDUE (règle de mesure §4).
 GRADIENT_CAUSAL_ACTIF = True        # False = `.mean()` d'avant v41.31 (`--gradient-non-filtre`)
 
+# --- v41.48 : LE RENDEMENT MÉCANIQUE ASYMÉTRIQUE (brique C) ---------------------------
+#
+# 🔴 CE QUE ÇA CORRIGE (Étape 0 du 01/09/2026, `A_g66`, 40 ép., 10 851 ticks, instrument
+# corrigé). Le masque binaire de la v41.31 laisse passer **44,5 %** de gestes stériles,
+# parce que `transition_tick` compte la ROTATION comme une transition — à juste titre,
+# c'est une acquisition d'information. Mais il ne distingue pas un pas qui déplace d'un
+# `forward` qui s'écrase sur un mur : mesuré, **53,6 % des `AVANCER` se cognent** (2 184
+# sur 4 078), et seuls **17,5 % des ticks** produisent un déplacement réel. Sur 324 ticks
+# de budget, l'agent obtient ~57 ticks de mouvement pour un objectif à 12 cases.
+#
+# LE MÉCANISME. Le gradient de l'acteur est pondéré par le RENDEMENT du geste :
+#
+#     rendement = travail_utile / travail_engagé   ∈ [0, 1]
+#
+# où le numérateur est le travail qui a **effectivement déplacé quelque chose** et le
+# dénominateur le travail **musculaire engagé**, tous deux déjà dérivés par
+# `calculer_effort_metabolique` (v41.28) — aucune table, aucun coefficient posé. Un geste
+# qui brasse du vent a un rendement nul ; pousser une porte qui s'ouvre, un rendement de 1.
+#
+# ⚠️ L'ASYMÉTRIE EST LE CŒUR DU MÉCANISME, et elle est une DÉCISION UTILISATEUR explicite
+# (01/09/2026) :
+#
+#     ∇θ ← ∇θ × rendement   si A_t > 0      (un succès stérile n'ancre RIEN)
+#     ∇θ ← ∇θ                si A_t ≤ 0      (un échec stérile reste PUNI)
+#
+# Sans l'asymétrie, un geste stérile aurait un gradient nul dans les DEUX sens : il
+# deviendrait INVISIBLE à l'apprentissage au lieu d'être appris comme mauvais. C'est
+# exactement le piège que `travail = 0.0` avait tendu en v41.27 côté COÛT — le geste
+# inutile était devenu le moins cher du barème. Ici la faute symétrique serait de le
+# rendre le moins instructif. **Le rendement module le BÉNÉFICE, jamais la PUNITION.**
+#
+# C'est le levier que `CLAUDE.md` désignait depuis la v41.28 : « si le gaspillage persiste
+# après ce correctif, le levier suivant est le BÉNÉFICE (un geste qui ne change rien
+# devrait n'apprendre rien), PAS un durcissement du coût. » Le gaspillage a persisté
+# (57,2 % → 44,5 %), la condition est remplie.
+#
+# ⚠️ NE PAS CONFONDRE AVEC LE MASQUE v41.31. Le masque REJETTE un tick (0 ou 1) ; le
+# rendement le PONDÈRE (continu dans [0,1]). Les deux sont composables et restent deux
+# interrupteurs SÉPARÉS — les couper ensemble donnerait une ablation confondue.
+RENDEMENT_MECANIQUE_ACTIF = True    # False = pas de pondération (`--sans-rendement`)
+RENDEMENT_SYMETRIQUE_TEMOIN = False  # True = pondère AUSSI les avantages négatifs, donc
+                                     # rend le geste stérile INVISIBLE au lieu de puni.
+                                     # Témoin de falsification de l'asymétrie
+                                     # (`--rendement-symetrique`).
+
 # v41.32 — ABLATION « COLLISION C1/C2 » : le critique sabote-t-il l'intégrateur bio ?
 #
 # Mesuré le 25/08 (chemins de gradient, 3 pertes injectées séparément) : `integrateur_bio`
@@ -7109,6 +7180,9 @@ class EtatCognitif:
         # grossirait d'un jour à l'autre et désalignerait le masque de `log_probs`
         # (piège du compteur non réinitialisé, v27.0 et v37.1).
         self.transitions_journee = []
+        # v41.48 — buffer du rendement mécanique, STRICTEMENT aligné sur
+        # `transitions_journee` et `log_probs_journee` (un élément par tick joué).
+        self.rendements_journee = []
         self.valeurs_journee, self.recompenses_journee, self.dones_journee = [], [], []
         # v37.1 — chocs dopaminergiques tick par tick, pour le crédit rétrograde de la
         # distillation sélective. Remis à zéro ici comme tout buffer journalier (piège du
@@ -9148,6 +9222,65 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
     # au moindre décalage, le masque est ignoré plutôt qu'appliqué de travers.
     etat.transitions_journee.append(etat.transition_tick)
 
+    # v41.48 — LE RENDEMENT MÉCANIQUE DU TICK, aligné sur le même buffer.
+    #
+    #     rendement = travail_utile / travail_engagé   ∈ [0, 1]
+    #
+    # Le dénominateur est le travail que `calculer_effort_metabolique` facture (v41.28 :
+    # le travail TENTÉ, jamais le travail réussi — pousser un mur coûte autant que pousser
+    # une porte qui cède). Le numérateur est la part de ce travail qui a effectivement
+    # déplacé quelque chose dans le monde.
+    #
+    # ⚠️ AUCUN COEFFICIENT N'EST POSÉ. Le rendement est un rapport de deux travaux déjà
+    # dérivés de la géométrie (translation d'une case, moment d'inertie d'un disque) : il
+    # vaut exactement 1 quand le geste aboutit et 0 quand il brasse du vent. Les deux
+    # bornes sortent de la physique, pas d'un réglage.
+    #
+    # ⚠️ LA ROTATION A UN RENDEMENT DE 1. Tourner PIVOTE le champ de vision : c'est une
+    # acquisition d'information, la brique de base de l'exploration (même raison qu'en
+    # v41.31, où la rotation est une transition à part entière). La punir reviendrait à
+    # punir le fait de regarder.
+    # 🔴 CE QUI LE DISTINGUE DU MASQUE v41.31 — sans quoi il n'ajouterait RIEN.
+    #
+    # Le masque rejette un tick sans transition (0 ou 1) et ANNULE déjà tout ce qui n'a
+    # rien changé. Un rendement calqué sur `transition_tick` serait donc un DOUBLON exact,
+    # et les deux bras d'une campagne sortiraient identiques — vérifié le 01/09 sur 3 jours
+    # appariés, c'est exactement ce qui s'est produit à la première écriture de ce bloc.
+    #
+    # Le rendement mesure autre chose : le TRAVAIL MÉCANIQUE LIVRÉ rapporté au TRAVAIL
+    # ENGAGÉ. Il départage ce que le masque confond — une ROTATION est une transition
+    # pleine (le masque la garde à 1) mais elle ne déplace RIEN dans l'espace ; un PAS
+    # déplace une masse d'une case entière. Les deux travaux sont déjà dérivés par
+    # `calculer_effort_metabolique` (v41.28), de la géométrie seule :
+    #
+    #     translation d'une case : W = M · PAS_GRILLE
+    #     rotation du disque     : W = ½ M r²,  r = PAS_GRILLE / 2
+    #
+    # ⚠️ AUCUN COEFFICIENT POSÉ : le rapport des deux (8×) sort du disque et de la grille,
+    # c'est l'invariant géométrique déjà inscrit dans les invariants v41.28 (« le ratio
+    # locomotion/manipulation est GÉOMÉTRIQUE, pas un réglage »). On réutilise les mêmes
+    # quantités plutôt que d'en dériver de nouvelles.
+    # La masse se SIMPLIFIE dans le rapport : elle figure aux deux numérateur et
+    # dénominateur, donc le rendement ne dépend que de la géométrie. C'est ce qui le rend
+    # invariant à la croissance du corps (la masse évolue avec la neurogenèse).
+    _w_pas = PAS_GRILLE                            # M · PAS_GRILLE,  M simplifié
+    _w_rot = 0.5 * (PAS_GRILLE / 2.0) ** 2         # ½ M r²,          M simplifié
+    if action_item == ACTION_DEMANDER:
+        # Seule action sans travail musculaire (elle n'atteint pas le monde physique) :
+        # rendement neutre, sinon interroger C3 serait puni comme un geste raté.
+        _rendement_tick = 1.0
+    elif _a_bouge:
+        _rendement_tick = 1.0                      # une masse a franchi une case
+    elif _a_tourne or _a_manipule:
+        # Le champ de vision a pivoté, ou l'inventaire a changé : travail réel, mais
+        # d'un ordre géométrique inférieur. La rotation N'EST PAS punie (elle reste la
+        # brique de base de l'exploration, invariant v41.31) — elle est simplement
+        # créditée à la hauteur de ce qu'elle déplace.
+        _rendement_tick = _w_rot / _w_pas
+    else:
+        _rendement_tick = 0.0                      # le muscle s'est contracté, rien n'a bougé
+    etat.rendements_journee.append(_rendement_tick)
+
     # v41.20 — L'EFFET DU TICK COURANT, retenu pour la facturation plus bas. La sonde
     # v41.19 n'agrégeait que des compteurs journaliers ; ici on conserve le tick lui-même,
     # parce que `calculer_effort_metabolique` doit facturer CE geste, pas une moyenne.
@@ -10178,6 +10311,7 @@ def executer_nuit(etat, plafond_reve=None):
         # v41.31 — le masque du gradient causal. Même tolérance : un cursus qui n'aurait
         # pas ce buffer (cuve, arène) retombe sur le `.mean()` d'avant v41.31.
         transitions=getattr(etat, "transitions_journee", None),
+        rendements=getattr(etat, "rendements_journee", None),
     )
 
     # --- v40.0 : LE VÉCU NOURRIT LA FORCE DE PLANIFICATION (une fois par nuit) ---
@@ -10291,6 +10425,14 @@ def executer_nuit(etat, plafond_reve=None):
         etat.gradient_ticks_credites = sum(1 for x in etat.transitions_journee if x)
         etat.gradient_ticks_total = len(etat.transitions_journee)
         etat.transitions_journee.clear()
+    # v41.48 — le buffer du rendement est vidé DANS TOUS LES CAS, comme celui des
+    # transitions : un compteur journalier jamais remis à zéro cumulerait depuis la
+    # naissance (piège du bug `score_vocal_jour` v27.0).
+    if hasattr(etat, "rendements_journee"):
+        _r = etat.rendements_journee
+        etat.rendement_moyen_journee = (sum(_r) / len(_r)) if _r else None
+        etat.rendement_ticks_nuls = sum(1 for x in _r if x <= 0.0)
+        etat.rendements_journee.clear()
 
     etat.teneur_dopamine += (DOPAMINE_NEUTRE - etat.teneur_dopamine) * TAUX_RESSORT
     etat.teneur_dopamine = float(np.clip(etat.teneur_dopamine, DOPAMINE_MIN, DOPAMINE_MAX))
@@ -10875,6 +11017,14 @@ def executer_nuit(etat, plafond_reve=None):
             print(f"  │                   🎯 Gradient causal v41.31 : {_ret}/{_gt} tick(s) "
                   f"crédité(s) ({100*_ret//max(1,_gt)}%) — dénominateur de l'acteur, "
                   f"jamais {_gt}")
+        # v41.48 — le rendement mécanique de la journée (même discipline v29.1 :
+        # conditionnelle, pour ne pas logger un zéro trompeur quand la branche dort).
+        _rm = getattr(etat, "rendement_moyen_journee", None)
+        if RENDEMENT_MECANIQUE_ACTIF and _rm is not None:
+            _rn = getattr(etat, "rendement_ticks_nuls", 0)
+            print(f"  │                   ⚙️  Rendement mécanique v41.48 : {_rm:.3f} moyen "
+                  f"— {_rn} geste(s) à rendement NUL "
+                  f"({'symétrique' if RENDEMENT_SYMETRIQUE_TEMOIN else 'asymétrique'})")
         _dd = getattr(etat.moteur_bio, "debit_digestif", None)
         if _dd is not None:
             print(f"  │                   🫀 Tube digestif v41.31 : {_dd*ticks_par_jour:.2f} "
@@ -11173,6 +11323,12 @@ def executer_nuit(etat, plafond_reve=None):
         # v41.31 — les deux grandeurs des axes 1 et 2.
         "Gradient_Ticks_Credites": getattr(etat, "gradient_ticks_credites", 0),
         "Gradient_Ticks_Total": getattr(etat, "gradient_ticks_total", 0),
+        # v41.48 — brique C. Clés CONDITIONNELLES : absentes si la mécanique dort,
+        # plutôt que des zéros qui se liraient comme « mesuré à zéro » (règle v29.1).
+        **({"Rendement_Mecanique_Moyen": getattr(etat, "rendement_moyen_journee", 0.0),
+            "Rendement_Ticks_Nuls": getattr(etat, "rendement_ticks_nuls", 0)}
+           if (RENDEMENT_MECANIQUE_ACTIF
+               and getattr(etat, "rendement_moyen_journee", None) is not None) else {}),
         "Debit_Digestif_Jour": getattr(etat.moteur_bio, "debit_digestif", 0.0) * ticks_par_jour,
         "Rythme_Besoin_Par_Axe": besoin_par_axe(
             getattr(etat.moteur_bio, "rythme_episodes", EPISODES_PAR_JOURNEE_NAISSANCE)),
@@ -11634,6 +11790,15 @@ if __name__ == "__main__":
     _p.add_argument("--gain-acteur", type=float, default=1.0,
                     help="bras de contrôle v41.31 : multiplie le gradient de l'acteur "
                          "SANS filtrer (2.6 = l'effet du dénominateur réduit)")
+    # v41.48 — brique C. DEUX drapeaux SÉPARÉS : le premier coupe la pondération, le
+    # second casse son ASYMÉTRIE. Les couper ensemble donnerait une ablation confondue.
+    _p.add_argument("--sans-rendement", action="store_true",
+                    help="v41.48 : coupe la pondération du gradient par le rendement "
+                         "mécanique (témoin — restitue le comportement v41.47)")
+    _p.add_argument("--rendement-symetrique", action="store_true",
+                    help="v41.48 : pondère AUSSI les avantages négatifs — le geste "
+                         "stérile devient invisible au lieu d'être puni (témoin de "
+                         "falsification de l'asymétrie)")
     _p.add_argument("--gradient-non-filtre", action="store_true",
                     help="témoin v41.30 : l'acteur apprend aussi sur les gestes stériles")
     _p.add_argument("--debit-fossile", action="store_true",
@@ -11733,6 +11898,25 @@ if __name__ == "__main__":
         print(f"🔬 [BANC] environnement forcé sur {_args.env_force} — cursus court-circuité")
         from naulthene.cerveau.noyau import ENV_FORCE as _verif_env
         assert _verif_env == _args.env_force, "le forçage n'a pas atteint le module"
+
+    # v41.48 — même discipline : écriture dans le module NOMMÉ + assertion runtime.
+    _rend = not _args.sans_rendement
+    globals()["RENDEMENT_MECANIQUE_ACTIF"] = _rend
+    if _module_reel is not None:
+        _module_reel.RENDEMENT_MECANIQUE_ACTIF = _rend
+    if not _rend:
+        print("🔬 [ABLATION] rendement mécanique v41.48 COUPÉ — gradient non pondéré")
+        from naulthene.cerveau.noyau import RENDEMENT_MECANIQUE_ACTIF as _v_rend
+        assert _v_rend is False, ("l'ablation n'a pas atteint le module — campagne invalide")
+
+    _rsym = bool(_args.rendement_symetrique)
+    globals()["RENDEMENT_SYMETRIQUE_TEMOIN"] = _rsym
+    if _module_reel is not None:
+        _module_reel.RENDEMENT_SYMETRIQUE_TEMOIN = _rsym
+    if _rsym:
+        print("🔬 [TÉMOIN] rendement SYMÉTRIQUE — le geste stérile devient invisible")
+        from naulthene.cerveau.noyau import RENDEMENT_SYMETRIQUE_TEMOIN as _v_sym
+        assert _v_sym is True, ("le témoin n'a pas atteint le module — campagne invalide")
 
     # v41.28 — même discipline : écriture dans le module NOMMÉ + assertion runtime.
     _trav = not _args.travail_reussi
