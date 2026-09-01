@@ -4,6 +4,86 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.46] - 2026-09-01 — La Règle de Trace, et la valence qui n'atteint pas la décision
+
+### Troisième dogme : « rien sans écrit » · le renforcement secondaire existe déjà
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | docs (dogme) + docs (mesure) |
+| **Impact** | Critique (règle de travail) |
+
+**[1] 🔴 LA RÈGLE DE TRACE — « RIEN SANS ÉCRIT ».** Demande utilisateur : *« chaque chose que
+tu fais devrait être automatiquement documentée, ce devrait être un dogme obligatoire »*.
+
+**Le manque était réel** : le seul « OBLIGATOIRE » de `CLAUDE.md` était conditionné à une
+modification de `colab.py`. **Une mesure pure n'avait donc aucune obligation de trace** — et
+la session du 30-31/08 a produit six mesures que seule la conversation retenait.
+
+Troisième dogme posé, à égalité avec « rien en dur » (conception) et « rien sans témoin »
+(conclusion) — celui-ci gouverne **ce qui survit** :
+
+- ce qui déclenche l'obligation (mesure, réfutation, rétractation, correction d'instrument,
+  artefact écarté) ;
+- la **forme minimale** en 6 points (question, protocole, chiffres bruts, vérifications,
+  limites, ce que ça ferme) ;
+- l'**agrégat machine** à côté du texte, régénéré à chaque relevé — avec l'avertissement
+  mesuré le 31/08 : `agregat.json` était resté à **n=14** pour 16 résultats existants ;
+- **écrire AVANT de conclure** : c'est en rédigeant le protocole qu'on voit qu'un échantillon
+  est biaisé. Cas d'école : l'inversion `r = −0,89` annoncée sur 4 cerveaux choisis dans le
+  haut de la distribution, qui vaut **+0,3961** à n=20 ;
+- ce qui **ne compte pas** comme trace : un chiffre en conversation, un `.log` gitignoré, un
+  commentaire de code, un message de commit seul.
+
+**[2] LE RENFORCEMENT SECONDAIRE EXISTE DÉJÀ.** Proposition utilisateur : faire hériter la
+porte de la valeur de ce qu'elle débloque. Vérifié avant de coder — **c'est en place depuis
+la v39.0 et ça fonctionne** :
+
+| Type | Valence apprise | Écart-type (n=20) |
+|---|---:|---:|
+| `porte_ball` | **+0,8381** | 0,0728 |
+| `porte_key` | **+0,7448** | 0,1866 |
+| `goal` | +0,6524 | 0,0420 |
+| `FOOD` | +0,1592 | 0,0374 |
+
+Les portes sont **déjà les objets les plus valorisés du monde de l'agent**, sans aucune table
+`objet → valeur` dans le code.
+
+Les deux autres leviers proposés sont **écartés par la mesure** : l'habituation du besoin
+comblé suppose un agent repu (la satiété est à **exactement zéro sur 78–100 % des nuits**),
+et le basculement C1→C2 sur déficit viscéral a été **implémenté en v41.2, mesuré, retiré en
+v41.16** (la part de C2 restait à 61,3 % de vigueur 1,00 à 0,30).
+
+**[3] ❌ MAIS LA VALENCE N'ATTEINT PAS LA DÉCISION.** Seuil Bonferroni (4 tests) 2,50 :
+
+| Corrélation | `r` | `t` |
+|---|---:|---:|
+| valence porte → succès au banc | −0,2930 | −1,30 |
+| valence porte → **directivité** | **+0,0521** | **+0,21** |
+
+La directivité étant le seul prédicteur significatif du succès (v41.45), le fait que la
+valence n'ait **aucun** lien avec elle est le résultat central.
+
+**[4] 🔴 ARTEFACT ÉCARTÉ.** Un test intermédiaire donnait `r(valence, confirmations) =
+−0,6294` (`t = −3,44`, significatif) — tentant de lire *« ceux qui valorisent le plus
+rencontrent le moins »*. **C'est une régression vers la moyenne** : le même motif apparaît
+sur `sol` (−0,74), `FOOD` (−0,72), `WATER` (−0,53). Écarté avant publication.
+
+**[5] LA CAUSE EST ÉCOLOGIQUE, PAS CYBERNÉTIQUE.** La valence des portes repose sur **6 à 8
+confirmations** contre **8 621** pour la nourriture et **1 715** pour le but. Ce n'est pas
+« le volant ne lit pas la carte » — **la carte est presque vide à cet endroit**. L'agent
+plafonne au niveau 4 ; les portes apparaissent au niveau 7.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `CLAUDE.md` | **§ La Règle de Trace** — troisième dogme, 6 sections |
+| `docs/recherche/enquetes_closes/VALENCE_31082026_la_carte_est_vide_a_cet_endroit.md` | **nouveau** |
+| `brains/31082026_valence_decision/` | `LISEZ_MOI.md` + `agregat.json` (20 points) |
+| `docs/INDEX.md` | enquête indexée |
+
+---
+
 ## [v41.45] - 2026-08-31 — La directivité : le premier prédicteur significatif du dépôt
 
 ### n=20 · le goulot est MOTEUR · et une rétractation de ma part

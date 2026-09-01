@@ -375,6 +375,89 @@ WANDB_MODE=offline PYTHONPATH=src python -m naulthene.salles_de_classe.cursus_de
 
 Il n'y a ni linter ni suite de tests automatisés configurés. Toute vérification passe par l'observation des logs console (progression de palier, teneur en dopamine, thermostat de neurogenèse) et des courbes du tableau de bord W&B (voir [Modèle de Données & Métriques W&B](readme_fr.md#modèle-de-données--métriques-wb) dans le README).
 
+## La Règle de Trace — « rien sans écrit »
+
+> **Troisième dogme, à égalité avec « rien en dur » et « rien sans témoin ».** Le premier
+> gouverne la conception, le second ce qu'on a le droit de conclure — celui-ci gouverne ce
+> qui SURVIT. Posé le 31/08/2026, après une session qui a produit six mesures dont **aucune
+> n'avait d'obligation de trace** : le seul « OBLIGATOIRE » du fichier était conditionné à
+> une modification de `colab.py`, donc une mesure pure pouvait disparaître avec la
+> conversation qui l'avait produite.
+
+**Toute mesure est écrite AVANT d'être commentée. Une mesure non consignée n'a pas eu lieu.**
+
+### 1. Ce qui déclenche l'obligation
+
+| Action | Trace obligatoire |
+|---|---|
+| Une **mesure** est produite (banc, sonde, corrélation, ablation) | ✅ document + agrégat machine |
+| Une **hypothèse est réfutée** | ✅ document dans `recherche/enquetes_closes/` ou `campagnes/` |
+| Un **chiffre publié est corrigé** | ✅ la rétractation, **avec l'ancien chiffre en regard** |
+| Un **instrument est corrigé** | ✅ ce qu'il mesurait faux, et depuis quand |
+| Un **artefact est écarté** | ✅ le test qui l'a écarté, pas seulement sa conclusion |
+| Du code est modifié | ✅ CHANGELOG (règle préexistante) |
+
+⚠️ **L'échec compte autant que le succès.** Sur ce projet, les défauts trouvés dans le banc
+d'essai ont plus fait avancer que les mécaniques ajoutées. Une piste morte non écrite sera
+reprise ; c'est le coût le plus cher du dépôt.
+
+### 2. La forme minimale
+
+Un document de mesure contient, sans exception :
+
+1. **La question posée**, telle qu'elle a été formulée — pas reconstruite après coup.
+2. **Le protocole exact** : commande, `n`, graines, témoin, ce qui est apparié.
+3. **Les chiffres bruts**, dans un tableau, avant toute interprétation.
+4. **Les vérifications passées** — tautologie, saturation, confondage, artefact — avec leur
+   résultat, y compris quand elles ne trouvent rien.
+5. **Les limites**, écrites par soi-même avant que quelqu'un d'autre ne les trouve.
+6. **Ce que cela ferme et ce que cela laisse ouvert.**
+
+### 3. L'agrégat machine, à côté du texte
+
+Le document est pour l'humain ; **un JSON est pour la réanalyse**. Il se régénère à chaque
+relevé, jamais à la fin :
+
+```bash
+CAMPAGNE="brains/$(date +%d%m%Y)_<sujet>"
+mkdir -p "$CAMPAGNE"          # AVANT le premier run
+# … puis un agregat.json rafraîchi après CHAQUE point
+```
+
+⚠️ **Vérifier que l'agrégat est complet avant de le citer.** Mesuré le 31/08 :
+`agregat.json` était resté à **n=14** alors que 16 fichiers de résultats existaient — le
+script d'agrégation n'avait pas été relancé après les derniers points. Un agrégat périmé se
+lit exactement comme un agrégat à jour.
+
+### 4. Écrire AVANT de conclure, pas après
+
+L'ordre compte. Consigner d'abord force à voir les trous : c'est en rédigeant le protocole
+qu'on s'aperçoit qu'un témoin manque, qu'un échantillon est biaisé, qu'une variable est
+confondue.
+
+> 🔴 **Le cas d'école, 30-31/08/2026.** Une inversion `r = −0,89` a été annoncée sur
+> **4 cerveaux choisis dans le haut de la distribution** — un biais de sélection introduit
+> sans être signalé. À n=20 : **+0,3961**. Si le protocole avait été écrit d'abord, la
+> question « comment ces quatre-là ont-ils été choisis ? » se posait avant l'annonce, pas
+> après.
+
+### 5. Ce qui ne compte PAS comme trace
+
+- Un chiffre dans une conversation. **Il disparaît avec elle.**
+- Un log dans `brains/**/*.log` — **gitignoré**. Les chiffres doivent être dans le JSON et
+  le document, jamais seulement dans la sortie console.
+- Un commentaire de code, pour une mesure : le code dit ce qu'il fait, pas ce qu'on a appris.
+- Un message de commit **seul** : il est bon pour le « quoi », il ne remplace pas le
+  document qui porte le protocole et les limites.
+
+### 6. Le corollaire — ne jamais annoncer avant d'avoir écrit
+
+Un résultat transmis oralement puis écrit plus tard arrive **déjà interprété** : la
+rédaction sert alors à justifier l'annonce au lieu de l'éprouver. Écrire d'abord coûte cinq
+minutes et a évité, le 31/08, de publier une inversion qui n'existait pas.
+
+---
+
 ## La Règle de Mesure — « rien sans témoin »
 
 > **Règle jumelle de « rien en dur ».** Celle-ci gouverne la conception ; celle-là gouverne
