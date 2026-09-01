@@ -493,6 +493,46 @@ DIM_PORTAGE = 1
 # le témoin conserve la LARGEUR du réseau et ne coupe que l'INFORMATION.
 PORTAGE_PERCU_ACTIF = True
 
+# --- v41.49 : L'ANCRAGE CINÉMATIQUE — l'agent sent-il son propre élan ? ----------------
+#
+# 🔴 CE QUE ÇA CORRIGE (Étape 0 du 01/09/2026, `A_g66`, 40 ép., 10 851 ticks) :
+#
+#     P(avancer_{t+1} | avancer_t) = 0,3743
+#     P(avancer)                   = 0,3758
+#     ratio                        = 0,9959
+#
+# **Aucune persistance motrice.** Avancer au tick *t* ne dit rigoureusement RIEN sur le
+# tick *t+1*. Or les LOGITS, eux, sont autocorrélés à 0,69–0,85 (mesuré le même jour) :
+# les préférences sont stables, les gestes sont sans mémoire. L'échantillonnage
+# multinomial d'une distribution seulement tiède (`P(avancer) = 0,376`) détruit la
+# structure temporelle des préférences.
+#
+# CE QUI MANQUE. Le vecteur bio porte déjà l'ORIENTATION (`orientation_cos/sin` dans
+# `DIM_TOUCHER`, v29.0) — mais une orientation est une POSE, la photo d'une boussole.
+# L'agent sait où il REGARDE, jamais s'il est en train de BOUGER. En navigation animale,
+# les amers visuels ne suffisent pas : ils vont de pair avec l'INTÉGRATION DU CHEMIN
+# (système vestibulaire et proprioceptif). C'est ce second pilier qui n'existe nulle part
+# dans le vecteur bio — vérifié le 01/09 : aucun signal de vitesse dans `bus_sensoriel.py`
+# ni dans `noyau.py` (`historique_vitesses` est une statistique de durée d'épisode,
+# agrégée à la nuit, jamais perçue au tick).
+#
+# ⚠️ LE RÉFÉRENTIEL EST ÉGOCENTRIQUE (arbitrage utilisateur explicite du 01/09/2026),
+# comme la pression v41.12 : « les directions tournent avec l'agent, jamais absolues ».
+# Un Δ absolu (Δx, Δy) obligerait le réseau à apprendre QUATRE règles au lieu d'une, « je
+# viens d'avancer » s'encodant différemment selon la direction cardinale. L'élan
+# égocentrique est invariant à la rotation de la carte : une seule règle vaut partout.
+#
+# ⚠️ LE NEUTRE EST 0.5 SUR LES DEUX DIMS, jamais 0.0 — même piège que la clinotaxie
+# (v32.0), la variation thermique (v41.11) et le rappel marquant (v36.0) : 0.0 signifierait
+# « je recule à pleine vitesse » et « je dérive à gauche à pleine vitesse », un régime que
+# l'agent n'a jamais vécu. Hors monde (rêve, leçon vocale), l'élan est donc `[0.5, 0.5]`.
+DIM_ELAN = 2   # avance/recul ressentie + dérive latérale, TOUTES DEUX ÉGOCENTRIQUES
+
+# Interrupteur d'ablation (v41.49). False = les 2 dims existent toujours mais restent au
+# NEUTRE 0.5 : le témoin conserve la LARGEUR du réseau et ne coupe que l'INFORMATION —
+# même discipline que `PORTAGE_PERCU_ACTIF` (v41.33).
+ELAN_PERCU_ACTIF = True
+
 # --- v41.34 : LE TRONC PERCEPTIF EST-IL COUPÉ POUR RIEN ? ---
 #
 # `_executer_c1_reflexe` contient `pensee_enrichie.detach()` — présent dans `colab.py`
@@ -534,7 +574,8 @@ DIM_VECTEUR_BIO = (16 + DIM_TOUCHER + DIM_CHIMIE + DIM_EXO
                    + DIM_ODORAT_DELTA + DIM_THERMOCEPTION + DIM_PRESSION
                    + DIM_RAPPEL_MARQUANT
                    + DIM_PRESENCE_AUDITIVE
-                   + DIM_PORTAGE)  # = 42 depuis la v41.33
+                   + DIM_PORTAGE
+                   + DIM_ELAN)      # = 44 depuis la v41.49 (42 depuis la v41.33)
                        # 3 jauges (satiete, hydratation, stimulation) + 3 quête (target_vector one-hot)
                        # + 2 rappel spatial (v20.0 : distance normalisée + fraîcheur du souvenir)
                        # + 8 quête vocale (v22.1 : formants cibles de la leçon en cours, ou [0]*8
@@ -3648,7 +3689,7 @@ class BiologicalHomeostasisEngine:
 
     def obtenir_vecteur_bio(self, rappel_spatial=None, cible_vocale=None,
                              signaux_sensoriels=None, rappel_marquant=None,
-                             presence_auditive=None, portage=None):
+                             presence_auditive=None, portage=None, elan=None):
         """Retourne le vecteur de `DIM_VECTEUR_BIO` dims — la constante fait foi, ce
         commentaire ne la répète PAS (v39-fix R2 : la valeur « 34 » écrite ici en dur
         était périmée depuis deux versions, et c'est ce genre d'écart qui a produit le
@@ -3738,9 +3779,18 @@ class BiologicalHomeostasisEngine:
         vecteur_portage = [float(np.clip(portage, 0.0, 1.0))
                            if portage is not None else 0.0]
 
+        # v41.49 — L'ÉLAN RESSENTI, en QUEUE (contrat append-only). Voir DIM_ELAN.
+        # ⚠️ Le neutre est **0.5 sur les deux dims**, jamais 0.0 : 0.0 signifierait
+        # « je recule à pleine vitesse » et « je dérive à gauche à pleine vitesse ».
+        # Hors monde (rêve, leçon vocale isolée), l'agent est immobile, pas en fuite
+        # arrière — même piège que la clinotaxie v32.0 et le rappel marquant v36.0.
+        vecteur_elan = ([float(np.clip(x, 0.0, 1.0)) for x in elan]
+                        if elan is not None and len(elan) == DIM_ELAN else [0.5, 0.5])
+
         return ([self.satiete, self.hydratation, self.stimulation] + vecteur_quete
                 + vecteur_rappel + vecteur_quete_vocale + vecteur_sensoriel
-                + vecteur_marquant + vecteur_presence + vecteur_portage)
+                + vecteur_marquant + vecteur_presence + vecteur_portage
+                + vecteur_elan)
 
 
 class DetecteurRessourcesBiologiques:
@@ -6909,6 +6959,9 @@ class EtatCognitif:
     def __init__(self, agent, env, env_id, nom_classe):
         # --- Cerveau & moteurs ---
         self.agent = agent
+        # v41.49 — l'ancrage cinématique. Un moteur à part, comme le bus sensoriel :
+        # il ne touche à aucune jauge, il ne fait que RESSENTIR le mouvement.
+        self.moteur_elan = MoteurElan()
         self.moteur_bio = BiologicalHomeostasisEngine(
             taux_satiete=TAUX_SATIETE, taux_hydratation=TAUX_HYDRATATION,
             taux_stimulation=TAUX_STIMULATION, seuil_critique=SEUIL_CRITIQUE_BIO,
@@ -7183,6 +7236,9 @@ class EtatCognitif:
         # v41.48 — buffer du rendement mécanique, STRICTEMENT aligné sur
         # `transitions_journee` et `log_probs_journee` (un élément par tick joué).
         self.rendements_journee = []
+        # v41.49 — télémétrie de l'ancrage cinématique. Sans elle la mécanique serait
+        # invisible sur un run long et son utilité indémontrable (leçon v29.1).
+        self.elan_avance_journee = []
         self.valeurs_journee, self.recompenses_journee, self.dones_journee = [], [], []
         # v37.1 — chocs dopaminergiques tick par tick, pour le crédit rétrograde de la
         # distillation sélective. Remis à zéro ici comme tout buffer journalier (piège du
@@ -7594,6 +7650,94 @@ def _reset_seede(etat):
     graine = _graine_episode(etat)
     etat.episodes_vecus = getattr(etat, "episodes_vecus", 0) + 1
     return etat.env.reset(seed=graine)
+
+
+class MoteurElan:
+    """v41.49 — L'ANCRAGE CINÉMATIQUE : ce que l'agent ressent de son propre mouvement.
+
+    Deux scalaires ÉGOCENTRIQUES, lissés par une moyenne glissante exponentielle :
+
+        avance  ∈ [0,1]   0,5 = immobile · 1 = avance plein · 0 = recule plein
+        dérive  ∈ [0,1]   0,5 = pas de dérive · 1 = vers la droite · 0 = vers la gauche
+
+    ⚠️ LA DEMI-VIE EST DÉRIVÉE DU MONDE, jamais posée (arbitrage utilisateur du 01/09).
+    Elle vaut le CÔTÉ de la carte, lu via `max_steps` — MiniGrid impose
+    `max_steps = 4·n²` sur ces grilles, donc `√(max_steps)/2` restitue le côté `n`. C'est
+    l'échelle à laquelle un cap a un sens : plus courte, l'élan n'est qu'un écho du tick
+    précédent ; plus longue, il survit à la traversée entière et ne distingue plus rien.
+    Même précédent que la patience (v41.30) et la stagnation (v41.43), qui dérivent déjà
+    leur échelle de `max_steps`.
+
+    ⚠️ L'ÉTAT REPART AU NEUTRE À CHAQUE ÉPISODE. L'agent est téléporté sur une carte
+    neuve : son élan ne survit pas au `reset()`. Même raison que `_odeurs_precedentes`
+    (v32.0), `_chaleur_precedente` (v41.11) et `douleur`/`exposition` (v41.27).
+    """
+
+    def __init__(self):
+        self.demi_vie = 3.0          # valeur hors monde, écrasée dès `reinitialiser_episode`
+        self.reinitialiser_episode(None)
+
+    def reinitialiser_episode(self, env=None):
+        self._avance = 0.0           # lissé, dans [-1, 1] avant remise en [0, 1]
+        self._derive = 0.0
+        self._pos_precedente = None
+        if env is not None:
+            budget = _budget_natif_carte(env, defaut=0)
+            if budget > 0:
+                # `max_steps = 4·n²` ⇒ côté n = √(budget)/2. Borné à 1 tick au minimum :
+                # une carte dégénérée ne doit pas produire une demi-vie nulle (division).
+                self.demi_vie = max(1.0, math.sqrt(float(budget)) / 2.0)
+
+    def etat_courant(self) -> list:
+        """L'élan RESSENTI, sans aucun effet de bord — lu avant la décision.
+
+        ⚠️ SÉPARÉ DE `observer()` À DESSEIN. La v41.25 a payé cher la confusion inverse :
+        `lire_thermoception` écrivait `_chaleur_precedente`, donc un second appel dans le
+        même tick divisait par deux la clinotaxie du tick suivant. Ici la LECTURE ne
+        touche à rien ; seule `observer()` fait avancer l'état.
+        """
+        if not ELAN_PERCU_ACTIF:
+            return [0.5, 0.5]   # témoin : la largeur reste, l'information est coupée
+        return [float(np.clip(0.5 + self._avance / 2.0, 0.0, 1.0)),
+                float(np.clip(0.5 + self._derive / 2.0, 0.0, 1.0))]
+
+    def observer(self, env) -> list:
+        """Met à jour l'élan à partir du déplacement réel du tick, et le renvoie.
+
+        Appelé APRÈS `env.step` — l'élan doit décrire ce que le corps VIENT de faire, pas
+        ce qu'il s'apprêtait à faire. Renvoie le neutre `[0.5, 0.5]` hors monde.
+        """
+        if env is None or not ELAN_PERCU_ACTIF:
+            return [0.5, 0.5]
+        try:
+            u = env.unwrapped
+            pos = (int(u.agent_pos[0]), int(u.agent_pos[1]))
+            direction = int(u.agent_dir)
+        except Exception:
+            return [0.5, 0.5]
+
+        # Le déplacement du tick, PROJETÉ sur le repère de l'agent. `DIR_VEC` de MiniGrid
+        # donne le vecteur unitaire de la direction courante ; la normale à gauche s'en
+        # déduit par rotation d'un quart de tour. Aucune table : c'est de la géométrie.
+        av_brut = lat_brut = 0.0
+        if self._pos_precedente is not None:
+            dx = pos[0] - self._pos_precedente[0]
+            dy = pos[1] - self._pos_precedente[1]
+            # vecteur avant selon la direction : est(0), sud(1), ouest(2), nord(3)
+            fx, fy = [(1, 0), (0, 1), (-1, 0), (0, -1)][direction % 4]
+            av_brut = float(dx * fx + dy * fy)          # projection sur l'avant
+            lat_brut = float(dx * (-fy) + dy * fx)      # projection sur la droite
+        self._pos_precedente = pos
+
+        # Moyenne glissante exponentielle de demi-vie `self.demi_vie` (dérivée du monde).
+        alpha = 1.0 - 0.5 ** (1.0 / self.demi_vie)
+        self._avance += alpha * (av_brut - self._avance)
+        self._derive += alpha * (lat_brut - self._derive)
+
+        # Remise dans [0,1] avec neutre à 0.5 — jamais 0.0 : ce serait « recule à pleine
+        # vitesse », un régime que l'agent n'a jamais vécu (piège v32.0/v36.0/v41.11).
+        return [float(np.clip(0.5 + self._avance / 2.0, 0.0, 1.0)),
+                float(np.clip(0.5 + self._derive / 2.0, 0.0, 1.0))]
 
 
 def _budget_natif_carte(env, defaut: int = PLAFOND_PATIENCE_HORS_MONDE) -> int:
@@ -8372,6 +8516,10 @@ def demarrer_journee(etat):
     etat.detecteur_ressources_bio.reinitialiser_episode(etat.env)
     etat.bus_sensoriel.reinitialiser_episode(etat.env)  # v29.0 — efface la trace de goût
     etat.moteur_bio.reinitialiser_episode()  # v41.26 — la brûlure est une lésion locale
+    # v41.49 — l'élan ne survit pas au `reset()` : l'agent est TÉLÉPORTÉ, son corps
+    # n'a plus aucune vitesse. Même raison que `_odeurs_precedentes` (v32.0) et
+    # `_chaleur_precedente` (v41.11). L'env est passé pour redériver la demi-vie.
+    etat.moteur_elan.reinitialiser_episode(etat.env)
     etat.positions_visitees_episode = set()
 
     etat._reinitialiser_buffers_journee()
@@ -9014,12 +9162,24 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
     if not PORTAGE_PERCU_ACTIF:
         _portage = 0.0   # témoin : la dimension reste, l'information est coupée
 
+    # v41.49 — L'ÉLAN RESSENTI AU MOMENT DE DÉCIDER.
+    #
+    # ⚠️ LE DÉCALAGE D'UN TICK EST VOULU, PAS SUBI. `observer()` est appelé APRÈS
+    # `env.step` (plus bas) : ce qu'on lit ici décrit donc le mouvement du tick
+    # PRÉCÉDENT. C'est exactement l'information utile — « je VIENS d'avancer » doit être
+    # connu AVANT de choisir le geste suivant, sans quoi l'élan arriverait trop tard pour
+    # peser sur la décision qu'il doit orienter. C'est la différence avec la nociception
+    # (v41.25), où la chaleur devait au contraire être relue APRÈS le pas parce qu'elle
+    # facture là où le corps est ARRIVÉ.
+    _elan = etat.moteur_elan.etat_courant()
+
     vecteur_bio_tensor = torch.tensor(
         [etat.moteur_bio.obtenir_vecteur_bio(rappel_spatial, cible_vocale,
                                               signaux_sensoriels=signaux_sensoriels,
                                               rappel_marquant=rappel_marquant,
                                               presence_auditive=_presence_aud,
-                                              portage=_portage)],
+                                              portage=_portage,
+                                              elan=_elan)],
         dtype=torch.float32, device=DEVICE
     )
 
@@ -9280,6 +9440,12 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
     else:
         _rendement_tick = 0.0                      # le muscle s'est contracté, rien n'a bougé
     etat.rendements_journee.append(_rendement_tick)
+
+    # v41.49 — MISE À JOUR DE L'ÉLAN, après `env.step` : il décrit ce que le corps VIENT
+    # de faire. Il sera lu au tick suivant, avant la décision (voir `_elan` plus haut).
+    etat.moteur_elan.observer(etat.env)
+    if ELAN_PERCU_ACTIF:
+        etat.elan_avance_journee.append(etat.moteur_elan.etat_courant()[0])
 
     # v41.20 — L'EFFET DU TICK COURANT, retenu pour la facturation plus bas. La sonde
     # v41.19 n'agrégeait que des compteurs journaliers ; ici on conserve le tick lui-même,
@@ -9949,6 +10115,7 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
         etat.detecteur_ressources_bio.reinitialiser_episode(etat.env)
         etat.bus_sensoriel.reinitialiser_episode(etat.env)  # v29.0 — efface la trace de goût
         etat.moteur_bio.reinitialiser_episode()  # v41.26 — la brûlure est une lésion locale
+        etat.moteur_elan.reinitialiser_episode(etat.env)   # v41.49 — voir plus haut
         etat.positions_visitees_episode = set()
         # v34.0-etape0 (télémétrie) : chaque nouvelle carte de la journée est comptée.
         etat.ressources_vues_jour += _compter_ressources_grille(etat)
@@ -10428,6 +10595,14 @@ def executer_nuit(etat, plafond_reve=None):
     # v41.48 — le buffer du rendement est vidé DANS TOUS LES CAS, comme celui des
     # transitions : un compteur journalier jamais remis à zéro cumulerait depuis la
     # naissance (piège du bug `score_vocal_jour` v27.0).
+    if hasattr(etat, "elan_avance_journee"):
+        _e = etat.elan_avance_journee
+        etat.elan_avance_moyen = (sum(_e) / len(_e)) if _e else None
+        # Amplitude : c'est elle qui dit si le signal PORTE une information ou s'il reste
+        # collé au neutre. Un élan constant à 0,5 serait une dimension morte — le même
+        # défaut que `indecision_c2` (varie de 1,00× sur 300 ticks, v37.0).
+        etat.elan_amplitude = (max(_e) - min(_e)) if _e else None
+        etat.elan_avance_journee.clear()
     if hasattr(etat, "rendements_journee"):
         _r = etat.rendements_journee
         etat.rendement_moyen_journee = (sum(_r) / len(_r)) if _r else None
@@ -11019,6 +11194,11 @@ def executer_nuit(etat, plafond_reve=None):
                   f"jamais {_gt}")
         # v41.48 — le rendement mécanique de la journée (même discipline v29.1 :
         # conditionnelle, pour ne pas logger un zéro trompeur quand la branche dort).
+        _em = getattr(etat, "elan_avance_moyen", None)
+        if ELAN_PERCU_ACTIF and _em is not None:
+            print(f"  │                   🧭 Ancrage cinématique v41.49 : avance {_em:.3f} "
+                  f"(neutre 0,5) — amplitude {getattr(etat, 'elan_amplitude', 0.0):.3f} "
+                  f"· demi-vie {etat.moteur_elan.demi_vie:.1f} tick(s), dérivée de la carte")
         _rm = getattr(etat, "rendement_moyen_journee", None)
         if RENDEMENT_MECANIQUE_ACTIF and _rm is not None:
             _rn = getattr(etat, "rendement_ticks_nuls", 0)
@@ -11325,6 +11505,11 @@ def executer_nuit(etat, plafond_reve=None):
         "Gradient_Ticks_Total": getattr(etat, "gradient_ticks_total", 0),
         # v41.48 — brique C. Clés CONDITIONNELLES : absentes si la mécanique dort,
         # plutôt que des zéros qui se liraient comme « mesuré à zéro » (règle v29.1).
+        **({"Elan_Avance_Moyen": getattr(etat, "elan_avance_moyen", 0.5),
+            "Elan_Amplitude": getattr(etat, "elan_amplitude", 0.0),
+            "Elan_Demi_Vie": etat.moteur_elan.demi_vie}
+           if (ELAN_PERCU_ACTIF
+               and getattr(etat, "elan_avance_moyen", None) is not None) else {}),
         **({"Rendement_Mecanique_Moyen": getattr(etat, "rendement_moyen_journee", 0.0),
             "Rendement_Ticks_Nuls": getattr(etat, "rendement_ticks_nuls", 0)}
            if (RENDEMENT_MECANIQUE_ACTIF
@@ -11792,6 +11977,11 @@ if __name__ == "__main__":
                          "SANS filtrer (2.6 = l'effet du dénominateur réduit)")
     # v41.48 — brique C. DEUX drapeaux SÉPARÉS : le premier coupe la pondération, le
     # second casse son ASYMÉTRIE. Les couper ensemble donnerait une ablation confondue.
+    # v41.49 — brique B. Le témoin conserve la LARGEUR (44 dims) et ne coupe que
+    # l'INFORMATION : les 2 dims restent au neutre 0,5. Même discipline que v41.33.
+    _p.add_argument("--sans-elan", action="store_true",
+                    help="v41.49 : coupe l'ancrage cinématique — les 2 dims d'élan "
+                         "restent au neutre 0,5 (témoin, largeur du réseau inchangée)")
     _p.add_argument("--sans-rendement", action="store_true",
                     help="v41.48 : coupe la pondération du gradient par le rendement "
                          "mécanique (témoin — restitue le comportement v41.47)")
@@ -11898,6 +12088,16 @@ if __name__ == "__main__":
         print(f"🔬 [BANC] environnement forcé sur {_args.env_force} — cursus court-circuité")
         from naulthene.cerveau.noyau import ENV_FORCE as _verif_env
         assert _verif_env == _args.env_force, "le forçage n'a pas atteint le module"
+
+    # v41.49 — même discipline : écriture dans le module NOMMÉ + assertion runtime.
+    _el = not _args.sans_elan
+    globals()["ELAN_PERCU_ACTIF"] = _el
+    if _module_reel is not None:
+        _module_reel.ELAN_PERCU_ACTIF = _el
+    if not _el:
+        print("🔬 [ABLATION] ancrage cinématique v41.49 COUPÉ — élan figé au neutre 0,5")
+        from naulthene.cerveau.noyau import ELAN_PERCU_ACTIF as _v_el
+        assert _v_el is False, ("l'ablation n'a pas atteint le module — campagne invalide")
 
     # v41.48 — même discipline : écriture dans le module NOMMÉ + assertion runtime.
     _rend = not _args.sans_rendement
