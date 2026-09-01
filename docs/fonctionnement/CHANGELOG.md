@@ -36,6 +36,27 @@ probabilités : **identique**. Température : **identique**.
 au tick précédent — déplacement **8,65 → 27,85 cases** (×3,2), répétition 0,14 → 0,91.
 Moyenner les ENTRÉES n'est pas biaiser vers la SORTIE.
 
+**[1b] ✅ BALAYAGE REJOUÉ AVEC L'INSTRUMENT CORRIGÉ — réfutation confirmée et renforcée.**
+
+| Politique | λ=0 | λ=0,5 | λ=0,7 | λ=0,9 |
+|---|---|---|---|---|
+| cerveau — succès | **40,00 %** | 34,00 % | 36,33 % | **32,67 %** |
+| cerveau — directivité | 14,92× | 14,12× | 14,75× | **12,04×** |
+| cerveau — part `forward` | 37,6 % | 37,6 % | 37,7 % | 37,8 % |
+| aléatoire — succès | 5,67 % | 5,33 % | 4,00 % | 5,67 % |
+
+Aucun λ ne fait mieux que λ=0, et **λ=0,9 tombe hors de l'IC95 de λ=0** [34,6 ; 45,6] : la
+dégradation y est significative. Part de `forward` **invariante**, témoin aléatoire immobile
+— l'artefact de rectification mécanique est écarté.
+
+⚠️ **Observation qui touche l'hypothèse de la directivité elle-même** : à λ=0,9 la
+directivité est la **meilleure** de la campagne (12,04×) pendant que le succès est au
+**pire** (32,67 %). **Tendre le trajet sans améliorer la décision dégrade le résultat** —
+argument contre la lecture *causale* de `r(directivité, succès)` : la directivité serait un
+**symptôme** de la compétence, pas son levier. Première intervention jamais tentée sur cette
+variable, et son signe est **contraire** à ce que la lecture causale prédisait. n=1 cerveau :
+indicatif, non concluant.
+
 **[2] 🔴 DÉFAUT D'INSTRUMENT — LE BANC JOUAIT À MÉMOIRE NULLE.** Trouvé par accident en
 cherchant autre chose. `penser()` retourne 8 valeurs ; la mémoire de travail est en **[4]**
 (`memoire_actuelle`), les trois sondes de banc lisaient **[1]** (`valeur_etat_courant`, un

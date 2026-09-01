@@ -14,6 +14,10 @@
 > §3c — mesuré sur les logits, pas sur la mémoire — la simulation géométrique §3d qui
 > n'utilise aucun cerveau, et le mécanisme §4 qui est algébrique. **La réfutation de la
 > prémisse tient donc entièrement** ; seule l'ampleur chiffrée du non-effet est à revoir.
+>
+> ✅ **REJOUÉ le jour même avec l'instrument corrigé — voir §9.** La réfutation est
+> **confirmée et renforcée** : tous les λ dégradent le succès, et λ=0,9 tombe **hors de
+> l'IC95** de λ=0.
 
 ---
 
@@ -203,3 +207,43 @@ Or l'avertissement inscrit dans `CLAUDE.md` à l'époque disait exactement ceci 
 🟡 **Mesure directe, n = 1 cerveau, non conclusive au sens de la règle des 20 graines.**
 Elle décrit `A_g66` — le **meilleur** cerveau de la cohorte (37,33 %). À vérifier sur la
 cohorte avant toute conclusion, et **avant toute modification du noyau**.
+
+
+---
+
+## 9. Le balayage REJOUÉ avec l'instrument corrigé
+
+Même cerveau, même protocole, mémoire de travail rétablie (`penser()[4]`).
+
+| Politique | λ | Succès | IC95 | Directivité | Part `forward` |
+|---|---|---|---|---|---|
+| cerveau | **0,0** | **40,00 %** | [34,6 ; 45,6] | 14,92× | 37,6 % |
+| cerveau | 0,5 | 34,00 % | [28,9 ; 39,5] | 14,12× | 37,6 % |
+| cerveau | 0,7 | 36,33 % | [31,1 ; 41,9] | 14,75× | 37,7 % |
+| cerveau | 0,9 | **32,67 %** | [27,6 ; 38,2] | **12,04×** | 37,8 % |
+| aléatoire | 0,0 | 5,67 % | [3,6 ; 8,9] | 21,42× | 14,4 % |
+| aléatoire | 0,5 | 5,33 % | — | 22,79× | 14,2 % |
+| aléatoire | 0,7 | 4,00 % | — | 21,17× | 14,2 % |
+| aléatoire | 0,9 | 5,67 % | — | 19,83× | 14,2 % |
+
+**La réfutation est confirmée, et plus nette qu'en régime amputé.** Aucun λ ne fait mieux
+que λ=0 ; **λ=0,9 (32,67 %) tombe HORS de l'IC95 de λ=0** [34,6 ; 45,6], donc la
+dégradation y est significative. La part de `forward` reste **invariante** (37,6 → 37,8 %),
+et le témoin aléatoire ne bouge pas davantage (5,67 → 5,33 / 4,00 / 5,67 %) — ce qui écarte
+l'artefact de rectification mécanique redouté au §2.
+
+### 9b. ⚠️ Une observation qui touche l'hypothèse de la directivité elle-même
+
+À λ=0,9 la directivité atteint **12,04×** — **la meilleure de toute la campagne** — pendant
+que le succès tombe à son **pire** (32,67 %).
+
+> **Tendre le trajet sans améliorer la décision DÉGRADE le résultat.**
+
+C'est un argument **contre la lecture causale** de `r(directivité, succès) = −0,8225` : la
+directivité serait un **symptôme** de la compétence, pas son levier. Un agent qui marche
+plus droit sans savoir où il va arrive moins souvent.
+
+⚠️ **Une seule intervention, n=1 cerveau, 4 valeurs de λ.** C'est indicatif, pas concluant —
+et la corrélation d'origine est elle-même à re-mesurer (défaut d'instrument). Mais c'est la
+**première intervention** jamais tentée sur la directivité, et son signe est **contraire**
+à ce que la lecture causale prédisait.

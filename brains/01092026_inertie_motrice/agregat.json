@@ -14,7 +14,55 @@
     "delta_AA": 0.0,
     "verdict": "instrument deterministe, aucune derive"
   },
-  "bras": [
+  "diagnostic_logits_reels": {
+    "n_ticks": 400,
+    "cerveau": "A_g66",
+    "autocorrelation_lag1_par_action": [
+      0.6854,
+      0.7328,
+      0.7715,
+      0.7476,
+      0.7147,
+      0.8474,
+      0.7482
+    ],
+    "ecart_type_entre_actions_meme_tick": 0.5674,
+    "ecart_type_temporel_par_action": [
+      0.18,
+      0.2125,
+      0.1383,
+      0.2232,
+      0.1469,
+      0.1533,
+      0.0657
+    ],
+    "P_forward": 0.4092,
+    "lecture": "La decision est DEJA fortement autocorrelee (0,69-0,85). La premisse d'un tirage multinomial independant tick a tick est FAUSSE."
+  },
+  "conclusion": "REFUTE. L'inertie sur les logits ne change ni le succes (37,33 -> 36,67 / 32,00 / 33,33 %) ni la part de `forward` (41,0 -> 41,1 %, invariante). La directivite baisse de 8 % (14,21 -> 13,04) sans aucun gain de succes. Cause identifiee : le filtre AR correle les logits MAIS divise leur variance par sqrt((1-lam)/(1+lam)), ce qui aplatit le softmax vers l'uniforme. Les deux effets s'annulent.",
+  "DEFAUT_INSTRUMENT": {
+    "trouve_le": "2026-09-01",
+    "nature": "la memoire de travail etait lue en penser()[1] (VALEUR, scalaire) au lieu de [4] (memoire_actuelle). Un garde-fou sur dim_bus la rejetait SILENCIEUSEMENT : memoire nulle et contexte episodique vide a chaque tick.",
+    "portee": "toutes les mesures de banc des 30-31/08 ET le balayage de lambda du 01/09",
+    "non_affecte": [
+      "mesures lues dans les .brain",
+      "baseline PPO",
+      "temoin aleatoire (5,67 %)",
+      "simulation geometrique",
+      "sonde_recompense / cohorte bareme"
+    ],
+    "impact_mesure_A_g66": {
+      "succes_ampute": 37.33,
+      "succes_corrige": 40.0,
+      "directivite_amputee": 14.21,
+      "directivite_corrigee": 14.916666666666668,
+      "neuf_corrige": 22.666666666666664,
+      "aleatoire": 5.666666666666666,
+      "lecture": "l'agent ampute SOUS-ESTIMAIT la politique de ~2,7 points. La directivite ne s'ameliore PAS avec la memoire (14,21 -> 14,92) : le brownien n'est pas un defaut de memoire de travail."
+    }
+  },
+  "statut": "Balayage REJOUE avec l'instrument corrige (memoire en [4]). Le resultat amputé est conserve sous `bras_AMPUTES_non_concluants` pour comparaison, jamais a citer.",
+  "bras_AMPUTES_non_concluants": [
     {
       "lambda": 0.0,
       "politique": "aleatoire",
@@ -168,52 +216,160 @@
       ]
     }
   ],
-  "diagnostic_logits_reels": {
-    "n_ticks": 400,
-    "cerveau": "A_g66",
-    "autocorrelation_lag1_par_action": [
-      0.6854,
-      0.7328,
-      0.7715,
-      0.7476,
-      0.7147,
-      0.8474,
-      0.7482
-    ],
-    "ecart_type_entre_actions_meme_tick": 0.5674,
-    "ecart_type_temporel_par_action": [
-      0.18,
-      0.2125,
-      0.1383,
-      0.2232,
-      0.1469,
-      0.1533,
-      0.0657
-    ],
-    "P_forward": 0.4092,
-    "lecture": "La decision est DEJA fortement autocorrelee (0,69-0,85). La premisse d'un tirage multinomial independant tick a tick est FAUSSE."
-  },
-  "conclusion": "REFUTE. L'inertie sur les logits ne change ni le succes (37,33 -> 36,67 / 32,00 / 33,33 %) ni la part de `forward` (41,0 -> 41,1 %, invariante). La directivite baisse de 8 % (14,21 -> 13,04) sans aucun gain de succes. Cause identifiee : le filtre AR correle les logits MAIS divise leur variance par sqrt((1-lam)/(1+lam)), ce qui aplatit le softmax vers l'uniforme. Les deux effets s'annulent.",
-  "DEFAUT_INSTRUMENT": {
-    "trouve_le": "2026-09-01",
-    "nature": "la memoire de travail etait lue en penser()[1] (VALEUR, scalaire) au lieu de [4] (memoire_actuelle). Un garde-fou sur dim_bus la rejetait SILENCIEUSEMENT : memoire nulle et contexte episodique vide a chaque tick.",
-    "portee": "toutes les mesures de banc des 30-31/08 ET le balayage de lambda du 01/09",
-    "non_affecte": [
-      "mesures lues dans les .brain",
-      "baseline PPO",
-      "temoin aleatoire (5,67 %)",
-      "simulation geometrique",
-      "sonde_recompense / cohorte bareme"
-    ],
-    "impact_mesure_A_g66": {
-      "succes_ampute": 37.33,
-      "succes_corrige": 40.0,
-      "directivite_amputee": 14.21,
-      "directivite_corrigee": 14.916666666666668,
-      "neuf_corrige": 22.666666666666664,
-      "aleatoire": 5.666666666666666,
-      "lecture": "l'agent ampute SOUS-ESTIMAIT la politique de ~2,7 points. La directivite ne s'ameliore PAS avec la memoire (14,21 -> 14,92) : le brownien n'est pas un defaut de memoire de travail."
+  "bras": [
+    {
+      "lambda": 0.0,
+      "politique": "aleatoire",
+      "taux": 0.056666666666666664,
+      "lo": 0.03567717591318777,
+      "hi": 0.08886666535147117,
+      "n_victoires": 17,
+      "directivite_mediane": 21.416666666666668,
+      "part_forward": 0.14370813946209862,
+      "distribution_actions": [
+        13664,
+        13749,
+        13775,
+        13776,
+        13739,
+        13520,
+        13631
+      ]
+    },
+    {
+      "lambda": 0.5,
+      "politique": "aleatoire",
+      "taux": 0.05333333333333334,
+      "lo": 0.03309162538404202,
+      "hi": 0.08486983874726851,
+      "n_victoires": 16,
+      "directivite_mediane": 22.791666666666664,
+      "part_forward": 0.1422282954509894,
+      "distribution_actions": [
+        13657,
+        13653,
+        13635,
+        13870,
+        13830,
+        13562,
+        13660
+      ]
+    },
+    {
+      "lambda": 0.7,
+      "politique": "aleatoire",
+      "taux": 0.04,
+      "lo": 0.02302709213793877,
+      "hi": 0.06860486345997804,
+      "n_victoires": 12,
+      "directivite_mediane": 21.166666666666664,
+      "part_forward": 0.14179189730914227,
+      "distribution_actions": [
+        13746,
+        13739,
+        13653,
+        13833,
+        13998,
+        13663,
+        13657
+      ]
+    },
+    {
+      "lambda": 0.9,
+      "politique": "aleatoire",
+      "taux": 0.056666666666666664,
+      "lo": 0.03567717591318777,
+      "hi": 0.08886666535147117,
+      "n_victoires": 17,
+      "directivite_mediane": 19.833333333333332,
+      "part_forward": 0.1415873679807592,
+      "distribution_actions": [
+        13712,
+        13677,
+        13540,
+        13778,
+        13651,
+        13696,
+        13576
+      ]
+    },
+    {
+      "lambda": 0.0,
+      "politique": "cerveau",
+      "taux": 0.4,
+      "lo": 0.3461642362605155,
+      "hi": 0.4563644497390317,
+      "n_victoires": 120,
+      "directivite_mediane": 14.916666666666668,
+      "part_forward": 0.3764026011308179,
+      "distribution_actions": [
+        7167,
+        7528,
+        30157,
+        4415,
+        9338,
+        11319,
+        10195
+      ]
+    },
+    {
+      "lambda": 0.5,
+      "politique": "cerveau",
+      "taux": 0.34,
+      "lo": 0.2887193090239354,
+      "hi": 0.3953265885753401,
+      "n_victoires": 102,
+      "directivite_mediane": 14.125,
+      "part_forward": 0.3758075349575624,
+      "distribution_actions": [
+        7391,
+        7604,
+        30773,
+        4379,
+        9638,
+        11647,
+        10453
+      ]
+    },
+    {
+      "lambda": 0.7,
+      "politique": "cerveau",
+      "taux": 0.36333333333333334,
+      "lo": 0.31095311702886,
+      "hi": 0.41916942050385436,
+      "n_victoires": 109,
+      "directivite_mediane": 14.75,
+      "part_forward": 0.37669193286410396,
+      "distribution_actions": [
+        7368,
+        7440,
+        30613,
+        4336,
+        9604,
+        11442,
+        10465
+      ]
+    },
+    {
+      "lambda": 0.9,
+      "politique": "cerveau",
+      "taux": 0.32666666666666666,
+      "lo": 0.27607755922349825,
+      "hi": 0.38163882984238345,
+      "n_victoires": 98,
+      "directivite_mediane": 12.041666666666666,
+      "part_forward": 0.37770280254149635,
+      "distribution_actions": [
+        7182,
+        7489,
+        30674,
+        4394,
+        9652,
+        11427,
+        10394
+      ]
     }
-  },
-  "statut": "Le balayage de lambda (section bras) a tourne AVEC le defaut : il est NON CONCLUANT et doit etre rejoue. La simulation geometrique et le diagnostic d'autocorrelation, eux, restent valides."
+  ],
+  "conclusion_corrigee": "REFUTE, et plus nettement qu'en regime ampute. Succes 40,00 % (lam=0) -> 34,00 / 36,33 / 32,67 %. Aucun lambda ne fait mieux ; lam=0,9 (32,67 %) tombe HORS de l'IC95 de lam=0 [34,6 ; 45,6], donc la degradation y est significative. Part de `forward` invariante (37,6 -> 37,8 %). Le temoin aleatoire ne bouge pas non plus (5,67 -> 5,33 / 4,00 / 5,67 %), ce qui ecarte l'artefact de rectification mecanique.",
+  "observation_directivite": "A lam=0,9 la directivite atteint 12,04x — la MEILLEURE de toute la campagne — pendant que le succes tombe a son PIRE (32,67 %). Tendre le trajet SANS ameliorer la decision DEGRADE le resultat. C'est un argument CONTRE la lecture causale de r(directivite, succes) : la directivite serait un SYMPTOME de la competence, pas son levier. Une seule intervention, n=1 cerveau : indicatif, non concluant."
 }

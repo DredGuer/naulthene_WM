@@ -1,0 +1,164 @@
+{
+  "cerveau": "A_g66",
+  "env": "MiniGrid-SimpleCrossingS9N1-v0",
+  "episodes": 300,
+  "graine": 90210,
+  "dim_bus": 158,
+  "bras": {
+    "cerveau_lam0.0": {
+      "lambda": 0.0,
+      "politique": "cerveau",
+      "taux": 0.4,
+      "lo": 0.3461642362605155,
+      "hi": 0.4563644497390317,
+      "n_victoires": 120,
+      "directivite_mediane": 14.916666666666668,
+      "part_forward": 0.3764026011308179,
+      "distribution_actions": [
+        7167,
+        7528,
+        30157,
+        4415,
+        9338,
+        11319,
+        10195
+      ]
+    },
+    "cerveau_lam0.5": {
+      "lambda": 0.5,
+      "politique": "cerveau",
+      "taux": 0.34,
+      "lo": 0.2887193090239354,
+      "hi": 0.3953265885753401,
+      "n_victoires": 102,
+      "directivite_mediane": 14.125,
+      "part_forward": 0.3758075349575624,
+      "distribution_actions": [
+        7391,
+        7604,
+        30773,
+        4379,
+        9638,
+        11647,
+        10453
+      ]
+    },
+    "cerveau_lam0.7": {
+      "lambda": 0.7,
+      "politique": "cerveau",
+      "taux": 0.36333333333333334,
+      "lo": 0.31095311702886,
+      "hi": 0.41916942050385436,
+      "n_victoires": 109,
+      "directivite_mediane": 14.75,
+      "part_forward": 0.37669193286410396,
+      "distribution_actions": [
+        7368,
+        7440,
+        30613,
+        4336,
+        9604,
+        11442,
+        10465
+      ]
+    },
+    "cerveau_lam0.9": {
+      "lambda": 0.9,
+      "politique": "cerveau",
+      "taux": 0.32666666666666666,
+      "lo": 0.27607755922349825,
+      "hi": 0.38163882984238345,
+      "n_victoires": 98,
+      "directivite_mediane": 12.041666666666666,
+      "part_forward": 0.37770280254149635,
+      "distribution_actions": [
+        7182,
+        7489,
+        30674,
+        4394,
+        9652,
+        11427,
+        10394
+      ]
+    },
+    "aleatoire_lam0.0": {
+      "lambda": 0.0,
+      "politique": "aleatoire",
+      "taux": 0.056666666666666664,
+      "lo": 0.03567717591318777,
+      "hi": 0.08886666535147117,
+      "n_victoires": 17,
+      "directivite_mediane": 21.416666666666668,
+      "part_forward": 0.14370813946209862,
+      "distribution_actions": [
+        13664,
+        13749,
+        13775,
+        13776,
+        13739,
+        13520,
+        13631
+      ]
+    },
+    "aleatoire_lam0.5": {
+      "lambda": 0.5,
+      "politique": "aleatoire",
+      "taux": 0.05333333333333334,
+      "lo": 0.03309162538404202,
+      "hi": 0.08486983874726851,
+      "n_victoires": 16,
+      "directivite_mediane": 22.791666666666664,
+      "part_forward": 0.1422282954509894,
+      "distribution_actions": [
+        13657,
+        13653,
+        13635,
+        13870,
+        13830,
+        13562,
+        13660
+      ]
+    },
+    "aleatoire_lam0.7": {
+      "lambda": 0.7,
+      "politique": "aleatoire",
+      "taux": 0.04,
+      "lo": 0.02302709213793877,
+      "hi": 0.06860486345997804,
+      "n_victoires": 12,
+      "directivite_mediane": 21.166666666666664,
+      "part_forward": 0.14179189730914227,
+      "distribution_actions": [
+        13746,
+        13739,
+        13653,
+        13833,
+        13998,
+        13663,
+        13657
+      ]
+    },
+    "aleatoire_lam0.9": {
+      "lambda": 0.9,
+      "politique": "aleatoire",
+      "taux": 0.056666666666666664,
+      "lo": 0.03567717591318777,
+      "hi": 0.08886666535147117,
+      "n_victoires": 17,
+      "directivite_mediane": 19.833333333333332,
+      "part_forward": 0.1415873679807592,
+      "distribution_actions": [
+        13712,
+        13677,
+        13540,
+        13778,
+        13651,
+        13696,
+        13576
+      ]
+    }
+  },
+  "maitrise_run": 30.0,
+  "jour": 1440,
+  "niveau": 3
+}
