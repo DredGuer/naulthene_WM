@@ -4,6 +4,56 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.48] - 2026-09-01 — Le rendement mécanique : la brique C livrée, et réfutée
+
+### 64,6 % du gradient assaini · directivité inchangée à 19,25×
+
+| Type | Details |
+|------|---------|
+| **Commit** | `be7358f` (mécanique) · `N/A — en attente` (résultats) |
+| **Catégorie** | feat + docs (mesure) |
+| **Impact** | Fonctionnel (mécanique livrée, sans effet mesuré) |
+
+**LA MÉCANIQUE.** Pondération asymétrique du gradient d'acteur par le rendement mécanique,
+formule décidée par l'utilisateur : `A_t > 0 → A_t × rendement` (un succès stérile n'ancre
+rien), `A_t ≤ 0 → A_t` (un échec stérile reste puni). Rendement = travail livré / travail
+engagé : **1,000** pour un pas, **0,125** pour une rotation (rapport géométrique 1/8 du
+disque, v41.28 — la masse se simplifie), **0,000** pour un geste stérile.
+
+**LE RÉSULTAT — ❌ ÉCHEC sur le critère fixé AVANT la mesure** (n=20 graines appariées ×
+2 bras × 100 jours, banc 150 épisodes) :
+
+| Grandeur | Valeur | `t` apparié |
+|---|---|---|
+| δ succès | **+0,400 pt** | +0,193 (NS) |
+| δ directivité | **+0,328×** (mauvais sens) | +0,443 (NS), n=17 |
+| **Directivité ACTIF médiane** | **19,25×** | seuil d'échec fixé à **≥ 12×** |
+
+Répartition graine par graine : **pile ou face** (succès mieux sur 7, pire sur 9 ;
+directivité mieux sur 8, pire sur 9).
+
+**L'ABLATION EST NÉGATIVE, PAS VIDE** : télémétrie présente sur les 20 runs ACTIF, absente
+sur les 20 TÉMOIN ; rendement mesuré de 0,007 à 0,171 selon la graine. Pas de saturation
+du budget (max 22,38× contre un plafond de 27,0×). Trois graines à zéro victoire, donc
+n=17 pour la directivité.
+
+🔴 **VINGTIÈME RÉFUTATION, et le motif se répète** : la curiosité (rente de 40 % du signal,
+15,0 % vs 15,0 % de maîtrise), l'agnosie proprioceptive (d' : −0,012 → +1,428, aucun effet)
+et maintenant le rendement (64,6 % du gradient assaini, +0,4 pt). **Le signal
+d'apprentissage n'est pas le goulot** — le défaut existait à chaque fois, le comportement
+n'a jamais bougé.
+
+⚠️ Le code reste **ACTIF par défaut** : il n'est pas nuisible et son témoin
+`--sans-rendement` est câblé. Décision utilisateur requise pour le désactiver.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | rendement asymétrique + 2 drapeaux + télémétrie |
+| `docs/recherche/campagnes/RENDEMENT_01092026_…` | **nouveau** — la campagne complète |
+| `brains/01092026_etape1_rendement/` | 40 runs, 40 bancs, agrégat, protocole |
+
+---
+
 ## [v41.47] - 2026-09-01 — L'inertie motrice réfutée, et le banc qui jouait sans mémoire
 
 ### La prémisse était fausse · un défaut d'instrument qui touche les 30-31/08

@@ -1,0 +1,234 @@
+{
+  "campagne": "ETAPE1_RENDEMENT_01092026",
+  "mecanique": "v41.48 rendement mecanique asymetrique",
+  "protocole": {
+    "graines": 20,
+    "jours": 100,
+    "env": "MiniGrid-SimpleCrossingS9N1-v0",
+    "banc": "sonde_plancher_geometrique (instrument corrige), 150 episodes, graines appariees",
+    "bras": [
+      "ACTIF (v41.48)",
+      "TEMOIN (--sans-rendement)"
+    ]
+  },
+  "juge_de_paix": {
+    "critere": "directivite < 6x = succes ; >= 12x = echec",
+    "directivite_ACTIF_mediane": 19.25,
+    "VERDICT": "ECHEC"
+  },
+  "resultats": {
+    "delta_succes_pt": 0.40000000000000024,
+    "t_succes": 0.19273206803455387,
+    "delta_directivite": 0.3284313725490189,
+    "t_directivite": 0.4428666282138538,
+    "n_directivite": 17,
+    "directivite_mediane_ACTIF": 19.25,
+    "directivite_mediane_TEMOIN": 18.666666666666668,
+    "victoires_banc_ACTIF": 264,
+    "victoires_banc_TEMOIN": 252
+  },
+  "verifications": {
+    "ablation_vide_ou_negative": "NEGATIVE — telemetrie presente sur les 20 ACTIF, absente sur les 20 TEMOIN",
+    "saturation_budget": "NON — max ACTIF 22.38x, max TEMOIN 22.75x, plafond 27,0x",
+    "graines_zero_victoire": {
+      "ACTIF": [
+        188,
+        199
+      ],
+      "TEMOIN": [
+        11
+      ],
+      "effet": "n directivite = 17, pas 20"
+    },
+    "repartition": {
+      "succes_ACTIF_mieux": 7,
+      "succes_ACTIF_pire": 9,
+      "egal": 4,
+      "directivite_ACTIF_mieux": 8,
+      "directivite_ACTIF_pire": 9
+    }
+  },
+  "conclusion": "ECHEC sur le critere utilisateur. Directivite ACTIF mediane 19,25x contre un seuil d'echec fixe a >= 12x. Le delta apparie est de +0,328x (t = +0,443), donc dans le MAUVAIS sens et non significatif. Le succes ne bouge pas (+0,400 pt, t = +0,193). La repartition graine par graine est un tirage a pile ou face (7 mieux / 9 pire en succes, 8 / 9 en directivite). Le mecanisme AGIT (rendement moyen 0,007-0,171 selon la graine) mais ne produit RIEN.",
+  "points": [
+    {
+      "graine": 11,
+      "actif_succes": 5.333333333333334,
+      "temoin_succes": 0.0,
+      "actif_direct": 22.375,
+      "temoin_direct": null,
+      "actif_nvict": 8,
+      "temoin_nvict": 0
+    },
+    {
+      "graine": 22,
+      "actif_succes": 2.0,
+      "temoin_succes": 2.0,
+      "actif_direct": 18.083333333333332,
+      "temoin_direct": 22.75,
+      "actif_nvict": 3,
+      "temoin_nvict": 3
+    },
+    {
+      "graine": 33,
+      "actif_succes": 4.666666666666667,
+      "temoin_succes": 10.0,
+      "actif_direct": 15.25,
+      "temoin_direct": 21.0,
+      "actif_nvict": 7,
+      "temoin_nvict": 15
+    },
+    {
+      "graine": 44,
+      "actif_succes": 3.3333333333333335,
+      "temoin_succes": 3.3333333333333335,
+      "actif_direct": 20.416666666666668,
+      "temoin_direct": 20.833333333333332,
+      "actif_nvict": 5,
+      "temoin_nvict": 5
+    },
+    {
+      "graine": 55,
+      "actif_succes": 5.333333333333334,
+      "temoin_succes": 1.3333333333333335,
+      "actif_direct": 17.541666666666664,
+      "temoin_direct": 15.958333333333332,
+      "actif_nvict": 8,
+      "temoin_nvict": 2
+    },
+    {
+      "graine": 66,
+      "actif_succes": 1.3333333333333335,
+      "temoin_succes": 1.3333333333333335,
+      "actif_direct": 20.666666666666664,
+      "temoin_direct": 21.291666666666668,
+      "actif_nvict": 2,
+      "temoin_nvict": 2
+    },
+    {
+      "graine": 77,
+      "actif_succes": 19.333333333333332,
+      "temoin_succes": 0.6666666666666667,
+      "actif_direct": 18.916666666666668,
+      "temoin_direct": 17.416666666666668,
+      "actif_nvict": 29,
+      "temoin_nvict": 1
+    },
+    {
+      "graine": 88,
+      "actif_succes": 1.3333333333333335,
+      "temoin_succes": 1.3333333333333335,
+      "actif_direct": 21.458333333333332,
+      "temoin_direct": 19.875,
+      "actif_nvict": 2,
+      "temoin_nvict": 2
+    },
+    {
+      "graine": 99,
+      "actif_succes": 8.0,
+      "temoin_succes": 17.333333333333336,
+      "actif_direct": 17.125,
+      "temoin_direct": 15.333333333333334,
+      "actif_nvict": 12,
+      "temoin_nvict": 26
+    },
+    {
+      "graine": 111,
+      "actif_succes": 28.666666666666668,
+      "temoin_succes": 8.0,
+      "actif_direct": 17.583333333333332,
+      "temoin_direct": 18.375,
+      "actif_nvict": 43,
+      "temoin_nvict": 12
+    },
+    {
+      "graine": 122,
+      "actif_succes": 11.333333333333332,
+      "temoin_succes": 13.333333333333334,
+      "actif_direct": 19.0,
+      "temoin_direct": 16.375,
+      "actif_nvict": 17,
+      "temoin_nvict": 20
+    },
+    {
+      "graine": 133,
+      "actif_succes": 17.333333333333336,
+      "temoin_succes": 15.333333333333332,
+      "actif_direct": 17.416666666666668,
+      "temoin_direct": 17.916666666666668,
+      "actif_nvict": 26,
+      "temoin_nvict": 23
+    },
+    {
+      "graine": 144,
+      "actif_succes": 0.6666666666666667,
+      "temoin_succes": 6.0,
+      "actif_direct": 19.75,
+      "temoin_direct": 20.916666666666668,
+      "actif_nvict": 1,
+      "temoin_nvict": 9
+    },
+    {
+      "graine": 155,
+      "actif_succes": 18.0,
+      "temoin_succes": 12.666666666666668,
+      "actif_direct": 19.583333333333332,
+      "temoin_direct": 19.333333333333332,
+      "actif_nvict": 27,
+      "temoin_nvict": 19
+    },
+    {
+      "graine": 166,
+      "actif_succes": 8.0,
+      "temoin_succes": 20.0,
+      "actif_direct": 20.791666666666664,
+      "temoin_direct": 13.583333333333334,
+      "actif_nvict": 12,
+      "temoin_nvict": 30
+    },
+    {
+      "graine": 177,
+      "actif_succes": 35.333333333333336,
+      "temoin_succes": 23.333333333333332,
+      "actif_direct": 14.25,
+      "temoin_direct": 16.416666666666668,
+      "actif_nvict": 53,
+      "temoin_nvict": 35
+    },
+    {
+      "graine": 188,
+      "actif_succes": 0.0,
+      "temoin_succes": 1.3333333333333335,
+      "actif_direct": null,
+      "temoin_direct": 19.541666666666664,
+      "actif_nvict": 0,
+      "temoin_nvict": 2
+    },
+    {
+      "graine": 199,
+      "actif_succes": 0.0,
+      "temoin_succes": 2.0,
+      "actif_direct": null,
+      "temoin_direct": 18.666666666666668,
+      "actif_nvict": 0,
+      "temoin_nvict": 3
+    },
+    {
+      "graine": 211,
+      "actif_succes": 1.3333333333333335,
+      "temoin_succes": 6.0,
+      "actif_direct": 21.625,
+      "temoin_direct": 17.25,
+      "actif_nvict": 2,
+      "temoin_nvict": 9
+    },
+    {
+      "graine": 222,
+      "actif_succes": 4.666666666666667,
+      "temoin_succes": 22.666666666666664,
+      "actif_direct": 19.5,
+      "temoin_direct": 18.75,
+      "actif_nvict": 7,
+      "temoin_nvict": 34
+    }
+  ]
+}

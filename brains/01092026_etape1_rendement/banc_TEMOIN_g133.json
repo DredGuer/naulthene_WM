@@ -1,0 +1,32 @@
+{
+  "cerveau": "TEMOIN_g133",
+  "env": "MiniGrid-SimpleCrossingS9N1-v0",
+  "episodes": 150,
+  "dim_bus": 86,
+  "jour": 100,
+  "niveau": 0,
+  "maitrise_run": 10.0,
+  "resultats": {
+    "entraîné (eval)": {
+      "taux": 0.15333333333333332,
+      "lo": 0.10439879275574346,
+      "hi": 0.2195811970519548,
+      "n_victoires": 23,
+      "directivite_mediane": 17.916666666666668
+    },
+    "neuf (Xavier)": {
+      "taux": 0.04,
+      "lo": 0.018458908886903574,
+      "hi": 0.08451453912715763,
+      "n_victoires": 6,
+      "directivite_mediane": 24.083333333333336
+    },
+    "aléatoire (7 actions)": {
+      "taux": 0.06666666666666667,
+      "lo": 0.03661146073480972,
+      "hi": 0.11836352652481316,
+      "n_victoires": 10,
+      "directivite_mediane": 20.666666666666664
+    }
+  }
+}
