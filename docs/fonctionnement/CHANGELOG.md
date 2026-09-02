@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `0d8b5d5` |
 | **Catégorie** | feat (drapeau d'intervention) + fix (instrument) + docs (hypothèse) |
 | **Impact** | Fonctionnel — **bit-identique** drapeau off (vérifié A/A) |
 
