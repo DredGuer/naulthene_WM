@@ -56,11 +56,14 @@ métrique dérivée de la récompense ne peut pas prédire la réussite, puisque
 *est* la réussite. **Le tableau des suspects reste vide** —
 [cohorte](docs/recherche/campagnes/COHORTE_30082026_le_bareme_ne_predit_rien.md).
 
-**⚠️ Cela ne fonctionne pas encore.** L'agent plafonne au **niveau 4 sur 15**, et **dix-huit**
+**⚠️ Cela ne fonctionne pas encore.** L'agent plafonne au **niveau 4 sur 15**, et **vingt-et-une**
 explications successives de ce plafond ont été mesurées puis réfutées — thrashing du gradient,
-attribution du crédit, proprioception, attention descendante, dérive de représentation. Les
-seuls leviers qui aient jamais marché sont des propriétés du *monde*, pas du cerveau. Le seul
-seuls leviers qui aient jamais marché sont des propriétés du *monde*, pas du cerveau.
+attribution du crédit, proprioception, attention descendante, dérive de représentation, et, les
+1-2/09/2026, deux mécaniques *livrées puis réfutées à n = 20* (rendement mécanique, ancrage
+cinématique — [rendement](docs/recherche/campagnes/RENDEMENT_01092026_le_gradient_assaini_ne_change_rien.md) ·
+[élan](docs/recherche/campagnes/ELAN_02092026_l_information_est_la_et_ne_sert_a_rien.md)).
+Ces deux dernières convergent sur une phrase : *l'information est là, et le réseau ne s'en
+sert pas*. Les seuls leviers qui aient jamais marché sont des propriétés du *monde*, pas du cerveau.
 🔴 **Et le 29/08/2026 la dernière est tombée aussi** : `maîtrise ~ énergie`, longtemps citée
 ici comme `r = +0,710` (`t = +2,85`), avait été mesurée à **n = 10**. Recalculée sur **20
 graines**, elle vaut **r = −0,0588 (`t = −0,25`)** — le signe s'inverse, le signal disparaît,
@@ -305,8 +308,9 @@ Un PPO standard résout `Empty-8x8` en quelques milliers d'épisodes. **Naulthè
 > **ne survit pas à Bonferroni** sur les 3 métriques testées (seuil `t ≈ 2,86` ; p corrigé
 > ≈ 0,13). [Compte rendu complet](docs/etat_des_lieux/22082026_campagne_v41.31_cursus_complet.md).
 
-> ⚠️ **Toute comparaison appariée antérieure à la v41.9 est non concluante — y compris la
-> ligne « 0 sur 9 » ci-dessus.** `env.reset()` n'était jamais seedé : MiniGrid tire ses cartes
+> ⚠️ **Toute comparaison appariée antérieure à la v41.9 est non concluante.** (Une version
+> antérieure de cette page portait encore une ligne « 0 sur 9 graines » ; elle en faisait partie.)
+> `env.reset()` n'était jamais seedé : MiniGrid tire ses cartes
 > sur son propre générateur, que `torch.manual_seed` n'atteint pas. Deux runs de même
 > `--graine` voyaient donc des **mondes différents**. Ces résultats ne sont pas faux : ils
 > n'établissent rien. Les deux premières lignes sont les premières mesurées sur un **banc

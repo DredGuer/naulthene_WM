@@ -4,6 +4,87 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.49-coherence] - 2026-09-02 — Audit de cohérence : dix dérives documentaires, cinq LISEZ_MOI, 106 JSON orphelins
+
+### Aucune mesure nouvelle · aucune ligne de code · la Règle de Trace appliquée à elle-même
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | docs (cohérence) + chore (trace) |
+| **Impact** | Documentation |
+
+**La question posée** : « mon projet est-il cohérent dans l'ensemble ? » Lecture complète de
+`readme.md`, `CLAUDE.md`, `CHANGELOG.md`, de l'arborescence (81 fichiers `src/`, 124 `docs/`,
+62 dossiers `brains/`) et vérification mécanique : liens (0 mort sur 4 fichiers pivots),
+LISEZ_MOI par campagne, état git, marqueurs de version.
+
+**Le verdict** : cohérent — la chaîne code → CHANGELOG → doc de campagne → JSON → README est
+réelle, et les rétractations sont laissées en regard de leurs corrections dans les deux
+langues. **Les incohérences trouvées sont toutes des dérives de copie** : le même fait
+(« état réel ») vit à quatre endroits (CLAUDE.md, readme.md, readme_fr.md, INDEX.md) et chaque
+copie a vieilli à sa vitesse.
+
+**Ce qui a été corrigé** (dix lignes, aucune n'était une erreur scientifique) :
+
+| Où | Était | Devient |
+|---|---|---|
+| `CLAUDE.md` § Git Workflow (daté 15/08) | `feat/v41-ligne-flottaison` « non mergée, 15 commits non poussés » | `master`, 21 branches toutes mergées, 0 non poussé |
+| `noyau.py:3` | `#Version actuelle 29.` | `41.49` — périmé de **20 versions** ; `colab.py` reste à 17 (vérifié : v41.33 n'y a ajouté que l'en-tête de licence) |
+| Compteur de réfutations | INDEX **16** · CLAUDE.md/README **18** · CHANGELOG **21** | **21** partout, avec la convergence des deux dernières |
+| `readme.md` Roadmap | « Now — run the three benchmark tables » alors que la ligne 798 dit qu'elles sont remplies ; « Next — patience 120 → 256 » alors que `PATIENCE_MAX` est supprimé depuis v41.30 | rejeu du banc corrigé, puis le problème de *conversion* |
+| `readme.md` métriques W&B | « flat at 2 since day 274 », « 1.69 % » | niveau 4 sur 100 % des graines ; maîtrise **bruitée** (16 % de la variance) |
+| `readme.md:307` / `readme_fr.md:309` | « including the "0 out of 9" line above » — la ligne n'existe plus | reformulé, miroir FR |
+| `readme.md:79` | « changelog v7 → v39 » | v41 |
+| `readme_fr.md:62` | une ligne **dupliquée** (« Le seul / seuls leviers… ») | supprimée |
+| `CLAUDE.md` § Architecture | 5 instruments listés sur 35 ; `cursus_parole.py`, `banc_ppo.py`, `experiences/`, `voix/`, `etat_des_lieux/`, `naulthene_cosmologie/` absents ; « 4 dossiers » | arborescence réelle au 02/09, « 5 dossiers » |
+| `docs/INDEX.md` | « état réel au 29/08 », « Neuf carnets » pour 17 lignes dont 3 hors dossier | 02/09 ; 14 carnets ; RENDEMENT et ELAN rangés dans `campagnes/`, BOUSSOLE dans les enquêtes |
+
+**Ce que la Règle de Trace a attrapé sur elle-même** :
+
+- **106 JSON de résultats non versionnés** au moment du commit (80 dans
+  `brains/01092026_etape1_elan/` — `autocorr_*.json`, `banc_*.json` — et le reste dans le rejeu
+  du 02/09, passe invalide comprise ; la campagne tourne encore, les suivants seront commités
+  au fil de l'eau) — ni ignorés par
+  `.gitignore` (qui ne couvre que `.brain` et `.log`), ni commités. Les agrégats que le §3
+  désigne comme « ce qui survit » étaient dans les limbes. **Commités.**
+- **5 campagnes sans `LISEZ_MOI.md`**, dont `29082026_baseline_ppo/` (le résultat le plus
+  cité du dépôt — il avait un `PROTOCOLE.md`, pas le nom convenu). Écrits **a posteriori**,
+  et marqués comme tels, à partir des documents qui les citent et des fichiers présents :
+  `nuit_18082026_V4123_optionB/`, `23082026_v4132_discrimination/` (l'artefact, gardé),
+  `25082026_v4132_collision/` (AB1/AB2/AB3), `01092026_boussole_latente/` (**vide** — la
+  mesure n'a que son document, manquement laissé visible).
+- Vérifié par `cmp` : `collision/base.brain` ≡ `thrashing_pisteC/base.brain` ≡
+  `discrimination/N4_g11.brain` ≡ `discrimination_fix1/N4_g11.brain` — un seul cerveau g11
+  de niveau 4 a servi de point de départ à toute la série de sondes v41.32.
+- Le rejeu du 02/09 a une **première passe invalide** (`_invalide_v4149/`) : elle tournait
+  sur v41.49 (`DIM_VECTEUR_BIO = 44`), donc greffait les cerveaux du 26/08 — deux variables
+  changeaient au lieu d'une. Le rejeu valide tourne sur un worktree figé à `2d69b40`
+  (v41.47). Journal ajouté au LISEZ_MOI de la campagne.
+
+**Trois tensions de fond, consignées sans être tranchées** (elles ne sont pas des erreurs) :
+(a) « rien en dur » est respecté dans la forme et contredit dans le poids — 95,6 % du signal
+vient de constantes posées ; (b) la dégradation gracieuse, seule preuve de l'unification, est
+trivialement vraie pour tout MLP dont on annule une entrée — 4 sens sur 6 à 0,0 d'effet est
+aussi compatible avec « non utilisés » ; (c) les 21 réfutations convergent sur « l'information
+est là, le réseau ne s'en sert pas », mais aucun document ne porte cette convergence seul.
+
+**Cause racine et suite proposée** (décision utilisateur en attente) : désigner **un seul**
+lieu pour l'état réel — `docs/etat_des_lieux/DDMMYYYY_*.md` daté — que README, INDEX et
+CLAUDE.md ne font que *lier*, et sortir de CLAUDE.md (110 Ko, 896 lignes) toute mesure datée
+pour n'y garder que les invariants de code et les règles.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `CLAUDE.md` | branches, arborescence, compteur, paragraphe de versioning |
+| `readme.md` / `readme_fr.md` | compteur 21 + convergence (miroir), « 0 sur 9 » (miroir), roadmap, métriques, lien changelog, doublon FR |
+| `docs/INDEX.md` | en-tête 02/09, rangement de 3 lignes |
+| `src/naulthene/cerveau/noyau.py` | en-tête `#Version actuelle` (commentaire seul) |
+| `brains/*/LISEZ_MOI.md` | 5 nouveaux + journal du rejeu 02/09 |
+| `brains/01092026_etape1_elan/*.json` · `brains/02092026_rejeu_banc_corrige/` | 106 agrégats versionnés |
+
+---
+
 ## [v41.49] - 2026-09-02 — L'ancrage cinématique : l'information est là, C1 ne s'en sert pas
 
 ### Les deux juges sont négatifs · 21ᵉ réfutation · le motif est désormais le résultat

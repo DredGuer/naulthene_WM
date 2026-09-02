@@ -1,0 +1,12 @@
+{
+  "cerveau": "ACTIF_g166",
+  "env": "MiniGrid-SimpleCrossingS9N1-v0",
+  "episodes": 40,
+  "ticks": 12005,
+  "P_avancer": 0.24589754269054562,
+  "P_avancer_sachant_avancer": 0.24991476304125468,
+  "ratio_autocorrelation": 1.016336968262284,
+  "P_repeter": 0.170748015043878,
+  "part_steriles": 0.5479383590170762,
+  "reference_etape0": 0.9959
+}

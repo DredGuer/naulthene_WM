@@ -1,0 +1,12 @@
+{
+  "cerveau": "TEMOIN_g111",
+  "env": "MiniGrid-SimpleCrossingS9N1-v0",
+  "episodes": 40,
+  "ticks": 12926,
+  "P_avancer": 0.14977564598483675,
+  "P_avancer_sachant_avancer": 0.1671858774662513,
+  "ratio_autocorrelation": 1.1162420723805602,
+  "P_repeter": 0.16645972373118112,
+  "part_steriles": 0.6400278508432616,
+  "reference_etape0": 0.9959
+}

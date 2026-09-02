@@ -52,10 +52,14 @@ the C2/C1 ratio in v41.32: a metric derived from the reward cannot predict succe
 the reward *is* success. **The suspect list stays empty** —
 [cohort](docs/recherche/campagnes/COHORTE_30082026_le_bareme_ne_predit_rien.md).
 
-**⚠️ It does not work yet.** The agent plateaus at **level 4 of 15**, and **eighteen**
+**⚠️ It does not work yet.** The agent plateaus at **level 4 of 15**, and **twenty-one**
 successive explanations for that plateau have been measured and refuted — thrashing, credit
-assignment, proprioception, top-down attention, representational drift. The only levers that
-ever worked are properties of the *world*, not of the brain.
+assignment, proprioception, top-down attention, representational drift, and, on 1-2 Sep
+2026, two mechanics *shipped and then refuted at n = 20* (mechanical yield, kinematic
+anchoring — [rendement](docs/recherche/campagnes/RENDEMENT_01092026_le_gradient_assaini_ne_change_rien.md) ·
+[élan](docs/recherche/campagnes/ELAN_02092026_l_information_est_la_et_ne_sert_a_rien.md)).
+Those last two converge on one sentence: *the information is there, and the network does
+not use it*. The only levers that ever worked are properties of the *world*, not of the brain.
 🔴 **And on 29 Aug 2026 the last one fell too**: `mastery ~ energy`, long quoted here as
 `r = +0.710` (`t = +2.85`), was measured at **n = 10**. Recomputed on **20 seeds** it reads
 **r = −0.0588 (`t = −0.25`)** — the sign flips and the signal vanishes, jackknife confirming
@@ -76,7 +80,7 @@ three of which were caught and retracted in the last week alone.
 datacenter.*
 
 > 🗂️ **[Documentation index →](docs/INDEX.md)** — which question leads to which document
-> 🇫🇷 **[Miroir français complet →](readme_fr.md)** (architecture, formules, changelog v7 → v39)
+> 🇫🇷 **[Miroir français complet →](readme_fr.md)** (architecture, formules, changelog v7 → v41)
 > 🩺 **[System diagnostic, August 2026 →](docs/recherche/dia_Aout_2026.md)** (1300-day run: what works,
 > what is blocked, what remains unknown)
 > 📊 **[Live experiments on Weights & Biases →](https://wandb.ai/naultadrien123-nvnc/Naulthene-AGI)**
@@ -304,8 +308,8 @@ A standard PPO solves `Empty-8x8` in a few thousand episodes. **Naulthène curre
 > [Full measurement](docs/recherche/NAVIGATION_20082026_le_vrai_blocage.md) ·
 > [why](docs/recherche/POURQUOI_20082026_l_agent_economise.md).
 
-> ⚠️ **Every paired comparison predating v41.9 is inconclusive — including the "0 out of 9"
-> line above.** `env.reset()` was never seeded: MiniGrid draws its layouts from its own RNG,
+> ⚠️ **Every paired comparison predating v41.9 is inconclusive.** (An earlier version of
+> this page still carried a "0 out of 9 seeds" line; it was one of them.) `env.reset()` was never seeded: MiniGrid draws its layouts from its own RNG,
 > which `torch.manual_seed` does not reach. Two runs of the same `--graine` therefore saw
 > **different worlds**. Those results are not wrong; they establish nothing. The figures in the
 > first two rows are the first measured on a **reproducible bench**, verified by an A/A test.
@@ -616,8 +620,8 @@ Roughly 90 metrics per simulated night. The ones worth watching:
 
 | Metric | What it tells you |
 |---|---|
-| `Cursus_Niveau_Index` | Curriculum progress — flat at 2 since day 274 |
-| `Victoire_Taux_Vie` | Lifetime win rate — 1.69 % |
+| `Cursus_Niveau_Index` | Curriculum progress — plateaus at **4** on 100 % of seeds since v41.16; the only question a run can answer is whether it crosses to 5 |
+| `Victoire_Taux_Vie` | Lifetime win rate — ⚠️ **noisy**: in-run mastery explains only 16 % of the variance of bench competence (v41.45); never read it alone, always next to a forced-bench score |
 | `Arbitrage_Ratio_C2C1` / `Arbitrage_Accord` | Balance and agreement between the reflex and the neocortex |
 | `Distillation_Reference_Choc` | The agent's own bar for what counts as remarkable — should rise with maturity |
 | `Memoire_Confirmations_Moy` | Abstraction by recurrence — 108 confirmations per landmark |
@@ -644,11 +648,21 @@ Roughly 90 metrics per simulated night. The ones worth watching:
 
 ## Roadmap
 
-**Now — make the thesis falsifiable.** Run the three benchmark tables above. Without them, a
-reader cannot distinguish "elegant and efficient" from "different and worse".
+**Done — the thesis is falsifiable.** The three benchmark tables above are filled
+(29 Aug 2026), and the verdict is unflattering: a PPO 4× lighter succeeds 2.3× better.
+⚠️ *An earlier version of this line still asked for those tables to be run.*
 
-**Next — unblock the curriculum.** Five measured blockers, none cognitive. The best-measured
-lever is patience: 120 → 256 ticks moves reachable success from 4.7 % to 21.0 %.
+**Now — re-run the bench with the corrected instrument.** Every bench figure from 30-31 Aug
+was measured with the working memory silently disconnected (v41.47). The 20-brain replay is
+in progress (`brains/02092026_rejeu_banc_corrige/`); until it lands, `r(directedness,
+success) = −0.82` is **not established**.
+
+**Next — the conversion problem, not the signal problem.** Twenty-one refutations say the
+learning signal and the available information are not the bottleneck; what fails is turning
+information into a policy (entropy 1.93 vs 1.67 for PPO). Whatever comes next must act on
+*how the motor head decides*, and must be measured against the `≤ 6×` directedness target
+fixed before the run. ⚠️ *The patience lever once listed here (120 → 256 ticks) is obsolete:
+v41.30 removed `PATIENCE_MAX` and derived patience from the world's own `max_steps`.*
 
 **Then — cross-modal binding.** All senses already enter the same bus simultaneously, including
 inactive ones. The design document

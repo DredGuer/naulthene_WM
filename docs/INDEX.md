@@ -15,15 +15,22 @@
 
 ---
 
-## 🔴 À lire en premier — l'état réel au 29/08/2026
+## 🔴 À lire en premier — l'état réel au 02/09/2026
 
-**Le tableau des suspects est vide.** Seize explications du plafond au niveau 4 ont été
-mesurées et réfutées, la dernière (`maîtrise ~ énergie`, `r = +0,710`) le 29/08 en passant
-de n=10 à n=20 : **r = −0,0588**.
+**Le tableau des suspects est vide, et le motif est devenu le résultat.** Vingt-et-une
+explications du plafond au niveau 4 ont été mesurées et réfutées. Les deux dernières
+(rendement mécanique v41.48, ancrage cinématique v41.49) ont été **livrées puis réfutées à
+n=20** et disent la même chose : qu'on retire du signal ou qu'on ajoute de l'information, le
+comportement ne bouge pas — *l'information est là, le réseau ne s'en sert pas*.
+🔴 **Réserve d'instrument** : les chiffres de banc des 30-31/08 (dont
+`r(directivité, succès) = −0,82`) ont été mesurés **sans mémoire de travail** ; le rejeu
+corrigé est en cours dans `brains/02092026_rejeu_banc_corrige/`.
 
 | Question | Document |
 |---|---|
 | Où en est le projet, sans enjolivure ? | [`../readme_fr.md`](../readme_fr.md) · [`../readme.md`](../readme.md) (EN) |
+| Qu'est-ce qui a été réfuté en dernier, et pourquoi ça converge ? | [campagnes/ELAN_02092026](recherche/campagnes/ELAN_02092026_l_information_est_la_et_ne_sert_a_rien.md) · [campagnes/RENDEMENT_01092026](recherche/campagnes/RENDEMENT_01092026_le_gradient_assaini_ne_change_rien.md) |
+| Quels chiffres publiés sont à reprendre ? | [enquetes_closes/INSTRUMENT_01092026](recherche/enquetes_closes/INSTRUMENT_01092026_la_memoire_du_banc.md) |
 | Le barème posé explique-t-il le plafond ? | [campagnes/COHORTE_30082026](recherche/campagnes/COHORTE_30082026_le_bareme_ne_predit_rien.md) — **non, tautologie** |
 | Que vaut l'agent face à un PPO ? | [campagnes/BASELINE_PPO_29082026](recherche/campagnes/BASELINE_PPO_29082026_le_mur_n_existe_pas.md) |
 | Qu'est-ce qui a changé, version par version ? | [fonctionnement/CHANGELOG.md](fonctionnement/CHANGELOG.md) |
@@ -45,10 +52,11 @@ de n=10 à n=20 : **r = −0,0588**.
 
 ## `recherche/` — trois niveaux
 
-### `recherche/enquetes_closes/` — **les pistes réfutées, série du 23-29/08/2026**
+### `recherche/enquetes_closes/` — **les pistes réfutées, série du 23/08 → 01/09/2026**
 
-Neuf carnets, une série. À lire **avant de rouvrir une piste** : c'est ce qui évite de
-retester une idée déjà écartée.
+Quatorze carnets, une série. À lire **avant de rouvrir une piste** : c'est ce qui évite de
+retester une idée déjà écartée. (Les réfutations à n ≥ 20 — RENDEMENT, ELAN — sont des
+**campagnes** et sont rangées dans le tableau suivant.)
 
 | Document | Ce qui a été réfuté |
 |---|---|
@@ -61,9 +69,6 @@ retester une idée déjà écartée.
 | [VALENCE_31082026](recherche/enquetes_closes/VALENCE_31082026_la_carte_est_vide_a_cet_endroit.md) | le renforcement secondaire **existe** (+0,84 sur les portes) mais **n'atteint pas la décision** — la carte est presque vide (6 confirmations contre 8 621) |
 | [INERTIE_01092026](recherche/enquetes_closes/INERTIE_01092026_la_decision_est_deja_lisse.md) | ❌ l'inertie motrice réfutée **sur sa prémisse** — la décision est déjà autocorrélée à **0,69–0,85** |
 | [INSTRUMENT_01092026](recherche/enquetes_closes/INSTRUMENT_01092026_la_memoire_du_banc.md) | 🔴 **correction d'instrument** — le banc jouait à **mémoire nulle** depuis le 30/08 ; `r = −0,8225` non établie |
-| [RENDEMENT_01092026](recherche/campagnes/RENDEMENT_01092026_le_gradient_assaini_ne_change_rien.md) | ❌ assainir **64,6 % du gradient** ne change RIEN — directivité 19,25× contre un seuil d'échec à 12× (n=20) |
-| [BOUSSOLE_01092026](recherche/BOUSSOLE_01092026_le_latent_n_est_pas_metrique.md) | 🟡 l'agent est **aveugle au but 84 %** du temps et le reconnaît à **d' = 8,89** — mais le latent **n'est pas métrique** (`r = +0,13`) |
-| [ELAN_02092026](recherche/campagnes/ELAN_02092026_l_information_est_la_et_ne_sert_a_rien.md) | ❌ l'ancrage cinématique : l'information EST là (amplitude 0,09–0,16) et C1 ne s'en sert pas — ratio `t` = +0,04, myéline identique aux deux bras |
 | [COLLAPSE_28082026](recherche/enquetes_closes/COLLAPSE_28082026_le_plafond_est_geometrique.md) | ⚠️ **contient sa propre rétractation** : le cosinus saturait |
 | [CIBLE_MOBILE_28082026](recherche/enquetes_closes/CIBLE_MOBILE_28082026_la_tete_poursuit_un_axe_qui_fuit.md) | la dérive de représentation ⚠️ chiffres ×46 **retirés** |
 | [COURSE_29082026](recherche/enquetes_closes/COURSE_29082026_le_predateur_recule.md) | la course mesurée proprement : ×11,7, l'alignement **recule** |
@@ -74,6 +79,8 @@ retester une idée déjà écartée.
 
 | Document | Ce qu'il mesure |
 |---|---|
+| [ELAN_02092026](recherche/campagnes/ELAN_02092026_l_information_est_la_et_ne_sert_a_rien.md) | ❌ **21ᵉ réfutation** — l'ancrage cinématique : l'information EST là (amplitude 0,09–0,16) et C1 ne s'en sert pas — ratio `t` = +0,04, myéline identique aux deux bras (n=20) |
+| [RENDEMENT_01092026](recherche/campagnes/RENDEMENT_01092026_le_gradient_assaini_ne_change_rien.md) | ❌ **20ᵉ réfutation** — assainir **64,6 % du gradient** ne change RIEN — directivité 19,25× contre un seuil d'échec à 12× (n=20) |
 | [COHORTE_30082026](recherche/campagnes/COHORTE_30082026_le_bareme_ne_predit_rien.md) | 🔴 **17ᵉ réfutation** — le barème ne prédit rien, la corrélation est une **tautologie** (n=40, 0 run) |
 | [DIRECTIVITE_31082026](recherche/campagnes/DIRECTIVITE_31082026_le_goulot_est_moteur.md) | 🔴 **le premier prédicteur significatif** — `r(directivité, succès) = −0,82` (`t = −5,96`, n=19), **68 % de la variance** |
 | [PLANCHER_30082026](recherche/campagnes/PLANCHER_30082026_la_competence_existe_et_la_maitrise_ment.md) | ✅ la compétence **existe** (25,8 % vs 5,7 % aléatoire) mais les victoires sont **browniennes** (14–18× l'optimal) — n=4 |
@@ -90,6 +97,7 @@ retester une idée déjà écartée.
 | Document | Sujet |
 |---|---|
 | [dia_Aout_2026.md](recherche/dia_Aout_2026.md) | **le diagnostic système** — plus utile que le README |
+| [BOUSSOLE_01092026](recherche/BOUSSOLE_01092026_le_latent_n_est_pas_metrique.md) | 🟡 mesure exploratoire (n=1) **avant de coder** : l'agent est **aveugle au but 84 %** du temps et le reconnaît à **d' = 8,89** — mais le latent **n'est pas métrique** (`r = +0,13`). Boussole non codée |
 | [recherche_bug_or_not_bug.md](recherche/recherche_bug_or_not_bug.md) | **les 18 erreurs de diagnostic**, H1→H18 |
 | [ETAT_DU_PROJET_aout_2026.md](recherche/ETAT_DU_PROJET_aout_2026.md) | état du projet |
 | [REVUE_CODE_v39_aout_2026.md](recherche/REVUE_CODE_v39_aout_2026.md) | les 6 défauts trouvés dans le code |

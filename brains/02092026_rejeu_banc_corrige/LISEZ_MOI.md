@@ -63,3 +63,16 @@ L'agent mesuré était **amputé**, donc les scores devraient monter. Mais :
    savent déjà faire.
 3. Ces cerveaux datent du **26/08** (v41.32) : ils n'ont ni le rendement v41.48 ni l'élan
    v41.49. C'est **voulu** — on fige la référence historique, on ne teste pas une mécanique.
+
+## Journal d'exécution (ajouté le 02/09/2026, en cours de campagne)
+
+- ⚠️ **Une première passe est INVALIDE et rangée dans `_invalide_v4149/`** (14 fichiers
+  `banc_A_*.json`). Elle a tourné sur le code courant (v41.49), où `DIM_VECTEUR_BIO = 44` :
+  les cerveaux du 26/08 (42 dims) y étaient **greffés** au chargement, donc mesurés avec deux
+  colonnes d'élan fraîchement initialisées — ce n'est plus « une seule variable change ».
+- **Le rejeu valide tourne sur un worktree figé au commit `2d69b40` (v41.47)** —
+  `/tmp/naulthene_v4147`, voir l'en-tête de `rejouer.sh` : `DIM_VECTEUR_BIO = 42`, aucune
+  greffe, et la mémoire de travail déjà lue en `penser()[4]`. C'est la **seule** combinaison
+  qui isole la correction d'instrument de tout le reste.
+- Les `banc_*.json` de ce dossier sont commités **au fil de l'eau** (Règle de Trace §3),
+  campagne non terminée : ne pas calculer de `t` avant que les 20 fichiers soient présents.

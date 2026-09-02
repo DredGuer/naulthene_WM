@@ -1,0 +1,32 @@
+{
+  "cerveau": "A_g111",
+  "env": "MiniGrid-SimpleCrossingS9N1-v0",
+  "episodes": 300,
+  "dim_bus": 78,
+  "jour": 1440,
+  "niveau": 4,
+  "maitrise_run": 5.0,
+  "resultats": {
+    "entraîné (eval)": {
+      "taux": 0.04666666666666667,
+      "lo": 0.02799867455083086,
+      "hi": 0.07679803531378282,
+      "n_victoires": 14,
+      "directivite_mediane": 17.625
+    },
+    "neuf (Xavier)": {
+      "taux": 0.06666666666666667,
+      "lo": 0.04356717679698387,
+      "hi": 0.10072379586772039,
+      "n_victoires": 20,
+      "directivite_mediane": 20.666666666666668
+    },
+    "aléatoire (7 actions)": {
+      "taux": 0.056666666666666664,
+      "lo": 0.03567717591318777,
+      "hi": 0.08886666535147117,
+      "n_victoires": 17,
+      "directivite_mediane": 20.166666666666668
+    }
+  }
+}

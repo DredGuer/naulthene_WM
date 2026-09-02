@@ -22,8 +22,11 @@ Ce n'est pas une application produit : c'est un script de recherche exécuté en
 
 ### 🔴 L'ÉTAT RÉEL AU 30/08/2026 — le tableau des suspects est VIDE
 
-**Dix-huit explications du plafond au niveau 4 ont été mesurées et réfutées.** Les trois
-dernières sont tombées le **30/08** : la **récompense creuse** (prémisse fausse — 86 % du
+**Vingt-et-une explications du plafond au niveau 4 ont été mesurées et réfutées** (compte
+tenu au CHANGELOG : 17ᵉ = le barème, 30/08 ; 20ᵉ = le rendement mécanique, 01/09 ; 21ᵉ =
+l'ancrage cinématique, 02/09 — ces deux dernières ont chacune été **livrées puis réfutées à
+n=20**, et convergent sur le même verdict : *l'information est là, et le réseau ne s'en sert
+pas*). Le bloc qui suit décrit l'état au 30/08 ; les trois explications tombées ce jour-là : la **récompense creuse** (prémisse fausse — 86 % du
 signal est **dense**, et normaliser par épisode est **pire**, 60 tirages sur 60), la
 **curiosité** (rente confirmée à 40 % du signal, mais **15,0 % vs 15,0 %** de maîtrise entre
 curiosité faible et forte), et le **barème** : `r(part_monde, maîtrise) = +0,4191`
@@ -206,7 +209,8 @@ Le projet est organisé en **package Python** sous `src/naulthene/`, avec un dos
 │   │   └── persistance.py        cristallisation/résurrection de l'état cognitif (.brain)
 │   ├── salles_de_classe/         ← LES SALLES DE CLASSE (cursus d'entraînement)
 │   │   ├── cursus_bebe.py        paradigme développemental "Bébé" (0→4 ans)
-│   │   └── cursus_developpemental.py   Cursus par Ères (1000 jours)
+│   │   ├── cursus_developpemental.py   Cursus par Ères (1000 jours)
+│   │   └── cursus_parole.py      l'École de la Parole (v27.x)
 │   ├── cuve/                     ← LA CUVE (client-serveur, cerveau persistant)
 │   │   ├── daemon_cerveau.py     le serveur (héberge le cerveau en cryostase)
 │   │   ├── client_corps.py       client MiniGrid jetable
@@ -220,22 +224,35 @@ Le projet est organisé en **package Python** sous `src/naulthene/`, avec un dos
 │   │   │                          (RequeteC3/ReponseC3/PlugC3)
 │   │   └── plugs/                 greffons interchangeables (PlugNul, PlugSimule,
 │   │                               PlugHTTP, PlugMemoireAugmentee) qui s'enregistrent sur le port
-│   └── instruments/               ← INSTRUMENTS D'OBSERVATION (lecture seule)
+│   └── instruments/               ← INSTRUMENTS D'OBSERVATION (lecture seule) — 35 fichiers
 │       ├── arene_visuelle.py     fenêtre pygame de visualisation en direct
 │       ├── lancer_arene.py       lance l'Arène (pygame + audio)
 │       ├── irm_cerveau.py        scanner d'activations internes, ne modifie jamais le .brain
+│       ├── banc_ablation.py      le banc d'ablation sensorielle (78 cellules, v41)
+│       ├── banc_ppo.py           la ligne de base PPO (60 runs, v41.38)
+│       ├── evaluer_cerveau.py · cohorte_bareme.py · enregistreur_voix.py
 │       ├── sonde_c1_c2.py        rapport de force C1/C2 (v37.0) — amplitudes, ratio, accord
-│       └── sonde_poids.py        santé synaptique couche par couche (v37.0) — signale les
-│                                   couches collées au plancher vital
+│       ├── sonde_poids.py        santé synaptique couche par couche (v37.0)
+│       └── sonde_*.py            ~25 sondes de la série 23/08 → 02/09 (gradient, crédit, dérive,
+│                                   collapse, plafond/plancher géométrique, autocorrélation
+│                                   motrice, gestes stériles…) — chacune est citée par
+│                                   l'entrée du CHANGELOG qui l'a créée
 │
-├── brains/                       cerveaux cristallisés (*.brain, gitignorés) — un fichier par run,
-│   ├── old_V30/                    nommé DDMMYYYYHHMM_VXX_NMRTOUR_RMD.brain (voir « Convention de
-│   ├── old_testV30-V34/            nommage des cerveaux ») ; old_VXX/ archive les générations
-│   ├── old_V37/                    précédentes, jamais supprimées. old_V37/ contient la lignée
-│   │   └── recherche_aout2026/     v34→v37 (8 cerveaux) et, dans son sous-dossier, les 70 cerveaux
-│   │                               de la campagne d'ablation/hypothèses du 11-12 août 2026
+├── experiences/                  scripts d'expérience v38 (continuité, permanence, liage) et
+│                                   v39 (validation, croissance P14, gaussienne P17) — un dossier
+│                                   par version, hors package, lancés à la main
+├── voix/                         cache des références vocales TTS (un dossier par mot)
+├── brains/                       cerveaux cristallisés (*.brain et *.log gitignorés) — 62
+│   │                               sous-dossiers au 02/09/2026 :
+│   ├── DDMMYYYY_<sujet>/           UNE CAMPAGNE = UN DOSSIER, créé AVANT le premier run, avec
+│   │                               LISEZ_MOI.md (protocole) + agrégat JSON versionnés (voir
+│   │                               « Règle de Trace » et « Règle de Mesure » §7)
+│   ├── old_VXX/                    archive des générations précédentes, jamais supprimées
+│   │                               (old_V30 → old_V4131, old_V37/recherche_aout2026 = les 70
+│   │                               cerveaux de la campagne du 11-12 août)
+│   ├── cas_isole_*/ · nuit_*/      dossiers antérieurs à la convention, conservés tels quels
 │   └── ablations/                  résultats JSON du banc d'ablation
-└── docs/                         DOCUMENTATION — 4 dossiers, un rôle chacun.
+└── docs/                         DOCUMENTATION — 5 dossiers, un rôle chacun.
     │                               👉 POINT D'ENTRÉE : docs/INDEX.md (dit où chercher)
     ├── INDEX.md                  la carte : quelle question → quel document
     ├── fonctionnement/           NORMATIF — fait autorité sur l'état courant
@@ -243,16 +260,20 @@ Le projet est organisé en **package Python** sous `src/naulthene/`, avec un dos
     │                               LANCEMENT.md (commandes, dépannage), Parcourt_readme.md,
     │                               explications_readme.md (détail algorithmique, §15 sens)
     ├── recherche/                ENQUÊTES — non normatif, mais à consulter AVANT toute
-    │                               idée neuve : recherche_bug_or_not_bug.md (H1→H18, les
-    │                               hypothèses réfutées), dia_Aout_2026.md (diagnostic),
-    │                               ETAT_DU_PROJET_aout_2026.md, REVUE_CODE_v39_aout_2026.md
-    │                               (les 6 défauts trouvés), evals/ (sorties JSON)
+    │                               idée neuve. Trois niveaux depuis le 29/08 :
+    │                               campagnes/ (mesures à n ≥ 20), enquetes_closes/ (pistes
+    │                               réfutées), la racine (diagnostics, autopsies, archives),
+    │                               plus scripts/ (analyses) et evals/ (sorties JSON)
     ├── ameliorations/            IDÉES proposées, PAS encore validées :
     │                               AVIS_ET_PROPOSITIONS_aout_2026.md (P1→P16),
-    │                               les_sens_combinatoire.md, CONCEPTION_v34, v33
-    └── ameliorations_appliquees/ LIVRÉ dans le code — garde la trace des options
-                                    ÉCARTÉES et de leurs raisons : CHANTIER_v37, v38,
-                                    CONCEPTION_v22_audio, v30_exo_sens, EXPLICATIONS_v29
+    │                               les_sens_combinatoire.md, CONCEPTION_v34, v33, CHANTIER_v41.x
+    ├── ameliorations_appliquees/ LIVRÉ dans le code — garde la trace des options
+    │                               ÉCARTÉES et de leurs raisons : CHANTIER_v37, v38, v40,
+    │                               v41.43, v41.44, CONCEPTION_v22_audio, v30_exo_sens
+    ├── etat_des_lieux/           PHOTOS DATÉES (DDMMYYYY_*.md), jamais réécrites après coup
+    └── naulthene_cosmologie/     12 PDF de travaux antérieurs — GITIGNORÉS depuis le 20/08/2026
+                                    (historique réécrit, voir CHANGELOG §[purge-cosmologie]) ;
+                                    présents sur le disque local seulement
 ```
 
 Le cœur de référence est `src/naulthene/cerveau/colab.py` (ex-`agi_google_colab.py`, pensé pour tourner sur Google Colab). Structure interne (sections numérotées par des commentaires `# --- N. ... ---`) :
@@ -697,24 +718,27 @@ décision utilisateur.
 
 ## Git Workflow
 
-### État des branches (2026-08-15)
+### État des branches (mis à jour le 2026-09-02)
 
 | Branche | Contenu | État |
 |---|---|---|
-| `master` | tout le cycle **v28 → v38** (Port C3, Bus Sensoriel, Exo-Sens, odorat topologique, mémoire proportionnelle, extinction synaptique, cursus à 15 niveaux, flux enrichi, équilibre C1/C2, monde continu) | intégrée, poussée |
-| **`feat/v41-ligne-flottaison`** | **branche de travail courante** — v39 → v41.2, **48 commits d'avance sur `master`**, dont **15 non poussés** | ⚠️ **non mergée** |
-| `feat/v39-…`, `feat/v40-…`, `feat/v40.1-…` | étapes intermédiaires du même cycle | conservées pour l'historique |
-| `feat/v28-…` → `feat/v38-…` | branches déjà mergées dans `master` | conservées pour l'historique |
+| **`master`** | **branche de travail courante** — tout le cycle **v28 → v41.49** (368 commits), à jour avec `origin/master` | ✅ intégrée, poussée |
+| `feat/v28-…` → `feat/v41.32-…`, `fix/v41.25-…`, `docs/…` (20 branches) | étapes intermédiaires, **toutes mergées dans `master`** | conservées pour l'historique, jamais supprimées |
 
-Le travail en cours se fait sur **`feat/v41-ligne-flottaison`**. Ce qu'elle porte et que
-`master` **n'a pas encore** :
+Depuis fin août 2026 le travail se fait **directement sur `master`** ; les branches `feat/…`
+ne sont plus créées que pour un chantier qui doit pouvoir être jeté. ⚠️ Une version
+antérieure de ce tableau (datée du 15/08) décrivait `feat/v41-ligne-flottaison` comme
+« non mergée, 15 commits non poussés » — c'était vrai ce jour-là et faux depuis ; vérifier
+avec `git branch --merged master` plutôt que de faire confiance à ce fichier.
+
+Ce que porte le cycle v39 → v41, et qui n'existe que dans `noyau.py` (jamais porté sur `colab.py`) :
 
 - **v39.0** — `noyau.py` versionné (risque structurel n°1 levé) ; empreinte de type ; silence auditif rendu explicite (correctif bit-identique)
 - **v40.0/v40.1** — planification émergente : 3 constantes d'arbitrage supprimées, **9 branches `if` éliminées** du chemin cognitif, 3 interrupteurs cognitifs rendus continus
-- **v41.0** — la **ligne de flottaison métabolique** : le vécu se compte en saillances au-dessus du coût d'exister, plus en moyenne
-- **v41.2** *(en cours, non entrée au CHANGELOG)* — métabolisme à deux étages, `vigueur = énergie ** κ` comme modulateur global unique, profil nutritionnel à 3 axes
+- **v41.0 → v41.2** — la **ligne de flottaison métabolique** puis le métabolisme à deux étages, `vigueur = énergie ** κ` comme modulateur global unique
+- **v41.9 → v41.49** — banc reproductible, douleur unique, travail tenté, constantes fossiles supprimées, puis la série de sondes et de réfutations du 23/08 → 02/09 (voir le CHANGELOG, une entrée par version)
 
-⚠️ **Résultats de cette branche qui contredisent des affirmations antérieures** — les avoir en
+⚠️ **Résultats de ce cycle qui contredisent des affirmations antérieures** — les avoir en
 tête avant toute nouvelle piste. **Couper C2 ne change le score de 0,0 point sur les 6 niveaux**
 (toujours vrai). En revanche le « 0 promotion sur 10 graines » est **périmé depuis le
 20/08/2026** : la campagne v41.29 (10 graines × 1500 jours, cursus complet) donne **10/10 au
@@ -893,4 +917,4 @@ testée reste dans `ameliorations/`. Voir §3 pour les cinq dossiers et la proc�
 | `fix` mineur / `refactor` / `docs` | même version + suffixe | 14.0-fix1, 14.0-docs |
 | `chore` / `style` | pas d'incrément | - |
 
-Le script de référence `src/naulthene/cerveau/colab.py` est actuellement en version **17** (voir `readme_fr.md`, table des matières et journal des mises à jour). `src/naulthene/cerveau/noyau.py` porte en plus toutes les mécaniques expérimentales non encore portées sur `colab.py` (actuellement jusqu'à **v37.0/v37.1** — l'Équilibre C1/C2 & la Distillation Sélective — en passant par v36.0 le Flux Enrichi & l'Abstraction par Récurrence, v35.0/v35.1 le Cursus Progressif à 15 niveaux, le Guidage Dégressif & le Filet de Sécurité, v34.0-fix1/fix2 le correctif d'Extinction Synaptique, v32.0 l'Odorat Topologique & la Clinotaxie, v31.0/v31.1 la Mémoire Proportionnelle, le Rêve Invariant d'Échelle & la Déduplication Mnésique, en passant par v18.0 Architecture Homéostatique Biologique, v22 Hémisphère Auditif & Vocal, v27.x École de la Parole, v28.0 Cascade C1→C2→C3 & Port Exocortex, v29.0/v29.1 Bus Sensoriel & télémétrie des 5 sens, v30.0/v30.1 Odorat Dynamique, Exo-Sens & instrumentation, voir [Variante Locale de Test](#variante-locale-de-test-mac--srcnaulthenecerveaunoyaupy) et `readme_fr.md`/`docs/fonctionnement/CHANGELOG.md` pour le détail) — toute nouvelle mécanique testée localement suit la même échelle de version que le script de référence, marquée `-experimental` tant qu'elle n'y est pas portée. Poursuivre sur cette échelle entière (+1.0 pour la prochaine mécanique majeure) sauf décision contraire de l'utilisateur.
+Le script de référence `src/naulthene/cerveau/colab.py` est toujours en version **17** (vérifié le 02/09/2026 : depuis la réorganisation en package, il n'a reçu que l'en-tête de licence AGPL en v41.33 — **aucune mécanique** de v18 à v41.49 n'y a été portée). `src/naulthene/cerveau/noyau.py` porte **toutes** les mécaniques expérimentales, jusqu'à la **v41.49** (l'ancrage cinématique, 02/09/2026) ; son en-tête `#Version actuelle` doit suivre la dernière entrée du CHANGELOG — il est resté à « 29 » pendant vingt versions avant d'être corrigé le 02/09. La liste complète des mécaniques est le CHANGELOG lui-même (135 entrées), pas ce paragraphe. Toute nouvelle mécanique testée localement suit la même échelle de version que le script de référence, marquée `-experimental` tant qu'elle n'y est pas portée. Poursuivre sur cette échelle (v41.x tant qu'on reste dans le cycle de la ligne de flottaison, +1.0 pour la prochaine mécanique majeure) sauf décision contraire de l'utilisateur.

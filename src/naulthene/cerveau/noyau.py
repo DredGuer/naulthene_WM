@@ -1,8 +1,11 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (C) 2026 Adrien Nault — Naulthène AGI
-#Version actuelle 29. — Variante LOCALE de test (Mac, non versionnée dans le script Colab de référence)
-# Différences avec agi_google_colab.py : détection du device MPS (Apple Silicon) et
-# jours_totaux (500) réglé pour des runs locaux plus courts que les 400 jours de Colab.
+#Version actuelle 41.49 — Variante LOCALE de test (Mac), terrain d'essai des mécaniques expérimentales.
+# Versionné dans git depuis la v39.0 (2026-08-13), mais colab.py reste le script de référence :
+# rien de v18 → v41.49 n'y a été porté. Le marqueur ci-dessus suit le CHANGELOG (une entrée par
+# version) — il indiquait « 29 » jusqu'au 02/09/2026, périmé de 20 versions.
+# Différences permanentes avec colab.py : détection du device MPS (Apple Silicon) et
+# jours_totaux réglé pour des runs locaux plus courts que les 400 jours de Colab.
 
 import torch
 import torch.nn as nn
