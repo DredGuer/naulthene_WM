@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 | Type | Details |
 |------|---------|
-| **Commit** | `c59499b` (mécanique) · `N/A — en attente` (résultats) |
+| **Commit** | `c59499b` (mécanique) · `8b9dd84` (résultats) |
 | **Catégorie** | feat + docs (mesure) |
 | **Impact** | Fonctionnel (mécanique livrée, sans effet mesuré) |
 
