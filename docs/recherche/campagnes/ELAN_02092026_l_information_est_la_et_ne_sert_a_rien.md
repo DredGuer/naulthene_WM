@@ -1,7 +1,7 @@
 # L'ANCRAGE CINÉMATIQUE — l'information est là, C1 ne s'en sert pas
 
-**Date** : 2026-09-02 · **Statut** : ❌ **JUGE N°1 NÉGATIF** · **n = 20 graines appariées ×
-2 bras × 100 jours** · juge n°2 (directivité) en cours.
+**Date** : 2026-09-02 · **Statut** : ❌ **LES DEUX JUGES SONT NÉGATIFS** · **n = 20 graines
+appariées × 2 bras × 100 jours** · banc 150 épisodes, instrument corrigé.
 
 ---
 
@@ -115,13 +115,53 @@ tous les cerveaux (100 comme 1440 jours). Ce n'est **pas** un défaut — la sau
 qu'un `.brain` **ne permet pas de lire l'apprentissage du jour** : seule la myéline,
 cumulative, est lisible post-hoc. À retenir pour toute future analyse de poids.
 
+## 5c. JUGE N°2 — la directivité, pour mémoire
+
+| Graine | ACTIF % | TÉM % | ACTIF dir | TÉM dir |
+|---|---|---|---|---|
+| 11 | 5,33 | 4,67 | 18,29 | 22,42 |
+| 22 | 11,33 | 9,33 | 16,92 | 18,50 |
+| 33 | 2,67 | 10,67 | 23,96 | 10,67 |
+| 44 | 7,33 | 2,67 | 16,00 | 18,88 |
+| 55 | 17,33 | 16,67 | 12,21 | 19,42 |
+| 66 | 13,33 | 16,00 | 16,71 | 17,50 |
+| 77 | 8,00 | 11,33 | 20,58 | 16,75 |
+| 88 | 2,67 | 2,00 | 25,62 | 20,50 |
+| 99 | 6,00 | 16,00 | 16,75 | 20,42 |
+| 111 | 16,00 | 2,67 | 13,33 | 23,21 |
+| 122 | 18,00 | 21,33 | 15,08 | 15,08 |
+| 133 | 6,00 | 9,33 | 20,42 | 22,54 |
+| 144 | 16,00 | 5,33 | 18,29 | 18,79 |
+| 155 | 0,00 | 1,33 | — | 21,83 |
+| 166 | 23,33 | 13,33 | 19,67 | 16,75 |
+| 177 | 4,00 | 3,33 | 22,29 | 23,58 |
+| 188 | 5,33 | 23,33 | 19,92 | 16,42 |
+| 199 | 18,00 | 7,33 | 18,33 | 16,08 |
+| 211 | 19,33 | 15,33 | 15,92 | 14,83 |
+| 222 | 22,00 | 16,00 | 16,25 | 17,00 |
+
+| Grandeur | Valeur | `t` |
+|---|---|---|
+| **Directivité médiane ACTIF** | **18,29×** | cible **< 6×**, échec **≥ 12×** |
+| Directivité médiane TÉMOIN | 18,65× | — |
+| δ directivité | −0,147× | **−0,129** (NS), n=19 |
+| δ succès | +0,700 pt | **+0,410** (NS), n=20 |
+
+🔴 **ÉCHEC sur le critère utilisateur** : 18,29× contre une cible de 6×, soit **3× la
+cible** et 1,5× le seuil d'échec.
+
+**Vérifications** : pas de saturation (max 25,62× contre un plafond de 27,0×) · 1 graine
+à zéro victoire côté ACTIF (`g155`), donc n=19 pour la directivité · victoires au banc
+333 contre 312, un écart de bruit sur 3 000 épisodes par bras · répartition 12 mieux /
+8 pire en succès, 11/19 en directivité — **pile ou face**.
+
 ## 6. Limites
 
 1. **100 jours.** `integrateur_bio` myélinise lentement ; l'absence d'effet à 100 jours
    n'exclut pas un effet à 1 500. Mais l'Étape 2 était conditionnée au juge n°1.
 2. **Banc forcé** : le niveau reste à 1/15 par construction (règle §6).
-3. Le juge n°2 (directivité) est en cours — il sera rapporté, mais **il n'est pas
-   interprétable seul** puisque le juge n°1 est négatif.
+3. Le juge n°2 est **rapporté au §5c**, mais il n'est **pas interprétable seul** puisque
+   le juge n°1 est négatif — c'est la règle fixée d'avance.
 4. Un **seul** couple de dimensions, une **seule** définition de l'élan (égocentrique,
    demi-vie = côté de la carte). D'autres formulations existent.
 
@@ -129,7 +169,8 @@ cumulative, est lisible post-hoc. À retenir pour toute future analyse de poids.
 
 **Fermé** : l'ancrage cinématique **comme simple entrée sensorielle passive**. Donner
 l'information au réseau ne suffit pas — il faut apparemment le **contraindre** à s'en
-servir.
+servir. Les **deux** juges sont négatifs, et le second confirme le premier plutôt que de
+le contredire.
 
 **Ouvert, et c'est le point important** : les 21 réfutations partagent désormais un motif
 unique. Qu'on retire du signal (curiosité, barème, rendement) ou qu'on en **ajoute**

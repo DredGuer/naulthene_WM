@@ -4,6 +4,69 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.49] - 2026-09-02 — L'ancrage cinématique : l'information est là, C1 ne s'en sert pas
+
+### Les deux juges sont négatifs · 21ᵉ réfutation · le motif est désormais le résultat
+
+| Type | Details |
+|------|---------|
+| **Commit** | `c59499b` (mécanique) · `N/A — en attente` (résultats) |
+| **Catégorie** | feat + docs (mesure) |
+| **Impact** | Fonctionnel (mécanique livrée, sans effet mesuré) |
+
+**LA MÉCANIQUE.** Injection en queue du vecteur bio (42 → **44 dims**) d'un couple
+**égocentrique** (avance ressentie, dérive latérale), lissé sur une demi-vie **dérivée de
+la carte** : `√(max_steps)/2` restitue le côté de la grille (**5,00** sur `Empty-5x5`,
+**9,00** sur `SimpleCrossing`, **16,00** sur `Empty-16x16`). Neutre à **0,5**, jamais 0,0.
+
+**JUGE N°1 — `P(avancer|avancer)/P(avancer)`** (référence Étape 0 : **0,9959**) :
+
+| | ACTIF | TÉMOIN | δ | `t` |
+|---|---|---|---|---|
+| ratio moyen | 1,0372 | 1,0367 | **+0,0005** | **+0,036** |
+
+**9/20 graines** en faveur d'ACTIF. Seuil Bonferroni (2 métriques) : 2,43. ❌
+
+**JUGE N°2 — directivité** (cible < 6×, échec ≥ 12×) : **18,29×** contre 18,65× au témoin,
+δ = −0,147× (`t` = −0,129). Succès +0,700 pt (`t` = +0,410). ❌
+
+🔴 **L'ABLATION N'EST PAS VIDE.** Le signal a vécu : amplitude **0,087–0,161**, demi-vie
+correctement dérivée, 0 télémétrie côté témoin. **L'information était présente et le réseau
+ne s'en est pas servi.**
+
+**LA MYÉLINE DIT POURQUOI.** Les 2 colonnes d'élan de `integrateur_bio` sont plus
+myélinisées que les autres dims bio — **dans les deux bras** (2,140 contre 2,127,
+`t = −1,008`). Effet d'**initialisation** de colonnes fraîchement greffées, pas une réponse
+au signal.
+
+⚠️ **Le test de fumée de la veille est désavoué** : sur la seule paire `g11`, 1,1491 contre
+1,0202 — ce qui ressemblait à un signal. À n=20, `g11` est le **plus gros δ de la
+campagne**. Troisième cas du même motif après `maîtrise ~ énergie` et l'inversion
+`r = −0,89`.
+
+⚠️ **Note technique** : `annexe_weight` vaut **0,000000 exact** sur toutes les couches et
+tous les cerveaux (100 comme 1440 jours) — la sauvegarde suit `cycle_sommeil`, qui verse
+l'annexe dans la base. **Un `.brain` ne permet pas de lire l'apprentissage du jour** ;
+seule la myéline, cumulative, est lisible post-hoc.
+
+🔴 **21ᵉ RÉFUTATION, ET LE MOTIF EST LE RÉSULTAT.** La brique B devait être différente parce
+qu'elle **ajoutait une information** au lieu de retoucher le barème. Elle ne l'est pas.
+Qu'on **retire** du signal (curiosité, barème, rendement) ou qu'on en **ajoute** (bit de
+portage, élan), le comportement ne bouge pas. Ce qui limite l'agent n'est ni le signal
+d'apprentissage, ni l'information disponible, mais **sa capacité à convertir une
+information disponible en politique**.
+
+⚠️ Le code reste **ACTIF par défaut** (non nuisible, témoin `--sans-elan` câblé).
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `MoteurElan`, `DIM_ELAN`, drapeau, télémétrie |
+| `src/naulthene/instruments/sonde_autocorrelation_motrice.py` | **nouveau** — juge n°1 |
+| `docs/recherche/campagnes/ELAN_02092026_…` | **nouveau** — la campagne |
+| `docs/recherche/BOUSSOLE_01092026_…` | **nouveau** — le latent n'est pas métrique |
+
+---
+
 ## [v41.48] - 2026-09-01 — Le rendement mécanique : la brique C livrée, et réfutée
 
 ### 64,6 % du gradient assaini · directivité inchangée à 19,25×
