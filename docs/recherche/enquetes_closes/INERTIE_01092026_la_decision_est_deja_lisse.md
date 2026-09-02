@@ -247,3 +247,12 @@ plus droit sans savoir où il va arrive moins souvent.
 et la corrélation d'origine est elle-même à re-mesurer (défaut d'instrument). Mais c'est la
 **première intervention** jamais tentée sur la directivité, et son signe est **contraire**
 à ce que la lecture causale prédisait.
+
+> ✅ **Mise à jour du 02/09/2026 — la corrélation a été re-mesurée, et l'argument tient
+> mieux qu'avant.** À n=20 sur instrument corrigé, `r` tombe de **−0,8225 à −0,6794** et
+> **échoue** au retrait des 4 extrêmes (−0,478, `t` = −2,04, NS). Le lien est donc **plus
+> faible et plus fragile** que ne le supposait la lecture causale, ce qui va dans le sens de
+> cette section. ⚠️ Mais la mesure λ de ce document **n'a PAS été rejouée** : elle a tourné
+> sur la même sonde amputée, donc ses valeurs absolues restent à reprendre. C'est le
+> **signe** de l'effet qui est ici retenu, pas ses chiffres.
+> Voir [REJEU_02092026](../campagnes/REJEU_02092026_la_directivite_survit_affaiblie.md).

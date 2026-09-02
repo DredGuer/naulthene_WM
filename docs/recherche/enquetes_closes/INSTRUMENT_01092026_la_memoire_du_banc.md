@@ -56,9 +56,9 @@ dernier.** Aucune exception, aucun avertissement, aucune valeur aberrante.
 
 | Mesure | Date | Statut |
 |---|---|---|
-| Plancher géométrique (entraîné vs neuf vs aléatoire) | 30/08 | ⚠️ **à re-mesurer** |
-| Directivité des 20 cerveaux (`r = −0,8225`) | 31/08 | ⚠️ **à re-mesurer** |
-| Inertie motrice (λ) | 01/09 | ⚠️ **à re-mesurer** — même sonde |
+| Plancher géométrique (entraîné vs neuf vs aléatoire) | 30/08 | ✅ **re-mesuré le 02/09** — δ succès **+0,63 pt** (`t` = +0,40, 10/20) : nul en moyenne |
+| Directivité des 20 cerveaux (`r = −0,8225`) | 31/08 | ✅ **re-mesuré le 02/09** — **−0,6794** (`t` = −3,93, n=20), ne passe plus le retrait des extrêmes |
+| Inertie motrice (λ) | 01/09 | ⚠️ **à re-mesurer** — même sonde, **non rejoué à ce jour** |
 
 **Ce qui n'est PAS affecté** (aucun `penser()` de banc dans la boucle) :
 
@@ -78,6 +78,24 @@ L'agent mesuré était **amputé**, donc les scores de banc sont vraisemblableme
    ce qui permettrait de tenir un cap.
 3. La corrélation `r(directivité, succès) = −0,8225` peut se renforcer, s'affaiblir ou
    changer de nature. **Elle n'est pas invalidée : elle est non établie.**
+
+> ✅ **VÉRIFIÉ le 02/09/2026 (n=20) — et DEUX de ces trois attentes étaient FAUSSES.**
+> Elles sont conservées telles quelles ci-dessus : c'est la trace de ce qui était attendu
+> avant la mesure.
+>
+> | Attente du 01/09 | Mesuré le 02/09 | Verdict |
+> |---|---|---|
+> | (1) le succès va **monter** | **+0,63 pt** (`t` = +0,40), **10/20** favorables | ❌ **faux** — nul en moyenne, un pile ou face |
+> | (2) la directivité va **baisser** | **−0,088×** (`t` = −0,16), 12/20 | ❌ **faux** — nulle aussi |
+> | (3) `r` peut s'affaiblir | **−0,8225 → −0,6794**, et échoue au retrait des extrêmes | ✅ **juste** — elle s'affaiblit |
+>
+> **Ce que l'erreur d'attente enseigne** : j'avais raisonné « agent amputé ⇒ scores
+> sous-estimés ». C'est faux. Rebrancher la mémoire de travail **redistribue** les cerveaux
+> sans les améliorer — `A_g111` **+17,0 pt**, `B_g11` **+17,3**, `A_g166` **−10,7**. Le banc
+> amputé mesurait faux, mais de façon **à peu près non biaisée** : les grands écarts
+> individuels s'annulent. Une amputation n'est donc **pas** synonyme de sous-estimation, et
+> il ne faut pas déduire le sens d'un biais de la nature du défaut — seule la mesure le dit.
+> Voir [REJEU_02092026](../campagnes/REJEU_02092026_la_directivite_survit_affaiblie.md).
 
 ⚠️ **Ce qui reste solide indépendamment de ce défaut** : le témoin aléatoire à 5,67 % et
 la ligne de base PPO à 27–40 % ne passent pas par ce code. Le fait que les cerveaux

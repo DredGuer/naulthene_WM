@@ -62,4 +62,10 @@ ont été tirés **en partant des strates les plus rares** pour couvrir 0–45 %
 > Le **sens** des conclusions n'est pas inversé (l'aléatoire reste à 5,67 %, la compétence
 > reste réelle), mais **les valeurs numériques sont à reprendre** et `r = −0,8225` est
 > **non établie** tant que la cohorte n'est pas rejouée.
+>
+> ✅ **RÉSERVE LEVÉE le 02/09/2026 — cohorte rejouée, 20/20.** La directivité **survit mais
+> s'affaiblit** : −0,8225 → **−0,6794** (`t` = −3,93, n=20), 46 % de la variance au lieu de
+> 68 %, et elle **ne passe plus** le retrait des 4 extrêmes (−0,478, `t` = −2,04, NS). Le
+> témoin aléatoire est **invariant** (5,67 % sur 20/20). Chiffres courants :
+> `docs/recherche/campagnes/REJEU_02092026_la_directivite_survit_affaiblie.md`.
 > Voir `docs/recherche/enquetes_closes/INSTRUMENT_01092026_la_memoire_du_banc.md`.

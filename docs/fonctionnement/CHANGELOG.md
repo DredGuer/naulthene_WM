@@ -4,6 +4,73 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.51-coherence] - 2026-09-02 — Levée de la réserve d'instrument et correction d'un chiffre publié
+
+### Toute la doc alignée sur le rejeu à instrument corrigé (n=20)
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | docs |
+| **Impact** | Documentation — **aucun changement de code** |
+
+**Passe de cohérence** après le rejeu des 20 cerveaux ([REJEU_02092026](../recherche/campagnes/REJEU_02092026_la_directivite_survit_affaiblie.md),
+commit `f6078fc`). `CLAUDE.md`, les deux README et `docs/INDEX.md` étaient déjà à jour ; cette
+passe traite ce qui restait **périmé ailleurs**, et corrige un chiffre publié.
+
+**[1] 🔴 UN CHIFFRE PUBLIÉ ÉTAIT FAUX — et il l'était déjà avant le rejeu.** La survie de la
+corrélation au retrait des 4 extrêmes, publiée le 31/08 comme l'une des **trois vérifications**
+établissant le résultat, était annoncée à `r = −0,7771`, `t = −3,27`, **n=9** (CHANGELOG) et
+`r = −0,78`, `t = −3,27` (les deux README). Recalcul sur la source
+`brains/30082026_plancher_n20/agregat.json` :
+
+| Publié le 31/08 | Recalculé le 02/09 |
+|---|---|
+| `r = −0,7771` · `t = −3,27` · **n=9** | **`r = −0,789`** · **`t = −4,63`** · **n=15** |
+
+Un retrait de 2+2 extrêmes sur 19 points donne **15**, jamais 9 : le `n` publié était
+incohérent avec le protocole annoncé. **La conclusion du 31/08 est inchangée** (le test
+passait, et passait même plus largement) — seules les valeurs étaient fausses. ⚠️ C'est le
+**sixième chiffre rétracté** en dix jours, et le premier qui ne vient pas d'un défaut
+d'instrument mais d'une erreur de report.
+
+**[2] ✅ RÉSERVE D'INSTRUMENT LEVÉE PARTOUT.** Cinq documents portaient encore « non établie
+tant que la cohorte n'est pas rejouée » ou « à re-mesurer » : `PLANCHER_30082026`,
+`DIRECTIVITE_31082026`, `INSTRUMENT_01092026`, `INERTIE_01092026`, et les deux `LISEZ_MOI.md`
+de campagne. Tous portent désormais le résultat du rejeu. ⚠️ **Une réserve reste OUVERTE et
+ne doit pas être levée** : la mesure d'inertie motrice (λ) du 01/09 a tourné sur la **même
+sonde amputée** et **n'a pas été rejouée** — c'est le signe de son effet qui est retenu, pas
+ses valeurs.
+
+**[3] 🔴 DEUX ATTENTES SUR TROIS ÉTAIENT FAUSSES.** `INSTRUMENT_01092026` §4 avait consigné
+trois prédictions **avant** le rejeu. Elles sont maintenant tranchées, et conservées telles
+quelles dans le document :
+
+| Attente du 01/09 | Mesuré le 02/09 | Verdict |
+|---|---|---|
+| le succès va **monter** (agent amputé ⇒ sous-estimé) | **+0,63 pt**, `t` = +0,40, 10/20 | ❌ **faux** |
+| la directivité va **baisser** | **−0,088×**, `t` = −0,16, 12/20 | ❌ **faux** |
+| `r` peut s'affaiblir | −0,8225 → **−0,6794**, échoue au retrait des extrêmes | ✅ juste |
+
+**La leçon**, écrite dans le document : « agent amputé ⇒ scores sous-estimés » est un
+raisonnement **faux**. Rebrancher la mémoire de travail **redistribue** les cerveaux sans les
+améliorer (`A_g111` +17,0 · `B_g11` +17,3 · `A_g166` −10,7, moyenne nulle). Un banc qui
+mesure faux ne mesure pas forcément **bas** : il peut mesurer faux de façon à peu près non
+biaisée. **Ne jamais déduire le sens d'un biais de la nature du défaut** — seule la mesure
+le dit.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `docs/fonctionnement/CHANGELOG.md` | portée de la réserve v41.47 mise à jour ; tableau des prédicteurs du 31/08 marqué **remplacé** ; chiffre `−0,7771`/n=9 corrigé |
+| `readme.md`, `readme_fr.md` | chiffre du retrait des extrêmes corrigé (règle de miroir, même commit) |
+| `docs/recherche/campagnes/DIRECTIVITE_31082026_…` | bandeau de réserve **levé** ; §5 point 3 corrigé et marqué comme ne passant plus au rejeu |
+| `docs/recherche/campagnes/PLANCHER_30082026_…` | réserve levée |
+| `docs/recherche/enquetes_closes/INSTRUMENT_01092026_…` | tableau de portée mis à jour ; les 3 attentes du §4 tranchées |
+| `docs/recherche/enquetes_closes/INERTIE_01092026_…` | renvoi mis à jour ; réserve λ maintenue **ouverte** |
+| `brains/30082026_plancher{,_n20}/LISEZ_MOI.md` | réserve levée |
+
+---
+
 ## [v41.50] - 2026-09-02 — La voix libre : le bras A du banc à trois bras (drapeau posé, non mesuré)
 
 ### La netteté de la politique n'est pas apprenable — hypothèse mécanique, et son test
@@ -346,8 +413,10 @@ CRIER quand il rejette**, jamais retomber en silence sur une valeur par défaut 
 que le bug v41.4 (drapeau n'atteignant pas le module) et que `SEUIL_CRISTAL` (branche
 exécutée chaque nuit, jamais déclenchée).
 
-**Portée** : tous les chiffres de banc des 30-31/08. `r(directivité, succès) = −0,8225` est
-**NON ÉTABLIE** jusqu'à réexécution de la cohorte. **Non affecté** : mesures lues dans les
+**Portée** : tous les chiffres de banc des 30-31/08. ✅ **La cohorte A ÉTÉ REJOUÉE le
+02/09/2026 (20/20)** — voir §[v41.51]. `r(directivité, succès)` **survit mais s'affaiblit** :
+−0,8225 → **−0,6794** (`t` = −3,93, n=20), et elle **ne passe plus** le retrait des 4
+extrêmes (−0,478, `t` = −2,04, NS). **Non affecté** : mesures lues dans les
 `.brain`, ligne de base PPO, témoin aléatoire, simulation géométrique, `sonde_recompense`.
 Le **sens** des conclusions tient (la compétence reste réelle, et l'écart à l'aléatoire ne
 peut que grandir), les **valeurs** sont à reprendre.
@@ -463,6 +532,11 @@ plafonne au niveau 4 ; les portes apparaissent au niveau 7.
 **[1] 🔴 LE PREMIER PRÉDICTEUR SIGNIFICATIF.** Sur **20 cerveaux**, `SimpleCrossingS9N1`,
 300 épisodes, graines de carte appariées :
 
+> ⚠️ **CHIFFRES REMPLACÉS (02/09/2026)** — ce tableau est mesuré sur le **banc amputé**
+> (mémoire de travail lue au mauvais index, voir §[v41.47]). Valeurs courantes en §[v41.51] :
+> directivité **−0,6794** (`t` = −3,93), maîtrise **+0,3721**, `dim_bus` **−0,1766**. Le
+> tableau est conservé pour la trace du protocole, **pas comme référence**.
+
 | Prédicteur | `r` | `t` | `r²` | Verdict (seuil 2,39) |
 |---|---:|---:|---:|---|
 | **Directivité** | **−0,8225** | **−5,96** | **0,677** | 🔴 **SIGNIFICATIF** |
@@ -472,7 +546,11 @@ plafonne au niveau 4 ; les portes apparaissent au niveau 7.
 Trois vérifications passées : **pas de saturation de budget** (plafond `324/12 = 27,0×`,
 pire cerveau **22,83×**, 0 sur 13 au-dessus de 24×) ; **pas de tautologie** (`B_g122` fait
 **0,00 %** de succès avec **aucune** directivité définie — les grandeurs sont
-indépendantes) ; **survit au retrait des 4 extrêmes** (`r = −0,7771`, `t = −3,27`, n=9).
+indépendantes) ; **survit au retrait des 4 extrêmes** (`r = −0,789`, `t = −4,63`, n=15).
+⚠️ Ce dernier chiffre a été **corrigé le 02/09** : la version publiée le 31/08 annonçait
+`−0,7771` (`t` = −3,27, n=9), valeurs calculées sur une cohorte **partielle**. Recalcul sur
+`brains/30082026_plancher_n20/agregat.json` : **−0,789** (`t` = −4,63, **n=15**). La
+conclusion du 31/08 est inchangée (le test passait) ; seules les valeurs étaient fausses.
 
 **[2] ✅ LA COMPÉTENCE EST RÉELLE.** Succès moyen **12,33 %** contre **5,67 %** pour le
 marcheur aléatoire (témoin **17/300 identique sur les 20 runs**, vérifié par assertion).

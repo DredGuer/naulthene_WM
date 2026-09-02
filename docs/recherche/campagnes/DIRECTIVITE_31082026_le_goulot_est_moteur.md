@@ -9,9 +9,16 @@
 > l'agent jouait **sans mémoire de travail ni contexte épisodique**. Re-mesuré sur `A_g66`,
 > le succès passe de **37,33 % à 40,00 %** et la directivité de **14,21× à 14,92×**.
 > Le **sens** des conclusions n'est pas inversé (l'aléatoire reste à 5,67 %, la compétence
-> reste réelle), mais **les valeurs numériques sont à reprendre** et `r = −0,8225` est
-> **non établie** tant que la cohorte n'est pas rejouée.
+> reste réelle), mais **les valeurs numériques sont à reprendre**.
 > Voir `docs/recherche/enquetes_closes/INSTRUMENT_01092026_la_memoire_du_banc.md`.
+>
+> ✅ **LEVÉE le 02/09/2026 — la cohorte a été rejouée, 20/20.** `r(directivité, succès)`
+> **survit mais s'affaiblit** : **−0,8225 → −0,6794** (`t` = −3,93, n=20), soit **46 %** de
+> la variance au lieu de 68 %. 🔴 **Et elle ne passe plus le retrait des 4 extrêmes**
+> (−0,478, `t` = −2,04, **NS**) — l'une des trois vérifications de ce document (§5).
+> **Tous les chiffres de banc ci-dessous sont donc REMPLACÉS** par ceux de
+> [REJEU_02092026](REJEU_02092026_la_directivite_survit_affaiblie.md) ; ce document reste
+> la référence du **protocole** et de la rétractation de l'inversion `r = −0,89`.
 
 Suite du [banc du plancher géométrique](PLANCHER_30082026_la_competence_existe_et_la_maitrise_ment.md)
 (30/08, n=4), étendu aux 20 cerveaux exigés par la règle de mesure §2.
@@ -141,8 +148,12 @@ identique, deux cerveaux vont de 3,00 % à 28,67 %.
 2. **Pas de tautologie.** Les deux grandeurs ne partagent aucun terme : la directivité se
    calcule sur les épisodes **gagnés**, le succès compte **combien** le sont. `B_g122` le
    démontre : **0,00 % de succès et aucune directivité définie**.
-3. **Survit au retrait des extrêmes.** Sans les 2 meilleurs et 2 pires : `r = −0,7771`,
-   `t = −3,27`, n=9 — **toujours au-dessus du seuil**.
+3. **Survit au retrait des extrêmes.** Sans les 2 meilleurs et 2 pires : `r = −0,789`,
+   `t = −4,63`, n=15 — **toujours au-dessus du seuil**.
+   ⚠️ **Chiffres corrigés le 02/09** : cette ligne annonçait `−0,7771`, `t = −3,27`, **n=9**,
+   valeurs calculées sur une cohorte partielle. Recalcul sur `agregat.json` : `−0,789`,
+   `t = −4,63`, **n=15**. Le test passait bien, mais pas avec ces nombres-là.
+   🔴 **Et il ne passe PLUS au rejeu à instrument corrigé** (−0,478, `t` = −2,04, NS).
 
 ---
 
