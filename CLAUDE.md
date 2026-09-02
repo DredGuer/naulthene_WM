@@ -64,28 +64,43 @@ plancher géométrique : sur `SimpleCrossingS9N1`, un marcheur aléatoire fait *
 (trajet optimal médian **12 pas**, budget 324 ticks). `r(succès, directivité) = −0,92` — la
 compétence existe et n'est **pas** une trajectoire dirigée.
 
-🔴 **RÉSERVE D'INSTRUMENT (01/09/2026) — les deux blocs qui suivent sont à re-mesurer.**
+✅ **RÉSERVE D'INSTRUMENT LEVÉE (02/09/2026) — la cohorte a été rejouée, 20/20.**
 La sonde de banc lisait la mémoire de travail en `penser()[1]` (la VALEUR, un scalaire) au
 lieu de `[4]`, et un garde-fou sur `dim_bus` la rejetait **en silence** : tous les chiffres
-de banc des 30-31/08 décrivent un agent **sans mémoire de travail ni contexte épisodique**.
-Re-mesuré sur `A_g66` : succès **37,33 % → 40,00 %**, directivité **14,21× → 14,92×**. Le
-**sens** tient (l'aléatoire reste à 5,67 %, la compétence reste réelle, et l'écart avec
-l'aléatoire ne peut que grandir), mais **`r(directivité, succès) = −0,8225` est NON ÉTABLIE**
-tant que la cohorte n'est pas rejouée. ⚠️ Ni l'A/A (δ = 0,000000) ni les 20 graines n'ont
-attrapé ce défaut : le banc était déterministe et reproductible, il mesurait simplement
-**autre chose que ce qu'il annonçait**. Voir
+de banc des 30-31/08 décrivaient un agent **sans mémoire de travail ni contexte épisodique**.
+⚠️ Ni l'A/A (δ = 0,000000) ni les 20 graines n'ont attrapé ce défaut : le banc était
+déterministe et reproductible, il mesurait simplement **autre chose que ce qu'il annonçait**.
+**Règle qui en découle : un garde-fou de forme doit CRIER quand il rejette.** Voir
 `docs/recherche/enquetes_closes/INSTRUMENT_01092026_la_memoire_du_banc.md`.
 
-🔴 **LE GOULOT EST MOTEUR — mesuré à n=20 le 31/08/2026.** La **directivité** (longueur du
-trajet victorieux rapportée au plus court chemin réel) est le **premier prédicteur
-significatif du dépôt** : `r(directivité, succès) = −0,8225`, `t = −5,96`, n=19 —
-**68 % de la variance** (contre 16 % pour la maîtrise). Trois vérifications passées : pas de
-saturation de budget (plafond 27,0×, pire cerveau 22,83×, 0 au plafond), pas de tautologie
-(`B_g122` a 0,00 % de succès et **aucune** directivité définie), et le lien **survit au
-retrait des 4 extrêmes** (`r = −0,78`, `t = −3,27`). Ce qui sépare un cerveau à 3 % d'un
-cerveau à 37 % est son **coefficient de diffusion spatiale** (22,8× contre 13,9×) — ni la
-perception, ni la taille, ni le métabolisme, ni le barème. ⚠️ Corrélationnel : la causalité
-n'est **pas** établie.
+🟡 **LE GOULOT EST MOTEUR — REQUALIFIÉ le 02/09/2026 après rejeu à instrument corrigé.**
+La **directivité** (longueur du trajet victorieux rapportée au plus court chemin réel)
+reste le **seul prédicteur significatif du dépôt**, mais plus faible qu'annoncé :
+
+| | 30/08 (banc amputé) | **02/09 (corrigé, n=20)** |
+|---|---|---|
+| global | −0,8225 (`t` = −5,96) | **−0,6794** (`t` = −3,93) ✅ |
+| **sans les 4 extrêmes** | −0,789 (`t` = −4,63) ✅ | **−0,478** (`t` = −2,04) ❌ **NS** |
+| variance expliquée | 68 % | **46 %** (contre 14 % pour la maîtrise) |
+
+🔴 **La vérification qui ne passe plus est l'une des trois qui avaient établi le résultat
+le 31/08.** La corrélation est **portée par ses extrêmes** : elle sépare les cerveaux très
+directifs des très browniens, elle discrimine mal **au milieu**. ⚠️ Ce point avait été
+consigné **à n=15, avant la fin de la campagne** — pas découvert après coup.
+Vérifications qui passent : témoin aléatoire **5,67 % sur 20/20** (invariant), 0 cerveau au
+plafond de budget (pire 26,25× contre 27,0×), aucun cerveau à zéro victoire, et le retrait
+des cerveaux à moins de 3 victoires ne change rien (`r = −0,67`, `t = −3,70`).
+⚠️ Corrélationnel : la causalité n'est **pas** établie — et v41.47 a mesuré qu'à λ=0,9 la
+**meilleure** directivité de la campagne allait avec le **pire** succès. La directivité
+pourrait être un **symptôme** de la compétence, pas son levier.
+Voir `docs/recherche/campagnes/REJEU_02092026_la_directivite_survit_affaiblie.md`.
+
+🟡 **LA MÉMOIRE DE TRAVAIL EST UNE SOURCE DE VARIANCE, PAS UN LEVIER** (02/09, n=20).
+Rendre à l'agent sa mémoire de travail et son contexte épisodique ne change **rien en
+moyenne** (δ succès **+0,63 pt**, `t` = +0,40, 10/20 favorables) mais déplace fortement les
+cerveaux individuels : **A_g111 +17,0 pt**, **B_g11 +17,3**, **A_g166 −10,7**.
+⚠️ **Tout classement de cerveaux établi sur les chiffres du 30-31/08 est caduc** — B_g11
+passe du 19ᵉ au 7ᵉ rang.
 
 ⚠️ **RÉTRACTATION du 31/08** : j'ai rapporté le 30/08 une **inversion** `r = −0,89` entre
 maîtrise en run et succès au banc, sur **4 cerveaux**. C'était un **biais de sélection que

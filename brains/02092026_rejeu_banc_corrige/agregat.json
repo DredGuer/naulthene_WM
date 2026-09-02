@@ -1,7 +1,7 @@
 {
  "date": "2026-09-02",
  "question": "r(directivité, succès) survit-il à la correction d'instrument du 01/09 ?",
- "n": 15,
+ "n": 20,
  "protocole": "identique au 30/08 à l'unique exception de l'index de la mémoire de travail (penser()[4]) ; worktree figé à 2d69b40 (v41.47), DIM_VECTEUR_BIO=42, aucune greffe ; --force non passé (défaut du banc à l'époque du rejeu : 0.5 figée)",
  "seuil_bonferroni_3_metriques_df18": 2.88,
  "points": [
@@ -54,6 +54,18 @@
    "entropie_jouee": null
   },
   {
+   "nom": "B_g144",
+   "dim_bus": 150,
+   "jour": 1440,
+   "maitrise_run": 35.0,
+   "succes_3008": 28.666666666666668,
+   "succes_rejeu": 22.0,
+   "directivite_3008": 14.666666666666668,
+   "directivite_rejeu": 16.958333333333332,
+   "n_victoires": 66,
+   "entropie_jouee": null
+  },
+  {
    "nom": "A_g166",
    "dim_bus": 132,
    "jour": 1440,
@@ -75,6 +87,18 @@
    "directivite_3008": 22.166666666666668,
    "directivite_rejeu": 16.833333333333332,
    "n_victoires": 61,
+   "entropie_jouee": null
+  },
+  {
+   "nom": "B_g211",
+   "dim_bus": 155,
+   "jour": 1440,
+   "maitrise_run": 40.0,
+   "succes_3008": 15.333333333333332,
+   "succes_rejeu": 16.33,
+   "directivite_3008": 18.041666666666664,
+   "directivite_rejeu": 18.666666666666668,
+   "n_victoires": 49,
    "entropie_jouee": null
   },
   {
@@ -150,6 +174,18 @@
    "entropie_jouee": null
   },
   {
+   "nom": "B_g188",
+   "dim_bus": 153,
+   "jour": 1440,
+   "maitrise_run": 25.0,
+   "succes_3008": 13.0,
+   "succes_rejeu": 6.33,
+   "directivite_3008": 15.666666666666666,
+   "directivite_rejeu": 16.833333333333332,
+   "n_victoires": 19,
+   "entropie_jouee": null
+  },
+  {
    "nom": "A_g44",
    "dim_bus": 157,
    "jour": 1440,
@@ -159,6 +195,18 @@
    "directivite_3008": 22.75,
    "directivite_rejeu": 22.083333333333332,
    "n_victoires": 11,
+   "entropie_jouee": null
+  },
+  {
+   "nom": "B_g44",
+   "dim_bus": 147,
+   "jour": 1440,
+   "maitrise_run": 10.0,
+   "succes_3008": 2.3333333333333335,
+   "succes_rejeu": 2.0,
+   "directivite_3008": 22.833333333333332,
+   "directivite_rejeu": 23.583333333333332,
+   "n_victoires": 6,
    "entropie_jouee": null
   },
   {
@@ -184,47 +232,59 @@
    "directivite_rejeu": 18.666666666666668,
    "n_victoires": 3,
    "entropie_jouee": null
+  },
+  {
+   "nom": "B_g122",
+   "dim_bus": 145,
+   "jour": 1440,
+   "maitrise_run": 20.0,
+   "succes_3008": 0.0,
+   "succes_rejeu": 0.33,
+   "directivite_3008": null,
+   "directivite_rejeu": 26.25,
+   "n_victoires": 1,
+   "entropie_jouee": null
   }
  ],
  "correlations_rejeu": {
   "directivite_vs_succes": {
-   "r": -0.6897,
-   "t": -3.43,
-   "n": 15
+   "r": -0.6794,
+   "t": -3.93,
+   "n": 20
   },
   "maitrise_vs_succes": {
-   "r": 0.3704,
-   "t": 1.44,
-   "n": 15
+   "r": 0.3721,
+   "t": 1.7,
+   "n": 20
   },
   "dim_bus_vs_succes": {
-   "r": -0.1443,
-   "t": -0.53,
-   "n": 15
+   "r": -0.1766,
+   "t": -0.76,
+   "n": 20
   },
   "directivite_vs_succes_sans_4_extremes": {
-   "r": -0.448,
-   "t": -1.5,
-   "n": 11
+   "r": -0.4782,
+   "t": -2.04,
+   "n": 16
   }
  },
  "correlation_3008_memes_cerveaux": {
-  "r": -0.8198,
-  "t": -5.16,
-  "n": 15
+  "r": -0.8225,
+  "t": -5.96,
+  "n": 19
  },
  "delta_apparie": {
   "succes": {
-   "moy": 1.6671,
-   "t": 0.84,
-   "n": 15,
-   "favorables": 8
+   "moy": 0.6332,
+   "t": 0.4,
+   "n": 20,
+   "favorables": 10
   },
   "directivite": {
-   "moy": -0.4332,
-   "t": -0.64,
-   "n": 15,
-   "favorables": 8
+   "moy": -0.0876,
+   "t": -0.16,
+   "n": 19,
+   "favorables": 12
   }
  },
  "verifications": {
@@ -234,10 +294,10 @@
   "temoin_aleatoire_conforme": true,
   "saturation_budget": {
    "plafond": 27.0,
-   "pire": 22.083333333333332,
+   "pire": 26.25,
    "au_plafond": 0
   },
   "tautologie_cerveaux_sans_victoire": [],
-  "n_directivite_definie": 15
+  "n_directivite_definie": 20
  }
 }

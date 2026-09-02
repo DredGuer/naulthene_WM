@@ -22,15 +22,18 @@ explications du plafond au niveau 4 ont été mesurées et réfutées. Les deux 
 (rendement mécanique v41.48, ancrage cinématique v41.49) ont été **livrées puis réfutées à
 n=20** et disent la même chose : qu'on retire du signal ou qu'on ajoute de l'information, le
 comportement ne bouge pas — *l'information est là, le réseau ne s'en sert pas*.
-🔴 **Réserve d'instrument** : les chiffres de banc des 30-31/08 (dont
-`r(directivité, succès) = −0,82`) ont été mesurés **sans mémoire de travail** ; le rejeu
-corrigé est en cours dans `brains/02092026_rejeu_banc_corrige/`.
+✅ **Réserve d'instrument LEVÉE le 02/09** (rejeu 20/20) : la directivité **survit,
+affaiblie** — `r = −0,68`, **46 %** de la variance, et elle **ne survit plus** au retrait
+des 4 extrêmes. La mémoire de travail est une **source de variance**, pas un levier.
+🟡 **Piste en cours** : l'amplitude de la politique est bornée par construction
+(`gain_c1` asservi) — bras A codé, non mesuré.
 
 | Question | Document |
 |---|---|
 | Où en est le projet, sans enjolivure ? | [`../readme_fr.md`](../readme_fr.md) · [`../readme.md`](../readme.md) (EN) |
 | Qu'est-ce qui a été réfuté en dernier, et pourquoi ça converge ? | [campagnes/ELAN_02092026](recherche/campagnes/ELAN_02092026_l_information_est_la_et_ne_sert_a_rien.md) · [campagnes/RENDEMENT_01092026](recherche/campagnes/RENDEMENT_01092026_le_gradient_assaini_ne_change_rien.md) |
-| Quels chiffres publiés sont à reprendre ? | [enquetes_closes/INSTRUMENT_01092026](recherche/enquetes_closes/INSTRUMENT_01092026_la_memoire_du_banc.md) |
+| Quels chiffres publiés sont à reprendre ? | [campagnes/REJEU_02092026](recherche/campagnes/REJEU_02092026_la_directivite_survit_affaiblie.md) — les valeurs des 30-31/08 sont **remplacées** |
+| Pourquoi la politique n'est-elle jamais nette ? | [AMPLITUDE_02092026](recherche/AMPLITUDE_02092026_la_politique_ne_peut_pas_etre_nette.md) — hypothèse, **non testée** |
 | Le barème posé explique-t-il le plafond ? | [campagnes/COHORTE_30082026](recherche/campagnes/COHORTE_30082026_le_bareme_ne_predit_rien.md) — **non, tautologie** |
 | Que vaut l'agent face à un PPO ? | [campagnes/BASELINE_PPO_29082026](recherche/campagnes/BASELINE_PPO_29082026_le_mur_n_existe_pas.md) |
 | Qu'est-ce qui a changé, version par version ? | [fonctionnement/CHANGELOG.md](fonctionnement/CHANGELOG.md) |
@@ -68,7 +71,7 @@ retester une idée déjà écartée. (Les réfutations à n ≥ 20 — RENDEMENT
 | [DIETE_30082026](recherche/enquetes_closes/DIETE_30082026_la_curiosite_est_une_rente_sans_effet.md) | 🔴 la curiosité est une **rente permanente** (40 % du signal) qui **ne prédit rien** — 15,0 % vs 15,0 % |
 | [VALENCE_31082026](recherche/enquetes_closes/VALENCE_31082026_la_carte_est_vide_a_cet_endroit.md) | le renforcement secondaire **existe** (+0,84 sur les portes) mais **n'atteint pas la décision** — la carte est presque vide (6 confirmations contre 8 621) |
 | [INERTIE_01092026](recherche/enquetes_closes/INERTIE_01092026_la_decision_est_deja_lisse.md) | ❌ l'inertie motrice réfutée **sur sa prémisse** — la décision est déjà autocorrélée à **0,69–0,85** |
-| [INSTRUMENT_01092026](recherche/enquetes_closes/INSTRUMENT_01092026_la_memoire_du_banc.md) | 🔴 **correction d'instrument** — le banc jouait à **mémoire nulle** depuis le 30/08 ; `r = −0,8225` non établie |
+| [INSTRUMENT_01092026](recherche/enquetes_closes/INSTRUMENT_01092026_la_memoire_du_banc.md) | 🔴 **correction d'instrument** — le banc jouait à **mémoire nulle** depuis le 30/08 (⚠️ réserve **levée** le 02/09, voir REJEU) |
 | [COLLAPSE_28082026](recherche/enquetes_closes/COLLAPSE_28082026_le_plafond_est_geometrique.md) | ⚠️ **contient sa propre rétractation** : le cosinus saturait |
 | [CIBLE_MOBILE_28082026](recherche/enquetes_closes/CIBLE_MOBILE_28082026_la_tete_poursuit_un_axe_qui_fuit.md) | la dérive de représentation ⚠️ chiffres ×46 **retirés** |
 | [COURSE_29082026](recherche/enquetes_closes/COURSE_29082026_le_predateur_recule.md) | la course mesurée proprement : ×11,7, l'alignement **recule** |
@@ -82,7 +85,8 @@ retester une idée déjà écartée. (Les réfutations à n ≥ 20 — RENDEMENT
 | [ELAN_02092026](recherche/campagnes/ELAN_02092026_l_information_est_la_et_ne_sert_a_rien.md) | ❌ **21ᵉ réfutation** — l'ancrage cinématique : l'information EST là (amplitude 0,09–0,16) et C1 ne s'en sert pas — ratio `t` = +0,04, myéline identique aux deux bras (n=20) |
 | [RENDEMENT_01092026](recherche/campagnes/RENDEMENT_01092026_le_gradient_assaini_ne_change_rien.md) | ❌ **20ᵉ réfutation** — assainir **64,6 % du gradient** ne change RIEN — directivité 19,25× contre un seuil d'échec à 12× (n=20) |
 | [COHORTE_30082026](recherche/campagnes/COHORTE_30082026_le_bareme_ne_predit_rien.md) | 🔴 **17ᵉ réfutation** — le barème ne prédit rien, la corrélation est une **tautologie** (n=40, 0 run) |
-| [DIRECTIVITE_31082026](recherche/campagnes/DIRECTIVITE_31082026_le_goulot_est_moteur.md) | 🔴 **le premier prédicteur significatif** — `r(directivité, succès) = −0,82` (`t = −5,96`, n=19), **68 % de la variance** |
+| [REJEU_02092026](recherche/campagnes/REJEU_02092026_la_directivite_survit_affaiblie.md) | 🟡 **la directivité SURVIT, AFFAIBLIE** (n=20, instrument corrigé) — `r = −0,68` (`t = −3,93`), **46 %** de la variance, mais **ne survit plus** au retrait des 4 extrêmes (`t = −2,04`, NS). La mémoire de travail est une **source de variance**, pas un levier (+0,63 pt en moyenne, ±17 pt par cerveau) |
+| [DIRECTIVITE_31082026](recherche/campagnes/DIRECTIVITE_31082026_le_goulot_est_moteur.md) | ⚠️ **chiffres remplacés par REJEU_02092026** — mesurés sur le banc amputé (`r = −0,82`, 68 % de la variance). Garder pour le protocole et la rétractation de l'inversion `r = −0,89` |
 | [PLANCHER_30082026](recherche/campagnes/PLANCHER_30082026_la_competence_existe_et_la_maitrise_ment.md) | ✅ la compétence **existe** (25,8 % vs 5,7 % aléatoire) mais les victoires sont **browniennes** (14–18× l'optimal) — n=4 |
 | [BASELINE_PPO_29082026](recherche/campagnes/BASELINE_PPO_29082026_le_mur_n_existe_pas.md) | 🔴 **la ligne de base**, 60 runs — le mur informationnel n'existe pas |
 | [CAMPAGNE_v41_population_et_ablation](recherche/campagnes/CAMPAGNE_v41_population_et_ablation_aout_2026.md) | population + ablation sensorielle, 78 cellules |
