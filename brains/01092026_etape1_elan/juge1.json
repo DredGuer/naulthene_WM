@@ -1,0 +1,157 @@
+{
+  "juge1": {
+    "reference_etape0": 0.9959,
+    "ratio_ACTIF_moyen": 1.0372186811610262,
+    "ratio_TEMOIN_moyen": 1.036706389666985,
+    "delta": 0.0005122914940412227,
+    "t": 0.03617853838628004,
+    "n": 20,
+    "ACTIF_mieux_sur": 9,
+    "steriles_ACTIF": 0.625413141586157,
+    "steriles_TEMOIN": 0.6474080862327231,
+    "delta_steriles": -0.021994944646566036,
+    "t_steriles": -1.7570441293692687
+  },
+  "points": [
+    {
+      "graine": 11,
+      "ratio_actif": 1.15651374676718,
+      "ratio_temoin": 1.0110413829850216,
+      "steriles_actif": 0.6802251823660006,
+      "steriles_temoin": 0.7449172576832152
+    },
+    {
+      "graine": 22,
+      "ratio_actif": 1.2819687339559247,
+      "ratio_temoin": 1.258056805959447,
+      "steriles_actif": 0.6187196744404445,
+      "steriles_temoin": 0.6988195091643368
+    },
+    {
+      "graine": 33,
+      "ratio_actif": 0.9810498071440551,
+      "ratio_temoin": 1.0001799612115476,
+      "steriles_actif": 0.6066358024691358,
+      "steriles_temoin": 0.6202842158687193
+    },
+    {
+      "graine": 44,
+      "ratio_actif": 0.9695781373419945,
+      "ratio_temoin": 0.9953219068989353,
+      "steriles_actif": 0.7533380182712579,
+      "steriles_temoin": 0.7986882716049383
+    },
+    {
+      "graine": 55,
+      "ratio_actif": 1.0960790799473281,
+      "ratio_temoin": 0.9852805265649303,
+      "steriles_actif": 0.6173644188184173,
+      "steriles_temoin": 0.5515322580645161
+    },
+    {
+      "graine": 66,
+      "ratio_actif": 1.0006288916562889,
+      "ratio_temoin": 1.0013203629677798,
+      "steriles_actif": 0.6722627737226278,
+      "steriles_temoin": 0.679297965696051
+    },
+    {
+      "graine": 77,
+      "ratio_actif": 1.064419752403788,
+      "ratio_temoin": 1.0088029848029847,
+      "steriles_actif": 0.6342270490412354,
+      "steriles_temoin": 0.715252104145363
+    },
+    {
+      "graine": 88,
+      "ratio_actif": 1.0636280992377682,
+      "ratio_temoin": 1.0559152760102528,
+      "steriles_actif": 0.6461419753086419,
+      "steriles_temoin": 0.64494608641688
+    },
+    {
+      "graine": 99,
+      "ratio_actif": 1.0810464525736037,
+      "ratio_temoin": 1.0136922426207329,
+      "steriles_actif": 0.6211213935764834,
+      "steriles_temoin": 0.5770942938081748
+    },
+    {
+      "graine": 111,
+      "ratio_actif": 1.0334217055332053,
+      "ratio_temoin": 1.1162420723805602,
+      "steriles_actif": 0.5688793718772306,
+      "steriles_temoin": 0.6400278508432616
+    },
+    {
+      "graine": 122,
+      "ratio_actif": 1.0278707713199826,
+      "ratio_temoin": 0.9959377449888954,
+      "steriles_actif": 0.6220920774361477,
+      "steriles_temoin": 0.5874584784898323
+    },
+    {
+      "graine": 133,
+      "ratio_actif": 0.9869312973589611,
+      "ratio_temoin": 1.0894140342416205,
+      "steriles_actif": 0.5846031112883925,
+      "steriles_temoin": 0.6479702510071274
+    },
+    {
+      "graine": 144,
+      "ratio_actif": 0.9816909620991253,
+      "ratio_temoin": 0.9587058071374855,
+      "steriles_actif": 0.42519996832185003,
+      "steriles_temoin": 0.47762653843018993
+    },
+    {
+      "graine": 155,
+      "ratio_actif": 0.9886606982307202,
+      "ratio_temoin": 1.04976104976105,
+      "steriles_actif": 0.8402777777777778,
+      "steriles_temoin": 0.8212962962962963
+    },
+    {
+      "graine": 166,
+      "ratio_actif": 1.016336968262284,
+      "ratio_temoin": 1.0240311221756915,
+      "steriles_actif": 0.5479383590170762,
+      "steriles_temoin": 0.6094660760083935
+    },
+    {
+      "graine": 177,
+      "ratio_actif": 1.0047891378745204,
+      "ratio_temoin": 1.0246038483976077,
+      "steriles_actif": 0.6372013118850539,
+      "steriles_temoin": 0.6017206063088898
+    },
+    {
+      "graine": 188,
+      "ratio_actif": 1.038954107380276,
+      "ratio_temoin": 1.026200233184673,
+      "steriles_actif": 0.6533386967015286,
+      "steriles_temoin": 0.552703134996801
+    },
+    {
+      "graine": 199,
+      "ratio_actif": 1.0028131017901298,
+      "ratio_temoin": 1.0914178725721502,
+      "steriles_actif": 0.5160479342998407,
+      "steriles_temoin": 0.6134559459247033
+    },
+    {
+      "graine": 211,
+      "ratio_actif": 0.9787565904070759,
+      "ratio_temoin": 0.9923021249452826,
+      "steriles_actif": 0.5952609670188921,
+      "steriles_temoin": 0.6382346036466077
+    },
+    {
+      "graine": 222,
+      "ratio_actif": 0.9892355819363118,
+      "ratio_temoin": 1.0359004335330508,
+      "steriles_actif": 0.6673869680851063,
+      "steriles_temoin": 0.7273699802501645
+    }
+  ]
+}
