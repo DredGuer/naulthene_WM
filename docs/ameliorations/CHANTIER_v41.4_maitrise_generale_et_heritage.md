@@ -1,6 +1,11 @@
 # Chantier v41.4 — La maîtrise générale et l'héritage de sevrage
 
-> **Statut** : implémenté, campagne 10 graines × 2 variantes en cours (15/08/2026).
+> **Statut** : implémenté (v41.4, CHANGELOG du 15/08/2026). ⚠️ **Campagne JAMAIS CONCLUE** —
+> annoncée « 10 graines × 2 variantes en cours » le 15/08 ; au 02/09 **aucun dossier de
+> campagne ni document de résultat n'existe**, et le cycle v41.41 → v41.51 est parti sur
+> d'autres pistes. La mécanique est donc **dans le code, non évaluée à n ≥ 20**.
+> *(Statut requalifié le 02/09/2026 — voir
+> [état du dépôt](../etat_des_lieux/02092026_etat_du_depot_et_reste_a_faire.md) §3.5.)*
 > **Fichier** : `src/naulthene/cerveau/noyau.py` (expérimental — pas dans `colab.py`).
 > **Décision utilisateur** : *« Tu as une maîtrise générale des cartes et une maîtrise
 > carte par carte »*, et *« reporter une proportion du niveau précédent de maîtrise sur

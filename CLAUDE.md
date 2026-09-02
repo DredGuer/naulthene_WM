@@ -737,14 +737,19 @@ décision utilisateur.
 
 | Branche | Contenu | État |
 |---|---|---|
-| **`master`** | **branche de travail courante** — tout le cycle **v28 → v41.49** (368 commits), à jour avec `origin/master` | ✅ intégrée, poussée |
-| `feat/v28-…` → `feat/v41.32-…`, `fix/v41.25-…`, `docs/…` (20 branches) | étapes intermédiaires, **toutes mergées dans `master`** | conservées pour l'historique, jamais supprimées |
+| **`master`** | **seule branche** — tout le cycle **v28 → v41.51**, à jour avec `origin/master` | ✅ intégrée, poussée |
+| ~~21 branches `feat/…`, `fix/…`, `docs/…`~~ | étapes intermédiaires, **toutes mergées** | 🗑️ **supprimées en local le 02/09/2026** |
 
-Depuis fin août 2026 le travail se fait **directement sur `master`** ; les branches `feat/…`
-ne sont plus créées que pour un chantier qui doit pouvoir être jeté. ⚠️ Une version
-antérieure de ce tableau (datée du 15/08) décrivait `feat/v41-ligne-flottaison` comme
-« non mergée, 15 commits non poussés » — c'était vrai ce jour-là et faux depuis ; vérifier
-avec `git branch --merged master` plutôt que de faire confiance à ce fichier.
+**Le dépôt est mono-branche depuis le 02/09/2026.** Les 21 branches de travail ont été
+supprimées après vérification que **chaque tip est un ancêtre de `master`** (0 commit
+orphelin) ; leurs SHA sont consignés dans
+[`docs/etat_des_lieux/02092026_branches_archivees.md`](docs/etat_des_lieux/02092026_branches_archivees.md)
+et suffisent à les ressusciter (`git branch <nom> <sha>`). ⏳ Les 21 branches **distantes**
+subsistent sur `origin` — leur suppression reste à faire.
+
+Le travail se fait **directement sur `master`** ; une branche `feat/…` ne se crée que pour un
+chantier qui doit pouvoir être **jeté**. ⚠️ Ne jamais faire confiance à ce tableau sans le
+vérifier : `git branch --merged master` et `git branch -r` disent la vérité, pas ce fichier.
 
 Ce que porte le cycle v39 → v41, et qui n'existe que dans `noyau.py` (jamais porté sur `colab.py`) :
 

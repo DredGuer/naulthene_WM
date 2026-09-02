@@ -157,6 +157,8 @@ retester une idée déjà écartée. (Les réfutations à n ≥ 20 — RENDEMENT
 
 | Date | Document |
 |---|---|
+| 02/09/2026 | [**état du dépôt — 21 réfutations, et ce qui reste**](etat_des_lieux/02092026_etat_du_depot_et_reste_a_faire.md) — où en est le projet, ce qui est acquis, ce qui est ouvert, et les 5 chantiers classés par ce que la mesure justifie |
+| 02/09/2026 | [branches archivées](etat_des_lieux/02092026_branches_archivees.md) — les 21 branches supprimées, leurs SHA pour les ressusciter |
 | 30/08/2026 | [**le génome — audit des constantes**](etat_des_lieux/30082026_le_genome_audit_des_constantes.md) — ce qui fixe la forme ET les désirs d'un cerveau avant tout vécu ; **95,6 % du signal vient de constantes posées** |
 | 22/08/2026 | [campagne v41.31, cursus complet](etat_des_lieux/22082026_campagne_v41.31_cursus_complet.md) |
 | 21/08/2026 | [anatomie du noyau](etat_des_lieux/21082026_anatomie_du_noyau.md) |

@@ -1,6 +1,12 @@
 # Chantier v41.6 — P17 : le cursus comme distribution
 
-> **Statut** : implémenté, run de validation en cours (6 graines × 1000 j, 15/08/2026 soir).
+> **Statut** : implémenté **hors du noyau** (`experiences/v39/v39_p17_gaussienne.py`).
+> ⚠️ **Run de validation JAMAIS CONCLU** — annoncé « 6 graines × 1000 j » le 15/08/2026 au
+> soir ; au 02/09 il n'existe **aucune entrée CHANGELOG pour une v41.6** ni document de
+> résultat. La mécanique n'a donc **jamais été mesurée à n ≥ 20**, et 6 graines ne
+> suffiraient de toute façon pas (règle des 20 graines).
+> *(Statut requalifié le 02/09/2026 — voir
+> [état du dépôt](../etat_des_lieux/02092026_etat_du_depot_et_reste_a_faire.md) §3.4.)*
 > **Fichier** : `src/naulthene/cerveau/noyau.py` (expérimental — pas dans `colab.py`).
 > **Origine** : [P17](AVIS_ET_PROPOSITIONS_aout_2026.md), formulé par l'utilisateur le 14/08.
 
