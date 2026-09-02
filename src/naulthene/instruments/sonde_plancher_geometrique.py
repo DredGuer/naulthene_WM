@@ -162,6 +162,14 @@ def main() -> None:
     p.add_argument("--patience", type=int, default=None,
                    help="troncature volontaire (défaut : max_steps de la carte). "
                         "La patience réelle mesurée en run est de ~258 ticks.")
+    # v41.50 — la force de planification du BANC. Jusqu'ici figée à 0,5 : le témoin y était
+    # donc renormalisé à 2,1 × 0,5 = 1,05 d'amplitude C1, quelle que soit la force qu'il
+    # avait VÉCUE en run (0,7-0,9 sur la cohorte AB3). Défaut : `agent.acceptation()`, la
+    # même grandeur que la boucle de jeu (envie_de_vivre × confiance vécue, toutes deux
+    # sérialisées). `--force 0.5` reproduit exactement le protocole des 30/08-02/09.
+    p.add_argument("--force", type=float, default=None,
+                   help="force de planification du banc (défaut : acceptation() du cerveau ; "
+                        "0.5 = protocole historique des 30/08-02/09)")
     a = p.parse_args()
 
     import naulthene.cerveau.noyau as N
@@ -190,6 +198,11 @@ def main() -> None:
     moteur = N.BiologicalHomeostasisEngine()
 
     def fabrique(modele):
+        force_banc = (a.force if a.force is not None
+                      else float(modele.acceptation()) if hasattr(modele, "acceptation")
+                      else 0.5)
+        print(f"  force de planification du banc : {force_banc:.3f}"
+              + ("  (acceptation() du cerveau)" if a.force is None else "  (imposée)"))
         """Reproduit la politique RÉELLEMENT jouée : `penser()` complet, donc
         `voix_c1 + voix_c2` — jamais les logits bruts de C1 seuls (erreur du 27/08,
         15,00 % publié pour C1 quand la politique jouée est à 23,89 %)."""
@@ -219,7 +232,7 @@ def main() -> None:
                 contexte = (torch.stack(episodiques).mean(dim=0)
                             if episodiques else modele.contexte_vide())
                 sortie = modele.penser(v, memoire, contexte, bio,
-                                       force_planification=0.5,
+                                       force_planification=force_banc,
                                        horizons_planification=(1, 3, 7),
                                        gamma_planif=0.9)
                 logits = sortie[0]
@@ -242,21 +255,31 @@ def main() -> None:
                 pr = torch.softmax(logits.squeeze(0)[:7], dim=-1).cpu().numpy()
                 if not np.isfinite(pr).all() or pr.sum() <= 0:
                     raise RuntimeError("politique dégénérée — le banc mesurerait du bruit")
-                return int(rng.choices(range(7), weights=(pr / pr.sum()).tolist())[0])
+                # v41.50 — entropie de la politique JOUÉE sur ce tick (max ln 7 = 1,946) :
+                # juge n°1 du banc à trois bras (critère posé avant : < 1,75). Accumulée
+                # sur la fabrique, lue après le jeu ; jamais sur le témoin aléatoire.
+                pn = pr / pr.sum()
+                jouer_un.entropies.append(float(-(pn * np.log(pn + 1e-12)).sum()))
+                return int(rng.choices(range(7), weights=pn.tolist())[0])
 
         def reset():
             nonlocal memoire, episodiques
             memoire = None
             episodiques = []      # vidé à chaque épisode, comme l.8289 en run
         jouer_un.reset = reset
+        jouer_un.entropies = []
         return jouer_un
 
     resultats = {}
+    entropies = {}
     for label, pol, ag in (("entraîné (eval)", "modele", fabrique(agent_e)),
                            ("neuf (Xavier)", "modele", fabrique(neuf)),
                            ("aléatoire (7 actions)", "aleatoire", None)):
         taux, trajets = jouer(pol, a.env, a.episodes, a.graine, agent=ag,
                               patience=a.patience)
+        if ag is not None and ag.entropies:
+            entropies[label] = float(np.mean(ag.entropies))
+            print(f"  {label:24s} entropie jouée {entropies[label]:.3f}  (max ln 7 = 1.946)")
         k = round(taux * a.episodes)
         lo, hi = intervalle_wilson(k, a.episodes)
         resultats[label] = (taux, trajets, lo, hi)
@@ -298,10 +321,12 @@ def main() -> None:
             "dim_bus": ck.get("dim_bus"), "jour": ck.get("jour"),
             "niveau": ck.get("niveau_actuel"),
             "maitrise_run": (100.0 * sum(1 for x in h if x) / len(h)) if h else None,
+            "force_banc": a.force, "gain_c1_libre": bool(ck.get("gain_c1_libre", False)),
             "resultats": {
                 lab: {"taux": t, "lo": lo, "hi": hi, "n_victoires": len(tr),
                       "directivite_mediane": (float(np.median([x / y for x, y in tr]))
-                                              if tr else None)}
+                                              if tr else None),
+                      "entropie_jouee": entropies.get(lab)}
                 for lab, (t, tr, lo, hi) in resultats.items()
             },
         }

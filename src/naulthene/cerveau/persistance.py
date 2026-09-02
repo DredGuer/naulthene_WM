@@ -250,6 +250,10 @@ class PersistanceAnatomique:
             # ce que la mécanique cherche à mesurer (un agent éteint renaîtrait plein
             # d'allant à chaque reprise, et aucun run ne pourrait jamais « mourir »).
             'envie_de_vivre': getattr(etat.agent, 'envie_de_vivre', 1.0),
+            # v41.50 — le régime de voix de C1 (bras A, `--gain-c1-libre`) est un trait de
+            # l'individu : un cerveau élevé la voix libre doit être rejoué la voix libre,
+            # sinon tout banc renormaliserait à la lecture ce que le run a laissé grandir.
+            'gain_c1_libre': bool(getattr(etat.agent, 'gain_c1_libre', False)),
 
             # --- 3. Chimie viscérale (réservoir dopaminergique + moteur homéostatique) ---
             'teneur_dopamine': etat.teneur_dopamine,
@@ -559,6 +563,12 @@ class PersistanceAnatomique:
         # l'occasion de perdre la foi, donc il repart entier. C'est le seul défaut
         # défendable — 0.0 condamnerait d'emblée tout cerveau existant.
         agent.envie_de_vivre = float(checkpoint.get('envie_de_vivre', 1.0))
+        # v41.50 — défaut False : tout .brain antérieur reste clampé (comportement v37.0
+        # exact), sans greffe ni erreur. Le trait ne dépend PAS de la constante du module
+        # au chargement : c'est l'individu qui le porte.
+        agent.gain_c1_libre = bool(checkpoint.get('gain_c1_libre', False))
+        if agent.gain_c1_libre:
+            print("🔬 [BRAS A] cerveau rechargé sous le régime VOIX LIBRE (gain_c1 ≡ 1,0)")
 
         env_id = checkpoint['env_id']
         nom_classe = checkpoint['nom_classe']

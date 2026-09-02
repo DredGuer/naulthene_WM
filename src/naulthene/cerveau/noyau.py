@@ -757,6 +757,12 @@ class AGI_Naulthene(nn.Module):
         # `None` = jamais mesuré (la 1re journée avec un choc l'établit).
         self.reference_choc_dopamine = None
 
+        # v41.50 — le régime de voix de C1, trait de l'individu (voir GAIN_C1_LIBRE).
+        # Posé à la naissance depuis la constante du module, relu par `penser()` à chaque
+        # tick, sérialisé par `persistance` : le banc qui rejoue ce cerveau respecte son
+        # régime sans qu'aucun drapeau n'ait à être répété côté instrument.
+        self.gain_c1_libre = bool(GAIN_C1_LIBRE)
+
         # v40.0 — LE VÉCU QUI DÉTERMINE LA FORCE DE PLANIFICATION.
         #
         # Deux compteurs, et rien d'autre : la somme pondérée de ce qui a marché (OKAY) et
@@ -1415,8 +1421,13 @@ class AGI_Naulthene(nn.Module):
         # règle ne l'ait décrété. « C1 a toujours raison, sauf si… » est ici, en une ligne.
         amplitude_c1 = (logits_instinct.max(dim=-1, keepdim=True).values
                         - logits_instinct.min(dim=-1, keepdim=True).values)
-        gain_c1 = torch.clamp(vigueur_min_c1(force_planification) / (amplitude_c1 + 1e-8),
-                              min=GAIN_C1_MIN, max=GAIN_C1_MAX)
+        if getattr(self, "gain_c1_libre", False):
+            # v41.50 — bras A : aucune renormalisation. `ones_like` et non `1.0` pour que
+            # la télémétrie (`gain_c1`) et les formes en aval restent identiques au témoin.
+            gain_c1 = torch.ones_like(amplitude_c1)
+        else:
+            gain_c1 = torch.clamp(vigueur_min_c1(force_planification) / (amplitude_c1 + 1e-8),
+                                  min=GAIN_C1_MIN, max=GAIN_C1_MAX)
         # v40.1 — trace de ce que C1 a CONSTRUIT (amplitude brute, avant gain). Lue une
         # fois par nuit par `reviser_envie_de_vivre` : c'est la moitié « expérience de C1 »
         # de la lucidité. Purement observationnel, aucune influence sur ce tick.
@@ -5363,6 +5374,29 @@ GAIN_C1_MAX = 4.0                  # l'extrême serait amplifié sans limite et 
                                     # jours) serait réduit au silence. Aucune des deux ne
                                     # fixe un rapport de force : elles empêchent seulement
                                     # l'un des deux modules de disparaître de l'arbitrage.
+
+# v41.50 — LE BRAS A : LA VOIX LIBRE (`--gain-c1-libre`).
+#
+# Hypothèse consignée le 02/09/2026 (docs/recherche/AMPLITUDE_02092026_…) : le gain ci-dessus
+# ramène l'amplitude de C1 à `2,1 × f` À CHAQUE TICK, dans les deux sens. Quoi que la tête
+# motrice apprenne, sa voix est renormalisée avant le softmax — et softmax est invariante par
+# translation, pas par échelle. La NETTETÉ de la politique n'est donc pas apprenable : sur 20
+# cerveaux, l'amplitude C1 vit dans [0,33 ; 0,91] et l'entropie jouée à 99 % du maximum.
+#
+# Le gain avait été posé (v37.0) contre un bug réel — C2 écrasant C1 de 9,9 à 22× parce que
+# l'érosion nocturne rongeait la tête motrice. Ce bug a été corrigé AILLEURS depuis (v37.0-fix
+# 3/4/5 : myéline rafraîchie, plancher non-plafond, échelle relative). Le gain est peut-être
+# un correctif devenu orphelin. C'est ce que ce bras mesure.
+#
+# Sous ce drapeau, `gain_c1 ≡ 1,0` : C1 parle à l'amplitude qu'il a APPRISE. On retire un
+# mécanisme, on n'en ajoute aucun. C2 n'est pas touché (sa normalisation reste
+# inconditionnelle, invariant v37.0 n°3) — un seul bras par mécanique (règle §6.2).
+#
+# ⚠️ Le régime est un TRAIT DE L'INDIVIDU, sérialisé dans le .brain (`gain_c1_libre`) : un
+# cerveau élevé la voix libre doit être MESURÉ la voix libre, sinon le banc renormaliserait
+# à la lecture ce que le run a laissé grandir — et mesurerait un autre agent. La constante
+# ci-dessous ne règle que les NOUVEAU-NÉS ; un .brain antérieur repart clampé (`.get(…, False)`).
+GAIN_C1_LIBRE = False               # True = bras A ; le témoin garde le gain v37.0 intact
 
 # v37.1 — LA DISTILLATION SÉLECTIVE (crédit rétrograde).
 #
@@ -10576,6 +10610,12 @@ def executer_nuit(etat, plafond_reve=None):
     # _reinitialiser_buffers_journee() ici, elle remet aussi à zéro des compteurs
     # scalaires (episodes_jour, erreur_journee...) encore lus plus bas dans cette
     # même fonction pour le log/dict W&B de fin de nuit.
+    # v41.50 — l'entropie de la politique JOUÉE (voix_c1 + voix_c2, après softmax), moyenne
+    # du jour. C'est le juge n°1 du banc à trois bras (critère posé AVANT : < 1,75 ; max
+    # ln 7 = 1,946). `Arbitrage_Entropie_C1/C2` mesurent les VOTES de chaque voix, pas la
+    # distribution réellement échantillonnée — sans cette clé le bras A serait invisible.
+    etat.entropie_jouee_jour = (float(torch.stack(etat.entropies_journee).mean().item())
+                                if etat.entropies_journee else None)
     etat.jepa_losses.clear()
     etat.log_probs_journee.clear()
     etat.entropies_journee.clear()
@@ -11319,8 +11359,11 @@ def executer_nuit(etat, plafond_reve=None):
         entropie_c2 = _entropie_votes(etat.votes_c2_jour)
         gain_moy = etat.gain_c1_jour / n_arb
         sante = "✅" if ratio_c2c1 <= 3.0 else "⚠️"
+        _h_jouee = getattr(etat, "entropie_jouee_jour", None)
         print(f"  ├─ Arbitrage C1/C2: {sante} C1={amp_c1:.3f} C2={amp_c2:.3f} "
               f"(ratio {ratio_c2c1:.2f}x) | accord {accord_pct:.1f}% | gain C1 ×{gain_moy:.2f}"
+              + (f" | H jouée {_h_jouee:.3f}" if _h_jouee is not None else "")
+              + (" | 🔬 voix libre" if getattr(etat.agent, "gain_c1_libre", False) else "")
               + (f" | distill. {etat.agent.derniere_perte_distillation:.4f}"
                  f" (crédit {getattr(etat.agent, 'dernier_credit_distillation', 0.0):.1%}"
                  f", réf. choc {(etat.agent.reference_choc_dopamine or 0.0):.3f})"
@@ -11873,6 +11916,11 @@ def executer_nuit(etat, plafond_reve=None):
         log_wandb["Arbitrage_Entropie_C2"] = entropie_c2
         log_wandb["Arbitrage_Gain_C1"] = gain_moy
         log_wandb["Arbitrage_Ticks"] = n_arb
+        # v41.50 — conditionnelle comme les autres : un jour sans tick moteur n'a pas
+        # d'entropie jouée, y logger 0 ferait croire à une politique déterministe.
+        if getattr(etat, "entropie_jouee_jour", None) is not None:
+            log_wandb["Politique_Entropie_Jouee"] = etat.entropie_jouee_jour
+        log_wandb["Arbitrage_Gain_C1_Libre"] = 1.0 if getattr(etat.agent, "gain_c1_libre", False) else 0.0
     if getattr(etat.agent, "derniere_perte_distillation", 0.0):
         log_wandb["Distillation_C2_vers_C1"] = etat.agent.derniere_perte_distillation
         # v37.1 — les deux courbes qui disent si la sélectivité fonctionne.
@@ -11985,6 +12033,12 @@ if __name__ == "__main__":
     _p.add_argument("--sans-elan", action="store_true",
                     help="v41.49 : coupe l'ancrage cinématique — les 2 dims d'élan "
                          "restent au neutre 0,5 (témoin, largeur du réseau inchangée)")
+    # v41.50 — bras A du banc à trois bras (AMPLITUDE_02092026). Retire la
+    # renormalisation de C1 ; ne touche ni C2 ni l'apprentissage. Trait sérialisé.
+    _p.add_argument("--gain-c1-libre", action="store_true",
+                    help="v41.50 : bras A — gain_c1 ≡ 1,0, C1 parle à l'amplitude qu'il a "
+                         "apprise (le témoin garde le gain v37.0). Trait de l'individu, "
+                         "écrit dans le .brain à la naissance")
     _p.add_argument("--sans-rendement", action="store_true",
                     help="v41.48 : coupe la pondération du gradient par le rendement "
                          "mécanique (témoin — restitue le comportement v41.47)")
@@ -12101,6 +12155,17 @@ if __name__ == "__main__":
         print("🔬 [ABLATION] ancrage cinématique v41.49 COUPÉ — élan figé au neutre 0,5")
         from naulthene.cerveau.noyau import ELAN_PERCU_ACTIF as _v_el
         assert _v_el is False, ("l'ablation n'a pas atteint le module — campagne invalide")
+
+    # v41.50 — même discipline : écriture dans le module NOMMÉ + assertion runtime, PUIS
+    # vérification que le trait a bien atteint l'INDIVIDU (c'est lui que `penser()` lit).
+    _gl = bool(_args.gain_c1_libre)
+    globals()["GAIN_C1_LIBRE"] = _gl
+    if _module_reel is not None:
+        _module_reel.GAIN_C1_LIBRE = _gl
+    if _gl:
+        print("🔬 [BRAS A] voix libre v41.50 — gain_c1 ≡ 1,0, C1 parle à l'amplitude apprise")
+        from naulthene.cerveau.noyau import GAIN_C1_LIBRE as _v_gl
+        assert _v_gl is True, ("le bras A n'a pas atteint le module — campagne invalide")
 
     # v41.48 — même discipline : écriture dans le module NOMMÉ + assertion runtime.
     _rend = not _args.sans_rendement
@@ -12373,6 +12438,20 @@ if __name__ == "__main__":
     # repris continue avec la graine du lancement courant, et non celle de sa naissance —
     # sans quoi deux reprises d'un même cerveau seraient indiscernables.
     etat.graine_run = int(_args.graine)
+
+    # v41.50 — le trait est lu par `penser()` sur l'INDIVIDU, pas dans le module : c'est
+    # donc l'individu qu'il faut vérifier. Un nouveau-né l'a reçu de la constante ; un
+    # .brain repris garde le sien (`.get(…, False)`) — sauf demande EXPLICITE par le
+    # drapeau, qui l'emporte et le dit (une reprise sous un autre régime est une décision,
+    # elle doit être visible dans le log).
+    if _args.gain_c1_libre and not getattr(etat.agent, "gain_c1_libre", False):
+        print("🔬 [BRAS A] cerveau repris sous le régime VOIX LIBRE (il était clampé)")
+        etat.agent.gain_c1_libre = True
+    if _args.gain_c1_libre:
+        assert etat.agent.gain_c1_libre is True, ("le bras A n'a pas atteint l'individu — "
+                                                   "campagne invalide")
+    elif getattr(etat.agent, "gain_c1_libre", False):
+        print("🔬 [BRAS A] ce cerveau porte le régime VOIX LIBRE (trait sérialisé)")
 
     for _ in range(1, _args.jours + 1):
         demarrer_journee(etat)

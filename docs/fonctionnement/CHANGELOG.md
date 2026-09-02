@@ -4,6 +4,79 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.50] - 2026-09-02 — La voix libre : le bras A du banc à trois bras (drapeau posé, non mesuré)
+
+### La netteté de la politique n'est pas apprenable — hypothèse mécanique, et son test
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | feat (drapeau d'intervention) + fix (instrument) + docs (hypothèse) |
+| **Impact** | Fonctionnel — **bit-identique** drapeau off (vérifié A/A) |
+
+**L'HYPOTHÈSE** (`docs/recherche/AMPLITUDE_02092026_la_politique_ne_peut_pas_etre_nette.md`,
+écrite avant ce code). Les 21 réfutations ont manipulé ce qui ENTRE dans le réseau ; aucune
+n'a regardé ce qui SORT. Or, à [noyau.py](../../src/naulthene/cerveau/noyau.py) `penser()` :
+`gain_c1 = clamp(2,1 × f / amplitude_c1, 0,25, 4)` ramène la voix de C1 à `2,1 × f` **à
+chaque tick, dans les deux sens** ; C2 est z-scoré inconditionnellement. Softmax étant
+invariante par translation mais pas par échelle, **la netteté de la politique n'est pas
+apprenable** : sur 20 cerveaux, amplitude C1 ∈ [0,33 ; 0,91], entropie jouée à 99 % du max.
+
+Trois faits qui en découlent, à vérifier :
+1. Le « plafond géométrique » (v41.35) ne vient pas de `‖W‖` mais du gain qui renormalise
+   `W` à chaque tick.
+2. **L'ablation « C2 coupé = 0,0 pt » est confondue** : `c2_coupe` pose `force = 0`, donc
+   `vigueur_min_c1(0) = 0`, donc `gain_c1 = 0,25` — couper C2 divise aussi C1 par 6 à 14.
+   Les deux bras étaient quasi uniformes. **Non réfuté : non établi.**
+3. La tête motrice reçoit **1 pas d'optimiseur par nuit** (400 sur le budget PPO, contre
+   ≈ 23 700 pour PPO : **59×**). Le contrôle v41.31 (`× 2,6` sur la perte) ne testait pas
+   cela — Adam absorbe un facteur, pas un nombre de pas.
+
+Corrélations sur données existantes (n=20, contre le banc du 30/08) : `r(amplitude C1,
+succès) = +0,37`, `r(gain, succès) = −0,44`, `r(accord, succès) = +0,45` — **aucune ne
+passe Bonferroni (2,88)**. La plage est tronquée par le code lui-même ; seule l'intervention
+tranchera.
+
+**LE CODE — bras A, `--gain-c1-libre`** : `gain_c1 ≡ 1,0`, C1 parle à l'amplitude qu'il a
+apprise. On **retire** un mécanisme, on n'en ajoute aucun. C2 intact (un bras par mécanique).
+Le régime est un **trait de l'individu** (`agent.gain_c1_libre`), sérialisé dans le `.brain`
+(`.get(…, False)` : tout cerveau antérieur reste clampé) — sans quoi le banc renormaliserait
+à la lecture ce que le run a laissé grandir. Drapeau écrit dans le module NOMMÉ + assertion,
+puis vérifié **sur l'individu** après chargement.
+
+**L'INSTRUMENT — deux corrections de `sonde_plancher_geometrique`** : (a) `entropie_jouee`
+(politique réellement échantillonnée) écrite dans le JSON — c'est le juge n°1 ; (b) la force
+de planification du banc était **figée à 0,5** : le témoin y était renormalisé à 1,05
+d'amplitude quelle que soit la force vécue (0,7-0,9 en run). Défaut : `acceptation()` du
+cerveau ; `--force 0.5` reproduit le protocole des 30/08-02/09. Télémétrie de nuit :
+`Politique_Entropie_Jouee`, `Arbitrage_Gain_C1_Libre`, « H jouée » sur la ligne d'arbitrage.
+
+**A/A passé** (`brains/02092026_AA_voix_libre/`) : témoin **bit-identique** au code d'avant
+(`git stash`), bras A différent (`gain ×1.00`), trait relu après une nuit complète, banc qui
+l'annonce. ⚠️ Sur un **nouveau-né**, le témoin a `gain ×0,25-0,45` : à `f ≈ 0` le gain
+*étouffe* C1 de 2 à 4× dès le premier jour.
+
+**Protocole du bras A écrit AVANT le run** : `brains/02092026_brasA_voix_libre/LISEZ_MOI.md`
+— 20 graines appariées × 2 bras × 100 jours, banc 300 épisodes, critères posés : entropie
+jouée < 1,75 (juge 1, sinon ablation vide) · succès > 25 % · directivité < 10×. Lancement
+**après** la fin du rejeu à instrument corrigé (13/20 au moment de l'écriture).
+
+⚠️ **Rien n'est mesuré.** Le drapeau est posé, le témoin est prouvé identique, le protocole
+est écrit. Le rejeu partiel (13/20) dit déjà que la mémoire de travail ne change rien en
+moyenne (+0,59 pt, `t = +0,31`) mais ±10-17 pt par cerveau, et `r(directivité, succès)`
+tient à −0,68 (`t = −3,07`) — à confirmer à 20/20.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `GAIN_C1_LIBRE`, trait `gain_c1_libre`, branche dans `penser()`, drapeau + 2 assertions, `Politique_Entropie_Jouee` |
+| `src/naulthene/cerveau/persistance.py` | trait sérialisé / relu (`.get(…, False)`) |
+| `src/naulthene/instruments/sonde_plancher_geometrique.py` | `entropie_jouee` dans le JSON ; `--force` (défaut `acceptation()`) |
+| `docs/recherche/AMPLITUDE_02092026_…` | **nouveau** — l'hypothèse, les chiffres, les vérifications, le banc à 3 bras |
+| `brains/02092026_amplitude_politique/` | agrégat de la réanalyse |
+| `brains/02092026_AA_voix_libre/` · `brains/02092026_brasA_voix_libre/` | A/A passé · protocole + scripts du bras A |
+
+---
+
 ## [v41.49-coherence] - 2026-09-02 — Audit de cohérence : dix dérives documentaires, cinq LISEZ_MOI, 106 JSON orphelins
 
 ### Aucune mesure nouvelle · aucune ligne de code · la Règle de Trace appliquée à elle-même

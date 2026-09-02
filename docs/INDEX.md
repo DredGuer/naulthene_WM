@@ -97,6 +97,7 @@ retester une idée déjà écartée. (Les réfutations à n ≥ 20 — RENDEMENT
 | Document | Sujet |
 |---|---|
 | [dia_Aout_2026.md](recherche/dia_Aout_2026.md) | **le diagnostic système** — plus utile que le README |
+| [AMPLITUDE_02092026](recherche/AMPLITUDE_02092026_la_politique_ne_peut_pas_etre_nette.md) | 🟡 **hypothèse mécanique, non testée** : `gain_c1` asservi à `2,1 × f` et C2 z-scoré bornent l'amplitude des logits joués — la politique **ne peut pas** devenir nette ; 1 pas d'optimiseur/nuit contre ≈ 23 700 pour PPO (**59×**) ; l'ablation « C2 coupé = 0,0 » est **confondue** (force = 0 ⇒ gain C1 = 0,25). Corrélations n=20 toutes NS, banc à 3 bras proposé |
 | [BOUSSOLE_01092026](recherche/BOUSSOLE_01092026_le_latent_n_est_pas_metrique.md) | 🟡 mesure exploratoire (n=1) **avant de coder** : l'agent est **aveugle au but 84 %** du temps et le reconnaît à **d' = 8,89** — mais le latent **n'est pas métrique** (`r = +0,13`). Boussole non codée |
 | [recherche_bug_or_not_bug.md](recherche/recherche_bug_or_not_bug.md) | **les 18 erreurs de diagnostic**, H1→H18 |
 | [ETAT_DU_PROJET_aout_2026.md](recherche/ETAT_DU_PROJET_aout_2026.md) | état du projet |

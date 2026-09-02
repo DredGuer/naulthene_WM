@@ -1,0 +1,309 @@
+{
+ "date": "2026-09-02",
+ "question": "l'amplitude des logits de la politique est-elle contrainte par construction, et est-elle liée au succès au banc ?",
+ "source_logs": "brains/26082026_v4132_AB3_cursus/*.log (100 dernières nuits)",
+ "banc": "brains/30082026_plancher_n20/agregat.json (⚠️ mesuré à mémoire nulle, v41.47)",
+ "bonferroni": "4 métriques, df=18 : t≈2,88",
+ "points": [
+  {
+   "nom": "A_g11",
+   "nuits": 100,
+   "amplitude_c1": 0.43089999999999995,
+   "amplitude_c2": 1.7971199999999998,
+   "gain_c1": 2.9208,
+   "accord_pct": 4.73,
+   "banc_3008": 1.0,
+   "directivite_3008": 20.5,
+   "maitrise_run": 5.0
+  },
+  {
+   "nom": "A_g111",
+   "nuits": 100,
+   "amplitude_c1": 0.51973,
+   "amplitude_c2": 1.63678,
+   "gain_c1": 2.3507,
+   "accord_pct": 15.287,
+   "banc_3008": 15.0,
+   "directivite_3008": 14.833333333333334,
+   "maitrise_run": 5.0
+  },
+  {
+   "nom": "A_g122",
+   "nuits": 100,
+   "amplitude_c1": 0.51536,
+   "amplitude_c2": 1.54679,
+   "gain_c1": 2.2668,
+   "accord_pct": 16.212,
+   "banc_3008": 27.33,
+   "directivite_3008": 16.33,
+   "maitrise_run": 35.0
+  },
+  {
+   "nom": "A_g133",
+   "nuits": 100,
+   "amplitude_c1": 0.4722,
+   "amplitude_c2": 1.58803,
+   "gain_c1": 2.5705,
+   "accord_pct": 23.858,
+   "banc_3008": 28.999999999999996,
+   "directivite_3008": 13.833333333333334,
+   "maitrise_run": 25.0
+  },
+  {
+   "nom": "A_g144",
+   "nuits": 100,
+   "amplitude_c1": 0.43705,
+   "amplitude_c2": 1.8324600000000002,
+   "gain_c1": 2.9863,
+   "accord_pct": 12.450999999999999,
+   "banc_3008": 1.3333333333333335,
+   "directivite_3008": 22.25,
+   "maitrise_run": 0.0
+  },
+  {
+   "nom": "A_g155",
+   "nuits": 100,
+   "amplitude_c1": 0.9079600000000001,
+   "amplitude_c2": 1.68216,
+   "gain_c1": 1.482,
+   "accord_pct": 3.944,
+   "banc_3008": 7.67,
+   "directivite_3008": 18.08,
+   "maitrise_run": 45.0
+  },
+  {
+   "nom": "A_g166",
+   "nuits": 100,
+   "amplitude_c1": 0.7823399999999999,
+   "amplitude_c2": 1.7439799999999999,
+   "gain_c1": 1.5893000000000002,
+   "accord_pct": 26.295,
+   "banc_3008": 31.0,
+   "directivite_3008": 16.42,
+   "maitrise_run": 25.0
+  },
+  {
+   "nom": "A_g177",
+   "nuits": 100,
+   "amplitude_c1": 0.74851,
+   "amplitude_c2": 1.78063,
+   "gain_c1": 1.8548,
+   "accord_pct": 11.463,
+   "banc_3008": 3.3333333333333335,
+   "directivite_3008": 19.208333333333336,
+   "maitrise_run": 25.0
+  },
+  {
+   "nom": "A_g188",
+   "nuits": 100,
+   "amplitude_c1": 0.67081,
+   "amplitude_c2": 2.0675499999999998,
+   "gain_c1": 2.2303,
+   "accord_pct": 2.1319999999999997,
+   "banc_3008": 20.666666666666668,
+   "directivite_3008": 13.916666666666666,
+   "maitrise_run": 5.0
+  },
+  {
+   "nom": "A_g222",
+   "nuits": 100,
+   "amplitude_c1": 0.33514000000000005,
+   "amplitude_c2": 1.7761500000000001,
+   "gain_c1": 3.3145,
+   "accord_pct": 27.665,
+   "banc_3008": 7.333333333333333,
+   "directivite_3008": 16.791666666666664,
+   "maitrise_run": 20.0
+  },
+  {
+   "nom": "A_g33",
+   "nuits": 100,
+   "amplitude_c1": 0.5544899999999999,
+   "amplitude_c2": 1.6343299999999998,
+   "gain_c1": 2.298,
+   "accord_pct": 22.999000000000002,
+   "banc_3008": 11.0,
+   "directivite_3008": 19.166666666666668,
+   "maitrise_run": 20.0
+  },
+  {
+   "nom": "A_g44",
+   "nuits": 100,
+   "amplitude_c1": 0.37726,
+   "amplitude_c2": 1.82589,
+   "gain_c1": 3.2186000000000003,
+   "accord_pct": 11.902000000000001,
+   "banc_3008": 1.3333333333333335,
+   "directivite_3008": 22.75,
+   "maitrise_run": 0.0
+  },
+  {
+   "nom": "A_g66",
+   "nuits": 100,
+   "amplitude_c1": 0.7995,
+   "amplitude_c2": 1.59992,
+   "gain_c1": 1.5499,
+   "accord_pct": 33.946999999999996,
+   "banc_3008": 37.33,
+   "directivite_3008": 14.21,
+   "maitrise_run": 30.0
+  },
+  {
+   "nom": "A_g77",
+   "nuits": 100,
+   "amplitude_c1": 0.6642100000000001,
+   "amplitude_c2": 1.66667,
+   "gain_c1": 1.8866999999999998,
+   "accord_pct": 7.5120000000000005,
+   "banc_3008": 9.333333333333334,
+   "directivite_3008": 18.541666666666668,
+   "maitrise_run": 10.0
+  },
+  {
+   "nom": "B_g11",
+   "nuits": 100,
+   "amplitude_c1": 0.3248,
+   "amplitude_c2": 1.7077799999999999,
+   "gain_c1": 3.5103000000000004,
+   "accord_pct": 12.216,
+   "banc_3008": 3.0,
+   "directivite_3008": 22.166666666666668,
+   "maitrise_run": 35.0
+  },
+  {
+   "nom": "B_g122",
+   "nuits": 100,
+   "amplitude_c1": 0.47404,
+   "amplitude_c2": 1.6494499999999999,
+   "gain_c1": 2.659,
+   "accord_pct": 23.423000000000002,
+   "banc_3008": 0.0,
+   "directivite_3008": null,
+   "maitrise_run": 20.0
+  },
+  {
+   "nom": "B_g144",
+   "nuits": 100,
+   "amplitude_c1": 0.46218000000000004,
+   "amplitude_c2": 1.78376,
+   "gain_c1": 2.8659,
+   "accord_pct": 9.377,
+   "banc_3008": 28.666666666666668,
+   "directivite_3008": 14.666666666666668,
+   "maitrise_run": 35.0
+  },
+  {
+   "nom": "B_g188",
+   "nuits": 100,
+   "amplitude_c1": 0.47434,
+   "amplitude_c2": 2.29809,
+   "gain_c1": 3.1869,
+   "accord_pct": 16.563,
+   "banc_3008": 13.0,
+   "directivite_3008": 15.666666666666666,
+   "maitrise_run": 25.0
+  },
+  {
+   "nom": "B_g211",
+   "nuits": 100,
+   "amplitude_c1": 0.50054,
+   "amplitude_c2": 2.46176,
+   "gain_c1": 3.3086,
+   "accord_pct": 13.093,
+   "banc_3008": 15.333333333333332,
+   "directivite_3008": 18.041666666666664,
+   "maitrise_run": 40.0
+  },
+  {
+   "nom": "B_g44",
+   "nuits": 100,
+   "amplitude_c1": 0.4879,
+   "amplitude_c2": 2.03621,
+   "gain_c1": 2.9335000000000004,
+   "accord_pct": 3.553,
+   "banc_3008": 2.3333333333333335,
+   "directivite_3008": 22.833333333333332,
+   "maitrise_run": 10.0
+  }
+ ],
+ "correlations": {
+  "amplitude_c1": {
+   "vs_banc": {
+    "r": 0.3715,
+    "t": 1.7,
+    "n": 20
+   },
+   "vs_directivite": {
+    "r": -0.3365,
+    "t": -1.47,
+    "n": 19
+   }
+  },
+  "amplitude_c2": {
+   "vs_banc": {
+    "r": -0.1569,
+    "t": -0.67,
+    "n": 20
+   },
+   "vs_directivite": {
+    "r": 0.0935,
+    "t": 0.39,
+    "n": 19
+   }
+  },
+  "gain_c1": {
+   "vs_banc": {
+    "r": -0.4369,
+    "t": -2.06,
+    "n": 20
+   },
+   "vs_directivite": {
+    "r": 0.3939,
+    "t": 1.77,
+    "n": 19
+   }
+  },
+  "accord_pct": {
+   "vs_banc": {
+    "r": 0.4459,
+    "t": 2.11,
+    "n": 20
+   },
+   "vs_directivite": {
+    "r": -0.3939,
+    "t": -1.77,
+    "n": 19
+   }
+  }
+ },
+ "rejeu_partiel_02092026": {
+  "n": 13,
+  "delta_succes_moy": 0.59,
+  "t": 0.31,
+  "favorable": 7,
+  "r_dir_succes_rejeu": {
+   "r": -0.6792,
+   "t": -3.07,
+   "n": 13
+  },
+  "r_dir_succes_3008_memes": {
+   "r": -0.8096,
+   "t": -4.57,
+   "n": 13
+  }
+ },
+ "budget_apprentissage": {
+  "naulthene_pas_acteur_par_jour": 1,
+  "naulthene_pas_jepa_reve_par_jour": 1,
+  "ticks_par_jour": 400,
+  "jours_equivalents_ppo": 400,
+  "naulthene_pas_acteur_total": 400,
+  "ppo_defaults": {
+   "n_steps": 2048,
+   "batch_size": 64,
+   "n_epochs": 10
+  },
+  "ppo_pas_total": 23757,
+  "ratio": "≈59×"
+ }
+}
