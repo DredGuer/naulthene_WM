@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (C) 2026 Adrien Nault — Naulthène AGI
-#Version actuelle 41.49 — Variante LOCALE de test (Mac), terrain d'essai des mécaniques expérimentales.
+#Version actuelle 41.50 — Variante LOCALE de test (Mac), terrain d'essai des mécaniques expérimentales.
 # Versionné dans git depuis la v39.0 (2026-08-13), mais colab.py reste le script de référence :
 # rien de v18 → v41.49 n'y a été porté. Le marqueur ci-dessus suit le CHANGELOG (une entrée par
 # version) — il indiquait « 29 » jusqu'au 02/09/2026, périmé de 20 versions.
