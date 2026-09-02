@@ -76,3 +76,16 @@ L'agent mesuré était **amputé**, donc les scores devraient monter. Mais :
   qui isole la correction d'instrument de tout le reste.
 - Les `banc_*.json` de ce dossier sont commités **au fil de l'eau** (Règle de Trace §3),
   campagne non terminée : ne pas calculer de `t` avant que les 20 fichiers soient présents.
+
+## Dépouillement — script écrit AVANT la fin de la campagne
+
+`depouiller.py` (02/09, écrit à n=15) produit `agregat.json` et le tableau. Les
+vérifications y sont **fixées d'avance**, pas choisies en regardant les chiffres :
+corrélation principale, corrélation du 30/08 sur les mêmes cerveaux, δ appariés, témoin
+aléatoire, saturation du budget, cerveaux sans victoire, retrait des 4 extrêmes.
+
+⚠️ **Point de vigilance noté à n=15, avant la fin** : `r(directivité, succès)` vaut alors
+−0,69 (`t` = −3,43) au global mais **−0,45 (`t` = −1,50, NS) une fois les 4 extrêmes
+retirés**, alors que le 30/08 il survivait à ce test (−0,78, `t` = −3,27). Si ce motif
+tient à 20/20, la lecture change : la corrélation serait **portée par les extrêmes**, donc
+plus fragile qu'annoncée le 31/08. C'est écrit ici avant de le savoir.
