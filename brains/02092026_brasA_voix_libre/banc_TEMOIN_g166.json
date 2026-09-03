@@ -1,0 +1,37 @@
+{
+  "cerveau": "TEMOIN_g166",
+  "env": "MiniGrid-SimpleCrossingS9N1-v0",
+  "episodes": 300,
+  "dim_bus": 108,
+  "jour": 100,
+  "niveau": 0,
+  "maitrise_run": 10.0,
+  "force_banc": null,
+  "gain_c1_libre": false,
+  "resultats": {
+    "entraîné (eval)": {
+      "taux": 0.23666666666666666,
+      "lo": 0.19208795133542217,
+      "hi": 0.28790425513005197,
+      "n_victoires": 71,
+      "directivite_mediane": 11.416666666666666,
+      "entropie_jouee": 1.6518275777034435
+    },
+    "neuf (Xavier)": {
+      "taux": 0.06333333333333334,
+      "lo": 0.04091655604878176,
+      "hi": 0.09679203948257407,
+      "n_victoires": 19,
+      "directivite_mediane": 22.416666666666668,
+      "entropie_jouee": 1.945576043797826
+    },
+    "aléatoire (7 actions)": {
+      "taux": 0.056666666666666664,
+      "lo": 0.03567717591318777,
+      "hi": 0.08886666535147117,
+      "n_victoires": 17,
+      "directivite_mediane": 20.166666666666668,
+      "entropie_jouee": null
+    }
+  }
+}

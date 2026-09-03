@@ -4,6 +4,70 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.52-mesure] - 2026-09-03 — La voix libre : le premier levier interne du dépôt
+
+### Retirer la renormalisation de C1 DOUBLE le taux de succès (n=20, banc forcé)
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | docs (campagne de mesure, **aucune ligne de `src/` modifiée**) |
+| **Impact** | Critique — première mécanique interne à améliorer quoi que ce soit |
+| **Carnet** | [VOIX_LIBRE_03092026](../recherche/campagnes/VOIX_LIBRE_03092026_le_premier_levier_du_depot.md) |
+
+**20 graines appariées × 2 bras × 100 jours + 40 bancs de 300 épisodes.** Protocole et
+critères écrits AVANT le lancement (`brains/02092026_brasA_voix_libre/LISEZ_MOI.md`).
+
+### Les trois juges, posés d'avance
+
+| Juge | Critère | Mesuré | Verdict |
+|---|---|---|---|
+| 1. Le mécanisme mord | H jouée médiane < 1,75 | **1,513** (témoin 1,702) · δ `t` = −4,93 | ✅ |
+| 2. Succès | > 25 %, δ significatif | **24,17 %** vs **11,73 %** · δ **+12,43 pt** · `t` = **+5,21** · 18/20 | ✅ |
+| 3. Directivité | médiane < 10× | **13,21×** (témoin 17,33×) · δ −5,25× · `t` = −6,30 | 🟡 absolu manqué |
+
+**Le taux de succès double** — après 21 réfutations consécutives. La cause n'est ni une
+entrée sensorielle ni un signal d'apprentissage : c'est une **contrainte de sortie**.
+`gain_c1 = clamp(2,1 × f / amplitude_c1, …)` renormalisait la voix de C1 à chaque tick, et
+softmax n'étant pas invariante par échelle, **la netteté de la politique n'était pas
+apprenable**. Le réseau savait ; il n'avait pas le droit de le dire.
+
+### Les vérifications — 8/8 passées
+
+Témoin aléatoire **5,67 % sur 40/40** · 0 saturation de budget · 0 graine LIBRE à zéro
+victoire (1 au témoin) · **sans les 4 extrêmes : δ = +8,44 pt, `t` = +4,86** (le test qui
+avait fait tomber la directivité) · sans les témoins au plancher : +9,11 pt · ratio C2/C1
+médian 0,535, **0/20** sous le seuil d'écrasement v37.0 · régime sérialisé vérifié
+20/20 · 0 témoin contaminé.
+
+**L'amplitude de C1 a réellement grandi** : 1,215 → **4,526** (×3,7). La question F4 (budget
+d'apprentissage de la tête motrice) est donc **écartée pour ce bras**.
+
+### Ce que ça ouvre — trois réserves écrites
+
+1. ⚠️ **Politique NON asymptotique** : l'entropie descendait encore à −0,00745/j dans 12/15
+   graines au jour 100 (plateau extrapolé vers j170-200). Le +12,43 pt vaut pour « la
+   netteté à H ≈ 1,5 », pas à l'asymptote. **Rejeu à 200 jours nécessaire.**
+2. ⚠️ **Banc forcé** : `--env-force` court-circuite la promotion, donc **rien n'est prouvé
+   sur le cursus**. Cursus complet obligatoire avant toute revendication publique — les
+   README ne sont **pas** modifiés par cette entrée.
+3. 🔴 **L'ablation « couper C2 = 0,0 pt » est CONFONDUE** : `c2_coupe` pose `force = 0` donc
+   `gain_c1 = 0,25` — couper C2 divisait aussi C1 par 6 à 14, les deux bras étaient quasi
+   uniformes. **Non réfuté : non établi.** À refaire sous régime libre.
+
+⚠️ **Incident consigné** : deux lanceurs simultanés sur `g177` (02/09, 21h01). Le `.brain`
+tronqué est archivé dans `_ecarte_collision/`, la graine rejouée. *Un script idempotent
+protège du doublon de travail, pas du doublon d'écrivain.*
+
+| Fichier | Changement |
+|---|---|
+| `docs/recherche/campagnes/VOIX_LIBRE_03092026_…` | **nouveau** — la campagne, les 8 vérifications, les 3 réserves |
+| `brains/02092026_brasA_voix_libre/agregat.json` | **nouveau** — agrégat machine, 20 paires |
+| `brains/02092026_brasA_voix_libre/DIMENSIONNEMENT.md` | analyse de puissance (n=20 suffit, 100 j non) |
+| `docs/INDEX.md` | campagne indexée |
+
+---
+
 ## [v41.51-coherence] - 2026-09-02 — Levée de la réserve d'instrument et correction d'un chiffre publié
 
 ### Toute la doc alignée sur le rejeu à instrument corrigé (n=20)

@@ -82,6 +82,7 @@ retester une idée déjà écartée. (Les réfutations à n ≥ 20 — RENDEMENT
 
 | Document | Ce qu'il mesure |
 |---|---|
+| **[VOIX_LIBRE_03092026](recherche/campagnes/VOIX_LIBRE_03092026_le_premier_levier_du_depot.md)** | ✅ **LE PREMIER LEVIER INTERNE DU DÉPÔT** — retirer la renormalisation de C1 (`gain_c1 ≡ 1`) **double le succès** : 24,17 % contre 11,73 %, δ **+12,43 pt** (`t = +5,21`, 18/20), et l'effet **survit au retrait des 4 extrêmes** (`t = +4,86`). ⚠️ banc forcé, politique **non asymptotique** (H descend encore à j100) ; l'ablation « C2 = 0,0 pt » est **confondue** et à refaire |
 | [ELAN_02092026](recherche/campagnes/ELAN_02092026_l_information_est_la_et_ne_sert_a_rien.md) | ❌ **21ᵉ réfutation** — l'ancrage cinématique : l'information EST là (amplitude 0,09–0,16) et C1 ne s'en sert pas — ratio `t` = +0,04, myéline identique aux deux bras (n=20) |
 | [RENDEMENT_01092026](recherche/campagnes/RENDEMENT_01092026_le_gradient_assaini_ne_change_rien.md) | ❌ **20ᵉ réfutation** — assainir **64,6 % du gradient** ne change RIEN — directivité 19,25× contre un seuil d'échec à 12× (n=20) |
 | [COHORTE_30082026](recherche/campagnes/COHORTE_30082026_le_bareme_ne_predit_rien.md) | 🔴 **17ᵉ réfutation** — le barème ne prédit rien, la corrélation est une **tautologie** (n=40, 0 run) |
