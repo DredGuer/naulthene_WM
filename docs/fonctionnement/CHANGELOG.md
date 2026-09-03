@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `050923b` |
 | **Catégorie** | docs (campagne de mesure, **aucune ligne de `src/` modifiée**) |
 | **Impact** | Critique — première mécanique interne à améliorer quoi que ce soit |
 | **Carnet** | [VOIX_LIBRE_03092026](../recherche/campagnes/VOIX_LIBRE_03092026_le_premier_levier_du_depot.md) |
