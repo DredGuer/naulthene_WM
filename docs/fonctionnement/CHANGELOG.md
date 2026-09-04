@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `f06f868` |
 | **Catégorie** | docs (campagne de mesure, **aucune ligne de `src/` modifiée**) |
 | **Impact** | Critique — le levier se confirme, et un fait nouveau apparaît |
 | **Carnet** | [VOIX_LIBRE_04092026](../recherche/campagnes/VOIX_LIBRE_04092026_200_jours_le_temoin_s_effondre.md) |
