@@ -42,12 +42,28 @@ Voir `docs/recherche/campagnes/CURSUS_04092026_le_mur_tient_l_hemorragie_cesse.m
 
 🔴 **LA TABLE DE MIXAGE — mesurée le 04/09, jamais exploitée.** Les **11 termes** de
 `recompense_interne` sont sommés **à poids 1** (`noyau.py` ~l. 9965). Leur dispersion réelle
-(σ médian, 14 runs) : **`Bio` 62,1 %** · `Env` (la victoire) **17,4 %** · SousObjectif 9,6 % ·
-Progres 5,5 % · Curiosite 5,0 % · Stagnation 0,4 % — et **5 termes sur 11 à σ = 0,0000**
-(Jalons, Portes, Vocal, CoutC3, Guidage). **Le corps pèse 1,35× la victoire.** ⚠️ Ne pas
-normaliser par σ : ce serait *poser* une pondération à la place d'une autre. Un terme mort
-doit d'abord être **expliqué** (jamais déclenché ? ou déclenché à valeur constante ?) — ce
-sont deux pathologies différentes.
+(σ moyen sur **60 000 nuits**, 40 runs) : **`Bio` 57,0 %** · `Env` (la victoire) **21,6 %** ·
+SousObjectif 10,7 % · Progres 5,2 % · Curiosite 4,9 % · Stagnation 0,6 % — et **5 termes sur
+11 à σ = 0,0000** (Jalons, Portes, Vocal, CoutC3, Guidage). **Le corps pèse 2,64× la
+victoire.**
+
+⚠️ **Les chiffres 62,1 / 17,4 publiés en v41.54 sont FAUX** : ils étaient lus sur la
+*dernière journée* de chaque run, or `Env` est nul **51 % des nuits** (l'agent ne gagne pas
+*ce jour-là* — sur la vie entière **tous** gagnent : 860 victoires médianes en LIBRE, 682 en
+témoin, **0 cerveau à zéro**). Corrigé en v41.55.
+
+✅ **Les 5 termes morts sont JAMAIS DÉCLENCHÉS, et c'est NORMAL** — pas un décalage
+d'origine, pas du code mort : ce sont des capteurs **hors de leur domaine**. `Jalons` et
+`Guidage` sont gardés par `if etat.doorkey_actif` (DoorKey est au niveau **7+**, jamais
+atteint), `Portes` n'a aucune porte aux niveaux 0-4, `Vocal` est éteint en cursus MiniGrid
+pur, `CoutC3` n'a aucun plug. **Les supprimer serait une erreur** : ils redeviennent
+nécessaires au niveau 6-7. Leur nullité est un **symptôme du plafond**, pas sa cause.
+Voir `docs/recherche/enquetes_closes/MIXAGE_04092026_les_termes_morts_ne_sont_pas_du_code_mort.md`.
+
+⚠️ Ne pas normaliser par σ : ce serait *poser* une pondération à la place d'une autre. Une
+échelle doit être **dérivée** du monde ou du corps (précédent : `GAIN_MINIMAL_VICTOIRE /
+max_steps`, v41.43). Le ratio Bio/Env de 2,64× n'est **pas tranché** — pathologie ou
+fonctionnement voulu d'un organisme homéostatique ?
 
 ⚠️ **19,2 % du réseau** (253 176 paramètres sur 1 321 618, cerveau réel) est alloué à
 l'hémisphère audio/vocal, pour un terme `Vocal` à **σ = 0,0000** sur un cursus spatial.

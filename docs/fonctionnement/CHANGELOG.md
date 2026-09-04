@@ -4,6 +4,69 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.55-mesure] - 2026-09-04 — La table de mixage : les termes morts ne sont pas du code mort
+
+### L'hypothèse est retournée, et un chiffre publié ce matin est corrigé
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | docs (diagnostic, **aucune ligne de `src/` modifiée**) |
+| **Impact** | Fonctionnel — écarte une intervention qui aurait été une erreur |
+| **Carnet** | [MIXAGE_04092026](../recherche/enquetes_closes/MIXAGE_04092026_les_termes_morts_ne_sont_pas_du_code_mort.md) |
+
+**60 000 nuits de bilan, 40 runs.** Coût : **zéro run**.
+
+### Les 5 termes à σ = 0 sont JAMAIS DÉCLENCHÉS — et c'est normal
+
+`μ = 0` **et** `σ = 0` sur 40 runs : aucun n'est un décalage d'origine. La cause est
+identique pour les cinq — **ils n'ont rien à mesurer sur les niveaux joués** (1 à 4 :
+`Empty-Random-6x6`, `Empty-8x8`, `SimpleCrossingS9N1`, `LavaGapS5`).
+
+| Terme | Cause |
+|---|---|
+| Jalons · Guidage | garde `if etat.doorkey_actif` — `DoorKey` est au **niveau 7+**, jamais atteint |
+| Portes | détecteur générique, mais **aucune porte** aux niveaux 0-4 |
+| Vocal | cursus MiniGrid pur ⇒ `avec_micro_recompense=False` |
+| CoutC3 | aucun plug enregistré ⇒ `ACTION_DEMANDER` masquée (invariant v28.0) |
+
+🔴 **Ce ne sont pas des termes défectueux, ce sont des capteurs hors domaine.** Les
+supprimer serait une **erreur** : ils redeviennent nécessaires au niveau 6-7. Leur nullité
+est un **symptôme du plafond**, pas sa cause.
+
+### ⚠️ Correction d'un chiffre publié le matin même
+
+L'entrée v41.54 donnait `Bio` **62,1 %** / `Env` **17,4 %** — lus sur **la dernière journée
+de chaque run seulement**. Or `Env` est nul **51 % des nuits** : non parce que l'agent ne
+gagne jamais, mais parce qu'il **ne gagne pas ce jour-là**. Sur la vie entière **tous les
+cerveaux gagnent** (victoires médianes **860** LIBRE / **682** TÉMOIN, **0** à zéro).
+
+| Mesure | Bio | Env | Ratio |
+|---|---|---|---|
+| Dernière journée (v41.54) | 62,1 % | 17,4 % | 3,57× |
+| **60 000 nuits (fait foi)** | **57,0 %** | **21,6 %** | **2,64×** |
+
+La conclusion qualitative tient — **le corps domine la victoire** — mais le ratio est
+corrigé.
+
+### Ce qui reste ouvert
+
+🔴 **Le ratio Bio/Env de 2,64× n'est pas tranché.** Pathologie (l'agent optimise sa survie
+et résout le labyrinthe par accident) **ou** fonctionnement voulu (un organisme homéostatique
+consacre l'essentiel de son apprentissage à ne pas mourir) ? ⚠️ Le dépôt a déjà réfuté deux
+fois une corrélation métabolique (`maîtrise ~ énergie` : +0,710 à n=10 → **−0,0588** à n=20).
+
+⚠️ **Ne pas normaliser par σ** : ce serait remplacer une pondération arbitraire par une
+autre, plus difficile à remettre en cause. Une échelle doit être **dérivée** du monde ou du
+corps, comme `GAIN_MINIMAL_VICTOIRE / max_steps` en v41.43.
+
+| Fichier | Changement |
+|---|---|
+| `docs/recherche/enquetes_closes/MIXAGE_04092026_…` | **nouveau** — le diagnostic des 11 termes |
+| `docs/fonctionnement/CHANGELOG.md` · `CLAUDE.md` | chiffres du mixage corrigés (60 000 nuits) |
+
+---
+
 ## [v41.54-mesure] - 2026-09-04 — Le cursus complet : le mur tient, l'hémorragie cesse
 
 ### Le juge de paix a tranché — le levier du banc forcé ne se transporte pas
@@ -56,9 +119,9 @@ reproduit le déclin historique de la v41.29 (−0,44 · −4,57 · −4,78).
 
 🔴 **La table de mixage** (sonde v41.32, lue sur ces runs) : les **11 termes** de la
 récompense sont sommés à poids 1, et leur dispersion réelle est
-**`Bio` 62,1 %** · `Env` (la victoire) **17,4 %** · SousObjectif 9,6 % · Progres 5,5 % ·
+**`Bio` 57,0 %** · `Env` (la victoire) **21,6 %** *(corrigé en v41.55 : les chiffres 62,1/17,4 étaient lus sur la dernière journée seulement)* · SousObjectif 9,6 % · Progres 5,5 % ·
 Curiosite 5,0 % · Stagnation 0,4 % — et **5 termes sur 11 à σ = 0,0000**
-(Jalons, Portes, Vocal, CoutC3, Guidage). Le corps pèse **1,35× la victoire**.
+(Jalons, Portes, Vocal, CoutC3, Guidage). Le corps pèse **2,64× la victoire**.
 
 🔴 Le **mécanisme de l'effondrement du témoin** reste inconnu. 🔴 L'ablation C2 reste
 **confondue**. 🟡 **19,2 %** du réseau (253 176 params) alimente l'audio pour un terme
