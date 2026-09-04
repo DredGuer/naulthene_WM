@@ -22,11 +22,38 @@ Ce n'est pas une application produit : c'est un script de recherche exécuté en
 
 ### 🔴 L'ÉTAT RÉEL AU 30/08/2026 — le tableau des suspects est VIDE
 
-**Vingt-et-une explications du plafond au niveau 4 ont été mesurées et réfutées** (compte
+**Vingt-trois explications du plafond au niveau 4 ont été mesurées et réfutées** (compte
 tenu au CHANGELOG : 17ᵉ = le barème, 30/08 ; 20ᵉ = le rendement mécanique, 01/09 ; 21ᵉ =
 l'ancrage cinématique, 02/09 — ces deux dernières ont chacune été **livrées puis réfutées à
 n=20**, et convergent sur le même verdict : *l'information est là, et le réseau ne s'en sert
-pas*). Le bloc qui suit décrit l'état au 30/08 ; les trois explications tombées ce jour-là : la **récompense creuse** (prémisse fausse — 86 % du
+pas* ; 22ᵉ = le rebond d'entropie causé par le changement de carte, 04/09, **réfuté à coût
+zéro** ; 23ᵉ = **la voix libre en cursus complet**, 04/09).
+
+🟡 **LA VOIX LIBRE (v41.50-54) — un levier réel qui ne débloque pas le cursus.** Retirer la
+renormalisation de C1 (`gain_c1 ≡ 1`) **double le succès au banc forcé** (25,75 % contre
+6,25 %, δ **+19,50 pt**, `t` = +9,58, n=20). En **cursus complet** (20 graines × 1500 j,
+cerveaux neufs) le gain **ne se transporte pas** : mur du niveau 4 sur 40 runs, et l'effet
+apparié **tombe** au retrait des 4 extrêmes (`t` 2,896 → 2,236). Le test de tautologie
+inverse même le signe de la maîtrise (+3,00 → **−2,27 pt** conditionné). ⚠️ Ce qui survit
+est un **comptage**, pas un test : **9 témoins sur 20 à 0 % de maîtrise et 3 effondrés au
+niveau 1, contre 1 et 0 en régime libre**. La renormalisation laisse la compétence **se
+déliter** ; le blocage passe de *dégénératif* à *stationnaire-ascendant*, il n'est pas levé.
+Voir `docs/recherche/campagnes/CURSUS_04092026_le_mur_tient_l_hemorragie_cesse.md`.
+
+🔴 **LA TABLE DE MIXAGE — mesurée le 04/09, jamais exploitée.** Les **11 termes** de
+`recompense_interne` sont sommés **à poids 1** (`noyau.py` ~l. 9965). Leur dispersion réelle
+(σ médian, 14 runs) : **`Bio` 62,1 %** · `Env` (la victoire) **17,4 %** · SousObjectif 9,6 % ·
+Progres 5,5 % · Curiosite 5,0 % · Stagnation 0,4 % — et **5 termes sur 11 à σ = 0,0000**
+(Jalons, Portes, Vocal, CoutC3, Guidage). **Le corps pèse 1,35× la victoire.** ⚠️ Ne pas
+normaliser par σ : ce serait *poser* une pondération à la place d'une autre. Un terme mort
+doit d'abord être **expliqué** (jamais déclenché ? ou déclenché à valeur constante ?) — ce
+sont deux pathologies différentes.
+
+⚠️ **19,2 % du réseau** (253 176 paramètres sur 1 321 618, cerveau réel) est alloué à
+l'hémisphère audio/vocal, pour un terme `Vocal` à **σ = 0,0000** sur un cursus spatial.
+**C1 + C2 pèsent 0,59 %** du réseau (6 962 + 872). ⚠️ C2 est petit **par construction** —
+`cortex_prefrontal : dim_bus → 1` est un critique, sa sortie est un scalaire ; C1 est
+exactement 8× plus gros parce qu'il y a 8 actions. Ce n'est pas une pathologie à corriger. Le bloc qui suit décrit l'état au 30/08 ; les trois explications tombées ce jour-là : la **récompense creuse** (prémisse fausse — 86 % du
 signal est **dense**, et normaliser par épisode est **pire**, 60 tirages sur 60), la
 **curiosité** (rente confirmée à 40 % du signal, mais **15,0 % vs 15,0 %** de maîtrise entre
 curiosité faible et forte), et le **barème** : `r(part_monde, maîtrise) = +0,4191`

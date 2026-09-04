@@ -4,6 +4,78 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.54-mesure] - 2026-09-04 — Le cursus complet : le mur tient, l'hémorragie cesse
+
+### Le juge de paix a tranché — le levier du banc forcé ne se transporte pas
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | docs (campagne de mesure, **aucune ligne de `src/` modifiée**) |
+| **Impact** | Critique — clôt le cycle de la voix libre |
+| **Carnet** | [CURSUS_04092026](../recherche/campagnes/CURSUS_04092026_le_mur_tient_l_hemorragie_cesse.md) |
+
+**20 graines appariées × 2 bras × 1500 jours, cursus complet 15 niveaux, AUCUN
+`--env-force`, cerveaux neufs.** Protocole et 4 critères écrits AVANT le lancement.
+
+### Les quatre juges — tous négatifs
+
+| Juge | Mesuré | Verdict |
+|---|---|---|
+| 1. Le mur (≥ 6/15) | **4/15**, tous bras, 40 runs | ❌ |
+| 2. Niveau apparié | δ +0,70 · `t` = **+2,896** (seuil 2,86) | 🔴 **passe puis TOMBE** |
+| 3. Tendance de maîtrise | LIBRE **+0,100** (12/20) · TÉMOIN **−0,416** (6/20) · `t` = +1,310 | 🟡 **NS** |
+| 4. Réplication | +3,00 pt · `t` = +1,301 (contre +19,50 pt au banc) | ❌ |
+
+**Le juge 2 ne survit pas à sa propre vérification** : `t` = 2,896 franchit Bonferroni de
+0,036, puis **tombe à 2,236 sans les 4 extrêmes** — le test même qui avait fait tomber la
+directivité le 02/09. L'effet est porté par **3 témoins effondrés au niveau 1**. **Non établi.**
+
+**Le test de tautologie retire le reste** : conditionné sur « les deux bras ont gagné »
+(n=11), le δ de maîtrise **change de signe** (+3,00 → **−2,27 pt**).
+
+### Ce qui survit — un comptage, pas un test
+
+| | LIBRE | TÉMOIN |
+|---|---|---|
+| Maîtrise **0 %** | **1/20** | **9/20** |
+| Effondrés au niveau 1 | **0/20** | **3/20** |
+| Au niveau 4 | **20/20** | 12/20 |
+
+**Le régime témoin produit des effondrements, le régime libre n'en produit aucun.** Le
+blocage passe de **dégénératif** à **stationnaire-ascendant** — sans être levé. Le témoin
+reproduit le déclin historique de la v41.29 (−0,44 · −4,57 · −4,78).
+
+### Ce que ça ferme
+
+- La voix libre **ne débloque pas le cursus** (mur du niveau 4, 40 runs, 1500 jours).
+- Le **+19,50 pt** du banc forcé était une **optimisation locale**, non généralisable —
+  illustration exacte de la règle de mesure §6.
+
+### Ce que ça ouvre — mesuré au passage, non exploité
+
+🔴 **La table de mixage** (sonde v41.32, lue sur ces runs) : les **11 termes** de la
+récompense sont sommés à poids 1, et leur dispersion réelle est
+**`Bio` 62,1 %** · `Env` (la victoire) **17,4 %** · SousObjectif 9,6 % · Progres 5,5 % ·
+Curiosite 5,0 % · Stagnation 0,4 % — et **5 termes sur 11 à σ = 0,0000**
+(Jalons, Portes, Vocal, CoutC3, Guidage). Le corps pèse **1,35× la victoire**.
+
+🔴 Le **mécanisme de l'effondrement du témoin** reste inconnu. 🔴 L'ablation C2 reste
+**confondue**. 🟡 **19,2 %** du réseau (253 176 params) alimente l'audio pour un terme
+`Vocal` à σ = 0.
+
+⚠️ **Incident de harnais** : la première version du lanceur bornait le parallélisme par
+`jobs -r` — mesurée, elle a lancé **41 runs simultanés (12 Go) au lieu de 6**. Réécrite
+autour de `xargs -P`, re-testée sur 40 runs courts avant le lancement réel.
+
+| Fichier | Changement |
+|---|---|
+| `docs/recherche/campagnes/CURSUS_04092026_…` | **nouveau** — les 4 juges, la tautologie, le comptage |
+| `brains/04092026_cursus_complet/` | protocole, scripts, `agregat.json` (20 paires) |
+| `readme.md` · `readme_fr.md` | état du blocage mis à jour (règle de miroir) |
+
+---
+
 ## [v41.53-mesure] - 2026-09-04 — La voix libre à 200 jours : le témoin s'effondre
 
 ### L'effet passe de +12,43 à +19,50 pt — parce que le régime NORMAL se dégrade

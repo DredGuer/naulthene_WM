@@ -56,7 +56,7 @@ métrique dérivée de la récompense ne peut pas prédire la réussite, puisque
 *est* la réussite. **Le tableau des suspects reste vide** —
 [cohorte](docs/recherche/campagnes/COHORTE_30082026_le_bareme_ne_predit_rien.md).
 
-**⚠️ Cela ne fonctionne pas encore.** L'agent plafonne au **niveau 4 sur 15**, et **vingt-et-une**
+**⚠️ Cela ne fonctionne pas encore.** L'agent plafonne au **niveau 4 sur 15**, et **vingt-trois**
 explications successives de ce plafond ont été mesurées puis réfutées — thrashing du gradient,
 attribution du crédit, proprioception, attention descendante, dérive de représentation, et, les
 1-2/09/2026, deux mécaniques *livrées puis réfutées à n = 20* (rendement mécanique, ancrage
@@ -64,6 +64,19 @@ cinématique — [rendement](docs/recherche/campagnes/RENDEMENT_01092026_le_grad
 [élan](docs/recherche/campagnes/ELAN_02092026_l_information_est_la_et_ne_sert_a_rien.md)).
 Ces deux dernières convergent sur une phrase : *l'information est là, et le réseau ne s'en
 sert pas*. Les seuls leviers qui aient jamais marché sont des propriétés du *monde*, pas du cerveau.
+
+**🟡 Un levier interne existe, et il ne débloque pas le cursus.** Retirer la renormalisation
+de C1 à chaque tick (`gain_c1 ≡ 1`, la « voix libre ») **double le taux de succès au banc
+forcé** — 25,75 % contre 6,25 %, δ **+19,50 pt** (`t` = +9,58, 19/20, n=20). Mais sur le
+**cursus complet à 15 niveaux** (20 graines × 1500 jours, cerveaux neufs), ce gain **ne se
+transporte pas** : le mur du niveau 4 tient sur 40 runs, et l'effet apparié s'effondre dès
+qu'on retire les quatre extrêmes (`t` 2,896 → 2,236). Ce qui survit est un *comptage*, pas un
+test : **9 témoins sur 20 finissent à 0 % de maîtrise et 3 s'effondrent au niveau 1 — contre
+1 et 0 dans le bras libre**. La renormalisation ne plafonne pas tant l'apprentissage qu'elle
+laisse la compétence **se déliter**. Le blocage passe de *dégénératif* à
+*stationnaire-ascendant* ; il n'est pas levé.
+[Banc](docs/recherche/campagnes/VOIX_LIBRE_04092026_200_jours_le_temoin_s_effondre.md) ·
+[cursus](docs/recherche/campagnes/CURSUS_04092026_le_mur_tient_l_hemorragie_cesse.md).
 🔴 **Et le 29/08/2026 la dernière est tombée aussi** : `maîtrise ~ énergie`, longtemps citée
 ici comme `r = +0,710` (`t = +2,85`), avait été mesurée à **n = 10**. Recalculée sur **20
 graines**, elle vaut **r = −0,0588 (`t = −0,25`)** — le signe s'inverse, le signal disparaît,

@@ -52,7 +52,7 @@ the C2/C1 ratio in v41.32: a metric derived from the reward cannot predict succe
 the reward *is* success. **The suspect list stays empty** —
 [cohort](docs/recherche/campagnes/COHORTE_30082026_le_bareme_ne_predit_rien.md).
 
-**⚠️ It does not work yet.** The agent plateaus at **level 4 of 15**, and **twenty-one**
+**⚠️ It does not work yet.** The agent plateaus at **level 4 of 15**, and **twenty-three**
 successive explanations for that plateau have been measured and refuted — thrashing, credit
 assignment, proprioception, top-down attention, representational drift, and, on 1-2 Sep
 2026, two mechanics *shipped and then refuted at n = 20* (mechanical yield, kinematic
@@ -60,6 +60,18 @@ anchoring — [rendement](docs/recherche/campagnes/RENDEMENT_01092026_le_gradien
 [élan](docs/recherche/campagnes/ELAN_02092026_l_information_est_la_et_ne_sert_a_rien.md)).
 Those last two converge on one sentence: *the information is there, and the network does
 not use it*. The only levers that ever worked are properties of the *world*, not of the brain.
+
+**🟡 One internal lever exists, and it does not unlock the curriculum.** Removing the
+per-tick renormalisation of C1 (`gain_c1 ≡ 1`, the "free voice") **doubles the success rate
+on a forced bench** — 25.75 % vs 6.25 %, δ **+19.50 pt** (`t` = +9.58, 19/20, n=20). But on
+the **full 15-level curriculum** (20 seeds × 1500 days, fresh brains), that gain **does not
+transport**: the level-4 wall holds on 40 runs, and the paired effect collapses once the
+four extremes are removed (`t` 2.896 → 2.236). What survives is a *count*, not a test:
+**9 control brains out of 20 end at 0 % mastery and 3 collapse to level 1 — against 1 and 0
+in the free arm**. The renormalisation does not cap learning so much as it lets competence
+**decay**. The blockage moves from *degenerative* to *stationary-ascending*; it is not
+lifted. [Bench](docs/recherche/campagnes/VOIX_LIBRE_04092026_200_jours_le_temoin_s_effondre.md) ·
+[curriculum](docs/recherche/campagnes/CURSUS_04092026_le_mur_tient_l_hemorragie_cesse.md).
 🔴 **And on 29 Aug 2026 the last one fell too**: `mastery ~ energy`, long quoted here as
 `r = +0.710` (`t = +2.85`), was measured at **n = 10**. Recomputed on **20 seeds** it reads
 **r = −0.0588 (`t = −0.25`)** — the sign flips and the signal vanishes, jackknife confirming

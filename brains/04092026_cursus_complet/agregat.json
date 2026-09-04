@@ -1,0 +1,380 @@
+{
+ "campagne": "cursus complet — la voix libre franchit-elle le mur ?",
+ "date": "2026-09-04",
+ "n_paires": 20,
+ "jours": 1500,
+ "niveaux": 15,
+ "env": "cursus complet, AUCUN --env-force",
+ "cerveaux": "neufs (population independante)",
+ "juge1_mur": {
+  "critere": ">= 6/15 sur >= 10 graines",
+  "niveau_max_tous_bras": 4,
+  "verdict": "ECHOUE"
+ },
+ "juge2_niveau": {
+  "delta": 0.7,
+  "sd": 1.0809,
+  "t": 2.8961,
+  "n": 20,
+  "favorables": "8/20",
+  "seuil_bonferroni": 2.86,
+  "verdict": "passe de justesse (2,896) mais NE SURVIT PAS au retrait des extremes",
+  "sans_4_extremes": {
+   "delta": 0.25,
+   "sd": 0.4472,
+   "t": 2.2361,
+   "n": 16
+  },
+  "sans_temoins_effondres": {
+   "delta": 0.2941,
+   "sd": 0.4697,
+   "t": 2.582,
+   "n": 17
+  }
+ },
+ "juge3_tendance": {
+  "mediane_libre": 0.0997,
+  "mediane_temoin": -0.4155,
+  "positives_libre": "12/20",
+  "positives_temoin": "6/20",
+  "delta": 0.4162,
+  "sd": 1.4204,
+  "t": 1.3105,
+  "n": 20,
+  "verdict": "signe constant, NON significatif"
+ },
+ "juge4_replication": {
+  "moy_libre": 9.5,
+  "moy_temoin": 6.5,
+  "delta": 3,
+  "sd": 10.311,
+  "t": 1.3012,
+  "n": 20,
+  "verdict": "NON — le +19,50 pt du banc ne se transporte pas"
+ },
+ "tautologie": {
+  "conditionne_sur_deux_bras_ont_gagne": {
+   "delta": -2.2727,
+   "sd": 10.3353,
+   "t": -0.7293,
+   "n": 11
+  },
+  "lecture": "signe s'inverse une fois conditionne"
+ },
+ "repartition": {
+  "libre": {
+   "4": 20
+  },
+  "temoin": {
+   "1": 3,
+   "3": 5,
+   "4": 12
+  }
+ },
+ "maitrise_zero": {
+  "libre": 1,
+  "temoin": 9
+ },
+ "resultats": [
+  {
+   "graine": 11,
+   "libre": {
+    "niveau": 4,
+    "maitrise": 10,
+    "pente": 0.0091,
+    "promotions": 3
+   },
+   "temoin": {
+    "niveau": 3,
+    "maitrise": 25,
+    "pente": -1.3414,
+    "promotions": 2
+   }
+  },
+  {
+   "graine": 22,
+   "libre": {
+    "niveau": 4,
+    "maitrise": 5,
+    "pente": 0.6885,
+    "promotions": 3
+   },
+   "temoin": {
+    "niveau": 4,
+    "maitrise": 5,
+    "pente": 0.2359,
+    "promotions": 3
+   }
+  },
+  {
+   "graine": 33,
+   "libre": {
+    "niveau": 4,
+    "maitrise": 5,
+    "pente": 0.1595,
+    "promotions": 3
+   },
+   "temoin": {
+    "niveau": 3,
+    "maitrise": 10,
+    "pente": 2.3968,
+    "promotions": 2
+   }
+  },
+  {
+   "graine": 44,
+   "libre": {
+    "niveau": 4,
+    "maitrise": 10,
+    "pente": 0.2529,
+    "promotions": 3
+   },
+   "temoin": {
+    "niveau": 4,
+    "maitrise": 0,
+    "pente": -0.2975,
+    "promotions": 3
+   }
+  },
+  {
+   "graine": 55,
+   "libre": {
+    "niveau": 4,
+    "maitrise": 5,
+    "pente": 0.3137,
+    "promotions": 3
+   },
+   "temoin": {
+    "niveau": 4,
+    "maitrise": 15,
+    "pente": 0.7311,
+    "promotions": 3
+   }
+  },
+  {
+   "graine": 66,
+   "libre": {
+    "niveau": 4,
+    "maitrise": 15,
+    "pente": 0.1169,
+    "promotions": 3
+   },
+   "temoin": {
+    "niveau": 3,
+    "maitrise": 5,
+    "pente": 1.0977,
+    "promotions": 2
+   }
+  },
+  {
+   "graine": 77,
+   "libre": {
+    "niveau": 4,
+    "maitrise": 20,
+    "pente": -0.8362,
+    "promotions": 3
+   },
+   "temoin": {
+    "niveau": 4,
+    "maitrise": 10,
+    "pente": -3.1402,
+    "promotions": 3
+   }
+  },
+  {
+   "graine": 88,
+   "libre": {
+    "niveau": 4,
+    "maitrise": 5,
+    "pente": 0.0825,
+    "promotions": 3
+   },
+   "temoin": {
+    "niveau": 1,
+    "maitrise": 0,
+    "pente": -1.9534,
+    "promotions": 0
+   }
+  },
+  {
+   "graine": 99,
+   "libre": {
+    "niveau": 4,
+    "maitrise": 5,
+    "pente": -0.8818,
+    "promotions": 3
+   },
+   "temoin": {
+    "niveau": 4,
+    "maitrise": 0,
+    "pente": -1.5255,
+    "promotions": 3
+   }
+  },
+  {
+   "graine": 111,
+   "libre": {
+    "niveau": 4,
+    "maitrise": 5,
+    "pente": 0.4692,
+    "promotions": 3
+   },
+   "temoin": {
+    "niveau": 1,
+    "maitrise": 20,
+    "pente": 1.1157,
+    "promotions": 0
+   }
+  },
+  {
+   "graine": 122,
+   "libre": {
+    "niveau": 4,
+    "maitrise": 10,
+    "pente": 0.7958,
+    "promotions": 3
+   },
+   "temoin": {
+    "niveau": 3,
+    "maitrise": 0,
+    "pente": 0.0,
+    "promotions": 2
+   }
+  },
+  {
+   "graine": 133,
+   "libre": {
+    "niveau": 4,
+    "maitrise": 10,
+    "pente": 0.9208,
+    "promotions": 3
+   },
+   "temoin": {
+    "niveau": 3,
+    "maitrise": 5,
+    "pente": -2.6054,
+    "promotions": 2
+   }
+  },
+  {
+   "graine": 144,
+   "libre": {
+    "niveau": 4,
+    "maitrise": 5,
+    "pente": -0.2985,
+    "promotions": 3
+   },
+   "temoin": {
+    "niveau": 4,
+    "maitrise": 20,
+    "pente": -0.6288,
+    "promotions": 3
+   }
+  },
+  {
+   "graine": 155,
+   "libre": {
+    "niveau": 4,
+    "maitrise": 20,
+    "pente": -0.6866,
+    "promotions": 3
+   },
+   "temoin": {
+    "niveau": 4,
+    "maitrise": 0,
+    "pente": 0.0401,
+    "promotions": 3
+   }
+  },
+  {
+   "graine": 166,
+   "libre": {
+    "niveau": 4,
+    "maitrise": 10,
+    "pente": 0.9777,
+    "promotions": 3
+   },
+   "temoin": {
+    "niveau": 4,
+    "maitrise": 0,
+    "pente": -1.1216,
+    "promotions": 3
+   }
+  },
+  {
+   "graine": 177,
+   "libre": {
+    "niveau": 4,
+    "maitrise": 15,
+    "pente": 0.7337,
+    "promotions": 3
+   },
+   "temoin": {
+    "niveau": 4,
+    "maitrise": 0,
+    "pente": 0.0,
+    "promotions": 3
+   }
+  },
+  {
+   "graine": 188,
+   "libre": {
+    "niveau": 4,
+    "maitrise": 5,
+    "pente": -0.7449,
+    "promotions": 3
+   },
+   "temoin": {
+    "niveau": 4,
+    "maitrise": 5,
+    "pente": -0.4081,
+    "promotions": 3
+   }
+  },
+  {
+   "graine": 199,
+   "libre": {
+    "niveau": 4,
+    "maitrise": 20,
+    "pente": -0.2889,
+    "promotions": 3
+   },
+   "temoin": {
+    "niveau": 4,
+    "maitrise": 10,
+    "pente": -1.5022,
+    "promotions": 3
+   }
+  },
+  {
+   "graine": 211,
+   "libre": {
+    "niveau": 4,
+    "maitrise": 10,
+    "pente": -1.668,
+    "promotions": 3
+   },
+   "temoin": {
+    "niveau": 1,
+    "maitrise": 0,
+    "pente": -0.423,
+    "promotions": 0
+   }
+  },
+  {
+   "graine": 222,
+   "libre": {
+    "niveau": 4,
+    "maitrise": 0,
+    "pente": -1.8033,
+    "promotions": 3
+   },
+   "temoin": {
+    "niveau": 4,
+    "maitrise": 0,
+    "pente": -0.6828,
+    "promotions": 3
+   }
+  }
+ ]
+}
