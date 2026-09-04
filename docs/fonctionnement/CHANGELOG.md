@@ -4,6 +4,71 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.53-mesure] - 2026-09-04 — La voix libre à 200 jours : le témoin s'effondre
+
+### L'effet passe de +12,43 à +19,50 pt — parce que le régime NORMAL se dégrade
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | docs (campagne de mesure, **aucune ligne de `src/` modifiée**) |
+| **Impact** | Critique — le levier se confirme, et un fait nouveau apparaît |
+| **Carnet** | [VOIX_LIBRE_04092026](../recherche/campagnes/VOIX_LIBRE_04092026_200_jours_le_temoin_s_effondre.md) |
+
+**20 graines appariées × 2 bras × 200 jours** (lignée reprise depuis j100) + 40 bancs de
+300 épisodes. Protocole et **quatre** critères écrits AVANT le lancement.
+
+### Le résultat
+
+| | j100 | **j200** |
+|---|---|---|
+| LIBRE | 24,17 % | **25,75 %** |
+| TÉMOIN | 11,73 % | **6,25 %** |
+| δ apparié | +12,43 pt | **+19,50 pt** · `t` = **+9,581** · 19/20 |
+
+**Mais la décomposition inverse la lecture** : LIBRE **+1,58 pt** (`t` = +0,670, **NS**) ·
+TÉMOIN **−5,48 pt** (`t` = **−3,049**, 17/20 régressent). Le bras libre ne progresse pas
+significativement — **c'est le témoin qui se dégrade** (`g144` : 27,00 % → **0,33 %**).
+
+> `gain_c1` ne bride pas seulement l'apprentissage : il **laisse la compétence se déliter**.
+> Retirer la renormalisation empêche l'agent de redescendre plus qu'elle ne le fait monter.
+
+### Le juge 0 — l'asymptote n'existe peut-être pas
+
+Posé d'avance comme préalable. **Il échoue**, et la pente s'est **inversée** : −0,00745/j à
+j100 → **+0,00736/j** à j200, **3/20** plats. **Les 20 cerveaux sur 20** passent par un
+minimum (j110-j192, jusqu'à H = 0,220) puis **remontent** (+0,26 à +1,22).
+
+La politique **sur-durcit puis se relâche**. Le relâchement est **sain** (le succès ne baisse
+pas) : ce n'est **pas** « confiant dans l'erreur ». ⚠️ Les juges 1-3 mesurent donc l'effet
+**à j200**, pas l'effet terminal.
+
+### Les 8 vérifications, toutes passées
+
+Témoin aléatoire **5,67 % sur 40/40** · 0 saturation · 0 graine LIBRE à zéro victoire ·
+**sans les 4 extrêmes δ = +16,71 pt (`t` = +8,54)** · **sans les témoins effondrés sous 5 %,
+δ = +12,70 pt (`t` = +5,32, n=9)** — l'effet n'est donc pas un artefact de l'effondrement ·
+ratio C2/C1 = 0,505, **0/20** sous le seuil v37.0 · régime sérialisé 20/20 · 0 contamination.
+
+**Amplitude C1 stabilisée** : 4,526 → **4,952** (+9 %, contre ×3,7 sur les 100 premiers
+jours). Pas d'emballement.
+
+### Ce que ça laisse ouvert
+
+1. 🔴 **Le mécanisme de l'effondrement du témoin est INCONNU** — fait majeur, non expliqué,
+   et il touche le régime **par défaut** du projet. À instruire.
+2. ⚠️ **Il n'y a peut-être pas d'asymptote** (20/20 rebonds). 300-400 j pour trancher.
+3. ⚠️ **Banc forcé** : ne prouve rien sur le cursus. **README non modifiés.**
+4. 🔴 L'ablation « C2 = 0,0 pt » reste **confondue** et non refaite.
+
+| Fichier | Changement |
+|---|---|
+| `docs/recherche/campagnes/VOIX_LIBRE_04092026_…` | **nouveau** — les 4 juges, les 8 vérifications, l'évolution intra-lignée |
+| `brains/03092026_brasA_200j/` | protocole, scripts, `agregat.json` (20 paires) |
+| `docs/INDEX.md` | campagne indexée |
+
+---
+
 ## [v41.52-mesure] - 2026-09-03 — La voix libre : le premier levier interne du dépôt
 
 ### Retirer la renormalisation de C1 DOUBLE le taux de succès (n=20, banc forcé)

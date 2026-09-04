@@ -1,0 +1,37 @@
+{
+  "cerveau": "TEMOIN_g44",
+  "env": "MiniGrid-SimpleCrossingS9N1-v0",
+  "episodes": 300,
+  "dim_bus": 132,
+  "jour": 200,
+  "niveau": 3,
+  "maitrise_run": 0.0,
+  "force_banc": null,
+  "gain_c1_libre": false,
+  "resultats": {
+    "entraîné (eval)": {
+      "taux": 0.03,
+      "lo": 0.015861673205964575,
+      "hi": 0.05602315099190695,
+      "n_victoires": 9,
+      "directivite_mediane": 21.75,
+      "entropie_jouee": 1.7099222155519727
+    },
+    "neuf (Xavier)": {
+      "taux": 0.04666666666666667,
+      "lo": 0.02799867455083086,
+      "hi": 0.07679803531378282,
+      "n_victoires": 14,
+      "directivite_mediane": 20.25,
+      "entropie_jouee": 1.9453198072313114
+    },
+    "aléatoire (7 actions)": {
+      "taux": 0.056666666666666664,
+      "lo": 0.03567717591318777,
+      "hi": 0.08886666535147117,
+      "n_victoires": 17,
+      "directivite_mediane": 20.166666666666668,
+      "entropie_jouee": null
+    }
+  }
+}

@@ -82,6 +82,7 @@ retester une idée déjà écartée. (Les réfutations à n ≥ 20 — RENDEMENT
 
 | Document | Ce qu'il mesure |
 |---|---|
+| **[VOIX_LIBRE_04092026](recherche/campagnes/VOIX_LIBRE_04092026_200_jours_le_temoin_s_effondre.md)** | ✅ **À 200 JOURS L'EFFET SE CONFIRME** — δ **+19,50 pt** (`t` = +9,58, 19/20), tient sans les 4 extrêmes (`t` = +8,54). 🔴 **Mais la cause change de sens** : LIBRE stagne (+1,58 pt, NS) et **c'est le TÉMOIN qui s'effondre** (−5,48 pt, `t` = −3,05, 17/20). ⚠️ **Pas d'asymptote** : 20/20 cerveaux sur-durcissent puis se relâchent |
 | **[VOIX_LIBRE_03092026](recherche/campagnes/VOIX_LIBRE_03092026_le_premier_levier_du_depot.md)** | ✅ **LE PREMIER LEVIER INTERNE DU DÉPÔT** — retirer la renormalisation de C1 (`gain_c1 ≡ 1`) **double le succès** : 24,17 % contre 11,73 %, δ **+12,43 pt** (`t = +5,21`, 18/20), et l'effet **survit au retrait des 4 extrêmes** (`t = +4,86`). ⚠️ banc forcé, politique **non asymptotique** (H descend encore à j100) ; l'ablation « C2 = 0,0 pt » est **confondue** et à refaire |
 | [ELAN_02092026](recherche/campagnes/ELAN_02092026_l_information_est_la_et_ne_sert_a_rien.md) | ❌ **21ᵉ réfutation** — l'ancrage cinématique : l'information EST là (amplitude 0,09–0,16) et C1 ne s'en sert pas — ratio `t` = +0,04, myéline identique aux deux bras (n=20) |
 | [RENDEMENT_01092026](recherche/campagnes/RENDEMENT_01092026_le_gradient_assaini_ne_change_rien.md) | ❌ **20ᵉ réfutation** — assainir **64,6 % du gradient** ne change RIEN — directivité 19,25× contre un seuil d'échec à 12× (n=20) |
