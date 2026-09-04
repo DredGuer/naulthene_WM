@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `936031d` |
 | **Catégorie** | docs (campagne de mesure, **aucune ligne de `src/` modifiée**) |
 | **Impact** | Critique — clôt le cycle de la voix libre |
 | **Carnet** | [CURSUS_04092026](../recherche/campagnes/CURSUS_04092026_le_mur_tient_l_hemorragie_cesse.md) |
