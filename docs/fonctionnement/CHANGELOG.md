@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `6e76004` |
 | **Catégorie** | docs (diagnostic, **aucune ligne de `src/` modifiée**) |
 | **Impact** | Fonctionnel — écarte une intervention qui aurait été une erreur |
 | **Carnet** | [MIXAGE_04092026](../recherche/enquetes_closes/MIXAGE_04092026_les_termes_morts_ne_sont_pas_du_code_mort.md) |
