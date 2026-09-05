@@ -67,11 +67,25 @@ on a forced bench** — 25.75 % vs 6.25 %, δ **+19.50 pt** (`t` = +9.58, 19/20,
 the **full 15-level curriculum** (20 seeds × 1500 days, fresh brains), that gain **does not
 transport**: the level-4 wall holds on 40 runs, and the paired effect collapses once the
 four extremes are removed (`t` 2.896 → 2.236). What survives is a *count*, not a test:
-**9 control brains out of 20 end at 0 % mastery and 3 collapse to level 1 — against 1 and 0
-in the free arm**. The renormalisation does not cap learning so much as it lets competence
-**decay**. The blockage moves from *degenerative* to *stationary-ascending*; it is not
-lifted. [Bench](docs/recherche/campagnes/VOIX_LIBRE_04092026_200_jours_le_temoin_s_effondre.md) ·
+**9 control brains out of 20 end at 0 % mastery and 3 are never promoted past level 1 —
+against 1 and 0 in the free arm**. The renormalisation does not cap learning so much as it
+lets competence **decay**. The blockage moves from *degenerative* to *stationary-ascending*;
+it is not lifted.
+[Bench](docs/recherche/campagnes/VOIX_LIBRE_04092026_200_jours_le_temoin_s_effondre.md) ·
 [curriculum](docs/recherche/campagnes/CURSUS_04092026_le_mur_tient_l_hemorragie_cesse.md).
+
+**The default regime's mechanism is established (5 Sep 2026): a compensation loop.** `C1`
+**atrophies in 20 control brains out of 20** (raw amplitude −0.81, `t` = **−7.82**) and
+`gain_c1` rises by exactly what it takes to mask it (+1.05, `t` = +7.96; `r` = **−0.75**).
+The control arm therefore keeps a stable output volume **while losing 43 % of its raw
+amplitude**: the renormalisation makes the atrophy **invisible to the network itself**.
+Final paired gap **+3.26**, `t` = **+16.55**, 20/20 — the strongest in the repository.
+⚠️ **Two rectifications in the same move**: there is **no level regression at all** (0 across
+40 runs × ~1477 nights — the 3 "collapsed" brains reach level 1 on day 2-3 and never leave
+it), and the "frozen voice" hypothesis is **refuted with the sign inverted**
+(`r(mastery, H_C1)` = **−0.6699**). ⚠️ This does **not** explain the plateau: the free arm
+does not atrophy and hits the **same level 4**.
+[Atrophy](docs/recherche/campagnes/ATROPHIE_05092026_la_boucle_de_compensation.md).
 🔴 **And on 29 Aug 2026 the last one fell too**: `mastery ~ energy`, long quoted here as
 `r = +0.710` (`t = +2.85`), was measured at **n = 10**. Recomputed on **20 seeds** it reads
 **r = −0.0588 (`t = −0.25`)** — the sign flips and the signal vanishes, jackknife confirming

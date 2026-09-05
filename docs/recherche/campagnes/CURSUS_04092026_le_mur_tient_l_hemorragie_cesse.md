@@ -49,8 +49,14 @@ C'est le point de méthode central de cette campagne.
 Le `t` global franchit Bonferroni **de 0,036**. Puis il tombe dès qu'on retire les extrêmes —
 et c'est précisément le test qui avait fait tomber la directivité le 02/09.
 
-**L'effet est porté par trois témoins effondrés au niveau 1** (`g88`, `g111`, `g211`). Sans
+**L'effet est porté par trois témoins restés au niveau 1** (`g88`, `g111`, `g211`). Sans
 eux, il n'y a plus de différence significative de niveau. **Non établi.**
+
+> 🔴 **RECTIFIÉ le 05/09/2026** — ces trois cerveaux étaient décrits comme « effondrés ».
+> C'est **faux** : ils atteignent le niveau 1 au jour **2-3** et n'en repartent jamais.
+> Il n'existe **aucune régression de niveau** dans cette campagne (0 sur 40 runs ×
+> ~1477 nuits). « Effondré au niveau 1 » ne pouvait signifier que **jamais promu**.
+> Voir [ATROPHIE_05092026](ATROPHIE_05092026_la_boucle_de_compensation.md).
 
 ### Juge 3 — le seul signal qui a du sens, et il est faible
 
@@ -94,11 +100,16 @@ significativité mais sur un **comptage** :
 | | LIBRE | TÉMOIN |
 |---|---|---|
 | Cerveaux à maîtrise **0 %** | **1 / 20** | **9 / 20** |
-| Cerveaux effondrés au **niveau 1** | **0 / 20** | **3 / 20** |
+| Cerveaux **jamais promus** au-delà du niveau 1 | **0 / 20** | **3 / 20** |
 | Cerveaux au niveau 4 | **20 / 20** | 12 / 20 |
 | Tendance positive | 12 / 20 | 6 / 20 |
 
-> **Le régime témoin produit des effondrements ; le régime libre n'en produit aucun.**
+> **Le régime témoin produit des blocages précoces et des pertes de maîtrise intra-palier ;
+> le régime libre n'en produit aucun.**
+
+⚠️ **Précision du 05/09** : « effondrement » vaut pour la **maîtrise** (perte de compétence
+au sein d'un palier, réelle et mesurée), **jamais** pour le **niveau** (aucune régression
+sur 40 runs).
 
 Cela rejoint, par un chemin indépendant, le résultat du banc à 200 jours : la voix libre
 **empêche de redescendre** plus qu'elle ne fait monter. Le blocage passe de **dégénératif**
@@ -112,8 +123,8 @@ Cela rejoint, par un chemin indépendant, le résultat du banc à 200 jours : la
 - L'hypothèse « une politique plus nette franchit les paliers » : **réfutée**.
 
 **Ouvert** :
-1. 🔴 **Pourquoi le témoin s'effondre-t-il ?** 9 cerveaux à maîtrise 0 %, 3 au niveau 1. Mécanisme toujours **inconnu** — c'est le régime **par défaut** du projet, et c'est le fait le plus important de ces trois campagnes.
-2. 🔴 **La table de mixage** : mesurée le 04/09 sur ces runs — `Bio` pèse **62,1 %** du gradient contre **17,4 %** pour la victoire, et **5 termes sur 11 ont une variance nulle**. Aucune intervention n'a été tentée.
+1. ✅ **RÉSOLU le 05/09** — le témoin ne « s'effondre » pas en niveau : **C1 s'atrophie** (−0,81 d'amplitude brute, `t` = −7,82, **20/20**) et `gain_c1` compense exactement (+1,05, `t` = +7,96, `r` = −0,75). Les 3 bloqués ne forment **aucune cohorte pathologique**. Voir [ATROPHIE_05092026](ATROPHIE_05092026_la_boucle_de_compensation.md).
+2. 🟡 **La table de mixage** : mesurée le 04/09 sur ces runs — `Bio` pèse **57,0 %** du gradient contre **21,6 %** pour la victoire (⚠️ chiffres corrigés le 04/09 : 62,1 / 17,4 étaient lus sur la dernière journée seule), et **5 termes sur 11 ont une variance nulle** — mais ce sont des **capteurs hors domaine**, pas du code mort. Voir [MIXAGE_04092026](../enquetes_closes/MIXAGE_04092026_les_termes_morts_ne_sont_pas_du_code_mort.md).
 3. 🔴 **L'ablation C2 reste confondue** et non refaite.
 4. 🟡 **19,2 % du réseau** est alloué à l'audio pour un terme `Vocal` à σ = 0,0000.
 

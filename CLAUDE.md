@@ -35,10 +35,32 @@ renormalisation de C1 (`gain_c1 ≡ 1`) **double le succès au banc forcé** (25
 cerveaux neufs) le gain **ne se transporte pas** : mur du niveau 4 sur 40 runs, et l'effet
 apparié **tombe** au retrait des 4 extrêmes (`t` 2,896 → 2,236). Le test de tautologie
 inverse même le signe de la maîtrise (+3,00 → **−2,27 pt** conditionné). ⚠️ Ce qui survit
-est un **comptage**, pas un test : **9 témoins sur 20 à 0 % de maîtrise et 3 effondrés au
-niveau 1, contre 1 et 0 en régime libre**. La renormalisation laisse la compétence **se
-déliter** ; le blocage passe de *dégénératif* à *stationnaire-ascendant*, il n'est pas levé.
-Voir `docs/recherche/campagnes/CURSUS_04092026_le_mur_tient_l_hemorragie_cesse.md`.
+est un **comptage**, pas un test : **9 témoins sur 20 à 0 % de maîtrise et 3 jamais promus
+au-delà du niveau 1, contre 1 et 0 en régime libre**. La renormalisation laisse la compétence
+**se déliter** ; le blocage passe de *dégénératif* à *stationnaire-ascendant*, il n'est pas
+levé. Voir `docs/recherche/campagnes/CURSUS_04092026_le_mur_tient_l_hemorragie_cesse.md`.
+
+✅ **LE MÉCANISME DU RÉGIME TÉMOIN EST ÉTABLI (05/09/2026, zéro run) — C'EST UNE BOUCLE DE
+COMPENSATION.** `C1` **s'atrophie chez 20 témoins sur 20** (amplitude brute −0,8085,
+`t` = **−7,82**) et `gain_c1` monte d'exactement ce qu'il faut pour le masquer (+1,0525,
+`t` = +7,96 ; `r(ΔC1, Δgain)` = **−0,7546**, compensation **serrée**). Le produit
+`gain × C1` — la voix réellement entendue — reste stable au témoin (1,891 → 1,691) **tout en
+perdant 43 % d'amplitude brute** : la renormalisation rend l'atrophie **invisible au réseau
+lui-même**. Écart apparié final **+3,2586**, `t` = **+16,55**, **20/20 favorables** (le plus
+fort du dépôt). En régime libre, `C1` **croît** (+0,6159).
+
+🔴 **RECTIFICATION du 05/09 — le mot « effondrement » était FAUX pour le NIVEAU.** Il
+n'existe **aucune régression de niveau** : **0 sur 40 runs × ~1477 nuits**. `g88`/`g111`/
+`g211` atteignent le niveau 1 au jour **2-3** et n'en repartent jamais — c'est un **blocage
+de naissance**, pas une dégénérescence. « Effondrement » reste exact pour la **maîtrise**
+(perte intra-palier, mesurée), jamais pour le **niveau**. ❌ L'hypothèse de la « voix figée »
+est **réfutée, signe inversé** : `r(maîtrise, H_C1)` = **−0,6699** au témoin (une voix plus
+figée va avec une MEILLEURE maîtrise ; `TEMOIN_g11`, `H_C1 = 0,0000`, fait le meilleur score
+de la campagne à 30 %) et **+0,0160** en libre. Les 3 bloqués ne diffèrent des 17 autres
+témoins **en rien** (`H_C1` −0,027, actions distinctes +0,13, `refchoc` −0,006) et ont même
+une maîtrise **supérieure** (7,50 % vs 5,88 %). ⚠️ **Ce dossier n'explique pas le plafond** :
+LIBRE ne s'atrophie pas et bute au **même niveau 4**. Voir
+`docs/recherche/campagnes/ATROPHIE_05092026_la_boucle_de_compensation.md`.
 
 🔴 **LA TABLE DE MIXAGE — mesurée le 04/09, jamais exploitée.** Les **11 termes** de
 `recompense_interne` sont sommés **à poids 1** (`noyau.py` ~l. 9965). Leur dispersion réelle

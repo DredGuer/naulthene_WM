@@ -71,12 +71,25 @@ forcé** — 25,75 % contre 6,25 %, δ **+19,50 pt** (`t` = +9,58, 19/20, n=20).
 **cursus complet à 15 niveaux** (20 graines × 1500 jours, cerveaux neufs), ce gain **ne se
 transporte pas** : le mur du niveau 4 tient sur 40 runs, et l'effet apparié s'effondre dès
 qu'on retire les quatre extrêmes (`t` 2,896 → 2,236). Ce qui survit est un *comptage*, pas un
-test : **9 témoins sur 20 finissent à 0 % de maîtrise et 3 s'effondrent au niveau 1 — contre
-1 et 0 dans le bras libre**. La renormalisation ne plafonne pas tant l'apprentissage qu'elle
-laisse la compétence **se déliter**. Le blocage passe de *dégénératif* à
-*stationnaire-ascendant* ; il n'est pas levé.
+test : **9 témoins sur 20 finissent à 0 % de maîtrise et 3 ne sont jamais promus au-delà du
+niveau 1 — contre 1 et 0 dans le bras libre**. La renormalisation ne plafonne pas tant
+l'apprentissage qu'elle laisse la compétence **se déliter**. Le blocage passe de
+*dégénératif* à *stationnaire-ascendant* ; il n'est pas levé.
 [Banc](docs/recherche/campagnes/VOIX_LIBRE_04092026_200_jours_le_temoin_s_effondre.md) ·
 [cursus](docs/recherche/campagnes/CURSUS_04092026_le_mur_tient_l_hemorragie_cesse.md).
+
+**Le mécanisme du régime par défaut est établi (05/09/2026) : une boucle de compensation.**
+`C1` **s'atrophie chez 20 témoins sur 20** (amplitude brute −0,81, `t` = **−7,82**) et
+`gain_c1` monte d'exactement ce qu'il faut pour le masquer (+1,05, `t` = +7,96 ;
+`r` = **−0,75**). Le témoin garde donc un volume de sortie stable **tout en perdant 43 %
+d'amplitude brute** : la renormalisation rend l'atrophie **invisible au réseau lui-même**.
+Écart apparié final **+3,26**, `t` = **+16,55**, 20/20 — le plus fort du dépôt.
+⚠️ **Deux rectifications dans le même mouvement** : il n'existe **aucune régression de
+niveau** (0 sur 40 runs × ~1477 nuits — les 3 cerveaux « effondrés » atteignent le niveau 1
+au jour 2-3 et n'en repartent jamais), et l'hypothèse de la « voix figée » est **réfutée
+signe inversé** (`r(maîtrise, H_C1)` = **−0,6699**). ⚠️ Cela **n'explique pas le plafond** :
+le bras libre ne s'atrophie pas et bute au **même niveau 4**.
+[Atrophie](docs/recherche/campagnes/ATROPHIE_05092026_la_boucle_de_compensation.md).
 🔴 **Et le 29/08/2026 la dernière est tombée aussi** : `maîtrise ~ énergie`, longtemps citée
 ici comme `r = +0,710` (`t = +2,85`), avait été mesurée à **n = 10**. Recalculée sur **20
 graines**, elle vaut **r = −0,0588 (`t = −0,25`)** — le signe s'inverse, le signal disparaît,

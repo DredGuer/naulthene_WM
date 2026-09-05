@@ -4,6 +4,79 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.56-mesure] - 2026-09-05 — L'atrophie de C1 : la renormalisation est une boucle de compensation
+
+### Le mécanisme du régime témoin est établi — et le mot « effondrement » est rectifié
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | docs (diagnostic, **aucune ligne de `src/` modifiée**) |
+| **Impact** | Fonctionnel — établit le mécanisme du régime **par défaut** et rectifie une publication de la veille |
+| **Carnet** | [ATROPHIE_05092026](../recherche/campagnes/ATROPHIE_05092026_la_boucle_de_compensation.md) |
+
+**40 runs, 20 paires, ~59 000 nuits.** Coût : **zéro run** (relecture des logs de
+`04092026_cursus_complet`).
+
+### La boucle de compensation
+
+`C1` **s'atrophie chez 20 témoins sur 20**, et `gain_c1` monte d'exactement ce qu'il faut
+pour le masquer :
+
+| Grandeur (médiane j1-100 → j1400-1500) | TÉMOIN | LIBRE |
+|---|---|---|
+| **Δ amplitude C1 brute** | **−0,8085** · `t` = **−7,82** · **20/20 en baisse** | +0,6159 · `t` = +2,34 |
+| **Δ `gain_c1`** | **+1,0525** · `t` = **+7,96** | **0,0000** (σ = 0 — témoin atteint) |
+| `r(ΔC1_brut, Δgain)` | **−0,7546** · `t` = −4,88 ⇒ compensation **serrée** | — |
+| Produit `gain × C1` (voix entendue) | 1,891 → 1,691 (`t` = −5,22) | 3,469 → **4,084** |
+
+Le témoin **maintient son volume de sortie** tout en perdant **43 % d'amplitude brute** :
+`clamp(2.1 × f / amplitude_c1, 0.25, 4)` est un **asservissement** qui retire toute pression
+sur C1 pour produire des logits amples — et rend l'atrophie **invisible au réseau lui-même**.
+
+**Écart apparié final : `C1` +3,2586, `t` = +16,55, 20/20 favorables** — le plus fort du dépôt
+(seuil Bonferroni 3 métriques : 2,86).
+
+### 🔴 Rectification — « effondrement » était faux pour le NIVEAU
+
+| | Publié le 04/09 | **Mesuré le 05/09** |
+|---|---|---|
+| `g88`/`g111`/`g211` | « 3 **effondrés** au niveau 1 » | **jamais promus** — niveau 1 atteint au jour **2-3**, puis 1497 jours sans bouger |
+| Régressions de niveau, 40 runs × ~1477 nuits | (non mesuré) | **0** |
+
+Le compteur `niveau_actuel` ne décroît structurellement jamais (invariant v35.0) : « effondré
+au niveau 1 » ne pouvait signifier que **jamais promu**. ⚠️ « Effondrement » reste **exact
+pour la maîtrise** (perte intra-palier, mesurée à 200 j : `g144` 27,00 % → 0,33 %) — jamais
+pour le niveau. Deux grandeurs distinctes.
+
+### ❌ L'hypothèse de la « voix figée » est réfutée, signe inversé
+
+| | `r(maîtrise, H_C1)` | `t` |
+|---|---|---|
+| **TÉMOIN** | **−0,6699** | −3,83 |
+| **LIBRE** | +0,0160 | +0,07 |
+
+Une voix **plus figée** va avec une **meilleure** maîtrise. Les deux voix les plus figées du
+dépôt (`H_C1 = 0,0000`) sont `TEMOIN_g11` — **30 % de maîtrise, meilleur score de la
+campagne** — et `LIBRE_g211`. Et les 3 bloqués ne diffèrent des 17 autres témoins **en rien**
+(`H_C1` −0,027 · actions distinctes +0,13 · `refchoc` −0,006), avec une maîtrise **supérieure**
+(7,50 % vs 5,88 %). **Il n'y a pas de cohorte pathologique.**
+
+⚠️ **Ce diagnostic n'explique PAS le plafond** : LIBRE ne s'atrophie pas et bute au **même
+niveau 4**. Il explique la *différence entre les deux régimes*, pas le mur.
+
+⚠️ **Myéline non mesurée** — absente des bilans de nuit, elle exigerait d'ouvrir les 40
+`.brain`. Le volet « la couche motrice se fige-t-elle physiquement ? » reste ouvert.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `docs/recherche/campagnes/ATROPHIE_05092026_la_boucle_de_compensation.md` | **créé** — le carnet complet |
+| `docs/recherche/campagnes/CURSUS_04092026_…md` | rectification en place (ancien mot en regard) |
+| `docs/INDEX.md` · `CLAUDE.md` | nouvelle entrée + rectification |
+| `brains/04092026_cursus_complet/agregat_atrophie_C1.json` | agrégat machine, 40 runs |
+
+---
+
 ## [v41.55-mesure] - 2026-09-04 — La table de mixage : les termes morts ne sont pas du code mort
 
 ### L'hypothèse est retournée, et un chiffre publié ce matin est corrigé
