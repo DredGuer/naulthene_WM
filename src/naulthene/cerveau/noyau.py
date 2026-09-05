@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (C) 2026 Adrien Nault — Naulthène AGI
-#Version actuelle 41.57 — Variante LOCALE de test (Mac), terrain d'essai des mécaniques expérimentales.
+#Version actuelle 41.59 — Variante LOCALE de test (Mac), terrain d'essai des mécaniques expérimentales.
 # Versionné dans git depuis la v39.0 (2026-08-13), mais colab.py reste le script de référence :
 # rien de v18 → v41.49 n'y a été porté. Le marqueur ci-dessus suit le CHANGELOG (une entrée par
 # version) — il indiquait « 29 » jusqu'au 02/09/2026, périmé de 20 versions.
@@ -5390,6 +5390,27 @@ def vigueur_min_c1(force_planification):
 # consommer son budget et d'alimenter la télémétrie. Seule sa VOIX est retirée de
 # `logits_finaux` — même discipline que `--sans-gradient-c2` (forward intact).
 SANS_C2 = False
+
+# --- v41.59 : L'ABLATION DE L'HÉMISPHÈRE AUDIO (`--sans-audio`) ---
+#
+# 🔴 CE QUE ÇA MESURE. `porte_auditive` + `generateur_attente_audio` + `tete_vocale` pèsent
+# **290 976 paramètres, 18,70 %** du réseau à 1500 j (`dim_bus`=159, mesuré le 05/09) — et
+# **33,26 % à la NAISSANCE** (`dim_bus`=16) : la part DÉPEND de l'âge, ne jamais la coder en
+# dur. Tout cela pour un
+# terme `Vocal` à **σ = 0,0000** sur 60 000 nuits de cursus MiniGrid — un monde silencieux.
+#
+# ⚠️ LE FORWARD EST DÉJÀ NUL, ET CE N'EST PAS CE QU'ON COUPE. `porte_auditive` est SANS BIAIS
+# (voir l. 438) : `relu(porte_auditive(zeros)) == 0.000000` exactement. En cursus silencieux
+# l'audio n'ajoute donc RIEN au bus. Le coût réel est ailleurs — dans le GRADIENT et dans le
+# cycle nocturne : ces trois couches sont érodées, consolidées, agrandies par la neurogenèse
+# et portées par l'optimiseur à chaque nuit, pour un signal qui n'existe pas.
+#
+# Ce drapeau GÈLE l'hémisphère : `requires_grad = False` sur les trois couches. Le forward
+# reste bit-identique (il valait zéro), seul le travail inutile disparaît.
+#
+# ⚠️ Un effet NUL serait un résultat parfaitement acceptable : il dirait que le coût de
+# l'hémisphère audio est purement computationnel, sans conséquence cognitive.
+SANS_AUDIO = False
 
 GAIN_C1_MIN = 0.25                 # bornes du gain. Sans la borne HAUTE, un C1 érodé à
 GAIN_C1_MAX = 4.0                  # l'extrême serait amplifié sans limite et son bruit
@@ -12107,6 +12128,11 @@ if __name__ == "__main__":
                     help="v41.57 : ablation PROPRE de C2 — sa voix est retirée de la fusion, "
                          "`force_planification` (donc `gain_c1`) reste intacte. Contrairement "
                          "à la lésion `c2_coupe` du banc, qui étranglait C1 à 0,25.")
+    _p.add_argument("--sans-audio", action="store_true",
+                    help="v41.59 : ABLATION — gèle l'hémisphère audio/vocal (porte_auditive, "
+                         "generateur_attente_audio, tete_vocale : 18,70 % du réseau) dont le "
+                         "terme Vocal est à sigma=0 en cursus MiniGrid. Le forward est déjà nul "
+                         "(porte_auditive est sans biais) : seul le gradient est coupé.")
     _p.add_argument("--soif-figee", action="store_true",
                     help="ABLATION piste C : l'hydratation reste à 1.0 (le corps ne tire "
                          "plus que sur UN axe). Mesure l'alignement du gradient, JAMAIS "
@@ -12336,6 +12362,16 @@ if __name__ == "__main__":
         from naulthene.cerveau.noyau import GRADIENT_C2_ACTIF as _verif_c2
         assert _verif_c2 is False, ("l'ablation n'a pas atteint le module — campagne invalide")
 
+    # v41.59 — ablation de l'hémisphère audio. MÊME DISCIPLINE : module NOMMÉ + assertion.
+    _sans_audio = bool(_args.sans_audio)
+    globals()["SANS_AUDIO"] = _sans_audio
+    if _module_reel is not None:
+        _module_reel.SANS_AUDIO = _sans_audio
+    if _sans_audio:
+        print("🔬 [ABLATION] HÉMISPHÈRE AUDIO GELÉ — part réelle annoncée au gel")
+        from naulthene.cerveau.noyau import SANS_AUDIO as _verif_audio
+        assert _verif_audio is True, ("l'ablation audio n'a pas atteint le module — campagne invalide")
+
     # v41.57 — ablation propre de C2. MÊME DISCIPLINE : module NOMMÉ + assertion runtime.
     _sans_c2 = bool(_args.sans_c2)
     globals()["SANS_C2"] = _sans_c2
@@ -12491,6 +12527,32 @@ if __name__ == "__main__":
                                                    "campagne invalide")
     elif getattr(etat.agent, "gain_c1_libre", False):
         print("🔬 [BRAS A] ce cerveau porte le régime VOIX LIBRE (trait sérialisé)")
+
+    # v41.59 — LE GEL EFFECTIF de l'hémisphère audio. Le drapeau ne suffit pas : il doit
+    # AGIR sur les couches (leçon v41.4, où un drapeau accepté par argparse n'atteignait pas
+    # le module et rendait les trois bras identiques en silence).
+    #
+    # ⚠️ On gèle le GRADIENT, jamais le forward : `porte_auditive` est sans biais, donc sa
+    # contribution au bus vaut déjà 0.000000 exactement en cursus silencieux. Ce qu'on retire
+    # est le travail nocturne inutile (érosion, consolidation, optimiseur, neurogenèse).
+    if _sans_audio:
+        _gelees = 0
+        for _nom_couche in ("porte_auditive", "generateur_attente_audio", "tete_vocale"):
+            _couche = getattr(etat.agent, _nom_couche, None)
+            if _couche is None:
+                raise RuntimeError(f"ablation audio : couche {_nom_couche} introuvable")
+            for _prm in _couche.parameters():
+                _prm.requires_grad = False
+                _gelees += _prm.numel()
+        # Assertion de RÉALITÉ : la lésion a-t-elle vraiment mordu ?
+        _restants = sum(p.numel() for n in ("porte_auditive", "generateur_attente_audio",
+                                            "tete_vocale")
+                        for p in getattr(etat.agent, n).parameters() if p.requires_grad)
+        assert _restants == 0, (f"ablation audio incomplète : {_restants} paramètres "
+                                "encore entraînables — campagne invalide")
+        _total = sum(p.numel() for p in etat.agent.parameters())
+        print(f"🔬 [ABLATION] {_gelees:,} paramètres audio gelés "
+              f"({100 * _gelees / _total:.2f} % du réseau) — 0 restant entraînable")
 
     for _ in range(1, _args.jours + 1):
         demarrer_journee(etat)

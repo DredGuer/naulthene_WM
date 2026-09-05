@@ -4,6 +4,63 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.59] - 2026-09-05 — `--sans-audio` : un hémisphère qu'on ne peut pas geler, il l'est déjà
+
+### La campagne de 8 h est ANNULÉE par son propre pré-vol
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | feat (drapeau d'ablation) + mesure |
+| **Impact** | Fonctionnel — annule une campagne avant qu'elle ne coûte |
+| **Carnet** | [AUDIO_05092026](../recherche/enquetes_closes/AUDIO_05092026_un_hemisphere_deja_gele.md) |
+
+`--sans-audio` gèle `porte_auditive`, `generateur_attente_audio` et `tete_vocale`
+(`requires_grad = False`), avec assertion de réalité (`0 restant entraînable`). Il **mord** :
+*« 2 592 paramètres audio gelés (33,26 % du réseau) »*.
+
+🔴 **Mais le run est BIT-IDENTIQUE au bras de référence** — zéro ligne d'écart.
+
+### La cause : l'audio ne recevait déjà aucun gradient
+
+La myéline ne vient que du gradient (invariant v34.0/v37.0). Mesuré sur **80 cerveaux ×
+1500 jours** :
+
+| | |
+|---|---|
+| **Cerveaux avec myéline audio > 0** | **0 / 80** |
+| Maximum, toutes couches audio | **0,0000000000** |
+| Myéline moyenne des autres couches | 0,00108566 |
+
+**Le geler ne change rien parce qu'il est déjà gelé.** Et `porte_auditive` étant **sans
+biais**, son forward vaut déjà `0,000000` en cursus silencieux.
+
+⚠️ Le coût de l'hémisphère est **computationnel** (mémoire, optimiseur sur gradients nuls),
+**jamais cognitif** : il ne consomme aucune capacité d'apprentissage.
+
+### Conséquences
+
+- ✅ **Campagne de 20 paires annulée** — elle aurait mesuré un δ nul garanti par construction.
+- ✅ Drapeau **conservé** : témoin propre pour le jour où une leçon vocale sera active.
+- 🟡 Le **coût mémoire** reste réel (18,70 % à 1500 j, **33,26 % à la naissance** — la part
+  dépend de `dim_bus`, ne jamais la coder en dur). Supprimer ≠ geler, et casserait la
+  rétrocompatibilité des `.brain`.
+- 🔴 **Ouvert** : pourquoi la neurogenèse agrandit-elle des couches qui n'apprennent jamais ?
+
+### Leçon de méthode
+
+**Un pré-vol bit-identique n'est pas forcément un drapeau mort.** Le matin même, ce symptôme
+signalait un bug de harnais (zsh, `$FLAGS`) ; ici c'est **le résultat**. La différence
+s'établit en mesurant *ce que la lésion était censée retirer* — la myéline, trace directe du
+gradient.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `SANS_AUDIO`, `--sans-audio`, gel effectif + assertion de réalité ; en-tête v41.57 → **v41.59** |
+| `docs/recherche/enquetes_closes/AUDIO_05092026_…md` | **créé** |
+
+---
+
 ## [v41.58-mesure] - 2026-09-05 — L'ablation propre de C2 : l'organe est muet
 
 ### La réponse : couper C2 ne change rien, cette fois SANS confusion
