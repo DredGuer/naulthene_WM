@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `fd9d2c9` |
 | **Catégorie** | feat (drapeau d'ablation) |
 | **Impact** | Critique — invalide un résultat cité depuis des mois |
 | **Protocole** | `brains/05092026_ablation_c2/LISEZ_MOI.md` (écrit AVANT le lancement) |
