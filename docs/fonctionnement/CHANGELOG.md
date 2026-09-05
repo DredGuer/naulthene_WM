@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `89ec2f3` |
 | **Catégorie** | docs (dépouillement, **aucune ligne de `src/` modifiée**) |
 | **Impact** | Critique — tranche la question qui bloquait toute refonte de C2 |
 | **Carnet** | [ABLATION_C2_05092026](../recherche/campagnes/ABLATION_C2_05092026_l_organe_muet.md) |
