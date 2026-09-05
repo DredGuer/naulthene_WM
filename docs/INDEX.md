@@ -134,6 +134,7 @@ retester une idée déjà écartée. (Les réfutations à n ≥ 20 — RENDEMENT
 
 | Document | Sujet |
 |---|---|
+| **[NEUROSCIENCES_05092026](ameliorations/NEUROSCIENCES_05092026_developpement_et_heredite.md)** | 🟡 **Développement et hérédité, en miroir du cerveau humain.** ✅ **Mesuré** : l'élagage **n'existe pas** — **0 synapse morte sur 259 329** (l'érosion est géométrique, le plancher vital l'empêche). ❌ **Réfuté** : le « cerveau obèse » — `r(bus, maîtrise)` = +0,50 mais `r(bus, victoires)` = **+0,68** (le bus mesure la SURVIE) et le signe **s'inverse entre bras** |
 | [AVIS_ET_PROPOSITIONS_aout_2026.md](ameliorations/AVIS_ET_PROPOSITIONS_aout_2026.md) | P1 → P16 |
 | [PLAN_v41.32_table_de_mixage_et_neurogenese_dirigee.md](ameliorations/PLAN_v41.32_table_de_mixage_et_neurogenese_dirigee.md) | table de mixage, neurogenèse dirigée |
 | [EPISODES_REFERENCE_20082026_la_derniere_constante_posee.md](ameliorations/EPISODES_REFERENCE_20082026_la_derniere_constante_posee.md) | la dernière constante posée |
