@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `564d4af` |
 | **Catégorie** | feat (drapeau d'ablation) + mesure |
 | **Impact** | Fonctionnel — annule une campagne avant qu'elle ne coûte |
 | **Carnet** | [AUDIO_05092026](../recherche/enquetes_closes/AUDIO_05092026_un_hemisphere_deja_gele.md) |
