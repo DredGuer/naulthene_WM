@@ -4,6 +4,80 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.58-mesure] - 2026-09-05 — L'ablation propre de C2 : l'organe est muet
+
+### La réponse : couper C2 ne change rien, cette fois SANS confusion
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | docs (dépouillement, **aucune ligne de `src/` modifiée**) |
+| **Impact** | Critique — tranche la question qui bloquait toute refonte de C2 |
+| **Carnet** | [ABLATION_C2_05092026](../recherche/campagnes/ABLATION_C2_05092026_l_organe_muet.md) |
+
+**40 runs neufs, 40/40 valides, 0 échec, `δ_A/A` = 0,000000.** 20 graines × 3 bras × 1500 j.
+
+### Juge 1 (celui qui porte la réponse) — C2 est INERTE
+
+δ maîtrise LIBRE − LIBRE_SANS_C2 = **−1,375 pt** (`t` = −1,15, NS, **5/20**), inchangé sans
+les extrêmes (−1,562) et sous conditionnement de tautologie (−1,375). **Puissance : effet
+minimal détectable 3,42 pt** — un C2 apportant plus de 3,4 pt aurait été vu.
+
+⚠️ Le signe est légèrement **négatif** : l'agent fait marginalement mieux **sans** son
+néo-cortex, sans que l'écart soit significatif.
+
+### 🔴 Le juge 2 est SATURÉ — `δ = 0` n'était pas une mesure
+
+Les 40 runs des deux bras LIBRE sont **au plafond du niveau 4**. Un δ de 0,000 sur 0/20 est
+donc un **plafond**, pas une absence d'effet : le juge 2 **ne pouvait pas** détecter un effet
+de C2. Résultat « trop propre » suspecté puis expliqué (règle §3).
+
+### 🔴 L'inversion du juge 3 est un ARTEFACT DE PALIER
+
+| Bras | Maîtrise médiane |
+|---|---|
+| LIBRE — niveau 4 (n=20) | **10,0 %** |
+| LIBRE_SANS_C2 — niveau 4 (n=20) | **10,0 %** |
+| TEMOIN_SANS_C2 — **niveau 3** (n=19) | 25,0 % |
+| TEMOIN_SANS_C2 — **niveau 4** (n=1) | **10,0 %** |
+
+Le δ maîtrise de −12,50 pt ne mesurait pas une compétence moindre : les témoins jouent un
+**palier plus facile**. À niveau égal, l'écart **disparaît**.
+
+### Le vrai levier n'est pas C2 : c'est la renormalisation de C1
+
+À C2 coupé des deux côtés, seule la renormalisation diffère :
+
+| | δ | `t` | favorables |
+|---|---|---|---|
+| **Amplitude C1** | **+3,983** | **+20,64** | **20/20** |
+| **Niveau** | **+0,950** | **+19,00** | **19/20** |
+
+**20/20 cerveaux LIBRE atteignent le niveau 4, contre 1/20 au témoin.**
+
+### Ce que ça implique
+
+✅ **Le « 0,0 pt » historique est réhabilité** : il était confondu (`c2_coupe` plaquait
+`gain_c1` à 0,25), mais sa conclusion **tient** une fois la confusion levée. Premier cas de la
+semaine où une réfutation survit à sa correction méthodologique.
+
+🔴 **La refonte de C2 en générateur d'intention devient justifiée par la mesure.**
+⚠️ C2 est petit **par construction** (`dim_bus → 1` est un critique) — il faut **ajouter une
+tête**, jamais élargir celle-ci, sous peine de casser la baseline de l'avantage.
+
+⚠️ **Limites** : effet minimal détectable 3,42 pt · le **gradient** de C2 vers le tronc n'est
+pas mesuré ici (seule sa voix est coupée) · mesuré au plafond du niveau 4, C2 pourrait servir
+aux niveaux 6-7 jamais atteints.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `docs/recherche/campagnes/ABLATION_C2_05092026_l_organe_muet.md` | **créé** — carnet complet |
+| `brains/05092026_ablation_c2/depouiller.py` | garde-fou anti-run-inachevé + vérif à palier égal |
+| `brains/05092026_ablation_c2/agregat.json` | agrégat machine, 60 runs |
+| `docs/INDEX.md` · `CLAUDE.md` · `readme.md` · `readme_fr.md` | mise à jour |
+
+---
+
 ## [v41.57] - 2026-09-05 — `--sans-c2` : la première ablation qui isole vraiment C2
 
 ### Le « couper C2 ne change rien » du dépôt était CONFONDU

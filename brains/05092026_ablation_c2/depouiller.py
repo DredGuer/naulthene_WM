@@ -48,6 +48,11 @@ for b, dossier in BRAS.items():
         if not os.path.exists(f): manquants.append(f'{b}_g{g}'); continue
         r = lire(f)
         if not r: manquants.append(f'{b}_g{g} (vide)'); continue
+        # ⚠️ REGLE DE MESURE §6 — un `t` sur un run INACHEVE choisit implicitement sa
+        # fenetre (leçon du 20/08 : t=+3,68 a mi-parcours -> +1,93 a la fin). Un run qui
+        # n'a pas atteint 1500 nuits est EXCLU, jamais compte comme termine.
+        if r[-1]['j'] < 1500:
+            manquants.append(f'{b}_g{g} (INACHEVE {r[-1]["j"]}/1500)'); continue
         E[f'{b}_g{g}'] = dict(niv=r[-1]['niv'], mait=med(r,'mait',-100,None),
                               gain=med(r,'gain',-100,None), c1=med(r,'c1',-100,None),
                               vict=r[-1].get('vict', 0), nuits=len(r))
@@ -109,6 +114,21 @@ for b in BRAS:
           f"maitrise 0%: {sum(1 for k in ks if E[k]['mait']==0):2} | "
           f"niveau 1: {sum(1 for k in ks if E[k]['niv']<=1):2} | "
           f"niv max {max(E[k]['niv'] for k in ks)}")
+
+
+# --- L'inversion du juge 3 est-elle un artefact de palier ? ---
+# Comparer la maitrise de deux cerveaux qui jouent des NIVEAUX DIFFERENTS n'a pas de sens :
+# un palier plus facile donne mecaniquement une maitrise plus haute. Ce bloc compare a
+# palier EGAL.
+print("\n=== VERIF — maitrise a PALIER EGAL (l'inversion du juge 3) ===")
+for b in BRAS:
+    ks = [k for k in E if k.rsplit('_g',1)[0] == b]
+    if not ks: continue
+    par = {}
+    for k in ks: par.setdefault(E[k]['niv'], []).append(E[k]['mait'])
+    print(f"  {b:16} " + " | ".join(f"niv{n}: {st.median(v):5.1f}% (n={len(v)})"
+                                   for n, v in sorted(par.items())))
+print("  => si l'ecart disparait a niveau egal, le delta de maitrise est un ARTEFACT de palier")
 
 json.dump(E, open(os.path.join(D,'agregat.json'),'w'), indent=1)
 print(f"\nagregat.json ecrit ({len(E)} runs)")
