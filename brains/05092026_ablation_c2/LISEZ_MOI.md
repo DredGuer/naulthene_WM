@@ -105,3 +105,38 @@ attribuait à C2 alors que ça venait de l'étranglement de C1.
 qui vaut **0,000 dans les deux bras** sur 3 jours (un agent neuf ne gagne rien si tôt). Le
 test ne pouvait rien discriminer — ce n'était pas le bug v41.4, c'était un mauvais choix de
 grandeur. *Un test qui ne peut pas échouer ne vérifie rien.*
+
+
+---
+
+## Incident de harnais — le faux départ du 05/09 (consigné)
+
+Le premier lancement a été **tué à 60 s** : les 20 runs `LIBRE_SANS_C2` échouaient sur
+`error: unrecognized arguments: --gain-c1-libre --sans-c2`, alors que le message d'usage
+**listait les deux options comme valides**.
+
+🔴 **Cause : `zsh` ne fait pas de word-splitting sur l'expansion d'une variable** (contrairement
+à `bash`). Le script posait `FLAGS="--gain-c1-libre --sans-c2"` puis
+`python … $FLAGS` : zsh passait **UN SEUL argument**, la chaîne entière, qu'argparse rejetait
+en bloc. Corrigé par un **tableau** — `FLAGS=(--gain-c1-libre --sans-c2)` puis `"${FLAGS[@]}"`.
+
+⚠️ **Le bug était dans le harnais, jamais dans `noyau.py`** : testés en direct, les deux
+drapeaux fonctionnaient parfaitement. Vérification faite avant de toucher au code.
+
+⚠️ **Second symptôme, même cause** : `TEMOIN_SANS_C2` renvoyait « OK » en ~30 s. Le garde-fou
+ne vérifiait que la présence du drapeau, pas que le run soit **allé au bout** — un run qui
+plante en 2 s et n'écrit jamais la ligne d'ablation aurait pu passer. Ajout de
+`grep -q "Jour 1500"` **avant** les autres contrôles.
+
+**Leçon** : *un message d'erreur contradictoire (« option inconnue » + « option listée comme
+valide ») désigne le passage des arguments, pas leur déclaration.* Et un garde-fou qui ne
+vérifie pas la complétion peut valider un run mort.
+
+### Pré-vol du relancement
+
+| Test | Résultat |
+|---|---|
+| `LIBRE_SANS_C2` (2 j) | ✅ `OK` — `[BRAS A]` **et** `[ABLATION] C2 MUET`, `gain ×1,00` |
+| `TEMOIN_SANS_C2` (2 j) | ✅ `OK` — `[ABLATION]` seul, pas de contamination, `gain ×0,63` |
+| Erreurs argparse après relance | ✅ **0** |
+| Parallélisme / RAM | ✅ **6 runs, 5,1 Go** sur 36 |
