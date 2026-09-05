@@ -74,9 +74,28 @@ gradients nuls. Un coût **computationnel**, jamais cognitif.
 1. 🟡 **Le coût mémoire reste réel** : 18,70 % du réseau à 1500 j (**33,26 % à la naissance**
    — la part dépend de `dim_bus`, ne jamais la coder en dur). Le **supprimer** est une autre
    question que le **geler**, et elle casserait la rétrocompatibilité des `.brain`.
-2. 🔴 **Pourquoi la neurogenèse agrandit-elle des couches qui n'apprennent jamais ?**
-   `porte_auditive` et `generateur_attente_audio` grandissent avec `dim_bus` sans jamais
-   recevoir un gradient. Question ouverte, non mesurée.
+2. ✅ **RÉPONDU le 05/09 — la contrainte est GÉOMÉTRIQUE, pas cognitive.** La fusion des
+   sens est une **addition** : `bus_latent = stimulus_visuel + stimulus_auditif`
+   (`noyau.py:1054`). Pour que cette somme soit définie, `porte_auditive` **doit** sortir
+   exactement `dim_bus`. Quand le thermostat JEPA élargit le bus, `declencher_neurogenese`
+   agrandit donc les **13 couches en bloc**, audio comprises :
+
+   ```python
+   self.porte_auditive.agrandir([(DIM_AUDIO_ENTREE, 0)], a)   # entrée MFCC figée, sortie = dim_bus
+   self.tete_vocale.agrandir([(d, a)], 0)
+   self.generateur_attente_audio.agrandir([(A, 0), (d, a)], a)
+   ```
+
+   > **La neurogenèse est un élargissement global de l'autoroute, jamais une pousse ciblée.**
+   > Elle donne de l'espace à tout le monde aveuglément — y compris à ceux qui n'ont rien à
+   > dire.
+
+   ⚠️ Nuance que le code ajoute : seule la **sortie** suit `dim_bus`. L'entrée audio brute
+   (`DIM_AUDIO_ENTREE`, les MFCC) ne bouge pas — la contrainte est unilatérale.
+
+   C'est **cohérent** avec le résultat principal : ces couches grandissent parce que la
+   géométrie l'exige, jamais parce qu'un gradient les sollicite. D'où **0/80 cerveaux** avec
+   la moindre myéline audio.
 
 ## 6. Leçon de méthode
 
