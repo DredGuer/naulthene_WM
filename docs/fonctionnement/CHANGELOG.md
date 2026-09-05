@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `9850e4a` |
 | **Catégorie** | feat (`--env` sur `banc_ppo`, 3 sondes) + mesure |
 | **Impact** | Critique — ferme une hypothèse, en ouvre une, aggrave le constat de fond |
 | **Carnets** | [PPO_LAVAGAP_06092026](../recherche/campagnes/PPO_LAVAGAP_06092026_le_mur_n_est_pas_la_carte.md) · [SONDES_06092026](../recherche/campagnes/SONDES_06092026_le_levier_s_efface_le_corps_domine.md) |
