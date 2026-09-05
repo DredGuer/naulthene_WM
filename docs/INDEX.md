@@ -163,6 +163,7 @@ retester une idée déjà écartée. (Les réfutations à n ≥ 20 — RENDEMENT
 
 | Date | Document |
 |---|---|
+| **[05092026_anatomie_comparee](etat_des_lieux/05092026_anatomie_comparee_cerveau_humain.md)** | 📷 **Naulthène face au cerveau humain** — décompte RÉEL d'un cerveau à 1500 j : **1 556 062** params (et non 55 232, qui est le chiffre à la NAISSANCE), `dim_bus` = **159**. Tronc+limbique **61,19 %** contre C2 **0,06 %** (ratio **×996**) : l'inversion architecturale est confirmée et amplifiée. ⚠️ C2 est petit **par construction** (un critique sort un scalaire) et « l'absence de cervelet » a sa version testable **déjà réfutée** (v41.48/49) |
 | 02/09/2026 | [**état du dépôt — 21 réfutations, et ce qui reste**](etat_des_lieux/02092026_etat_du_depot_et_reste_a_faire.md) — où en est le projet, ce qui est acquis, ce qui est ouvert, et les 5 chantiers classés par ce que la mesure justifie |
 | 02/09/2026 | [branches archivées](etat_des_lieux/02092026_branches_archivees.md) — les 21 branches supprimées, leurs SHA pour les ressusciter |
 | 30/08/2026 | [**le génome — audit des constantes**](etat_des_lieux/30082026_le_genome_audit_des_constantes.md) — ce qui fixe la forme ET les désirs d'un cerveau avant tout vécu ; **95,6 % du signal vient de constantes posées** |
