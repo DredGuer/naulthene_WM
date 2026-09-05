@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `076887a` |
 | **Catégorie** | docs (diagnostic, **aucune ligne de `src/` modifiée**) |
 | **Impact** | Fonctionnel — établit le mécanisme du régime **par défaut** et rectifie une publication de la veille |
 | **Carnet** | [ATROPHIE_05092026](../recherche/campagnes/ATROPHIE_05092026_la_boucle_de_compensation.md) |
