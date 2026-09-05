@@ -4,6 +4,64 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.57] - 2026-09-05 — `--sans-c2` : la première ablation qui isole vraiment C2
+
+### Le « couper C2 ne change rien » du dépôt était CONFONDU
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | feat (drapeau d'ablation) |
+| **Impact** | Critique — invalide un résultat cité depuis des mois |
+| **Protocole** | `brains/05092026_ablation_c2/LISEZ_MOI.md` (écrit AVANT le lancement) |
+
+🔴 **Vérifié dans le code.** La lésion `c2_coupe` (`banc_ablation.py:246`) coupe C2 en posant
+`force_planification = 0`. Or `gain_c1 = clamp(vigueur_min_c1(force) / amplitude_c1, 0.25, 4)`
+avec `vigueur_min_c1(f) = 2.1 × f` (`noyau.py:5362`) : à `force = 0` le numérateur s'annule et
+**`gain_c1` est plaqué à sa borne basse, 0,25**.
+
+> **L'ablation historique ne coupait pas C2 : elle coupait C2 ET étranglait C1 à un quart.**
+
+⚠️ **Deux rectifications du récit du projet** :
+1. `c2_coupe` **n'existe que dans le banc d'ablation**, jamais dans le cursus — le « 0,0 pt
+   sur les 6 niveaux » vient d'un banc court sur cerveau entraîné, **jamais** d'une campagne
+   de 1500 jours.
+2. **Aucun drapeau ne coupait C2 dans le cursus** avant celui-ci.
+
+### Ce que fait `--sans-c2`
+
+La lésion porte sur le **seul terme de C2** dans la fusion (`noyau.py:1526`) :
+`logits_finaux = voix_c1`, `force_planification` restant à sa valeur vécue. `gain_c1` est donc
+**rigoureusement celui du bras de référence**. C2 continue de tourner (rollout, budget,
+télémétrie) — même discipline que `--sans-gradient-c2`, seule la **voix** est retirée.
+
+### Pré-vol mesuré avant tout lancement
+
+| Test | Résultat |
+|---|---|
+| Assertion runtime (`SANS_C2 is True`, module nommé — discipline v41.4) | ✅ atteinte |
+| `gain_c1` en LIBRE_SANS_C2 | ✅ **×1,00** (inchangé) |
+| `gain_c1` en TEMOIN_SANS_C2 | ✅ **×0,86** vs 0,88 en référence — **contre 0,25 pour `c2_coupe`** |
+| La lésion change le comportement | ✅ **5/5 grandeurs** divergent (accord, H jouée, JEPA, gestes stériles, amplitude C1) |
+
+⚠️ **Fausse alerte consignée** : le premier test de non-régression comparait `Réc. moyenne`,
+qui vaut **0,000 dans les deux bras** à 3 jours (un agent neuf ne gagne rien si tôt) — le test
+ne pouvait pas échouer, donc ne vérifiait rien. Ce n'était **pas** le bug v41.4.
+
+### La campagne (3 bras, non encore dépouillée)
+
+C2 et le gain étant couplés, deux bras redonneraient une ablation confondue (règle §6.2) :
+**LIBRE** (référence, runs existants) · **LIBRE_SANS_C2** (effet propre de C2) ·
+**TEMOIN_SANS_C2** (part du gain dans le « 0,0 pt » historique). 20 graines × 1500 j.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `SANS_C2` (constante-module), lésion l. 1526, drapeau `--sans-c2`, branchement + assertion runtime ; en-tête v41.50 → **v41.57** |
+| `brains/05092026_ablation_c2/LISEZ_MOI.md` | protocole + 4 juges, écrits avant lancement |
+| `brains/05092026_ablation_c2/{lancer,run_un}.sh` · `depouiller.py` | harnais + dépouillement |
+
+---
+
 ## [v41.56-mesure] - 2026-09-05 — L'atrophie de C1 : la renormalisation est une boucle de compensation
 
 ### Le mécanisme du régime témoin est établi — et le mot « effondrement » est rectifié

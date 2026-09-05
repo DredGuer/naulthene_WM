@@ -226,7 +226,7 @@ Deux conséquences pour la rédaction de toute doc, tout commit, toute descripti
   fois sur ~700 jours, n'est **jamais positive** (−0,44 pt `t=−0,26` ; −4,57 `t=−2,85` SIG ;
   −4,78 `t=−1,95`). Les 2 passages au niveau 5 sont passés par la voie « 2 victoires
   consécutives », jamais par les 60 % de maîtrise. **Couper C2 ne change toujours le score de
-  0,0 point sur les 6 niveaux** (78 cellules d'ablation). ⚠️ Ces taux sont à **n=10, sous le
+  0,0 point sur les 6 niveaux** (78 cellules d'ablation — 🔴 **CE RÉSULTAT EST CONFONDU (vérifié dans le code le 05/09/2026)** : la lésion `c2_coupe` du banc pose `force_planification = 0`, ce qui plaque `gain_c1` à sa borne basse **0,25** — elle coupait C2 **et étranglait C1 à un quart**. Elle n'existe par ailleurs **que dans le banc d'ablation**, jamais dans le cursus. `--sans-c2` (v41.57) est la première ablation qui isole C2 ; campagne `brains/05092026_ablation_c2/`.) ⚠️ Ces taux sont à **n=10, sous le
   seuil des 20 graines** : ce sont des tendances, pas des conclusions. L'échec fait partie du
   carnet de recherche et se documente (voir `docs/fonctionnement/CHANGELOG.md`
   §[v41.29-resultats] pour la mesure, et `docs/recherche/dia_Aout_2026.md` pour le
@@ -825,6 +825,8 @@ Ce que porte le cycle v39 → v41, et qui n'existe que dans `noyau.py` (jamais p
 
 ⚠️ **Résultats de ce cycle qui contredisent des affirmations antérieures** — les avoir en
 tête avant toute nouvelle piste. **Couper C2 ne change le score de 0,0 point sur les 6 niveaux**
+🔴 **CE RÉSULTAT EST CONFONDU (vérifié dans le code le 05/09/2026)** : la lésion `c2_coupe` du banc pose `force_planification = 0`, ce qui plaque `gain_c1` à sa borne basse **0,25** — elle coupait C2 **et étranglait C1 à un quart**. Elle n'existe par ailleurs **que dans le banc d'ablation**, jamais dans le cursus. `--sans-c2` (v41.57) est la première ablation qui isole C2 ; campagne `brains/05092026_ablation_c2/`.
+
 (toujours vrai). En revanche le « 0 promotion sur 10 graines » est **périmé depuis le
 20/08/2026** : la campagne v41.29 (10 graines × 1500 jours, cursus complet) donne **10/10 au
 niveau 4** et 2/10 au niveau 5 — le niveau 4 de g22 n'était donc pas une loterie natale. Voir
@@ -1002,4 +1004,4 @@ testée reste dans `ameliorations/`. Voir §3 pour les cinq dossiers et la proc�
 | `fix` mineur / `refactor` / `docs` | même version + suffixe | 14.0-fix1, 14.0-docs |
 | `chore` / `style` | pas d'incrément | - |
 
-Le script de référence `src/naulthene/cerveau/colab.py` est toujours en version **17** (vérifié le 02/09/2026 : depuis la réorganisation en package, il n'a reçu que l'en-tête de licence AGPL en v41.33 — **aucune mécanique** de v18 à v41.49 n'y a été portée). `src/naulthene/cerveau/noyau.py` porte **toutes** les mécaniques expérimentales, jusqu'à la **v41.50** (la voix libre, 02/09/2026) ; son en-tête `#Version actuelle` doit suivre la dernière entrée du CHANGELOG — il est resté à « 29 » pendant vingt versions avant d'être corrigé le 02/09. La liste complète des mécaniques est le CHANGELOG lui-même (138 entrées), pas ce paragraphe. Toute nouvelle mécanique testée localement suit la même échelle de version que le script de référence, marquée `-experimental` tant qu'elle n'y est pas portée. Poursuivre sur cette échelle (v41.x tant qu'on reste dans le cycle de la ligne de flottaison, +1.0 pour la prochaine mécanique majeure) sauf décision contraire de l'utilisateur.
+Le script de référence `src/naulthene/cerveau/colab.py` est toujours en version **17** (vérifié le 02/09/2026 : depuis la réorganisation en package, il n'a reçu que l'en-tête de licence AGPL en v41.33 — **aucune mécanique** de v18 à v41.49 n'y a été portée). `src/naulthene/cerveau/noyau.py` porte **toutes** les mécaniques expérimentales, jusqu'à la **v41.57** (`--sans-c2`, l'ablation propre de C2, 05/09/2026) ; son en-tête `#Version actuelle` doit suivre la dernière entrée du CHANGELOG — il est resté à « 29 » pendant vingt versions avant d'être corrigé le 02/09. La liste complète des mécaniques est le CHANGELOG lui-même (144 entrées), pas ce paragraphe. Toute nouvelle mécanique testée localement suit la même échelle de version que le script de référence, marquée `-experimental` tant qu'elle n'y est pas portée. Poursuivre sur cette échelle (v41.x tant qu'on reste dans le cycle de la ligne de flottaison, +1.0 pour la prochaine mécanique majeure) sauf décision contraire de l'utilisateur.

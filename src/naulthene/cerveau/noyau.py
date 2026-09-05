@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (C) 2026 Adrien Nault — Naulthène AGI
-#Version actuelle 41.50 — Variante LOCALE de test (Mac), terrain d'essai des mécaniques expérimentales.
+#Version actuelle 41.57 — Variante LOCALE de test (Mac), terrain d'essai des mécaniques expérimentales.
 # Versionné dans git depuis la v39.0 (2026-08-13), mais colab.py reste le script de référence :
 # rien de v18 → v41.49 n'y a été porté. Le marqueur ci-dessus suit le CHANGELOG (une entrée par
 # version) — il indiquait « 29 » jusqu'au 02/09/2026, périmé de 20 versions.
@@ -1523,7 +1523,13 @@ class AGI_Naulthene(nn.Module):
         # --- Arbitrage C1 + C2 (structure inchangée depuis la v13.0) ---
         # `force_planification` retrouve enfin le rôle qu'elle prétendait tenir : arbitrer
         # entre deux voix comparables, au lieu de multiplier la seule qui avait une échelle.
-        logits_finaux = voix_c1 + (valeurs_simulees * force_planification)
+        if SANS_C2:
+            # v41.57 — ablation propre : on retire la VOIX de C2, jamais `force_planification`
+            # (qui pilote `gain_c1` en amont). C1 parle exactement comme dans le bras de
+            # référence ; c'est ce que le banc `c2_coupe` ne savait pas faire.
+            logits_finaux = voix_c1
+        else:
+            logits_finaux = voix_c1 + (valeurs_simulees * force_planification)
 
         # Masquage PERMANENT de la 8ème action (v30.0, décision utilisateur explicite).
         #
@@ -5366,6 +5372,25 @@ def vigueur_min_c1(force_planification):
     les rapports entre les 7 logits de C1 sont rigoureusement préservés (invariant v37.0).
     """
     return AMPLITUDE_C2_NORMALISEE * float(force_planification)
+# --- v41.57 : L'ABLATION PROPRE DE C2 (`--sans-c2`) ---
+#
+# 🔴 CE QUE ÇA CORRIGE. Le « couper C2 ne change le score de 0,0 point sur les 6 niveaux »
+# du dépôt vient du BANC d'ablation (`banc_ablation.py`, lésion `c2_coupe`), qui coupe C2
+# en posant `force_planification = 0`. Or le gain de C1 est
+# `clamp(vigueur_min_c1(force) / amplitude_c1, 0.25, 4)` avec `vigueur_min_c1(f) = 2.1 × f` :
+# à `force = 0` le numérateur s'annule et **`gain_c1` est plaqué à sa borne basse, 0,25**.
+# Cette ablation ne coupait donc pas C2 : elle coupait C2 **et étranglait C1 à un quart**.
+# Le résultat historique est CONFONDU, au sens de la règle de mesure §6.2.
+#
+# Ici la lésion porte sur le SEUL terme de C2 dans la fusion, `force_planification` restant
+# à sa valeur vécue : `gain_c1` est rigoureusement celui du bras de référence. C'est la
+# première ablation de C2 qui isole C2.
+#
+# ⚠️ Ce drapeau NE touche PAS `simuler_futur_et_planifier` : C2 continue de tourner, de
+# consommer son budget et d'alimenter la télémétrie. Seule sa VOIX est retirée de
+# `logits_finaux` — même discipline que `--sans-gradient-c2` (forward intact).
+SANS_C2 = False
+
 GAIN_C1_MIN = 0.25                 # bornes du gain. Sans la borne HAUTE, un C1 érodé à
 GAIN_C1_MAX = 4.0                  # l'extrême serait amplifié sans limite et son bruit
                                     # deviendrait du signal ; sans la borne BASSE, un C1
@@ -12078,6 +12103,10 @@ if __name__ == "__main__":
                     help="ABLATION : C2 garde son forward mais ne rétropropage plus "
                          "(teste la collision C1/C2 dans integrateur_bio). Mesure "
                          "l'ALIGNEMENT du gradient, jamais la performance.")
+    _p.add_argument("--sans-c2", action="store_true",
+                    help="v41.57 : ablation PROPRE de C2 — sa voix est retirée de la fusion, "
+                         "`force_planification` (donc `gain_c1`) reste intacte. Contrairement "
+                         "à la lésion `c2_coupe` du banc, qui étranglait C1 à 0,25.")
     _p.add_argument("--soif-figee", action="store_true",
                     help="ABLATION piste C : l'hydratation reste à 1.0 (le corps ne tire "
                          "plus que sur UN axe). Mesure l'alignement du gradient, JAMAIS "
@@ -12306,6 +12335,16 @@ if __name__ == "__main__":
               "rétropropagation vers integrateur_bio")
         from naulthene.cerveau.noyau import GRADIENT_C2_ACTIF as _verif_c2
         assert _verif_c2 is False, ("l'ablation n'a pas atteint le module — campagne invalide")
+
+    # v41.57 — ablation propre de C2. MÊME DISCIPLINE : module NOMMÉ + assertion runtime.
+    _sans_c2 = bool(_args.sans_c2)
+    globals()["SANS_C2"] = _sans_c2
+    if _module_reel is not None:
+        _module_reel.SANS_C2 = _sans_c2
+    if _sans_c2:
+        print("🔬 [ABLATION] C2 MUET — sa voix est retirée de la fusion, `gain_c1` intact")
+        from naulthene.cerveau.noyau import SANS_C2 as _verif_sc2
+        assert _verif_sc2 is True, ("l'ablation C2 n'a pas atteint le module — campagne invalide")
 
     # v41.32 — piste C. MÊME DISCIPLINE : écriture dans le module NOMMÉ + assertion
     # runtime. C'est le correctif du bug v41.4, où le drapeau n'atteignait pas le module
