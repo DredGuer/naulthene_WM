@@ -240,6 +240,16 @@ creuse brute** de MiniGrid, sans aucun shaping.
 trois architectures tiennent dans **0,7 point**. Le plafond est une pathologie de Naulthène,
 pas une propriété de MiniGrid.
 
+🔴 **MESURÉ AU NIVEAU DU MUR LE 06/09/2026 — et l'écart se creuse.** Cette baseline avait
+été mesurée sur `SimpleCrossingS9N1`, le niveau **3**, que Naulthène **franchit** ; le mur
+est au niveau **4** (`LavaGapS5`), où **40 runs sur 40** s'arrêtent. Refaite là-bas :
+**PPO réussit à 97,27 %** (n=5, min 90,67 %, δ_A/A = 0,000000) contre **6,67 %** pour le
+marcheur aléatoire — **14,6×**. **Naulthène n'y franchit jamais.** Au niveau 3 l'écart
+était de 2,3× ; au niveau 4 il est total, sur une carte pourtant **plus facile** pour un RL
+standard (`max_steps` 100, grille 5×5). ⚠️ **n = 5, sous le seuil des 20 graines** : le
+contraste est d'un ordre de grandeur au-dessus du bruit, mais aucune comparaison fine n'en
+découle. Voir [PPO_LAVAGAP_06092026](docs/recherche/campagnes/PPO_LAVAGAP_06092026_le_mur_n_est_pas_la_carte.md).
+
 🔴 **La capacité n'est pas en cause.** `r(params, réussite) = −0,1519` (`t = −1,17`, NS). Un
 PPO de **14 068 paramètres — 4× plus léger que le cœur RL de Naulthène — réussit 2,3×
 mieux**, et le bras le plus gros est le pire des trois.

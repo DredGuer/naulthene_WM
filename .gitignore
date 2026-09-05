@@ -91,3 +91,4 @@ brains/**/*.log
 # l'utilisateur : ils étaient suivis et poussés sur GitHub depuis le commit 89ac5ad.
 # Les fichiers RESTENT sur le disque local ; cette règle empêche seulement qu'ils y reviennent.
 docs/naulthene_cosmologie/
+.taches

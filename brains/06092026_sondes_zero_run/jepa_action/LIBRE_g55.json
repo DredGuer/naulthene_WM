@@ -1,0 +1,10 @@
+{
+ "brain": "LIBRE_g55.brain",
+ "dim_bus": 150,
+ "num_actions": 8,
+ "d_inter_actions_moy": 0.17539556317031382,
+ "d_inter_actions_med": 0.17539556324481964,
+ "d_temps_moy": 0.9137947142973516,
+ "ratio_action_sur_temps": 0.19194197605420557,
+ "n_etats": 200
+}

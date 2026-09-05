@@ -173,9 +173,20 @@ def main():
     ap.add_argument("--graine", type=int, default=11)
     ap.add_argument("--pas", type=int, default=PAS_MESURES)
     ap.add_argument("--sortie", default=None)
+    ap.add_argument("--env", default=None,
+                    help="surcharge ENV_ID (defaut : %s). Le defaut reste inchange pour "
+                         "que l'A/A du 29/08 reste reproductible bit a bit." % ENV_ID)
     ap.add_argument("--aa", action="store_true",
                     help="contrôle A/A : deux runs identiques, avant tout A/B (règle §5)")
     a = ap.parse_args()
+
+    if a.env:
+        # v41.60 - le banc etait fige sur SimpleCrossingS9N1 (le niveau 3), donc la
+        # baseline « le mur n'existe pas » n'avait JAMAIS ete mesuree au niveau du mur
+        # (LavaGapS5, niveau 4, ou 40 runs sur 40 s'arretent). Surcharge explicite,
+        # jamais implicite : sans ce drapeau le banc est bit-identique a la v41.38.
+        globals()["ENV_ID"] = a.env
+        print(f"[ENV] {ENV_ID}")
 
     if a.aa:
         print(f"CONTRÔLE A/A — arch [{a.arch},{a.arch}], graine {a.graine}, "
@@ -197,6 +208,7 @@ def main():
         return
 
     r = entrainer(a.arch, a.graine, a.pas)
+    r["env_id"] = ENV_ID
     print(json.dumps(r, indent=1))
     if a.sortie:
         json.dump(r, open(a.sortie, "w"), indent=1)

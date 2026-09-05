@@ -1,0 +1,47 @@
+{
+ "brain": "LIBRE_g211.brain",
+ "ticks": 300,
+ "dim_bus": 69,
+ "termes": {
+  "jepa": {
+   "porte_visuelle": 0.0,
+   "hippocampe": 0.0,
+   "analyseur": 0.0,
+   "integrateur_bio": 0.11802611500024796,
+   "tete_motrice": 0.0,
+   "cortex_prefrontal": 0.0,
+   "generateur_attente": 0.07490246742963791,
+   "_valeur_perte": 0.10044858604669571
+  },
+  "acteur": {
+   "porte_visuelle": 0.0,
+   "hippocampe": 0.0,
+   "analyseur": 0.0,
+   "integrateur_bio": 0.04949446767568588,
+   "tete_motrice": 0.06355483829975128,
+   "cortex_prefrontal": 0.0,
+   "generateur_attente": 0.0,
+   "_valeur_perte": -0.20536519587039948
+  },
+  "critique": {
+   "porte_visuelle": 0.0,
+   "hippocampe": 0.0,
+   "analyseur": 0.0,
+   "integrateur_bio": 0.20226669311523438,
+   "tete_motrice": 0.0,
+   "cortex_prefrontal": 0.373769611120224,
+   "generateur_attente": 0.0,
+   "_valeur_perte": 1.0278151035308838
+  },
+  "entropie": {
+   "porte_visuelle": 0.0,
+   "hippocampe": 0.0,
+   "analyseur": 0.0,
+   "integrateur_bio": 0.001475461875088513,
+   "tete_motrice": 0.00162231526337564,
+   "cortex_prefrontal": 0.0,
+   "generateur_attente": 0.0,
+   "_valeur_perte": -0.04129556566476822
+  }
+ }
+}

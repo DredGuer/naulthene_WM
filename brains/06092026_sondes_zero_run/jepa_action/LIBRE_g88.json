@@ -1,0 +1,10 @@
+{
+ "brain": "LIBRE_g88.brain",
+ "dim_bus": 146,
+ "num_actions": 8,
+ "d_inter_actions_moy": 0.42398908764123916,
+ "d_inter_actions_med": 0.42398908734321594,
+ "d_temps_moy": 0.6072362634347782,
+ "ratio_action_sur_temps": 0.6982275486023911,
+ "n_etats": 200
+}

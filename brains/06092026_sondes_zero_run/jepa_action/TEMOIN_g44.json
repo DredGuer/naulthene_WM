@@ -1,0 +1,10 @@
+{
+ "brain": "TEMOIN_g44.brain",
+ "dim_bus": 147,
+ "num_actions": 8,
+ "d_inter_actions_moy": 0.14545555777847766,
+ "d_inter_actions_med": 0.14545555412769318,
+ "d_temps_moy": 0.844416131706379,
+ "ratio_action_sur_temps": 0.17225577806569348,
+ "n_etats": 200
+}

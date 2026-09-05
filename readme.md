@@ -455,6 +455,16 @@ action — nearly **double the 18.00 % ceiling** Naulthène's own geometry allow
 architectures sit within **0.7 points** of each other. The plateau is a pathology of
 Naulthène, not a property of MiniGrid.
 
+🔴 **MEASURED AT THE WALL ITSELF ON 6 SEP 2026 — and the gap widens.** This baseline was
+measured on `SimpleCrossingS9N1`, level **3**, which Naulthène **clears**; the wall is at
+level **4** (`LavaGapS5`), where **40 runs out of 40** stop. Re-run there: **PPO scores
+97.27 %** (n=5, min 90.67 %, δ_A/A = 0.000000) against **6.67 %** for the random walker —
+**14.6×**. **Naulthène never clears it.** At level 3 the gap was 2.3×; at level 4 it is
+total, on a map that is in fact **easier** for standard RL (`max_steps` 100, 5×5 grid).
+⚠️ **n = 5, below the 20-seed threshold**: the contrast is an order of magnitude above
+noise, but no fine comparison follows from it. See
+[PPO_LAVAGAP_06092026](docs/recherche/campagnes/PPO_LAVAGAP_06092026_le_mur_n_est_pas_la_carte.md).
+
 🔴 **Capacity is not the cause.** `r(params, success) = −0.1519` (`t = −1.17`, NS). A PPO of
 **14,068 parameters — 4× lighter than Naulthène's RL core — succeeds 2.3× better**, and the
 largest arm is the worst of the three.

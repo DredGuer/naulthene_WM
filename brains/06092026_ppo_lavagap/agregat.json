@@ -1,0 +1,25 @@
+{
+ "env": "MiniGrid-LavaGapS5-v0",
+ "n": 5,
+ "delta_AA": 0.0,
+ "reussite_par_graine": {
+  "g11": 0.98,
+  "g22": 1.0,
+  "g33": 0.9766666666666667,
+  "g44": 1.0,
+  "g55": 0.9066666666666666
+ },
+ "moyenne": 0.9726666666666667,
+ "min": 0.9066666666666666,
+ "max": 1.0,
+ "temoin_aleatoire": {
+  "taux": 0.0667,
+  "n_episodes": 600,
+  "ic95": [
+   0.0467,
+   0.0866
+  ]
+ },
+ "naulthene_franchissements": 0,
+ "naulthene_runs": 40
+}

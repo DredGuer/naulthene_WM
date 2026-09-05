@@ -1,0 +1,77 @@
+{
+ "brain": "LIBRE_g66.brain",
+ "dim_bus": 151,
+ "ref_vision": 0.18588566780090332,
+ "tranches": {
+  "jauges": {
+   "largeur": 3,
+   "norme_moy": 1.1009647846221924,
+   "ratio_vs_vision": 5.922806262969971
+  },
+  "quete": {
+   "largeur": 3,
+   "norme_moy": 0.35421085357666016,
+   "ratio_vs_vision": 1.9055306911468506
+  },
+  "rappel_spatial": {
+   "largeur": 2,
+   "norme_moy": 0.6586756110191345,
+   "ratio_vs_vision": 3.543444871902466
+  },
+  "quete_vocale": {
+   "largeur": 8,
+   "norme_moy": 0.011813550256192684,
+   "ratio_vs_vision": 0.06355277448892593
+  },
+  "toucher": {
+   "largeur": 4,
+   "norme_moy": 1.0519155263900757,
+   "ratio_vs_vision": 5.658938407897949
+  },
+  "chimie": {
+   "largeur": 4,
+   "norme_moy": 0.9982603192329407,
+   "ratio_vs_vision": 5.3702921867370605
+  },
+  "exo_sens": {
+   "largeur": 8,
+   "norme_moy": 0.011751624755561352,
+   "ratio_vs_vision": 0.06321963667869568
+  },
+  "clinotaxie": {
+   "largeur": 2,
+   "norme_moy": 0.8153325319290161,
+   "ratio_vs_vision": 4.386204242706299
+  },
+  "thermoception": {
+   "largeur": 2,
+   "norme_moy": 0.565333366394043,
+   "ratio_vs_vision": 3.0412962436676025
+  },
+  "pression": {
+   "largeur": 2,
+   "norme_moy": 0.8388972878456116,
+   "ratio_vs_vision": 4.512974739074707
+  },
+  "rappel_marquant": {
+   "largeur": 2,
+   "norme_moy": 0.712655246257782,
+   "ratio_vs_vision": 3.833836555480957
+  },
+  "presence_auditive": {
+   "largeur": 1,
+   "norme_moy": 0.011863076128065586,
+   "ratio_vs_vision": 0.06381920725107193
+  },
+  "portage": {
+   "largeur": 1,
+   "norme_moy": 0.011889473535120487,
+   "ratio_vs_vision": 0.0639612153172493
+  },
+  "elan": {
+   "largeur": 2,
+   "norme_moy": 0.7110689878463745,
+   "ratio_vs_vision": 3.825302839279175
+  }
+ }
+}

@@ -1,0 +1,16 @@
+{
+ "arch": 69,
+ "graine": 22,
+ "params": 30644,
+ "pas": 152043,
+ "proba_favorite_but_vu": 0.5661723613739014,
+ "proba_favorite_but_absent": 0.706132173538208,
+ "action_favorite_but_vu": 2,
+ "action_favorite_but_absent": 1,
+ "entropie": 1.02567720413208,
+ "entropie_max": 1.9459101490553132,
+ "dprime_latent": 1.308467149734497,
+ "derive_par_jalon_deg": 23.384311372298505,
+ "reussite": 1.0,
+ "env_id": "MiniGrid-LavaGapS5-v0"
+}

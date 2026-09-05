@@ -4,6 +4,73 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.60-mesure] - 2026-09-06 — Le mur n'est pas la carte, et le critique mange l'entrée de la décision
+
+### Quatre mesures en une nuit, dont trois à coût zéro
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | feat (`--env` sur `banc_ppo`, 3 sondes) + mesure |
+| **Impact** | Critique — ferme une hypothèse, en ouvre une, aggrave le constat de fond |
+| **Carnets** | [PPO_LAVAGAP_06092026](../recherche/campagnes/PPO_LAVAGAP_06092026_le_mur_n_est_pas_la_carte.md) · [SONDES_06092026](../recherche/campagnes/SONDES_06092026_le_levier_s_efface_le_corps_domine.md) |
+
+### 1. 🔴 PPO résout `LavaGapS5` — le mur n'est PAS la carte
+
+La baseline *« le mur n'existe pas »* (29/08) avait été mesurée sur `SimpleCrossingS9N1`,
+le niveau **3** — que Naulthène **franchit**. Refaite au niveau **4**, celui où **40 runs
+sur 40** s'arrêtent :
+
+| | Taux |
+|---|---|
+| **PPO** (n=5, δ_A/A = 0,000000) | **97,27 %** — min 90,67 %, max 100 % |
+| Marcheur aléatoire (600 ép.) | 6,67 % — IC95 [4,67 ; 8,66] |
+| **Naulthène** (40 runs × 1500 j) | **0 franchissement** |
+
+**L'écart se creuse avec la facilité de la tâche** : 2,3× au niveau 3, essentiellement tout
+au niveau 4. `LavaGapS5` est pour un RL standard **plus facile** que le niveau précédent.
+
+### 2. 🔴 Le critique consomme 89,24 % du gradient d'`integrateur_bio`
+
+Seconde table de mixage, jamais mesurée — `perte_totale` somme six termes, un seul Adam :
+
+| Couche | jepa | acteur | **critique** | entropie |
+|---|---|---|---|---|
+| **`integrateur_bio`** | 4,00 % | **6,57 %** | **89,24 %** | 0,19 % |
+| `tete_motrice` | — | 97,95 % | — | 2,05 % |
+
+**40 cerveaux sur 40**, ratio médian **11,50×**. Or `integrateur_bio` est **l'entrée unique
+de la décision**. La voix libre divise cette domination par **2,4** (16,38× → 6,69×) : elle
+rend sa voix à l'acteur (+54 %) et réduit celle du critique (−50 %) — le chaînon mécanique
+de l'atrophie mesurée le 05/09.
+
+⚠️ **Le run `--detach-c2` en cours teste exactement cette voie** (`noyau.py:1556`) : son
+verdict ouvrira ou fermera la piste sans run supplémentaire.
+
+### 3. ❌ La dilution d'`integrateur_bio` est réfutée — et une norme n'est pas un usage
+
+Le corps pèse **2,5 à 5,6×** la vision (chimie 5,57× · jauges 5,55× · toucher 3,94×). Trois
+canaux au **plancher Xavier** (quête vocale, Exo-Sens, présence auditive : 0,055, σ 0,0119).
+
+🔴 **`élan` pèse 3,41× et son effet comportemental fut mesuré NUL à n=20.** Confirmation
+expérimentale qu'un poids élevé prouve qu'une voie **existe**, jamais qu'elle **porte**.
+
+### 4. 🟡 Le levier de l'agent s'efface (fait nouveau, non interprété)
+
+Sensibilité de JEPA à l'action divisée par **10** entre un cerveau neuf (ratio 4,79) et un
+cerveau de 1500 jours (**0,48**) : `δ_action` ÷5, `δ_temps` ×2,5. ⚠️ Peut être **sain** —
+il manque le ratio d'un modèle du monde compétent, qui n'existe pas dans le dépôt.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/instruments/banc_ppo.py` | `--env` (défaut inchangé, l'A/A du 29/08 reste reproductible) + `env_id` dans le JSON |
+| `src/naulthene/instruments/sonde_jepa_action.py` | **créé** — sensibilité de JEPA à l'action |
+| `src/naulthene/instruments/sonde_permeabilite_bio.py` | **créé** — poids par tranche sensorielle |
+| `src/naulthene/instruments/sonde_mixage_pertes.py` | **créé** — gradient par terme et par couche |
+| `docs/ameliorations/PLAN_05092026_...md` | addendum daté, ordre original non modifié |
+
+---
+
 ## [v41.59] - 2026-09-05 — `--sans-audio` : un hémisphère qu'on ne peut pas geler, il l'est déjà
 
 ### La campagne de 8 h est ANNULÉE par son propre pré-vol
