@@ -1,0 +1,8 @@
+{
+ "brain": "LIBRE_g155.brain",
+ "dim_bus": 145,
+ "relu_mortes_pensee_bio": 0.43448275327682495,
+ "taux_zeros_pensee_bio": 0.6203448176383972,
+ "relu_mortes_bus_latent": 0.634482741355896,
+ "sd_dims_vivantes": 0.053477637469768524
+}

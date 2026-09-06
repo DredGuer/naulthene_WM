@@ -1,0 +1,14 @@
+{
+ "var_inter_actions": 0.00055123824859038,
+ "var_intra_temps": 0.0002751709835138172,
+ "ratio_inter_sur_intra": 2.0032572746276855,
+ "marge_logits_moyens": 0.008775647729635239,
+ "sd_temporel_logit": 0.015941256657242775,
+ "entropie": 1.945623755455017,
+ "p_favorite": 0.14709235727787018,
+ "part_ticks_argmax_change": 0.095238097012043,
+ "actions_distinctes_jouees": 2,
+ "norme_pensee": 0.5026969313621521,
+ "n_ticks": 400,
+ "brain": "TEMOIN_g211.brain"
+}

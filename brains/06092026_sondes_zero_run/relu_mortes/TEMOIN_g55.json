@@ -1,0 +1,8 @@
+{
+ "brain": "TEMOIN_g55.brain",
+ "dim_bus": 151,
+ "relu_mortes_pensee_bio": 0.6490066051483154,
+ "taux_zeros_pensee_bio": 0.7782284617424011,
+ "relu_mortes_bus_latent": 0.695364236831665,
+ "sd_dims_vivantes": 0.04955437779426575
+}

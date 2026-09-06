@@ -1,0 +1,112 @@
+{
+ "platitude_c1": {
+  "n": 40,
+  "var_inter_actions": {
+   "moy": 0.03725840203114785,
+   "med": 0.011389091145247221
+  },
+  "var_intra_temps": {
+   "moy": 0.01229331020376776,
+   "med": 0.004848277196288109
+  },
+  "ratio_inter_sur_intra": {
+   "moy": 3.912972667813301,
+   "med": 2.7081797122955322
+  },
+  "marge_logits_moyens": {
+   "moy": 0.0898734051734209,
+   "med": 0.04011521488428116
+  },
+  "sd_temporel_logit": {
+   "moy": 0.07101250361884012,
+   "med": 0.05968056805431843
+  },
+  "entropie": {
+   "moy": 1.929977035522461,
+   "med": 1.938503086566925
+  },
+  "p_favorite": {
+   "moy": 0.17107002288103104,
+   "med": 0.16377195715904236
+  },
+  "part_ticks_argmax_change": {
+   "moy": 0.12199248159304261,
+   "med": 0.12155388295650482
+  },
+  "actions_distinctes_jouees": {
+   "moy": 2.3,
+   "med": 2.0
+  },
+  "norme_pensee": {
+   "moy": 0.9720133300870657,
+   "med": 0.8948180675506592
+  },
+  "n_ticks": {
+   "moy": 400,
+   "med": 400.0
+  }
+ },
+ "relu_mortes": {
+  "n": 40,
+  "dim_bus": {
+   "moy": 139.1,
+   "med": 147.0
+  },
+  "relu_mortes_pensee_bio": {
+   "moy": 0.5607621252536774,
+   "med": 0.5738288164138794
+  },
+  "taux_zeros_pensee_bio": {
+   "moy": 0.690985532104969,
+   "med": 0.7006740868091583
+  },
+  "relu_mortes_bus_latent": {
+   "moy": 0.6284867785871029,
+   "med": 0.6416224241256714
+  },
+  "sd_dims_vivantes": {
+   "moy": 0.05282830742653459,
+   "med": 0.053333407267928123
+  }
+ },
+ "c1_branches": {
+  "n": 40,
+  "actions_distinctes_med": {
+   "moy": 1.4,
+   "med": 1.0
+  },
+  "actions_distinctes_moy": {
+   "moy": 1.4627083333333333,
+   "med": 1.4166666666666667
+  },
+  "part_ticks_vote_unique": {
+   "moy": 0.6127083333333333,
+   "med": 0.6625000000000001
+  },
+  "num_actions": {
+   "moy": 8,
+   "med": 8.0
+  },
+  "n_ticks": {
+   "moy": 120,
+   "med": 120.0
+  }
+ },
+ "horizon7": {
+  "n": 40,
+  "ratio_h7_sur_h1": {
+   "moy": 0.08823083759605498,
+   "med": 0.02950949153746677
+  }
+ },
+ "temoin_ppo": {
+  "env": "MiniGrid-LavaGapS5-v0",
+  "reussite": 0.9727,
+  "ratio_inter_sur_intra": 0.06,
+  "marge_logits_moyens": 0.0117,
+  "sd_temporel_logit": 2.9233,
+  "entropie": 0.6183,
+  "part_ticks_argmax_change": 0.216,
+  "actions_distinctes": 3
+ }
+}
