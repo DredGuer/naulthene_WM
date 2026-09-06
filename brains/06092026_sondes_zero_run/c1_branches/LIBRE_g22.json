@@ -1,0 +1,8 @@
+{
+ "actions_distinctes_med": 1.0,
+ "actions_distinctes_moy": 1.4416666666666667,
+ "part_ticks_vote_unique": 0.6833333333333333,
+ "num_actions": 8,
+ "n_ticks": 120,
+ "brain": "LIBRE_g22.brain"
+}

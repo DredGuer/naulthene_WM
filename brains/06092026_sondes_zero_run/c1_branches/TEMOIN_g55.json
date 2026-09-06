@@ -1,0 +1,8 @@
+{
+ "actions_distinctes_med": 2.0,
+ "actions_distinctes_moy": 2.15,
+ "part_ticks_vote_unique": 0.15,
+ "num_actions": 8,
+ "n_ticks": 120,
+ "brain": "TEMOIN_g55.brain"
+}
