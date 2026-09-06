@@ -1786,7 +1786,8 @@ class AGI_Naulthene(nn.Module):
 
     def apprendre_journee(self, jepa_losses, log_probs, entropies, valeurs, rewards, dones,
                           gamma=0.95, coeff_entropie=0.02, pertes_vocales=None,
-                          chocs_dopamine=None, transitions=None, rendements=None):
+                          chocs_dopamine=None, transitions=None, rendements=None,
+                          etats_rejeu=None):
         self.optimizer.zero_grad(set_to_none=True)
         perte_totale = torch.zeros((), device=DEVICE)
 
@@ -1800,6 +1801,9 @@ class AGI_Naulthene(nn.Module):
         # que par LTP hebbien/rêve, jamais par une erreur dirigée vers la cible.
         if pertes_vocales:
             perte_totale = perte_totale + COEFF_PERTE_VOCALE * torch.stack(pertes_vocales).mean()
+
+        returns_sauve = avantages_sauve = log_probs_anciens = None
+        self.pas_politique_nuit = 0
 
         if log_probs:
             returns = []
@@ -1917,6 +1921,14 @@ class AGI_Naulthene(nn.Module):
 
             perte_totale = perte_totale + perte_acteur + perte_critique + perte_entropie
 
+            # v41.62 — memorise ce que les epoques supplementaires rejoueront. `.detach()`
+            # partout : ces valeurs sont des CIBLES figees, calculees sur la politique qui
+            # a REELLEMENT collecte la journee. Les recalculer a chaque epoque melangerait
+            # deux politiques et rendrait le ratio d'importance vide de sens.
+            returns_sauve = returns.detach()
+            avantages_sauve = avantages.detach()
+            log_probs_anciens = log_probs_tensor.detach()
+
         # --- v37.1 : DISTILLATION SÉLECTIVE — C1 n'automatise que ce qui a marché ---
         #
         # Le buffer est vidé DANS TOUS LES CAS (même si la branche est désactivée ou si la
@@ -1952,8 +1964,78 @@ class AGI_Naulthene(nn.Module):
         perte_totale.backward()
         torch.nn.utils.clip_grad_norm_([p for p in self.parameters() if p.requires_grad], 1.0)
         self.optimizer.step()
+        self.pas_politique_nuit = 1
+
+        # --- v41.62 : LES EPOQUES SUPPLEMENTAIRES ---
+        #
+        # Le pas ci-dessus est INCHANGE : `EPOQUES_NUIT = 1` ne rentre jamais dans cette
+        # boucle, donc le comportement par defaut est bit-identique.
+        #
+        # ⚠️ POURQUOI ON RECALCULE `log_probs` A CHAQUE EPOQUE. Les tenseurs recus en
+        # argument portent le graphe construit PENDANT la journee. Rappeler `backward()`
+        # dessus produirait 8 gradients IDENTIQUES : la politique aurait bouge, mais pas
+        # les log_probs qui la decrivent. Une "campagne multi-epoques" faite ainsi serait
+        # VIDE — 8 fois le meme pas, mesure comme un effet. On rejoue donc les etats
+        # stockes (`etats_rejeu`) a travers la politique COURANTE, comme le fait PPO.
+        if EPOQUES_NUIT > 1 and etats_rejeu and log_probs:
+            self._epoques_supplementaires(etats_rejeu, returns_sauve, avantages_sauve,
+                                          log_probs_anciens, coeff_entropie)
 
         return float(perte_totale.item())
+
+    def _epoques_supplementaires(self, etats, returns, avantages, log_probs_anciens,
+                                 coeff_entropie):
+        """Les K-1 passes supplementaires sur la journee (v41.62).
+
+        `etats` : liste de dicts {obs, memoire, contexte, vecteur_bio, action} — les etats
+        REELS de la journee, rejouables a travers la politique courante.
+
+        Deux bras separes (regle de mesure §6.2) :
+          - `RATIO_CLIPPE_ACTIF = False` : policy gradient nu, qui DOIT diverger en theorie
+          - `RATIO_CLIPPE_ACTIF = True`  : ratio d'importance clippe, le garde-fou de PPO
+        """
+        n = min(len(etats), avantages.numel())
+        if n < 2:
+            return
+        obs = torch.cat([e["obs"] for e in etats[:n]], dim=0)
+        mem = torch.cat([e["memoire"] for e in etats[:n]], dim=0)
+        ctx = torch.cat([e["contexte"] for e in etats[:n]], dim=0)
+        vbio = torch.cat([e["vecteur_bio"] for e in etats[:n]], dim=0)
+        actions = torch.tensor([e["action"] for e in etats[:n]], dtype=torch.long,
+                               device=DEVICE)
+        av = avantages[:n].detach()
+        ret = returns[:n].detach()
+        lp_old = log_probs_anciens[:n].detach()
+
+        for _ in range(EPOQUES_NUIT - 1):
+            self.optimizer.zero_grad(set_to_none=True)
+            _, _, _, pensee_bio, logits = self._executer_c1_reflexe(obs, mem, ctx, vbio)
+            logits = logits.clone()
+            if self.num_actions > NUM_ACTIONS_BASE:
+                logits[..., ACTION_DEMANDER] = float("-inf")
+            d = torch.distributions.Categorical(logits=logits)
+            lp = d.log_prob(actions)
+            valeurs = self.cortex_prefrontal(pensee_bio).squeeze(-1)
+
+            if RATIO_CLIPPE_ACTIF:
+                ratio = torch.exp(lp - lp_old)
+                perte_acteur = -torch.min(
+                    ratio * av,
+                    torch.clamp(ratio, 1.0 - EPSILON_CLIP, 1.0 + EPSILON_CLIP) * av
+                ).mean()
+            else:
+                perte_acteur = -(lp * av).mean()
+
+            perte = (perte_acteur
+                     + F.mse_loss(valeurs, ret)
+                     - coeff_entropie * d.entropy().mean())
+            if not perte.requires_grad:
+                return
+            perte.backward()
+            torch.nn.utils.clip_grad_norm_(
+                [p for p in self.parameters() if p.requires_grad], 1.0)
+            self.optimizer.step()
+            self.pas_politique_nuit += 1
 
     def rever(self, memoire_moyen_terme, batch_size=32, coeff_jepa_audio=0.0):
         """batch_size est désormais calculé par l'appelant comme un POURCENTAGE adaptatif
@@ -5748,6 +5830,34 @@ GRADIENT_C2_ACTIF = True
 # ses estimations dérivaient. Ici, il apprend toujours — il cesse seulement de déformer
 # le sol de C1. Les deux bras doivent être mesurés séparément.
 DETACH_C2_ASYMETRIQUE = False
+
+# --- v41.62 : LES EPOQUES DE LA NUIT (piste §3 du plan du 05/09) ---
+#
+# 🔴 CE QUE ÇA ATTAQUE (mesure du 06/09, zero run). La politique recoit **UN SEUL pas de
+# gradient par journee** de ~400 ticks : `apprendre_journee` fait un `step()`, et le second
+# (celui de `rever`) ne porte QUE JEPA — aucune log_prob, aucun avantage, aucune tete
+# motrice. Sur le meme banc, PPO fait 23 680 pas contre 1 500 pour une vie entiere de
+# Naulthene, soit **63x plus par tick vecu**.
+#
+# Et la mesure du mecanisme boucle : un pas Adam deplace les logits de **0,0107**, quand la
+# marge entre l'argmax et le second vaut **0,392**. Il faudrait ~**37 pas** consecutifs dans
+# la meme direction pour changer une seule decision. L'agent en fait **un par jour**.
+#
+# ⚠️ `EPOQUES_NUIT = 1` reproduit le comportement anterieur **bit a bit** : la boucle n'est
+# meme pas entree (voir `apprendre_journee`).
+#
+# ⚠️ K EST UNE CONSTANTE POSEE, ce que le projet interdit a terme. Methode v30.1 : mesurer
+# le FIXE d'abord, deriver ensuite. Si l'effet existe, la forme finale devra emerger (de la
+# plasticite dopaminergique, comme `pourcentage_reve`) — jamais rester un 8 en dur.
+EPOQUES_NUIT = 1
+
+# Ratio d'importance clippe (le garde-fou de PPO). Plusieurs epoques de policy gradient
+# Monte-Carlo SANS ce ratio **divergent** : la politique s'eloigne de celle qui a collecte
+# les donnees, et les log_probs recalcules ne decrivent plus le comportement joue. C'est
+# exactement pourquoi PPO clippe. Les deux bras sont donc SEPARES (regle de mesure §6.2) :
+# couper les deux ensemble donnerait une ablation confondue.
+RATIO_CLIPPE_ACTIF = False
+EPSILON_CLIP = 0.2
 # v41.31-controle — bras de falsification : gradient acteur ×N SANS filtrage. 1.0 = inactif.
 # Le 2.6 n'est pas posé : c'est `T / Σm` mesuré (61,7 % de ticks stériles → 1/0,383 ≈ 2,6).
 GAIN_ACTEUR_CONTROLE = 1.0
@@ -7302,6 +7412,12 @@ class EtatCognitif:
 
     def _reinitialiser_buffers_journee(self):
         self._reinitialiser_buffers_calibrage()
+        # v41.62 — les etats rejoues par les epoques supplementaires. Reame ici comme tout
+        # buffer journalier : non vide, il retiendrait le graphe des journees precedentes
+        # et ferait rejouer a l'agent une vie entiere a chaque nuit (piege `score_vocal_jour`
+        # v27.0). Vide meme quand EPOQUES_NUIT == 1, pour que le passage d'un bras a l'autre
+        # ne laisse jamais de residu.
+        self.etats_rejeu_journee = []
         # v41.6 (P17) — compteurs de distribution du cursus. Réarmés ici comme tout buffer
         # journalier : sans cela ils cumuleraient depuis la naissance et la « part de
         # révision du jour » serait en réalité la part depuis toujours (piège du bug
@@ -9336,6 +9452,20 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
         log_prob_tick = dist.log_prob(action)
 
     etat.log_probs_journee.append(log_prob_tick)
+    # v41.62 — les entrees REELLES du tick, detachees, pour rejouer la politique aux
+    # epoques supplementaires (voir AGI_Naulthene._epoques_supplementaires). Sans ce
+    # buffer, K passes produiraient K gradients IDENTIQUES : le graphe recu par
+    # `apprendre_journee` est fige, seule la politique bouge.
+    # ⚠️ Ce buffer est vide dans `_reinitialiser_buffers_journee` comme tous les autres :
+    # non remis a zero, il retiendrait toute la journee precedente (piege v27.0).
+    if EPOQUES_NUIT > 1:
+        etat.etats_rejeu_journee.append({
+            "obs": etat.etat_courant.detach(),
+            "memoire": memoire_avant.detach(),
+            "contexte": contexte.detach(),
+            "vecteur_bio": vecteur_bio_tensor.detach(),
+            "action": action_item,
+        })
     etat.entropies_journee.append(dist.entropy())
     etat.valeurs_journee.append(valeur_estimee)
 
@@ -10562,6 +10692,10 @@ def executer_nuit(etat, plafond_reve=None):
         # pas ce buffer (cuve, arène) retombe sur le `.mean()` d'avant v41.31.
         transitions=getattr(etat, "transitions_journee", None),
         rendements=getattr(etat, "rendements_journee", None),
+        # v41.62 — les etats REELS de la journee, pour rejouer la politique aux epoques
+        # supplementaires. `getattr` : un cursus sans ce buffer (cuve, arene) retombe sur
+        # le pas unique d'avant v41.62.
+        etats_rejeu=getattr(etat, "etats_rejeu_journee", None),
     )
 
     # --- v40.0 : LE VÉCU NOURRIT LA FORCE DE PLANIFICATION (une fois par nuit) ---
@@ -11987,6 +12121,12 @@ def executer_nuit(etat, plafond_reve=None):
     # selon le palier ; elle dépend maintenant du vécu, donc elle vit sur tous les niveaux.
     # Les deux réservoirs sont loggés séparément : c'est leur RAPPORT qui pilote, mais leur
     # évolution respective est ce qui dira si le cliquet fait son travail.
+    # v41.62 — LE GARDE-FOU DES EPOQUES. Sans cette cle, un bras K=8 dont le drapeau
+    # n'atteindrait pas le module serait INDISCERNABLE du temoin (bug v41.4). Conditionnelle
+    # pour ne pas logger un « 1 » trompeur sur les cursus qui n'ont pas ce compteur.
+    _pas_pol = getattr(etat.agent, "pas_politique_nuit", None)
+    if _pas_pol is not None:
+        log_wandb["Pas_Politique_Nuit"] = _pas_pol
     log_wandb["Force_Planification"] = etat.force_planification_jour
     log_wandb["Planif_Vecu_Okay"] = etat.agent.vecu_okay
     log_wandb["Planif_Vecu_Danger"] = etat.agent.vecu_danger
@@ -12116,6 +12256,15 @@ if __name__ == "__main__":
     # v41.27 — témoin de l'option (b), voir MORT_COUTE_LA_JOURNEE.
     _p.add_argument("--mort-sans-cout", action="store_true",
                     help="ABLATION : mourir ne coûte plus la journée (comportement < v41.27)")
+    _p.add_argument("--epoques-nuit", type=int, default=1,
+                    help="v41.62 — nombre de pas de gradient de POLITIQUE par nuit "
+                         "(defaut 1 = comportement bit-identique). Mesure du 06/09 : un pas "
+                         "deplace les logits de 0,0107 pour une marge de 0,392, soit ~37 pas "
+                         "necessaires pour changer une decision.")
+    _p.add_argument("--ratio-clippe", action="store_true",
+                    help="v41.62 — active le ratio d'importance clippe (le garde-fou de PPO) "
+                         "sur les epoques supplementaires. A tester en bras SEPARE : plusieurs "
+                         "epoques de policy gradient nu divergent en theorie (regle §6.2).")
     _p.add_argument("--detach-c2", action="store_true",
                     help="C2 lit le corps sans le sculpter : il apprend toujours, mais ne "
                          "rétropropage plus dans integrateur_bio (correctif candidat de la "
@@ -12343,9 +12492,29 @@ if __name__ == "__main__":
 
     # v41.32 — detach asymétrique. MÊME DISCIPLINE : module NOMMÉ + assertion runtime.
     _det_c2 = bool(_args.detach_c2)
+    _epoques = int(getattr(_args, 'epoques_nuit', 1) or 1)
+    _ratio_clip = bool(getattr(_args, 'ratio_clippe', False))
     globals()["DETACH_C2_ASYMETRIQUE"] = _det_c2
     if _module_reel is not None:
         _module_reel.DETACH_C2_ASYMETRIQUE = _det_c2
+        # v41.62 — les epoques. Assertion de REALITE : le drapeau doit mordre DANS le module,
+        # pas seulement etre accepte par argparse (bug v41.4, ou trois bras etaient
+        # identiques en silence).
+        # ⚠️ LES DEUX COPIES DU MODULE. `python -m naulthene.cerveau.noyau` cree `__main__`
+        # ET `naulthene.cerveau.noyau` : `traiter_tick` s'execute dans le premier,
+        # `apprendre_journee` (methode de l'agent importe) dans le second. Ne surcharger que
+        # `_module_reel` laisse la COLLECTE des etats a EPOQUES_NUIT=1 — donc un buffer vide,
+        # donc 8 epoques qui ne s'executent jamais. MESURE au pre-vol du 06/09 : 0 grandeur
+        # sur 6 divergeait entre K=1 et K=8. C'est le bug v41.4 a l'identique.
+        globals()["EPOQUES_NUIT"] = max(1, int(_epoques))
+        globals()["RATIO_CLIPPE_ACTIF"] = bool(_ratio_clip)
+        _module_reel.EPOQUES_NUIT = max(1, int(_epoques))
+        _module_reel.RATIO_CLIPPE_ACTIF = bool(_ratio_clip)
+        assert _module_reel.EPOQUES_NUIT == globals()["EPOQUES_NUIT"] == max(1, int(_epoques)), \
+            "le drapeau --epoques-nuit n'atteint pas les DEUX copies du module"
+        if _module_reel.EPOQUES_NUIT > 1:
+            print(f"🔬 [VARIANTE] {_module_reel.EPOQUES_NUIT} epoques de politique par nuit"
+                  f" — ratio clippe : {'OUI' if _module_reel.RATIO_CLIPPE_ACTIF else 'NON'}")
     if _det_c2:
         print("🔬 [VARIANTE] detach asymétrique — C2 lit le corps sans le sculpter")
         from naulthene.cerveau.noyau import DETACH_C2_ASYMETRIQUE as _verif_det
