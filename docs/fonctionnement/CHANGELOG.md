@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `a32fd56` |
 | **Catégorie** | mesure (aucun changement de code par défaut) |
 | **Impact** | Critique — lève la réserve du 05/09, dans le sens inverse de celui attendu |
 | **Carnet** | [DETACH_C2_06092026](../recherche/campagnes/DETACH_C2_06092026_le_gradient_fantome_nuisait.md) |
