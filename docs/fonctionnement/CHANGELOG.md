@@ -4,6 +4,53 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.61-mesure] - 2026-09-06 — Le gradient fantôme de C2 nuisait : +5,25 pt de maîtrise
+
+### Le premier résultat positif du dépôt en cursus complet
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | mesure (aucun changement de code par défaut) |
+| **Impact** | Critique — lève la réserve du 05/09, dans le sens inverse de celui attendu |
+| **Carnet** | [DETACH_C2_06092026](../recherche/campagnes/DETACH_C2_06092026_le_gradient_fantome_nuisait.md) |
+
+**`--detach-c2` en régime libre, 20 graines appariées × 1500 jours, 0 échec.**
+
+| Juge (posé AVANT le lancement) | Mesuré | Verdict |
+|---|---|---|
+| **4. Garde-fou** `gain_c1` | 1,0000 / 1,0000 | ✅ passe |
+| **1. Maîtrise** | δ **+5,250 pt** · `t` = **+4,97** · **16/20** | ✅ **PASSE** |
+| ↳ sans les 4 extrêmes | δ +3,438 · `t` = **+4,57** | ✅ **survit** |
+| **2. Niveau** | δ = 0 — **20/20 au niveau 4 des deux côtés** | ⚠️ **SATURÉ** (prévu) |
+| **3. Amplitude C1** | δ +0,014 · `t` = +0,09 | ❌ nul |
+
+Maîtrise **8,75 % → 14,00 %** (+60 % relatif), victoires cumulées **860 → 926**.
+🔴 **La prédiction pré-enregistrée (« probablement rien ») est réfutée.**
+
+### La sonde du matin avait prédit ce levier
+
+La [table de mixage des pertes](../recherche/campagnes/SONDES_06092026_le_levier_s_efface_le_corps_domine.md)
+avait mesuré, sans connaître ce verdict, que **le critique consomme 89,24 %** du gradient
+d'`integrateur_bio` contre **6,57 %** pour l'acteur (40/40 cerveaux). `--detach-c2` coupe
+exactement cette voie (`noyau.py:1556`).
+
+### ⚠️ Deux réserves consignées
+
+1. **Les victoires cumulées ne survivent pas aux extrêmes** (`t` +3,42 → **+2,35** NS). La
+   maîtrise étant quantifiée à 5 %, la vérification sur grandeur continue donne un signal
+   **plus faible** — le sens est confirmé (16/20), pas la force.
+2. **Le mur du niveau 4 TIENT** : 20/20 dans les deux bras. Ce résultat améliore la
+   compétence **dans** le palier, il ne débloque **pas** le cursus.
+
+⚠️ **Aucun changement de comportement par défaut** : `DETACH_C2_ASYMETRIQUE` reste `False`.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `brains/05092026_detach_c2/depouiller.py` | **créé** — juges du LISEZ_MOI, garde anti-run-inachevé |
+
+---
+
 ## [v41.60-mesure] - 2026-09-06 — Le mur n'est pas la carte, et le critique mange l'entrée de la décision
 
 ### Quatre mesures en une nuit, dont trois à coût zéro

@@ -518,3 +518,37 @@ monde **compétent**, qui n'existe pas dans le dépôt. À ne pas citer comme pa
 
 *4 mesures, 0 run de cursus, ~40 min. Les trois sondes créées sont réutilisables :
 `sonde_jepa_action.py`, `sonde_permeabilite_bio.py`, `sonde_mixage_pertes.py`.*
+
+---
+
+# VERDICT DU CHANTIER 1 — 06/09/2026, 07h
+
+**La piste ouverte par la sonde §7 est CONFIRMÉE.** `--detach-c2` en régime libre, 20 graines
+× 1500 jours, 0 échec : **maîtrise 8,75 % → 14,00 %** (δ **+5,25 pt**, `t` = **+4,97**,
+**16/20**), et le résultat **survit au retrait des 4 extrêmes** (`t` = +4,57).
+
+[Carnet complet](../recherche/campagnes/DETACH_C2_06092026_le_gradient_fantome_nuisait.md).
+
+## Ce que ça change au classement
+
+| Piste | Avant | Après |
+|---|---|---|
+| **Découpler critique/acteur** (née de §7) | 🟢 hypothèse | ✅ **RÉSULTAT** — premier levier du dépôt en cursus complet |
+| **§5 tête d'intention** | 🟢 débloquée | 🟡 **à repenser** — la voix de C2 est inerte ET son gradient nuisait ; poser une tête de plus sur cet organe demande un argument neuf |
+| **§3 pas d'optimiseur** | 🟢 la plus haute | 🟢 **inchangée** — le mur du niveau 4 tient malgré ce levier, l'écart PPO reste inexpliqué |
+
+## Ce que ça ne change pas
+
+⚠️ **Le mur du niveau 4 TIENT** : 20/20 dans les deux bras. Ce levier améliore la compétence
+**dans** le palier, il ne débloque **pas** le cursus. L'objectif reformulé en §0 reste entier.
+
+⚠️ **Ma prédiction était fausse.** J'avais écrit *« la probabilité que ce bras trouve un effet
+est faible »*. C'est la deuxième fois en 24 h qu'une prédiction pré-enregistrée est réfutée
+(l'autre : §2.a). Les deux fois, l'écrire d'avance a rendu la réfutation lisible — c'est
+exactement ce à quoi sert la règle de trace.
+
+## La suite immédiate, non lancée
+
+**Un `lr` propre au critique, dérivé du rapport 89,24 / 6,57 mesuré** — jamais posé.
+`--detach-c2` coupe *tout* le gradient de C2 vers le tronc ; un dosage serait plus fin, et
+pourrait faire mieux. Témoin apparié, 20 graines, ~5 h.
