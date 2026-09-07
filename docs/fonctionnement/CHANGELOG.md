@@ -4,6 +4,112 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.65] - 2026-09-08 — MES-01 : le dépouillement REFUSE de publier sur une campagne invalide
+
+### La racine (registre MES-01) — six scripts, un seul défaut, recopié six fois
+
+| Type | Details |
+|------|---------|
+| **Commit** | `54c1867` |
+| **Catégorie** | fix (MES-01 P0 du registre) — outillage de mesure uniquement, **zéro ligne de `noyau.py` touchée** |
+| **Impact** | Critique — conditionne la validité de toute campagne future ; aucun résultat publié n'est modifié |
+| **Registre** | [REGISTRE_PROBLEMES_A_CORRIGER](../../ameliorations/REGISTRE_PROBLEMES_A_CORRIGER.md) MES-01 → ✅ Clos |
+
+L'audit du 08/09 a trouvé **six** scripts `depouiller*.py`, copies successives les uns des
+autres, partageant **le même** défaut :
+
+1. `for g in GRAINES if f'{bras}_g{g}' in E` — une graine absente disparaissait **en
+   silence** de chaque test, sans que le `n` réel soit confronté au `n` prévu ;
+2. « CAMPAGNE INVALIDE » était **affiché**, jamais bloquant : le script continuait et
+   `json.dump(E, ...)` écrivait l'agrégat quoi qu'il arrive, code de sortie 0 ;
+3. le seuil de significativité était la **constante `2.86`**, appliquée telle quelle après
+   le retrait des 4 extrêmes (`n` = 20 → 16) ;
+4. la fonction `lire()` et ses expressions régulières étaient recopiées à l'identique dans
+   quatre fichiers — une expression régulière copiée six fois est six occasions de dériver.
+
+C'est la panne d'`INSTRUMENT_01092026_la_memoire_du_banc.md` à l'identique : *un garde-fou
+de forme doit CRIER quand il rejette*.
+
+### Ce qui est livré
+
+| Fichier | Rôle |
+|---|---|
+| `src/naulthene/instruments/depouillement.py` | **créé** — `Manifeste`, `Depouillement`, `Resultat`, `seuil_t`. Couverture exacte, garde-fous bloquants, exclusions nommées ET motivées, `exiger()` pour les données annexes, refus d'écrire un agrégat sur campagne invalide, code de sortie ≠ 0, mode `exploratoire` séparé qui ne prononce aucun verdict et n'écrit jamais `agregat.json` |
+| `src/naulthene/instruments/journal_cursus.py` | **créé** — lecture unique d'un journal de run (une seule copie des expressions régulières) |
+| `tests/test_depouillement.py`, `tests/test_journal_cursus.py` | **créés** — 40 tests `unittest` (stdlib, aucune dépendance ajoutée) ; premier embryon de suite automatisée du dépôt (amorce QUA-01) |
+| `brains/*/manifeste.json` | **créés** ×6 — protocole transcrit : graines prévues, bras, jours requis, garde-fous, famille de tests, exclusions autorisées |
+| `brains/*/depouiller*.py` | **réécrits** ×6 — ne gardent que ce qui leur est propre : lecture de leurs sources et choix de leurs juges |
+
+`seuil_t(n, comparaisons, alpha)` implémente le quantile de Student en pur `math` (bêta
+incomplète + bissection), vérifié contre la table publiée **et** par intégration numérique
+indépendante de la densité. ⚠️ `scipy.stats` s'importe en > 60 s dans le venv du projet :
+ne pas l'introduire dans un instrument.
+
+### Re-dépouillement strict des campagnes publiées — AUCUNE rétractation
+
+Les quatre campagnes publiées ont été rejouées en mode confirmatoire strict. **Tous les
+`δ` et tous les `t` sont identiques au chiffre près, et aucun verdict SIG/NS ne change.**
+Parité vérifiée champ à champ sur `06092026_epoques_nuit` : **0 divergence sur 60 runs**.
+
+| Campagne | Couverture | Garde-fous | Verdicts |
+|---|---|---|---|
+| `06092026_epoques_nuit` | 60/60 | ✅ | inchangés |
+| `07092026_branches_persistantes` | 40/40 + 40/40 rollout | ✅ | inchangés |
+| `05092026_detach_c2` | 40/40 | ✅ | inchangés |
+| `05092026_ablation_c2` | 60/60 | ✅ | inchangés |
+| `02092026_rejeu_banc_corrige` | 20/20 | ✅ | inchangés |
+| `01092026_etape1_rendement` | 40/40 | — | inchangés |
+
+**C'est le résultat attendu et c'est le bon** : MES-01 n'était pas la preuve d'un agrégat
+faux, mais l'absence de garantie qu'il ne puisse pas l'être. La garantie existe maintenant.
+
+### 🟡 Une découverte de méthode : `2,86` n'était pas le seuil annoncé
+
+Les quatre campagnes déclarent « **Bonferroni 3 métriques ⇒ seuil `t` = 2,86** ». Or
+`t(df = 19, α = 0,05/3 bilatéral)` vaut **2,625**, pas 2,861 — **2,861 est le seuil de
+α = 0,01**, c'est-à-dire une famille de **5**. Le dépôt a donc été, sans le savoir, **plus
+sévère que sa propre pré-enregistration**. Conséquences :
+
+- direction de l'erreur **conservatrice** : elle n'a jamais fabriqué de résultat
+  significatif, elle a pu en masquer ;
+- après retrait des 4 extrêmes (`n` = 16), le seuil correct de la famille 3 est **2,694** —
+  toujours au-dessus de rien de décisif : aucun `t` du dépôt ne tombe dans les bandes
+  litigieuses. Le plus proche est le juge 2 de K8 (`t` = **+2,52** contre 2,625) — **près
+  du seuil, toujours NS** ;
+- les manifestes transcrivent la famille **déclarée** (3) ; les seuils affichés sont donc
+  désormais 2,63 (n = 20) et 2,69 (n = 16).
+
+🟡 **À trancher** (n'est PAS décidé par ce commit) : conserver la famille déclarée de 3, ou
+adopter officiellement α = 0,01 — le comportement historique. Tant que ce n'est pas tranché,
+ne pas requalifier en « significatif » un résultat qui ne passait pas 2,86.
+
+### Deux vérifications décoratives promues BLOQUANTES
+
+`02092026_rejeu_banc_corrige` calculait `temoin_aleatoire_conforme` (invariant 5,67 %) et
+`saturation_budget` (aucun cerveau au plafond 27,0×) **puis les ignorait**. Elles bloquent
+désormais la publication. Les deux passent sur les données réelles.
+
+### Une correction mineure d'affichage
+
+`01092026_etape1_rendement` calculait sa « médiane » par `sorted(v)[len(v)//2]`, ce qui rend
+la valeur **haute** des deux valeurs centrales quand `n` est pair : la directivité ACTIF
+médiane s'affichait **19,50×** pour 18 valeurs, au lieu de **19,25×**. ✅ Le carnet
+`RENDEMENT_01092026` avait publié **19,25×** — c'est l'outil qui était faux, pas le carnet,
+et le verdict (ÉCHEC, seuil ≥ 12×) est inchangé.
+
+### Preuve que la sévérité mord — sur données réelles
+
+| Épreuve | Résultat |
+|---|---|
+| JSON de rollout `BP_g44` retiré | exit **1**, aucun juge prononcé, aucun agrégat écrit |
+| `K8_NU_g55.log` tronqué au jour 900 | exit **1**, `⛔ K8_NU_g55 [NON PRÉVUE] INACHEVÉ 900/1500`, `agregat.json` **inchangé** (comparaison binaire) |
+| Données restaurées | 6/6 scripts exit 0, couverture pleine |
+
+Lancer la suite : `PYTHONPATH=src venv/bin/python -m unittest discover -s tests`
+(40 tests, ~0,07 s, aucune dépendance externe).
+
+---
+
 ## [v41.64] - 2026-09-07 — APP-01/APP-02 : le rejeu nocturne rejoue la politique COMPLÈTE
 
 ### La racine d'APP-01 (registre) — le rejeu comparait deux politiques différentes

@@ -53,12 +53,13 @@ Un problème ne passe à `✅ Clos` que si les quatre éléments suivants sont c
 |---|---:|---|---|---|
 | APP-01 | P0 | ✅ Clos | La politique rejouée la nuit n'est pas la politique ayant collecté les actions | Corrigé v41.64 (`6d6bcaa`) — rejeu sur politique complète |
 | APP-02 | P0 | ✅ Clos | `--detach-c2` n'est pas conservé dans les époques supplémentaires | Corrigé v41.64 (`6d6bcaa`) — detach sur chaque passe |
-| MES-01 | P0 | 🔴 Ouvert | Le dépouillement peut publier sur une cohorte incomplète ou un garde-fou échoué | Rendre les invalidités bloquantes |
+| MES-01 | P0 | ✅ Clos | Le dépouillement peut publier sur une cohorte incomplète ou un garde-fou échoué | Corrigé v41.65 (`54c1867`) — primitive stricte + manifestes, 6 scripts migrés |
 | MES-02 | P0 | 🔴 Ouvert | La sonde du rollout réimplémente encore le noyau | Observer le vrai rollout ou partager une primitive |
 | APP-03 | P1 | 🔴 Ouvert | Deux identités/configurations du module `noyau` | Point d'entrée léger et configuration unique |
 | API-01 | P1 | 🔴 Ouvert | Le tuple positionnel de `penser()` est fragile | Sortie nommée et validations de forme |
 | MES-03 | P1 | 🔴 Ouvert | Des dispersions de récompense sont présentées comme parts du gradient | Corriger le vocabulaire et mesurer séparément |
-| QUA-01 | P1 | 🔴 Ouvert | Absence de petite suite automatisée et de CI | Tests CPU de contrats et migrations |
+| MES-04 | P1 | 🟡 À décider | Le seuil `2,86` appliqué contredit la famille de 3 métriques déclarée (2,625) | Trancher : famille de 3, ou α = 0,01 assumé |
+| QUA-01 | P1 | 🟠 Amorcé | Absence de petite suite automatisée et de CI | `tests/` livré en v41.65 (40 tests) ; reste `penser()` et la CI |
 | EVA-01 | P1 | 🔵 À mesurer | Le juge principal est bruité et dépend du palier atteint | Banc final standard sur cartes fixes |
 | DOC-01 | P1 | 🔴 Ouvert | L'état courant et l'historique se contredisent dans la documentation | État courant unique + miroir EN/FR |
 | PER-01 | P1 | 🟠 À reproduire | Le chargement permissif peut masquer une anomalie comme migration | Migrations explicites, strictes hors cas connus |
@@ -219,37 +220,63 @@ que la collecte et l'apprentissage lisaient deux copies différentes de la confi
 
 # 4. Instruments, dépouillement et statistiques
 
-## MES-01 — Le dépouillement ne bloque pas toutes les campagnes invalides
+## MES-01 — Le dépouillement ne bloque pas toutes les campagnes invalides — ✅ CLOS (08/09/2026)
 
-- **Priorité / statut** : **P0 — 🔴 Ouvert**
+- **Priorité / statut** : **P0 — ✅ Clos** (v41.65, commit `54c1867`, CHANGELOG [v41.65])
 
-### Preuves
+### Preuves (audit initial, confirmé et étendu le 08/09)
 
-Dans `brains/06092026_epoques_nuit/depouiller.py` :
+Le registre citait `brains/06092026_epoques_nuit/depouiller.py`. L'audit a montré que le
+défaut n'était pas dans **un** script mais dans **six**, copies successives les uns des
+autres — `01092026_etape1_rendement`, `02092026_rejeu_banc_corrige`, `05092026_ablation_c2`,
+`05092026_detach_c2`, `06092026_epoques_nuit`, `07092026_branches_persistantes` :
 
-- les runs absents, vides ou inachevés sont exclus (`~49-58`) ;
-- la couverture n'est qu'affichée (`~64`) ;
-- les statistiques sont calculées sur l'intersection disponible (`~76-100`) ;
-- le seuil `2.86` est fixe, y compris après retrait de quatre observations (`~82-87`) ;
-- un garde-fou échoué affiche « CAMPAGNE INVALIDE » sans arrêter le script (`~67-74`) ;
-- l'agrégat est écrit sans condition finale (`~129`).
+- les runs absents, vides ou inachevés sont exclus **en silence** (`for g in GRAINES if
+  f'{bras}_g{g}' in E`), sans confronter le `n` réel au `n` prévu ;
+- la couverture n'est qu'affichée ;
+- le seuil `2.86` est fixe, y compris après retrait de quatre observations ;
+- un garde-fou échoué affiche « CAMPAGNE INVALIDE » sans arrêter le script ;
+- l'agrégat est écrit sans condition finale, code de sortie 0 ;
+- `02092026` calcule deux vérifications pré-enregistrées (`temoin_aleatoire_conforme`,
+  `saturation_budget`) **et les ignore** ;
+- la fonction de lecture des journaux et ses expressions régulières sont recopiées dans
+  quatre fichiers.
 
 Cela ne démontre pas que l'agrégat publié était incomplet. Cela démontre que le script ne rend
 pas cette situation impossible.
 
-### Correction proposée
+### Correction livrée
 
-- Mode **confirmatoire** strict : couverture exacte, graines prévues, jours finaux et garde-fous
-  obligatoires ; code de sortie non nul sinon.
-- Mode **exploratoire** séparé, clairement marqué, sans verdict confirmatoire.
-- Calcul explicite des seuils selon `n`, la famille de tests et les exclusions prévues.
-- Manifeste JSON du protocole et validation automatique avant dépouillement.
+- `src/naulthene/instruments/depouillement.py` — `Manifeste` (protocole transcrit en JSON),
+  `Depouillement` (collecte de la cohorte **entière**, garde-fous bloquants cible±tolérance
+  **et** plancher, `exiger()` pour les données annexes, refus de publier, code de sortie),
+  `Resultat` (verdict avec seuil affiché), `seuil_t` (quantile de Student **dérivé** de `n` et
+  de la famille, en pur `math` — `scipy.stats` met > 60 s à s'importer dans ce venv).
+- `src/naulthene/instruments/journal_cursus.py` — lecture unique des journaux de run.
+- Mode **exploratoire** séparé : calcule tout, ne prononce aucun verdict, et n'écrit jamais
+  `agregat.json` (seulement `agregat_exploratoire.json`).
+- Six manifestes + six scripts migrés.
 
-### Critères de clôture
+### Critères de clôture — vérifiés
 
-- Tests avec run manquant, run inachevé, garde-fou faux et `n` réduit.
-- Aucun agrégat final écrit dans ces cas en mode confirmatoire.
-- Rapport lisible des exclusions et de leur justification.
+| Critère | Preuve |
+|---|---|
+| Tests avec run manquant, run inachevé, garde-fou faux, `n` réduit | `tests/test_depouillement.py` — 33 tests, dont couverture, plancher, cohorte explicite, retrait des extrêmes |
+| Aucun agrégat final écrit dans ces cas | épreuves sur données réelles : rollout `BP_g44` retiré → exit 1 ; `K8_NU_g55.log` tronqué à 900/1500 → exit 1 et `agregat.json` **binairement inchangé** |
+| Rapport lisible des exclusions et de leur justification | `Depouillement.rapport()` nomme chaque run écarté, son motif, et distingue « prévue au manifeste » de « NON PRÉVUE » |
+| Non-régression | re-dépouillement strict des 6 campagnes : tous les `δ`/`t` identiques, aucun verdict changé ; parité champ à champ **0 divergence / 60 runs** sur K8 |
+
+### Ce que le re-dépouillement a appris (et qui n'était pas cherché)
+
+1. 🟡 **`2,86` n'est pas le seuil annoncé.** Les campagnes déclarent « Bonferroni 3
+   métriques » ; le seuil correspondant à `n = 20` est **2,625**, et 2,861 est celui de
+   α = 0,01 (famille de 5). Le dépôt a été **plus sévère que sa pré-enregistration** —
+   erreur conservatrice, aucun résultat à retirer, mais un choix à trancher (voir MES-04).
+2. ✅ **Aucune campagne publiée n'était incomplète** : 60/60, 40/40, 60/60, 40/40, 20/20,
+   40/40. Le risque était réel, il ne s'était pas réalisé.
+3. Une « médiane » de `01092026` était `sorted(v)[len(v)//2]` (valeur haute pour `n` pair) :
+   19,50× affiché pour 19,25× réel. Le carnet publiait déjà **19,25×** — l'outil était faux,
+   pas le carnet ; verdict inchangé.
 
 ---
 
@@ -308,6 +335,48 @@ entropie — mais pas une attribution Bio contre Env et pas leurs directions ou 
 - Vocabulaire corrigé dans les documents normatifs et vitrines ; archives datées annotées sans
   effacer l'ancien texte.
 - Instrument et formule documentés si une vraie attribution du gradient est produite.
+
+---
+
+## MES-04 — Le seuil appliqué contredit la famille de tests déclarée
+
+- **Priorité / statut** : **P1 — 🟡 À décider** (constaté le 08/09/2026 pendant MES-01)
+
+### Le fait
+
+Quatre campagnes (`05092026_ablation_c2`, `05092026_detach_c2`, `06092026_epoques_nuit`,
+`07092026_branches_persistantes`) écrivent dans leur `LISEZ_MOI.md` :
+
+> ⚠️ **Bonferroni 3 métriques** ⇒ seuil `t` = **2,86**.
+
+Or, pour `n` = 20 (df = 19), le seuil bilatéral de Bonferroni à 3 comparaisons vaut
+**2,625**. **2,861** est le seuil de α = 0,01, c'est-à-dire d'une famille de **5**. Les deux
+phrases de la même ligne ne désignent pas le même test.
+
+### Conséquences mesurées
+
+- L'erreur est **conservatrice** : elle n'a jamais transformé un résultat nul en résultat
+  significatif. Elle a pu masquer un effet réel.
+- Après retrait des 4 extrêmes (`n` = 16), le seuil correct de la famille 3 est **2,694**,
+  toujours en dessous de 2,861 : là aussi le dépôt a été plus sévère qu'annoncé.
+- **Aucun `t` du dépôt ne tombe dans la bande litigieuse.** Le plus proche est le juge 2 de
+  K8 (niveau, `t` = **+2,52**, contre un seuil de 2,625) : près du seuil, toujours NS.
+
+### La décision à prendre
+
+| Option | Effet |
+|---|---|
+| **A — famille de 3 assumée** (2,625 / 2,694) | cohérent avec les LISEZ_MOI ; desserre légèrement le critère des campagnes futures |
+| **B — α = 0,01 assumé** (2,861 / 2,947) | conserve le comportement historique ; il faut alors corriger la phrase « Bonferroni 3 métriques » partout |
+
+Les manifestes livrés en v41.65 transcrivent la famille **déclarée** (option A) parce qu'un
+manifeste transcrit un protocole, il ne le réécrit pas. ⚠️ **Tant que ce point n'est pas
+tranché, ne requalifier en « significatif » aucun résultat qui ne passait pas 2,86.**
+
+### Critères de clôture
+
+- Option choisie, écrite une seule fois, et reportée dans les manifestes.
+- Vérification qu'aucun verdict publié ne bascule sous l'option retenue (déjà fait pour A).
 
 ---
 
@@ -647,12 +716,14 @@ La tête d'intention reste cohérente avec la thèse du projet, mais elle dépen
 
 ## Phase A — zéro campagne longue
 
-1. APP-01 : test de parité collecte/rejeu et définition du contrat.
-2. APP-02 : test de gradient K + detach.
-3. MES-01 : rendre le dépouillement strict.
-4. MES-02 : supprimer la duplication instrument/noyau.
-5. API-01 et QUA-01 : installer la première suite de contrats.
-6. DOC-01 : corriger l'état courant et les termes statistiques.
+1. ✅ APP-01 : test de parité collecte/rejeu et définition du contrat. *(v41.64)*
+2. ✅ APP-02 : test de gradient K + detach. *(v41.64)*
+3. ✅ MES-01 : rendre le dépouillement strict. *(v41.65)*
+4. **MES-02 : supprimer la duplication instrument/noyau.** ← prochain P0
+5. MES-04 : trancher la famille de tests (2,625 déclaré contre 2,861 appliqué).
+6. API-01 et QUA-01 : installer la première suite de contrats — **amorcée** par `tests/`
+   (40 tests stdlib) livré avec MES-01 ; reste à couvrir `penser()` et à installer la CI.
+7. DOC-01 : corriger l'état courant et les termes statistiques.
 
 ## Phase B — fiabilisation structurelle
 
@@ -680,6 +751,8 @@ La tête d'intention reste cohérente avec la thèse du projet, mais elle dépen
 | 2026-09-08 | Tous | Registre créé | — | Audit statique ciblé | Aucun effet dynamique nouvellement établi |
 | 2026-09-07 | APP-01 | ✅ Clos | `6d6bcaa` · CHANGELOG [v41.64] | T1 CPU : parité de formule 32 régimes × 2 (delta ≤ 1,5e-8) ; K=8 réel 0 violation du garde de forme | Rejeu sur politique complète (C1+C2), contexte k1/k2 figé par tick |
 | 2026-09-07 | APP-02 | ✅ Clos | `6d6bcaa` · CHANGELOG [v41.64] | T2 CPU : grad critique `integrateur_bio` 2,891 → 0,000 (detach) ; K=8 + detach réel exit 0 | Détachement du critique appliqué sur chaque passe |
+| 2026-09-08 | MES-01 | ✅ Clos | `54c1867` · CHANGELOG [v41.65] | 40 tests `unittest` verts ; épreuves réelles : rollout retiré → exit 1, log tronqué 900/1500 → exit 1 et agrégat binairement inchangé ; re-dépouillement des 6 campagnes, 0 verdict changé, parité champ à champ 0/60 divergence | Primitive `depouillement.py` + `journal_cursus.py` + 6 manifestes ; 6 scripts migrés |
+| 2026-09-08 | MES-04 | 🟡 À décider | — | Constatée pendant le re-dépouillement MES-01 | La famille déclarée (3 métriques ⇒ 2,625) contredit le seuil appliqué (2,861 = α 0,01) ; erreur conservatrice, aucun résultat retiré |
 
 ---
 
