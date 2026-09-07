@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (C) 2026 Adrien Nault — Naulthène AGI
-#Version actuelle 41.63 — Variante LOCALE de test (Mac), terrain d'essai des mécaniques expérimentales.
+#Version actuelle 41.64 — Variante LOCALE de test (Mac), terrain d'essai des mécaniques expérimentales.
 # Versionné dans git depuis la v39.0 (2026-08-13), mais colab.py reste le script de référence :
 # rien de v18 → v41.49 n'y a été porté. Le marqueur ci-dessus suit le CHANGELOG (une entrée par
 # version) — il indiquait « 29 » jusqu'au 02/09/2026, périmé de 20 versions.
@@ -1794,6 +1794,10 @@ class AGI_Naulthene(nn.Module):
                           gamma=0.95, coeff_entropie=0.02, pertes_vocales=None,
                           chocs_dopamine=None, transitions=None, rendements=None,
                           etats_rejeu=None):
+        # v41.64 — télémétrie du rejeu : remise à zéro à CHAQUE nuit, avant toute sortie
+        # anticipée (sinon une vieille valeur d'une nuit K>1 survivrait et loggerait des
+        # clés `Rejouer_*` trompeuses sur une nuit K=1).
+        self.rejouer_stats_nuit = None
         self.optimizer.zero_grad(set_to_none=True)
         perte_totale = torch.zeros((), device=DEVICE)
 
@@ -1989,16 +1993,70 @@ class AGI_Naulthene(nn.Module):
 
         return float(perte_totale.item())
 
+    def _logits_politique_complete_rejouee(self, obs, mem, ctx, vbio, k1, k2):
+        """v41.64 — APP-01 : reconstruit la politique COMPLETE (C1+C2) qui a collecté.
+
+        Le jour, la log-prob stockée (`lp_old`) vient des logits FUSIONNÉS
+        `voix_c1 + valeurs_simulees × force` (penser, structure v13.0). Avant v41.64, le
+        rejeu ne reconstruisait que `tete_motrice` nue : le ratio `exp(lp - lp_old)`
+        comparait deux politiques DIFFÉRENTES dès la première passe (APP-01). Ici :
+          - C1 reflex (batché) → `logits_instinct` ;
+          - C2 re-rollout PAR ÉTAT — jamais vectorisé artificiellement : la parité
+            numérique avec le jour prime, même appel `_solliciter_c2_neocortex`, même
+            ordre d'opérations, même détachement du corps (`CORPS_DANS_ROLLOUT_ACTIF`) ;
+          - fusion avec les COEFFICIENTS FIGÉS du tick de collecte, exactement la formule
+            de `penser` : `logits = logits_instinct × k1 + valeurs × k2`, où `k1` =
+            `gain_c1 × (1 si BRAIN_SPARING_ACTIF sinon vigueur)` et `k2` = force effective
+            post-vigueur (stockés par `traiter_tick`) ;
+          - masque de la 8ème action (inchangé).
+        `SANS_C2` : le rollout est court-circuité (k2 inutile) — coût de simulation
+        nocturne économisé immédiatement.
+
+        Retourne `(logits_finaux, pensee_bio)`."""
+        _, mem_act, _, pensee_bio, logits_instinct = self._executer_c1_reflexe(
+            obs, mem, ctx, vbio)
+        if not SANS_C2:
+            valeurs = []
+            for i in range(logits_instinct.shape[0]):
+                _corps_c2 = (vbio[i:i + 1].detach()
+                             if (CORPS_DANS_ROLLOUT_ACTIF and vbio is not None) else None)
+                v, _ = self._solliciter_c2_neocortex(
+                    pensee_bio[i:i + 1], mem_act[i:i + 1], vecteur_bio=_corps_c2)
+                valeurs.append(v)
+            # (n, A) — chaque v sort en (1, num_actions) ; l'empilement évite toute
+            # dimension orpheline dans la fusion ci-dessous.
+            valeurs = torch.cat(valeurs, dim=0)
+            logits = logits_instinct * k1.unsqueeze(-1) + valeurs * k2.unsqueeze(-1)
+        else:
+            logits = logits_instinct * k1.unsqueeze(-1)
+        logits = logits.clone()
+        if self.num_actions > NUM_ACTIONS_BASE:
+            logits[..., ACTION_DEMANDER] = float("-inf")
+        return logits, pensee_bio
+
     def _epoques_supplementaires(self, etats, returns, avantages, log_probs_anciens,
                                  coeff_entropie):
-        """Les K-1 passes supplementaires sur la journee (v41.62).
+        """Les K-1 passes supplementaires sur la journee (v41.62, corrigé v41.64).
 
-        `etats` : liste de dicts {obs, memoire, contexte, vecteur_bio, action} — les etats
-        REELS de la journee, rejouables a travers la politique courante.
+        `etats` : liste de dicts {obs, memoire, contexte, vecteur_bio, action, k1, k2} —
+        les etats REELS de la journee, rejouables a travers la politique courante, avec
+        le contexte décisionnel figé de chaque tick (v41.64, APP-01).
 
         Deux bras separes (regle de mesure §6.2) :
           - `RATIO_CLIPPE_ACTIF = False` : policy gradient nu, qui DOIT diverger en theorie
           - `RATIO_CLIPPE_ACTIF = True`  : ratio d'importance clippe, le garde-fou de PPO
+
+        v41.64 (APP-01/APP-02) :
+          - la log-prob de chaque passe est celle de la politique COMPLETE reconstruite
+            (C1+C2, mêmes coefficients de contexte que le jour) — le ratio
+            `exp(lp - lp_old)` n'exprime plus qu'un déplacement de poids, plus jamais
+            un changement de politique (le bug d'APP-01). Le pas du jour ayant déjà eu
+            lieu, le ratio de la passe 0 n'est PAS 1 : ce qui doit rester ~0, c'est
+            l'écart de FORME reconstruction vs `penser` (garde échantillonné, voir le
+            corps de la méthode) ;
+          - le détachement asymétrique de C2 (`DETACH_C2_ASYMETRIQUE`) s'applique au
+            critique sur CHAQUE passe, comme dans `penser` (APP-02) ;
+          - télémétrie de nuit (`rejouer_stats_nuit` → clés `Rejouer_*`).
         """
         n = min(len(etats), avantages.numel())
         if n < 2:
@@ -2009,19 +2067,71 @@ class AGI_Naulthene(nn.Module):
         vbio = torch.cat([e["vecteur_bio"] for e in etats[:n]], dim=0)
         actions = torch.tensor([e["action"] for e in etats[:n]], dtype=torch.long,
                                device=DEVICE)
+        # v41.64 — coefficients de contexte figés à la collecte (flottants stockés,
+        # chargés ici en tenseur une seule fois).
+        k1 = torch.tensor([float(e["k1"]) for e in etats[:n]], dtype=torch.float32,
+                          device=DEVICE)
+        k2 = torch.tensor([float(e["k2"]) for e in etats[:n]], dtype=torch.float32,
+                          device=DEVICE)
         av = avantages[:n].detach()
         ret = returns[:n].detach()
         lp_old = log_probs_anciens[:n].detach()
 
+        # --- v41.64 — APP-01 : GARDE DE PARITÉ DE FORME (échantillonné) ---
+        #
+        # ⚠️ Ce garde compare la RECONSTRUCTION à la FORMULE de `penser` à POIDS COURANTS,
+        # jamais la log-prob rejouée à `lp_old` : `apprendre_journee` a déjà fait son pas
+        # de politique (le « pas du jour ») avant cette boucle, donc `π_rejouée ≠ π_collecte`
+        # est le ratio PPO LÉGITIME — l'assertion « ratio = 1 au premier pas » ne peut
+        # tenir qu'à poids de collecte, c'est-à-dire avant ce pas (pré-vol unitaire, pas en
+        # run). Ce que la nuit DOIT garantir, c'est que la reconstruction rejoue la MÊME
+        # fonction de politique que le jour (C1+C2 fusionnés, mêmes coefficients) — sinon
+        # le ratio comparerait deux politiques différentes (le bug d'APP-01).
+        #
+        # Échantillon de `N` états espacés (16 max) : chaque état est rejoué par la
+        # reconstruction ET par `penser` « canonique » (force/vigueur reconstruites depuis
+        # k1/k2). La différence de logits doit rester sous 1e-3 — sinon CRIER (un
+        # garde-fou qui rejette doit crier, leçon du 01/09). Coût : ~16 rollouts/nuit.
+        N_FORM = min(16, max(1, n // max(1, n // 16)))
+        indices_form = list(range(0, n, max(1, n // N_FORM)))[:N_FORM]
+        max_form = 0.0
+        _etat_entrainement = self.training
+        with torch.no_grad():
+            self.eval()
+            for i in indices_form:
+                man = self.penser(
+                    obs[i:i + 1], mem[i:i + 1], ctx[i:i + 1], vbio[i:i + 1],
+                    force_planification=(float(k2[i]) if BRAIN_SPARING_ACTIF
+                                         else float(k2[i]) / max(float(k1[i]), 1e-9)),
+                    vigueur=(1.0 if BRAIN_SPARING_ACTIF else float(k1[i])),
+                    plugs_c3_disponibles=[])[0]
+                rej, _ = self._logits_politique_complete_rejouee(
+                    obs[i:i + 1], mem[i:i + 1], ctx[i:i + 1], vbio[i:i + 1],
+                    k1[i:i + 1], k2[i:i + 1])
+                max_form = max(max_form, float(
+                    (man[..., :NUM_ACTIONS_BASE] - rej[..., :NUM_ACTIONS_BASE])
+                    .abs().max().item()))
+            self.train(_etat_entrainement)
+        if max_form > 1e-3:
+            raise RuntimeError(
+                "[v41.64 APP-01] PARITÉ DE FORME ROMPUE : la reconstruction du rejeu "
+                f"diffère de la politique de `penser` de {max_form:.3e} sur les logits "
+                "(tolérance 1e-3) — le ratio comparerait deux politiques différentes. "
+                "Campagne multi-époques invalide.")
+
+        ratios_epochs, clippes_epochs, entropies_epochs = [], [], []
         for _ in range(EPOQUES_NUIT - 1):
             self.optimizer.zero_grad(set_to_none=True)
-            _, _, _, pensee_bio, logits = self._executer_c1_reflexe(obs, mem, ctx, vbio)
-            logits = logits.clone()
-            if self.num_actions > NUM_ACTIONS_BASE:
-                logits[..., ACTION_DEMANDER] = float("-inf")
+            logits, pensee_bio = self._logits_politique_complete_rejouee(
+                obs, mem, ctx, vbio, k1, k2)
             d = torch.distributions.Categorical(logits=logits)
             lp = d.log_prob(actions)
-            valeurs = self.cortex_prefrontal(pensee_bio).squeeze(-1)
+            # v41.64 — APP-02 : le critique reçoit la MÊME entrée détachée que dans
+            # penser (v41.32), sur CHAQUE passe — il ne sculpte jamais la représentation
+            # partagée via la perte de valeur.
+            entree_critique = (pensee_bio.detach() if DETACH_C2_ASYMETRIQUE
+                               else pensee_bio)
+            valeurs = self.cortex_prefrontal(entree_critique).squeeze(-1)
 
             if RATIO_CLIPPE_ACTIF:
                 ratio = torch.exp(lp - lp_old)
@@ -2029,8 +2139,13 @@ class AGI_Naulthene(nn.Module):
                     ratio * av,
                     torch.clamp(ratio, 1.0 - EPSILON_CLIP, 1.0 + EPSILON_CLIP) * av
                 ).mean()
+                ratios_epochs.append(ratio.detach())
+                clippes_epochs.append(
+                    ((ratio < (1.0 - EPSILON_CLIP)) | (ratio > (1.0 + EPSILON_CLIP)))
+                    .float())
             else:
                 perte_acteur = -(lp * av).mean()
+            entropies_epochs.append(d.entropy().detach())
 
             perte = (perte_acteur
                      + F.mse_loss(valeurs, ret)
@@ -2042,6 +2157,20 @@ class AGI_Naulthene(nn.Module):
                 [p for p in self.parameters() if p.requires_grad], 1.0)
             self.optimizer.step()
             self.pas_politique_nuit += 1
+
+        # v41.64 — télémétrie de nuit (leçon v29.1 : une mécanique sans clé est invisible).
+        # Conditionnelle : ces clés n'existent que si la boucle a réellement tourné.
+        # `parite_max_delta` = écart max reconstruction vs `penser` sur l'échantillon de
+        # forme (APP-01) — il doit rester ~0 (le ratio n'exprime qu'un déplacement de poids).
+        _ent_moy = float(torch.cat(entropies_epochs).mean().cpu().item())
+        stats = {"parite_max_delta": float(max_form), "entropie_moy": _ent_moy}
+        if ratios_epochs:
+            _rt = torch.cat(ratios_epochs)
+            _ct = torch.cat(clippes_epochs)
+            stats["ratio_moy"] = float(_rt.mean().cpu().item())
+            stats["ratio_p90"] = float(torch.quantile(_rt, 0.90).cpu().item())
+            stats["fraction_clippee"] = float(_ct.mean().cpu().item())
+        self.rejouer_stats_nuit = stats
 
     def rever(self, memoire_moyen_terme, batch_size=32, coeff_jepa_audio=0.0):
         """batch_size est désormais calculé par l'appelant comme un POURCENTAGE adaptatif
@@ -9420,6 +9549,12 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
     # de cooldown pour PortC3 (voir port_c3.COOLDOWN_PLUG_ECHEC).
     plugs_c3_disponibles = etat.agent.port_c3.plugs_disponibles(tick_absolu=etat.tick_absolu)
 
+    # v41.64 — capturée UNE FOIS : c'est la vigueur qui pilote réellement CE tick (elle
+    # est passée à penser juste en dessous), figée pour le contexte de rejeu (k1/k2,
+    # APP-01). Appelée avant penser pour que le rejeu nocturne dispose de la MÊME valeur
+    # que celle qui a modulé la décision, pas d'une valeur re-lue après coup.
+    _vigueur_tick = etat.moteur_bio.vigueur()
+
     (logits_action, valeur_estimee, parametres_vocaux, pensee_enrichie,
      etat.memoire_tampon, bus_latent, logits_routage,
      indecision_c2) = etat.agent.penser(
@@ -9431,7 +9566,7 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
         plugs_c3_disponibles=plugs_c3_disponibles,
         # v41.2 — l'état du CORPS module la décision : `vigueur = énergie ** κ`, lue au
         # tick courant. C'est le point où le métabolisme entre dans le chemin cognitif.
-        vigueur=etat.moteur_bio.vigueur(),
+        vigueur=_vigueur_tick,
     )
 
     # --- v37.0 : accumulation de la télémétrie d'arbitrage ---
@@ -9491,12 +9626,30 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
     # ⚠️ Ce buffer est vide dans `_reinitialiser_buffers_journee` comme tous les autres :
     # non remis a zero, il retiendrait toute la journee precedente (piege v27.0).
     if EPOQUES_NUIT > 1:
+        # v41.64 — APP-01 : le CONTEXTE DÉCISIONNEL du tick est figé au moment de la
+        # collecte. `k1` = facteur C1 réellement appliqué à la décision
+        # (`gain_c1` × (1 si BRAIN_SPARING_ACTIF sinon vigueur)) ; `k2` = force effective
+        # du terme C2 (post-vigueur). Sans eux, le rejeu nocturne ne peut pas reconstruire
+        # la politique COMPLETE qui a joué (il ne connaît ni le gain ni la vigueur du tick)
+        # — c'est la racine d'APP-01. Flottants Python (`.item()`-équivalent) : aucun
+        # graphe autograd diurne conservé en mémoire.
+        _facteur_vigueur = 1.0 if BRAIN_SPARING_ACTIF else float(_vigueur_tick)
+        _k1 = (float(mesure["gain_c1"]) * _facteur_vigueur
+               if mesure is not None else _facteur_vigueur)
+        _k2 = float(etat.force_planification_jour) * _facteur_vigueur
+        # ⚠️ `.clone()` (et non `.detach()` seul) : ces tenseurs peuvent être des VUES
+        # réutilisées plus loin dans le tick ou le tick suivant (etat_courant est
+        # réassigné après env.step, memoire_avant aliase etat.memoire_tampon). Le rejeu
+        # nocturne lit ces états APRÈS la journée : une copie garantit qu'il rejoue
+        # exactement les entrées de la décision, jamais un contenu écrasé.
         etat.etats_rejeu_journee.append({
-            "obs": etat.etat_courant.detach(),
-            "memoire": memoire_avant.detach(),
-            "contexte": contexte.detach(),
-            "vecteur_bio": vecteur_bio_tensor.detach(),
+            "obs": etat.etat_courant.detach().clone(),
+            "memoire": memoire_avant.detach().clone(),
+            "contexte": contexte.detach().clone(),
+            "vecteur_bio": vecteur_bio_tensor.detach().clone(),
             "action": action_item,
+            "k1": float(_k1),
+            "k2": float(_k2),
         })
     etat.entropies_journee.append(dist.entropy())
     etat.valeurs_journee.append(valeur_estimee)
@@ -12183,6 +12336,18 @@ def executer_nuit(etat, plafond_reve=None):
         log_wandb["Facteur_Complexite"] = etat.facteur_complexite_jour
         if taux_maitrise is not None:
             log_wandb["Taux_Maitrise_Palier"] = taux_maitrise
+
+    # v41.64 — télémétrie du rejeu nocturne (conditionnelle : n'existe que si
+    # EPOQUES_NUIT > 1 et que la boucle a tourné). Sans ces clés, un ratio faussé ou une
+    # parité rompue seraient invisibles sur un run long (leçons v29.1 / v41.62).
+    _rs = getattr(etat.agent, "rejouer_stats_nuit", None)
+    if _rs:
+        log_wandb["Rejouer_Parite_Max_Delta"] = _rs["parite_max_delta"]
+        log_wandb["Rejouer_Entropie_Moy"] = _rs["entropie_moy"]
+        if "ratio_moy" in _rs:
+            log_wandb["Rejouer_Ratio_Moy"] = _rs["ratio_moy"]
+            log_wandb["Rejouer_Ratio_P90"] = _rs["ratio_p90"]
+            log_wandb["Rejouer_Fraction_Clippee"] = _rs["fraction_clippee"]
 
     return log_wandb
 
