@@ -4,6 +4,38 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.70] - 2026-09-08 — QUA-01 : suite de contrats CPU du noyau (44 tests)
+
+| Type | Details |
+|------|---------|
+| **Catégorie** | tests (aucune ligne de `noyau.py`) |
+| **Impact** | Moyen — les contrats clos (API-01, APP-01, APP-02, MES-02) sont verrouillés par des tests exécutables en une commande |
+| **Registre** | [REGISTRE_PROBLEMES_A_CORRIGER](../../ameliorations/REGISTRE_PROBLEMES_A_CORRIGER.md) QUA-01 → ✅ Clos (CI : point d'infra) |
+
+`tests/test_contrats_cognitifs.py` (agent neuf CPU partagé par classe) :
+
+- **API-01** : index == nom == déballage sur les 8 champs de `SortiePenser` (`out[4] ==
+  out.memoire_actuelle`, `out[1] == out.valeur_etat_courant`) ;
+- **APP-01** : parité `penser()` vs `_logits_politique_complete_rejouee` sur **16 régimes**
+  (SANS_C2 × brain-sparing × corps-rollout × voix libre, force/vigueur variés, masque 8ᵉ
+  vérifié), tolérance 1e-4 ;
+- **APP-02** : gradient du critique vers `integrateur_bio` > 0 sans detach, **exactement
+  0,000** avec `DETACH_C2_ASYMETRIQUE` ;
+- **MES-02** : trace `None` = simulation strictement inchangée ; collecteur actif = horizons
+  1/3/7 capturés (formes `(num_actions, dim_bus)`).
+
+**Commande unique (CPU)** :
+`NAULTHENE_DEVICE=cpu venv/bin/python -m unittest discover -s tests`
+→ **44 tests OK en 2,1 s** (40 MES-01 + 4 nouveaux). CI : non installée (pas d'hébergeur sur
+le dépôt) — point d'infrastructure hors périmètre de cette clôture.
+
+| Fichier | Changement |
+|---|---|
+| `tests/test_contrats_cognitifs.py` | **créé** — 4 classes de contrats, stdlib uniquement |
+| REGISTRE QUA-01 | → ✅ Clos |
+
+---
+
 ## [v41.69] - 2026-09-08 — DOC-01 : assainissement des vitrines
 
 | Type | Details |

@@ -59,7 +59,7 @@ Un problème ne passe à `✅ Clos` que si les quatre éléments suivants sont c
 | API-01 | P1 | ✅ Clos | Le tuple positionnel de `penser()` est fragile | Corrigé v41.67 (`87b8967`) — `SortiePenser` (NamedTuple) |
 | MES-03 | P1 | 🔴 Ouvert | Des dispersions de récompense sont présentées comme parts du gradient | Corriger le vocabulaire et mesurer séparément |
 | MES-04 | P1 | ✅ Clos | Le seuil `2,86` appliqué contredisait la famille de 3 métriques déclarée (2,625) | Décidé 08/09 : famille de 3, α = 0,05 ⇒ `t` = 2,625 (n=20) / 2,694 (n=16) |
-| QUA-01 | P1 | 🟠 Amorcé | Absence de petite suite automatisée et de CI | `tests/` livré en v41.65 (40 tests) ; reste `penser()` et la CI |
+| QUA-01 | P1 | ✅ Clos | Absence de petite suite automatisée (CI : en attente d'infra) | Clos v41.70 — **44 tests CPU** (`test_contrats_cognitifs.py`) : API-01, APP-01, APP-02, MES-02 + 40 MES-01 ; commande unique documentée |
 | EVA-01 | P1 | 🔵 À mesurer | Le juge principal est bruité et dépend du palier atteint | Banc final standard sur cartes fixes |
 | DOC-01 | P1 | 🔴 Ouvert | L'état courant et l'historique se contredisent dans la documentation | État courant unique + miroir EN/FR |
 | PER-01 | P1 | 🟠 À reproduire | Le chargement permissif peut masquer une anomalie comme migration | Migrations explicites, strictes hors cas connus |
@@ -478,9 +478,10 @@ s'agit pas d'un bug actif démontré.
 
 ---
 
-## QUA-01 — Pas de petite suite de tests automatisés ni de CI
+## QUA-01 — Pas de petite suite de tests automatisés ni de CI — ✅ CLOS (08/09/2026)
 
-- **Priorité / statut** : **P1 — 🔴 Ouvert**
+- **Priorité / statut** : **P1 — ✅ Clos** (v41.70) — CI : dépend de l'infra, hors périmètre
+  de cette clôture (pas d'hébergeur CI sur le dépôt ; la commande locale unique est livrée).
 
 ### Constat
 
@@ -508,6 +509,20 @@ Tests CPU, courts et sans entraînement long :
 - Suite exécutée en CI sur CPU.
 - Temps compatible avec chaque commit.
 - Les campagnes longues restent nécessaires pour les hypothèses cognitives.
+
+### Clôture (08/09/2026, v41.70)
+
+1. **Cause** : aucune petite suite de contrats automatisée ; validation par pré-vols manuels.
+2. **Correction** : `tests/test_contrats_cognitifs.py` (agent neuf CPU partagé par classe) —
+   **API-01** : index == nom == déballage sur les 8 champs de `SortiePenser` ; **APP-01** :
+   parité `penser()` vs `_logits_politique_complete_rejouee` sur **16 régimes** (SANS_C2 ×
+   brain-sparing × corps-rollout × voix libre, force/vigueur variés, masque 8ᵉ vérifié) ;
+   **APP-02** : gradient du critique vers `integrateur_bio` > 0 sans detach, **exactement
+   0,000** avec `DETACH_C2_ASYMETRIQUE` ; **MES-02** : trace `None` = simulation inchangée,
+   collecteur actif = horizons 1/3/7 capturés sans modifier le retour.
+3. **Vérification fraîche (CPU)** : **44 tests OK en 2,1 s** (40 MES-01 + 4 nouveaux) —
+   `NAULTHENE_DEVICE=cpu venv/bin/python -m unittest discover -s tests`.
+4. **CI** : non installée (pas d'hébergeur sur le dépôt) — point d'infra, hors clôture.
 
 ---
 
@@ -764,7 +779,7 @@ La tête d'intention reste cohérente avec la thèse du projet, mais elle dépen
 4. ✅ **MES-02 : supprimer la duplication instrument/noyau.** *(v41.66, `48aa8a6`)*
 5. ✅ MES-04 : décision — famille de 3, α = 0,05 ⇒ `t` = 2,625 / 2,694. *(08/09/2026)*
 6. ✅ API-01 : `SortiePenser` nommée pour `penser()`. *(v41.67, `87b8967`)*
-7. QUA-01 : étendre la suite `tests/` (40 tests stdlib, v41.65) à `penser()` et installer la CI.
+7. ✅ QUA-01 : contrats noyau posés — **44 tests CPU** (v41.70). *(CI : en attente d'infra)*
 8. DOC-01 : corriger l'état courant et les termes statistiques.
 
 ## Phase B — fiabilisation structurelle
@@ -798,6 +813,7 @@ La tête d'intention reste cohérente avec la thèse du projet, mais elle dépen
 | 2026-09-08 | MES-04 | 🟡 À décider | — | Constatée pendant le re-dépouillement MES-01 | La famille déclarée (3 métriques ⇒ 2,625) contredit le seuil appliqué (2,861 = α 0,01) ; erreur conservatrice, aucun résultat retiré |
 | 2026-09-08 | MES-04 | ✅ Clos (décision) | CHANGELOG [v41.67] | — | Option A : famille de 3, α = 0,05 ⇒ `t` = 2,625 (n=20) / 2,694 (n=16) ; aucun `t` dans la bande litigieuse, aucun verdict basculé |
 | 2026-09-08 | API-01 | ✅ Clos | `87b8967` · CHANGELOG [v41.67] | CPU : type `SortiePenser`, index == noms sur 8/8 champs, déballage OK, `out[4] == out.memoire_actuelle` | Sortie nommée de `penser()` (NamedTuple, accès numérique rétrocompatible) |
+| 2026-09-08 | QUA-01 | ✅ Clos | v41.70 · CHANGELOG [v41.70] | **44 tests OK en 2,1 s** (CPU) : API-01 / APP-01 (16 régimes) / APP-02 / MES-02 + 40 MES-01 | `tests/test_contrats_cognitifs.py` ; commande `NAULTHENE_DEVICE=cpu venv/bin/python -m unittest discover -s tests` ; CI = point d'infra |
 
 ---
 
