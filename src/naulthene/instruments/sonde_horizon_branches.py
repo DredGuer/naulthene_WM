@@ -33,6 +33,12 @@ def separation_par_horizon(agent, N, n_etats=80, graine=7, horizons=(1,3,7)):
                 for saut in range(h - pas_prec):
                     if i==0 and saut==0:
                         ap = agent.actions_eye
+                    elif getattr(N, "BRANCHES_PERSISTANTES", False):
+                        # v41.63 — la sonde DOIT suivre le drapeau du noyau. Sans cette
+                        # branche elle mesurerait toujours l'ancien rollout, quel que soit
+                        # le regime teste : c'est le piege de l'instrument du 01/09, ou un
+                        # banc mesurait « autre chose que ce qu'il annoncait ».
+                        ap = agent.actions_eye
                     else:
                         ch = torch.argmax(agent.tete_motrice(pb), dim=-1)
                         ap = agent.actions_eye[ch]

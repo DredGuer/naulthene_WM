@@ -1151,8 +1151,14 @@ class AGI_Naulthene(nn.Module):
                 if i == 0 and saut == 0:
                     actions_pas = self.actions_eye  # les 7 (ou 8) choix réels, un par branche
                 else:
-                    choix = torch.argmax(self.tete_motrice(pensee_branche), dim=-1)
-                    actions_pas = self.actions_eye[choix]  # continuation gourmande, 1 par branche
+                    if BRANCHES_PERSISTANTES:
+                        # v41.63 — la branche GARDE son geste. Chaque branche repond alors a
+                        # « et si je faisais CELA, encore ? », question dont les 8 reponses
+                        # restent distinctes (h7/h1 mesure a 1,15 contre 0,043).
+                        actions_pas = self.actions_eye
+                    else:
+                        choix = torch.argmax(self.tete_motrice(pensee_branche), dim=-1)
+                        actions_pas = self.actions_eye[choix]  # continuation gourmande
 
                 futur_bus = F.relu(self._predire_bus(pensee_branche, actions_pas))
                 futur_mem = F.relu(self.hippocampe(torch.cat([futur_bus, mem_branche], dim=-1)))
@@ -5858,6 +5864,32 @@ EPOQUES_NUIT = 1
 # couper les deux ensemble donnerait une ablation confondue.
 RATIO_CLIPPE_ACTIF = False
 EPSILON_CLIP = 0.2
+
+# --- v41.63 : LES BRANCHES PERSISTANTES DU ROLLOUT ---
+#
+# 🔴 CE QUE ÇA CORRIGE (mesure du 06/09, 40 cerveaux, zero run). Dans le rollout mental,
+# apres le premier pas, chaque branche etait poursuivie par `argmax(tete_motrice)` — donc
+# par C1 lui-meme. Mesure : les 8 futurs perdent **97 % de leur separation** avant
+# l'horizon 7 (mediane h7/h1 = 0,0295 ; 33 cerveaux sur 40 sous 0,10). C2 n'evaluait donc
+# pas 8 plans : il evaluait **une destination** vue de 8 departs.
+#
+# La cause n'est PAS le modele du monde. Mesure comparative sur le meme cerveau :
+#     conduite par C1    h7/h1 = 0,043
+#     action REPETEE     h7/h1 = 1,15     <- JEPA maintient parfaitement la separation
+#
+# ⚠️ CETTE MODIFICATION LEVE UNE RESTRICTION QUE CLAUDE.md PROTEGEAIT (« le premier pas
+# branche sur les 7 actions, les suivants suivent le reflexe glouton — ne pas changer sans
+# une raison explicite de l'utilisateur »). La raison est desormais MESUREE, et la levee a
+# ete accordee explicitement le 06/09/2026.
+#
+# ⚠️ LE BUDGET DE CALCUL EST INCHANGE : repeter l'action est une SUBSTITUTION de l'action
+# choisie a chaque pas, jamais un rebranchement. La complexite reste O(A x horizon), jamais
+# 7^N — c'est ce que la restriction d'origine protegeait, et qui est preserve.
+#
+# ⚠️ CE N'EST PAS DEMONTRE MEILLEUR. Un agent qui repete 7 fois « avancer » simule une
+# trajectoire irrealiste. Ce drapeau REND POSSIBLE une separation des branches ; il ne
+# prouve pas qu'elle aide. D'ou le temoin `--rollout-fossile` (comportement < v41.63).
+BRANCHES_PERSISTANTES = False
 # v41.31-controle — bras de falsification : gradient acteur ×N SANS filtrage. 1.0 = inactif.
 # Le 2.6 n'est pas posé : c'est `T / Σm` mesuré (61,7 % de ticks stériles → 1/0,383 ≈ 2,6).
 GAIN_ACTEUR_CONTROLE = 1.0
@@ -12261,6 +12293,11 @@ if __name__ == "__main__":
                          "(defaut 1 = comportement bit-identique). Mesure du 06/09 : un pas "
                          "deplace les logits de 0,0107 pour une marge de 0,392, soit ~37 pas "
                          "necessaires pour changer une decision.")
+    _p.add_argument("--branches-persistantes", action="store_true",
+                    help="v41.63 — chaque branche du rollout GARDE son geste au lieu d'etre "
+                         "reprise par l'argmax de C1. Mesure du 06/09 : les 8 futurs perdent "
+                         "97 pourcent de leur separation avant l'horizon 7, et la cause est C1, "
+                         "pas JEPA (h7/h1 = 1,15 a action repetee contre 0,043 en conduite C1).")
     _p.add_argument("--ratio-clippe", action="store_true",
                     help="v41.62 — active le ratio d'importance clippe (le garde-fou de PPO) "
                          "sur les epoques supplementaires. A tester en bras SEPARE : plusieurs "
@@ -12493,6 +12530,7 @@ if __name__ == "__main__":
     # v41.32 — detach asymétrique. MÊME DISCIPLINE : module NOMMÉ + assertion runtime.
     _det_c2 = bool(_args.detach_c2)
     _epoques = int(getattr(_args, 'epoques_nuit', 1) or 1)
+    _branches_pers = bool(getattr(_args, 'branches_persistantes', False))
     _ratio_clip = bool(getattr(_args, 'ratio_clippe', False))
     globals()["DETACH_C2_ASYMETRIQUE"] = _det_c2
     if _module_reel is not None:
@@ -12506,6 +12544,16 @@ if __name__ == "__main__":
         # `_module_reel` laisse la COLLECTE des etats a EPOQUES_NUIT=1 — donc un buffer vide,
         # donc 8 epoques qui ne s'executent jamais. MESURE au pre-vol du 06/09 : 0 grandeur
         # sur 6 divergeait entre K=1 et K=8. C'est le bug v41.4 a l'identique.
+        # v41.63 — meme discipline que les epoques : les DEUX copies du module. Le rollout
+        # s'execute dans la methode de l'agent (module importe), mais la constante est lue
+        # a l'endroit ou elle est definie — ne surcharger qu'une copie a deja vide une
+        # campagne entiere le 06/09.
+        globals()["BRANCHES_PERSISTANTES"] = _branches_pers
+        _module_reel.BRANCHES_PERSISTANTES = _branches_pers
+        assert _module_reel.BRANCHES_PERSISTANTES == globals()["BRANCHES_PERSISTANTES"] == _branches_pers, \
+            "le drapeau --branches-persistantes n'atteint pas les DEUX copies du module"
+        if _branches_pers:
+            print("🔬 [VARIANTE] rollout a branches PERSISTANTES — chaque branche garde son geste")
         globals()["EPOQUES_NUIT"] = max(1, int(_epoques))
         globals()["RATIO_CLIPPE_ACTIF"] = bool(_ratio_clip)
         _module_reel.EPOQUES_NUIT = max(1, int(_epoques))
