@@ -12,8 +12,9 @@ ajouter des dimensions à un vecteur — pas greffer un sous-système.
 30/08/2026** : cette ligne annonçait « 55 616 à la naissance » depuis des mois, et c'était
 faux — un cerveau naît à `BUS_REFERENCE_INITIAL = 16`, soit **7 760 paramètres** ; 55 616 est
 le même cerveau quatre neurogenèses plus tard. Mesuré, jamais estimé. La croissance ne s'arrête
-pas là : un cerveau à 1500 jours pèse en moyenne **1 241 790 paramètres — 160×** sa taille de
-naissance réelle (35 cerveaux, voir plus bas).
+pas là : un cerveau à 1500 jours atteint une **médiane de 1 321 618 paramètres — ~24×** son
+total réel de naissance de **46 840** (44 cerveaux, mesuré le 07/09/2026 ; voir « La taille
+réelle » plus bas).
 
 ### Ce que ce projet a vocation à devenir
 
@@ -438,6 +439,33 @@ Tourne sur `mps` (Apple Silicon) aujourd'hui. Les buffers de plasticité coûten
 eux-mêmes** — c'est le prix du cycle jour/nuit, et une cible d'optimisation réelle.
 
 ---
+
+### La taille réelle : de la naissance à 1500 jours — ✅ **mesurée le 07/09/2026**
+
+Naulthène **naît petit et grandit** : la neurogenèse étend `dim_bus` quand le thermostat
+d'erreur JEPA le demande. Les deux bornes, comptées par
+`sum(p.numel() for p in agent.parameters())` + les buffers `base_weight`, **jamais estimées** :
+
+| | `dim_bus` | Paramètres appris | Buffers (`base_weight`) | **Total** |
+|---|---|---|---|---|
+| **À la naissance** | **16** | 7 792 | 39 048 | **46 840** |
+| **À 1500 jours** (médiane, 44 cerveaux) | **145** | — | — | **1 321 618** |
+| ↳ le plus petit | 69 | — | — | 377 242 |
+| ↳ le plus gros | 157 | — | — | 1 521 418 |
+
+> **Le cerveau est multiplié par ~24 sur une vie**, et le bus par **9**.
+>
+> ⚠️ **La dispersion est énorme** : de 377 k à 1,52 M pour le même code et le même nombre de
+> jours. La neurogenèse étant déclenchée par l'erreur JEPA, un agent qui vit et joue plus
+> d'épisodes a simplement **plus d'occasions de grandir** — mesuré,
+> `r(dim_bus, victoires cumulées) = +0,678` contre +0,499 pour la maîtrise : **le bus mesure
+> surtout la survie, pas la compétence**.
+>
+> ⚠️ **Et plus de la moitié de cette croissance est éteinte** : **56 % des neurones** de
+> `pensee_bio` sont **toujours à zéro** (40 cerveaux sur 40, 63 % dans le tronc). Les *poids*
+> survivent — le plancher vital les protège, **0 synapse morte sur 259 329** — mais les
+> *activations*, elles, sont cliniquement mortes.
+
 
 ## 📖 Documentation technique de référence
 

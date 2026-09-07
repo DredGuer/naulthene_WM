@@ -11,7 +11,35 @@ layers, twelve hundred simulated days of continuous life. 🔴 **Corrected 30 Au
 line read "55,616 at birth" for months, and that was wrong — a brain is born at
 `BUS_REFERENCE_INITIAL = 16`, which is **7,760 parameters**; 55,616 is the same brain four
 neurogenesis events later. Measured, never estimated. Growth does not stop there: a brain at
-1500 days averages **1,241,790 parameters — 160×** its true birth size (35 brains, see below).
+1500 days reaches a **median of 1,321,618 parameters — ~24×** its true birth total of
+**46,840** (44 brains, measured 7 Sep 2026; see "Real size" below).
+
+
+### Real size: from birth to 1500 days — ✅ **measured 7 Sep 2026**
+
+Naulthène **is born small and grows**: neurogenesis extends `dim_bus` whenever the JEPA error
+thermostat calls for it. Both bounds, counted with
+`sum(p.numel() for p in agent.parameters())` plus the `base_weight` buffers, **never estimated**:
+
+| | `dim_bus` | Learned parameters | Buffers (`base_weight`) | **Total** |
+|---|---|---|---|---|
+| **At birth** | **16** | 7,792 | 39,048 | **46,840** |
+| **At 1500 days** (median, 44 brains) | **145** | — | — | **1,321,618** |
+| ↳ smallest | 69 | — | — | 377,242 |
+| ↳ largest | 157 | — | — | 1,521,418 |
+
+> **The brain grows ~24× over a lifetime**, and the bus **9×**.
+>
+> ⚠️ **The spread is enormous**: 377k to 1.52M for the same code and the same number of days.
+> Since neurogenesis is triggered by JEPA error, an agent that lives and plays more episodes
+> simply gets **more chances to grow** — measured, `r(dim_bus, cumulative wins) = +0.678`
+> against +0.499 for mastery: **the bus mostly measures survival, not competence**.
+>
+> ⚠️ **And more than half of that growth is switched off**: **56 % of `pensee_bio` neurons**
+> are **always at zero** (40 brains out of 40, 63 % in the trunk). The *weights* survive — the
+> vital floor protects them, **0 dead synapses out of 259,329** — but the *activations* are
+> clinically dead.
+
 
 ### What this is meant to become
 
