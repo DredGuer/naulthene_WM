@@ -4,6 +4,61 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.62-mesure] - 2026-09-07 — Le mur du niveau 4 est franchi : +10,25 pt de maîtrise
+
+### 8 pas de gradient par nuit au lieu d'un
+
+| Type | Details |
+|------|---------|
+| **Commit** | `N/A — en attente du commit de cette version` |
+| **Catégorie** | mesure (le code est en v41.62, `EPOQUES_NUIT = 1` par défaut) |
+| **Impact** | Critique — **le plus fort résultat du dépôt**, et le premier à déplacer le mur |
+| **Carnet** | [EPOQUES_07092026](../recherche/campagnes/EPOQUES_07092026_le_mur_du_niveau_4_est_franchi.md) |
+
+**3 bras × 20 graines appariées × 1500 jours, 40 runs neufs, 0 échec.**
+
+| Juge (posé AVANT) | K8_NU | K8_CLIP |
+|---|---|---|
+| **4. Garde-fou** `gain_c1` | ✅ 1,0000 | ✅ 1,0000 |
+| **1. Maîtrise** | ✅ **+10,25 pt · `t` = +4,81** · 15/20 | ❌ −1,00 · `t` = −0,47 |
+| ↳ sans les 4 extrêmes | ✅ **+7,19 · `t` = +3,62** | ❌ −3,13 |
+| **2. Niveau** | 🟡 +0,25 · `t` = +2,52 (NS) | ❌ 0,00 |
+| **3. Mécaniste** (entropie C1) | 🟡 −0,090 (NS) | ✅ −0,172 · `t` = −5,35 |
+
+Maîtrise **8,75 % → 19,00 %**. À **palier égal** (niveau 4) : **10,0 % → 25,0 %**.
+**5 cerveaux sur 20 franchissent le niveau 5**, contre **0/20** au témoin.
+
+### 🔴 Le clipping de PPO NUIT — l'inverse de l'attente théorique
+
+Comparaison directe des deux bras K8 : δ **+11,25 pt**, `t` = **+4,48**, 15/20, survit aux
+extrêmes. `K8_CLIP` a **7 cerveaux à maîtrise 0 %** (contre 1) et **678 victoires médianes**
+(contre 860 au témoin). Lecture proposée, **non démontrée** : le clipping borne le
+déplacement de la politique, or c'est ce déplacement qui manque (~37 pas pour franchir la
+marge de 0,392).
+
+### ⚠️ Trois réserves consignées
+
+1. 🔴 **Le franchissement du niveau 5 ne passe PAS Bonferroni** (Fisher bras par bras :
+   `p` = 0,0236 pour K8_NU contre un seuil de 0,0167). ⚠️ **Une première version de cette
+   analyse annonçait `p < 0,00001`** — c'était un Fisher sur les **deux bras agrégés**, ce
+   que le protocole ne prévoit pas. **Suggestif, pas démontré.**
+2. 🔴 **Le juge mécaniste ne passe pas pour K8_NU** (`t` = −2,47, NS) : l'effet ne s'explique
+   **pas** par la baisse de platitude attendue. Le mécanisme reste ouvert.
+3. **Le mur se déplace, il ne tombe pas** : 15/20 restent au niveau 4, personne n'atteint le 6.
+
+### Le pré-vol a sauvé la campagne
+
+Première version : **0 grandeur sur 6** divergeait entre K=1 et K=8 — les 40 runs auraient
+produit trois bras identiques. Cause : `python -m` crée **deux copies du module**, et le
+drapeau ne surchargeait que `_module_reel`, laissant la **collecte** à `EPOQUES_NUIT = 1`.
+**Le bug v41.4 à l'identique**, malgré une assertion qui passait.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `brains/06092026_epoques_nuit/depouiller.py` | **créé** — 4 juges, garde anti-run-inachevé, Fisher bras par bras |
+
+---
+
 ## [v41.61-mesure] - 2026-09-06 — Le gradient fantôme de C2 nuisait : +5,25 pt de maîtrise
 
 ### Le premier résultat positif du dépôt en cursus complet

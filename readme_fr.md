@@ -250,6 +250,17 @@ standard (`max_steps` 100, grille 5×5). ⚠️ **n = 5, sous le seuil des 20 gr
 contraste est d'un ordre de grandeur au-dessus du bruit, mais aucune comparaison fine n'en
 découle. Voir [PPO_LAVAGAP_06092026](docs/recherche/campagnes/PPO_LAVAGAP_06092026_le_mur_n_est_pas_la_carte.md).
 
+✅ **07/09/2026 — LE MUR SE DÉPLACE, ET LA CAUSE EST L'ANÉMIE DE L'OPTIMISEUR.** La
+politique de Naulthène ne recevait qu'**UN SEUL pas de gradient par journée** de ~400 ticks,
+contre **23 680** pour ce PPO sur le même banc — **63× moins par tick vécu**. Un pas déplace
+les logits de **0,0107** quand la marge à franchir vaut **0,392** : il en faudrait **~37**.
+Avec **8 pas par nuit** (20 graines appariées × 1500 j) : maîtrise **8,75 % → 19,00 %**
+(δ **+10,25 pt**, `t` = **+4,81**, 15/20, survit au retrait des 4 extrêmes), et **5 cerveaux
+sur 20 franchissent le niveau 5** contre **0/20** au témoin. 🔴 **Le clipping de PPO NUIT
+ici** (−1,00 pt). ⚠️ Le franchissement **ne passe pas Bonferroni** (`p` = 0,024 vs 0,0167) et
+le mur **se déplace sans tomber** : 15/20 restent au niveau 4. Voir
+[EPOQUES_07092026](docs/recherche/campagnes/EPOQUES_07092026_le_mur_du_niveau_4_est_franchi.md).
+
 🔴 **La capacité n'est pas en cause.** `r(params, réussite) = −0,1519` (`t = −1,17`, NS). Un
 PPO de **14 068 paramètres — 4× plus léger que le cœur RL de Naulthène — réussit 2,3×
 mieux**, et le bras le plus gros est le pire des trois.

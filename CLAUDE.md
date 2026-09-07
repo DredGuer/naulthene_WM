@@ -20,6 +20,31 @@ L'agent progresse à travers un **cursus académique** de **15 niveaux** MiniGri
 
 Ce n'est pas une application produit : c'est un script de recherche exécuté en continu (boucle de jours/ticks), instrumenté avec **Weights & Biases** pour le suivi expérimental — projet public [`Naulthene-AGI`](https://wandb.ai/naultadrien123-nvnc/Naulthene-AGI), ~90 métriques par nuit simulée. Pas de tests automatisés, pas de build — la validation passe par l'observation des courbes W&B et des logs console.
 
+### ✅ LE MUR DU NIVEAU 4 SE DÉPLACE (07/09/2026) — le nombre de pas de gradient
+
+**Mesuré, n=20 graines appariées × 3 bras × 1500 jours, 0 échec sur 40 runs neufs.** La
+politique ne recevait qu'**UN SEUL pas de gradient par journée** de ~400 ticks (le second
+`step()`, celui du rêve, ne porte que JEPA) — contre **23 680** pour un PPO sur le même banc,
+soit **63× moins par tick vécu**. Et un pas déplace les logits de **0,0107** quand la marge
+argmax/2ᵉ vaut **0,392** : il en faudrait **~37** pour changer une décision.
+
+`--epoques-nuit 8` : maîtrise **8,75 % → 19,00 %** (δ **+10,25 pt**, `t` = **+4,81**, 15/20,
+**survit au retrait des 4 extrêmes** à `t` = +3,62, tautologie **inchangée**). À palier égal
+(niveau 4) : **10,0 % → 25,0 %**. **5 cerveaux sur 20 franchissent le niveau 5**, contre
+**0/20** au témoin — un palier jamais atteint auparavant.
+
+🔴 **Le clipping de PPO NUIT, à l'inverse de l'attente théorique** : `K8_CLIP` fait −1,00 pt
+(7 cerveaux à maîtrise 0 % contre 1). Comparaison directe des deux bras K8 : **+11,25 pt**,
+`t` = +4,48.
+
+⚠️ **TROIS RÉSERVES.** (1) Le franchissement du niveau 5 **ne passe PAS Bonferroni** bras par
+bras (Fisher `p` = 0,0236 contre un seuil de 0,0167) — **suggestif, pas démontré**. (2) Le
+**juge mécaniste échoue** pour `K8_NU` (entropie de C1, `t` = −2,47, NS) : l'effet ne
+s'explique **pas** par la baisse de platitude attendue. (3) **Le mur se déplace, il ne tombe
+pas** : 15/20 restent au niveau 4, personne n'atteint le 6, et le cursus compte 15 paliers.
+⚠️ `K = 8` est une **constante posée** (méthode v30.1 : mesurer le fixe, dériver ensuite).
+Voir `docs/recherche/campagnes/EPOQUES_07092026_le_mur_du_niveau_4_est_franchi.md`.
+
 ### 🔴 L'ÉTAT RÉEL AU 30/08/2026 — le tableau des suspects est VIDE
 
 **Vingt-trois explications du plafond au niveau 4 ont été mesurées et réfutées** (compte

@@ -465,6 +465,17 @@ total, on a map that is in fact **easier** for standard RL (`max_steps` 100, 5×
 noise, but no fine comparison follows from it. See
 [PPO_LAVAGAP_06092026](docs/recherche/campagnes/PPO_LAVAGAP_06092026_le_mur_n_est_pas_la_carte.md).
 
+✅ **7 SEP 2026 — THE WALL MOVES, AND THE CAUSE IS OPTIMISER STARVATION.** Naulthène's
+policy received **ONE SINGLE gradient step per day** of ~400 ticks, against **23,680** for
+this PPO on the same bench — **63× fewer per tick lived**. One step shifts the logits by
+**0.0107** when the margin to cross is **0.392**: about **37** would be needed. With
+**8 steps per night** (20 paired seeds × 1500 days): mastery **8.75 % → 19.00 %**
+(δ **+10.25 pt**, `t` = **+4.81**, 15/20, survives dropping the four extremes), and **5 brains
+out of 20 clear level 5** against **0/20** for the control. 🔴 **PPO's clipping HURTS here**
+(−1.00 pt). ⚠️ The crossing **does not pass Bonferroni** (`p` = 0.024 vs 0.0167) and the wall
+**moves without falling**: 15/20 remain at level 4. See
+[EPOQUES_07092026](docs/recherche/campagnes/EPOQUES_07092026_le_mur_du_niveau_4_est_franchi.md).
+
 🔴 **Capacity is not the cause.** `r(params, success) = −0.1519` (`t = −1.17`, NS). A PPO of
 **14,068 parameters — 4× lighter than Naulthène's RL core — succeeds 2.3× better**, and the
 largest arm is the worst of the three.
