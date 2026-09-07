@@ -89,6 +89,20 @@ le palier franchi — il n'y a **pas** d'apprentissage gagné sur `LavaGapS5` no
 3. La maîtrise est quantifiée à **5 %** (1 victoire = 5 % sur n=20) : la fenêtre finale
    moyenne (14 %) et la médiane sur les 100 derniers jours (16,9 %) sont à lire à cette
    résolution.
+4. 🔴 **RÉSERVE APP-01 (registre des problèmes à corriger) — régime K8 : validité relative
+   intacte, niveau absolu biaisé.** Les 20 cerveaux BP, comme les 20 K8_NU, ont tourné sous
+   `--epoques-nuit 8` : le rejeu nocturne évalue la log-prob du policy gradient **sur C1 seul**
+   alors que la politique diurne jouée est **C1 + C2** — un ratio d'importance calculé sur
+   **deux distributions qui divergent** (C1 seul la nuit, C1+C2 le jour). Conséquences, à
+   consigner au moment exact où la limite est formalisée :
+   - Le **δ apparié** de maîtrise (**−2,10 pt**, `t` = −0,87) reste **parfaitement comparable
+     en interne** : les deux bras partagent le même défaut, la comparaison BP vs K8_NU n'est
+     pas confondue.
+   - Les **niveaux absolus** (16,9 % BP · 19,0 % K8_NU) sont **potentiellement bridés** par ce
+     ratio d'importance sur distributions divergentes : **ne jamais lire ces 16-19 % comme le
+     maximum atteignable par l'architecture sur cette carte** — ce serait fige un plafond
+     artificiel (protection contre les faux plafonds). La vraie portée du régime K8 se mesurera
+     au balayage K/ε (protocole B), avec le même contrôle C1 vs C1+C2.
 
 ## 6. Fichiers
 
