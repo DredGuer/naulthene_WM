@@ -29,6 +29,29 @@
 
 ## Runs
 
+### 🟡 `07092026_protoA_ppo_seuil60` — PPO face à la règle 60 % du cursus
+
+| | |
+|---|---|
+| **Début** | 2026-09-07 18:13 |
+| **Fin estimée** | ~18:50 *(dérivée du pré-vol A/A : 2 × 20 k pas en ~1 min, dont import torch)* |
+| **Fin réelle** | — |
+| **Coût** | 5 runs PPO × 152 043 pas (arch [69,69]) · **banc** — zéro ligne de `noyau.py` |
+| **Statut** | 🟡 en cours |
+
+**Pourquoi** : le seuil de promotion (`TAUX_PROMOTION` = 60 % × 20 épisodes) est au-dessus de
+ce que PPO atteint (36-40 %) sur `SimpleCrossingS9N1` — le mur du niveau 4 est-il en partie
+une **règle du cursus** ? Le banc capture le vecteur binaire victoire/défaite épisode par
+épisode pendant l'entraînement → fenêtres glissantes ≥ 12/20 **et** route série (2 victoires
+consécutives, l'autre branche du OU).
+
+**Pré-vol (18:13)** : A/A 2 × 20 k pas — **vecteurs bit-identiques** (64 épisodes ×2) :
+la capture est valide.
+
+[Protocole complet](../../brains/07092026_protoA_ppo_seuil60/LISEZ_MOI.md)
+
+---
+
 ### ✅ `07092026_branches_persistantes` — les branches persistantes du rollout
 
 | | |
