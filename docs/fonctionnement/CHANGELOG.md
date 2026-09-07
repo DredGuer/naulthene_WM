@@ -4,6 +4,67 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.64] - 2026-09-07 — APP-01/APP-02 : le rejeu nocturne rejoue la politique COMPLÈTE
+
+### La racine d'APP-01 (registre) — le rejeu comparait deux politiques différentes
+
+| Type | Details |
+|------|---------|
+| **Commit** | `6d6bcaa` |
+| **Catégorie** | fix (APP-01 P0 + APP-02 P0 du registre) — `EPOQUES_NUIT = 1` bit-identique (vérifié) |
+| **Impact** | Critique — corrige la formule de mise à jour des époques avant tout balayage K |
+| **Registre** | [REGISTRE_PROBLEMES_A_CORRIGER](../../ameliorations/REGISTRE_PROBLEMES_A_CORRIGER.md) APP-01/APP-02 → ✅ Clos |
+
+Le jour, la log-prob stockée vient des logits **fusionnés** (`voix_c1 + valeurs × force`,
+`penser`). Le rejeu (v41.62) ne reconstruisait que `tete_motrice` nue : le ratio
+`exp(lp - lp_old)` comparait **deux politiques différentes dès la passe 0**. En plus, le
+critique du rejeu appelait `cortex_prefrontal(pensee_bio)` **sans** le détachement que
+`penser()` applique (APP-02).
+
+**Corrections** :
+1. **Collecte** (`traiter_tick`) : le contexte décisionnel de chaque tick est figé —
+   `k1` = `gain_c1 × (1 si BRAIN_SPARING_ACTIF sinon vigueur)`, `k2` = force effective
+   post-vigueur — et les états stockés sont **`.clone()`** (les `.detach()` seuls peuvent
+   être des vues réécrites après `env.step`).
+2. **Nouveau helper** `_logits_politique_complete_rejouee` : C1 (batch) + **C2 re-rollout
+   par état** (jamais vectorisé : la parité numérique avec le jour prime), fusion
+   identique à `penser`, masque 8ᵉ, court-circuit `SANS_C2`.
+3. **Rejeu** : log-prob de la politique complète ; détachement du critique sur **chaque
+   passe** (APP-02) ; pertes identiques au jour.
+4. **Garde de parité de FORME** échantillonné (16 états/nuit, tolérance 1e-3 sur les
+   logits, RuntimeError si rompue) + télémétrie `Rejouer_*`.
+
+### 🔴 La découverte de pré-vol : le ratio du premier pas ne doit PAS être 1
+
+`apprendre_journee` exécute son pas de politique (le « pas du jour ») **avant** la boucle
+des époques : à la passe 0, les poids ont légitimement bougé et `π_rejouée ≠ π_collecte`
+**est le mécanisme de PPO** (divergence progressive `π_θ / π_{θ_collecte}`). Une première
+assertion « ratio = 1 à poids constants » a donc été écrite puis **retirée au pré-vol** :
+elle aurait mathématiquement détruit l'avantage de PPO. Le bon invariant est la **parité de
+FORME** (reconstruction ≡ fonction de politique du jour), jamais l'égalité des log-probs
+après un pas d'optimiseur. — Leçon : écrire le test de contrat AVANT la campagne ; l'ordre
+des opérations (step du jour avant les époques) avait échappé à la lecture statique.
+
+### Validation (CPU, pré-vol v41.64 — `experiences/prevol_app01_app02.py`)
+
+| Test | Résultat |
+|---|---|
+| **T1** — parité de formule, 32 régimes × 2 (C2 actif/SANS_C2 · voix libre/renorm. · brain-sparing · corps-rollout · masque 8ᵉ) | ✅ delta max 0,0 (≤ 1,5e-8) |
+| **T2** — APP-02 : gradient du critique sur `integrateur_bio` | ✅ 2,891 (sans detach) → **0,000** (avec) |
+| **T3/T4** — K=1 inchangé vs code d'origine | ✅ **0 différence** sur le payload sémantique complet (poids, optimiseur, état) + logs identiques |
+| Journées réelles K=8 (CPU, jour 001) — voix libre · `--detach-c2` · bras clippé | ✅ exit 0 ×3, 0 violation du garde de forme |
+
+⚠️ Détail méthodologique : les `.brain` ne sont pas bit-identiques run à run (champ
+d'en-tête non déterministe, payload 100 % égal) — comparer le **payload sémantique**, pas
+le hash du fichier.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | en-tête **41.63 → 41.64** ; collecte k1/k2 + clones ; helper de reconstruction ; rejeu réécrit ; garde de forme ; télémétrie |
+| `experiences/prevol_app01_app02.py` | **créé** — tests CPU T1/T2 reproductibles |
+
+---
+
 ## [v41.63] - 2026-09-07 — Les branches persistantes du rollout
 
 ### C2 évaluait une destination, pas huit plans
