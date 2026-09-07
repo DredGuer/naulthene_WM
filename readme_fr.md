@@ -474,7 +474,7 @@ d'erreur JEPA le demande. Les deux bornes, comptées par
 | ↳ le plus petit | 69 | — | — | 377 242 |
 | ↳ le plus gros | 157 | — | — | 1 521 418 |
 
-> **Le cerveau est multiplié par ~24 sur une vie**, et le bus par **9**.
+> **Le cerveau est multiplié par ~28,2 sur une vie**, et le bus par **9**.
 >
 > ⚠️ **La dispersion est énorme** : de 377 k à 1,52 M pour le même code et le même nombre de
 > jours. La neurogenèse étant déclenchée par l'erreur JEPA, un agent qui vit et joue plus

@@ -64,8 +64,9 @@ la mécanique supprime l'effondrement du rollout, C2 ne sait pas s'en servir (ar
 la v42, qui reste **troisième** derrière la réparation de l'apprenant et la campagne de
 soustraction). Voir
 `docs/recherche/campagnes/BRANCHES_PERSISTANTES_07092026_la_mecanique_marche_la_voix_reste_inerte.md`.
-Le protocole A (PPO face au seuil 60 % du cursus) est **préparé, non lancé** —
-`docs/ameliorations/07092026_protocoles_en_reserve.md`.
+Le **protocole A** (PPO face au seuil 60 % du cursus) a été **lancé et dépouillé le 07/09** :
+2/5 graines ≥ 12/20 → le seuil n'est pas le mur, `TAUX_PROMOTION` n'est pas abaissé ; carnet
+`docs/recherche/campagnes/PPO_AU_SEUIL_07092026_la_porte_60_n_est_pas_le_mur.md`.
 
 ### 🔴 L'ÉTAT RÉEL AU 30/08/2026 — le tableau des suspects est VIDE
 
