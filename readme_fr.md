@@ -263,6 +263,20 @@ ici** (−1,00 pt). ⚠️ Le franchissement **ne passe pas Bonferroni** (`p` = 
 le mur **se déplace sans tomber** : 15/20 restent au niveau 4. Voir
 [EPOQUES_07092026](docs/recherche/campagnes/EPOQUES_07092026_le_mur_du_niveau_4_est_franchi.md).
 
+🟡 **07/09/2026 — BRANCHES PERSISTANTES (v41.63) : LE CANAL EST RÉPARÉ, C2 NE S'EN SERT
+TOUJOURS PAS.** Garder chaque branche du rollout sur **son propre geste** (au lieu de
+laisser `argmax(C1)` les faire converger) était un prérequis pré-enregistré de la v42,
+avec une prédiction honnête : *effet comportemental peu probable*. **Dépouillement, 20
+graines appariées × 1500 jours face à K8_NU** : le juge mécaniste **passe massivement** —
+séparation médiane h7/h1 du rollout de **0,012 → 1,28** (log10 apparié `t` = **+10,55**,
+19/20, **survit au retrait des 4 extrêmes** à +8,58 ; 20/20 cerveaux > 0,05 contre 4/20
+pour K8_NU). **Tous les juges comportementaux sont nuls** : maîtrise δ **−2,10 pt**
+(`t` = −0,87, 7/20), niveau **7/20 contre 5/20** (Fisher `p` = 0,73), accord C1/C2
+δ −2,70 (`t` = −1,75) ; garde-fou `gain_c1` = 1,0000 des deux côtés. C'est l'issue
+**« acceptable » pré-enregistrée** — la mécanique marche, et C2 ne sait toujours pas s'en
+servir : l'argument exact de la tête d'intention v42. Voir
+[carnet](docs/recherche/campagnes/BRANCHES_PERSISTANTES_07092026_la_mecanique_marche_la_voix_reste_inerte.md).
+
 🔴 **La capacité n'est pas en cause.** `r(params, réussite) = −0,1519` (`t = −1,17`, NS). Un
 PPO de **14 068 paramètres — 4× plus léger que le cœur RL de Naulthène — réussit 2,3×
 mieux**, et le bras le plus gros est le pire des trois.

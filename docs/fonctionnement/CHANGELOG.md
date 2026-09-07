@@ -48,6 +48,54 @@ le piège de l'instrument du 01/09.
 
 ---
 
+## [v41.63-mesure] - 2026-09-07 — Branches persistantes : la mécanique marche, la voix reste inerte
+
+### Dépouillement de la campagne `07092026_branches_persistantes`
+
+| Type | Details |
+|------|---------|
+| **Commit** | ce commit (dépouillement + docs du 07/09 soir) |
+| **Catégorie** | mesure (le code est en v41.63, `BRANCHES_PERSISTANTES = False` par défaut) |
+| **Impact** | Moyen — remplit le prérequis de la v42, sans effet comportemental |
+| **Carnet** | [BRANCHES_PERSISTANTES_07092026](../recherche/campagnes/BRANCHES_PERSISTANTES_07092026_la_mecanique_marche_la_voix_reste_inerte.md) |
+
+**20 graines appariées × 1500 jours, bras BP (v41.63) vs témoin K8_NU (réutilisé), 0 run
+neuf, 0 échec.** Juges posés d'avance dans le LISEZ_MOI, seuil Bonferroni `t` = 2,86.
+
+| Juge (posé AVANT) | BP vs K8_NU | Verdict |
+|---|---|---|
+| **Garde-fou** `gain_c1` | 1,0000 / 1,0000 | ✅ passe |
+| **1. Maîtrise** | δ **−2,10 pt** · `t` = −0,87 · 7/20 | ❌ nul |
+| ↳ sans les 4 extrêmes | δ +0,125 · `t` = +0,07 | ❌ nul |
+| **2. Niveau** | δ +0,10 · `t` = +0,70 · Fisher `p` = **0,7311** (7/20 vs 5/20) | ❌ nul |
+| **3. Mécaniste** (ratio h7/h1) | médiane **0,012 → 1,28** · log10 apparié `t` = **+10,55** · **19/20** | ✅ **PASSE massivement** |
+| ↳ sans les 4 extrêmes | `t` = **+8,58** | ✅ survit |
+| **4. Accord C1/C2** | δ −2,70 pt · `t` = −1,75 · 4/20 | ❌ nul |
+
+Compléments : 20/20 cerveaux BP > 0,05 (vs 4/20) · maîtrise moyenne 16,90 % vs 19,00 % ·
+0 cerveau BP à maîtrise 0 % (vs 1) · victoires médianes 932 vs 882 · à palier égal
+(niveau 5) : maîtrise **10,0 % des deux côtés**.
+
+**Issue conforme à la prédiction pré-enregistrée** (« un juge 3 qui passe et un juge 1 nul
+serait acceptable ») : la mécanique supprime l'effondrement du rollout sur les 20 cerveaux
+entraînés avec elle, et **aucun comportement ne bouge** — le canal qui nourrira la tête
+d'intention v42 est réparé, C2 ne sait pas s'en servir. La v42 reste **troisième** dans
+l'ordre des décisions (après la réparation de l'apprenant et la campagne de soustraction,
+[point général du 07/09](../etat_des_lieux/07092026_point_general_et_direction.md) §5).
+
+⚠️ **Notes de mesure** : la sonde a été lancée avec le drapeau `BRANCHES_PERSISTANTES`
+**forcé dans les deux copies du module** (sans cela elle mesurait l'ancien rollout — piège
+du 01/09) ; un premier `xargs` a été cassé par des fichiers de reprise « BP_gXX N.brain »
+(espaces), les 20 mesures ont été rejouées sur les 20 cerveaux nominaux (vérifié 20/20).
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `brains/07092026_branches_persistantes/depouiller_BP.py` | **créé** — 4 juges + garde-fou + Fisher + retrait des extrêmes |
+| `brains/07092026_branches_persistantes/mesure_rollout_BP.py` | **créé** — mesure h7/h1 sous drapeau forcé |
+| `brains/07092026_branches_persistantes/agregat_BP.json` · `depouillement_BP.txt` · `rollout_h7h1/` | **créés** — 40 runs, sortie brute, 20 mesures |
+
+---
+
 ## [v41.62-mesure] - 2026-09-07 — Le mur du niveau 4 est franchi : +10,25 pt de maîtrise
 
 ### 8 pas de gradient par nuit au lieu d'un

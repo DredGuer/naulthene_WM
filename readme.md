@@ -504,6 +504,20 @@ out of 20 clear level 5** against **0/20** for the control. 🔴 **PPO's clippin
 **moves without falling**: 15/20 remain at level 4. See
 [EPOQUES_07092026](docs/recherche/campagnes/EPOQUES_07092026_le_mur_du_niveau_4_est_franchi.md).
 
+🟡 **7 SEP 2026 — BRANCHES PERSISTANTES (v41.63): THE CHANNEL IS REPAIRED, C2 STILL DOES
+NOT USE IT.** Keeping each rollout branch on **its own action** (instead of letting C1's
+`argmax` collapse them back together) was a pre-registered prerequisite of the v42 intention
+head, with an honest prediction: *little behavioural effect expected*. **Depouillement, 20
+paired seeds × 1500 days vs K8_NU**: the mechanistic judge **passes massively** — median
+rollout separation h7/h1 rises from **0.012 to 1.28** (paired log10 `t` = **+10.55**, 19/20,
+**survives dropping the four extremes** at +8.58; 20/20 brains > 0.05 vs 4/20 for K8_NU).
+**Every behavioural judge is null**: mastery δ **−2.10 pt** (`t` = −0.87, 7/20), level
+**7/20 vs 5/20** (Fisher `p` = 0.73), C1/C2 agreement δ −2.70 (`t` = −1.75); guardrail
+`gain_c1` = 1.0000 in both arms. This is the pre-registered **"acceptable" outcome** — the
+mechanism works, and C2 still does not know how to use it: the exact argument for the v42
+intention head (which stays third in the decision order). See
+[carnet](docs/recherche/campagnes/BRANCHES_PERSISTANTES_07092026_la_mecanique_marche_la_voix_reste_inerte.md).
+
 🔴 **Capacity is not the cause.** `r(params, success) = −0.1519` (`t = −1.17`, NS). A PPO of
 **14,068 parameters — 4× lighter than Naulthène's RL core — succeeds 2.3× better**, and the
 largest arm is the worst of the three.
@@ -727,17 +741,26 @@ Roughly 90 metrics per simulated night. The ones worth watching:
 (29 Aug 2026), and the verdict is unflattering: a PPO 4× lighter succeeds 2.3× better.
 ⚠️ *An earlier version of this line still asked for those tables to be run.*
 
-**Now — re-run the bench with the corrected instrument.** Every bench figure from 30-31 Aug
-was measured with the working memory silently disconnected (v41.47). The 20-brain replay is
-in progress (`brains/02092026_rejeu_banc_corrige/`); until it lands, `r(directedness,
-success) = −0.82` is **not established**.
+**Now — the corrected-bench replay landed on 2 Sep 2026 (20/20).** Directedness is
+requalified: `r(directedness, success) = −0.68` (`t` = −3.93) — significant but **carried
+by the extremes** (NS once they are removed): a symptom of competence, not an established
+lever. The three levers that ever moved behaviour were found on 3-7 Sep 2026, and all three
+are **repairs of the learner, not additions**: free voice (`gain_c1 ≡ 1`), `--detach-c2`
+(+5.25 pt), `--epoques-nuit 8` (+10.25 pt).
 
-**Next — the conversion problem, not the signal problem.** Twenty-one refutations say the
-learning signal and the available information are not the bottleneck; what fails is turning
-information into a policy (entropy 1.93 vs 1.67 for PPO). Whatever comes next must act on
-*how the motor head decides*, and must be measured against the `≤ 6×` directedness target
-fixed before the run. ⚠️ *The patience lever once listed here (120 → 256 ticks) is obsolete:
-v41.30 removed `PATIENCE_MAX` and derived patience from the world's own `max_steps`.*
+**Next — the conversion problem, not the signal problem.** Twenty-seven hypotheses have now
+been measured on the plateau; twenty-three refuted. What fails is turning information into a
+policy (entropy 1.93 vs 1.67 for PPO; C1's policy flat — inter/intra variance 3.91 vs 0.06
+for PPO). Whatever comes next must act on *how the motor head decides*. Prepared but not yet
+launched, in the
+[protocol-reserve document](docs/ameliorations/07092026_protocoles_en_reserve.md): PPO
+facing the curriculum rule itself (would 60 % × 20 ever fire at 36-40 % success?), a K/ε
+sweep around the single measured point K = 8, and the never-run **subtraction campaign**
+under the repaired learner. The v42 intention head stays third — its channel (the rollout)
+is repaired and behaviourally silent, measured 7 Sep
+([carnet](docs/recherche/campagnes/BRANCHES_PERSISTANTES_07092026_la_mecanique_marche_la_voix_reste_inerte.md)).
+⚠️ *The patience lever once listed here (120 → 256 ticks) is obsolete: v41.30 removed
+`PATIENCE_MAX` and derived patience from the world's own `max_steps`.*
 
 **Then — cross-modal binding.** All senses already enter the same bus simultaneously, including
 inactive ones. The design document

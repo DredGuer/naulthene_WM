@@ -49,6 +49,20 @@ pas** : 15/20 restent au niveau 4, personne n'atteint le 6, et le cursus compte 
 ⚠️ `K = 8` est une **constante posée** (méthode v30.1 : mesurer le fixe, dériver ensuite).
 Voir `docs/recherche/campagnes/EPOQUES_07092026_le_mur_du_niveau_4_est_franchi.md`.
 
+### 🟡 BRANCHES PERSISTANTES — DÉPOUILLÉES LE 07/09 : LE CANAL EST RÉPARÉ, C2 NE S'EN SERT PAS
+
+Campagne `07092026_branches_persistantes` (20 graines × 1500 j face à K8_NU, juges
+pré-enregistrés, seuil Bonferroni `t` = 2,86). Juge mécaniste (ratio h7/h1 du rollout)
+**passe massivement** : médiane **0,012 → 1,28** (log10 apparié `t` = +10,55, 19/20,
+survit aux extrêmes à +8,58) ; maîtrise (**−2,10 pt**, NS), niveau (**7/20 vs 5/20**,
+Fisher `p` = 0,73) et accord (**NS**) **nuls** — l'issue « acceptable » pré-enregistrée :
+la mécanique supprime l'effondrement du rollout, C2 ne sait pas s'en servir (argument de
+la v42, qui reste **troisième** derrière la réparation de l'apprenant et la campagne de
+soustraction). Voir
+`docs/recherche/campagnes/BRANCHES_PERSISTANTES_07092026_la_mecanique_marche_la_voix_reste_inerte.md`.
+Le protocole A (PPO face au seuil 60 % du cursus) est **préparé, non lancé** —
+`docs/ameliorations/07092026_protocoles_en_reserve.md`.
+
 ### 🔴 L'ÉTAT RÉEL AU 30/08/2026 — le tableau des suspects est VIDE
 
 **Vingt-trois explications du plafond au niveau 4 ont été mesurées et réfutées** (compte

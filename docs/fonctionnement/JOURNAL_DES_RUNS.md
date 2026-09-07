@@ -29,15 +29,19 @@
 
 ## Runs
 
-### 🟡 `07092026_branches_persistantes` — les branches persistantes du rollout
+### ✅ `07092026_branches_persistantes` — les branches persistantes du rollout
 
 | | |
 |---|---|
 | **Début** | 2026-09-07 09:03 |
 | **Fin estimée** | 2026-09-07 ~15:15 *(mesurée sur le rythme réel à 09:35 : 8,7 % en 32 min)* |
-| **Fin réelle** | — |
+| **Fin réelle** | 2026-09-07 ~16:05 — 20/20, « CAMPAGNE TERMINEE », **0 échec** |
 | **Coût** | 20 runs × 1500 jours, 6 en parallèle |
-| **Statut** | 🟡 en cours |
+| **Statut** | ✅ terminée |
+
+**Écart estimé / réel** : ~50 min de retard — le rythme **ralentit** en fin de course (les
+cerveaux grossissent) : c'est exactement l'information que la règle « fin estimée mesurée »
+voulait capturer.
 
 **Pourquoi** : les 8 branches du rollout mental perdent **97 % de leur séparation** avant
 l'horizon 7 — C2 n'évalue pas 8 plans, il évalue **une destination** vue de 8 départs. La
@@ -48,6 +52,12 @@ comportement — c'est le **prérequis** de la tête d'intention de C2 (v42).
 **Prédiction écrite d'avance** : effet comportemental **peu probable**. C2 est mesuré inerte
 et son gradient nuisait ; `r(ratio rollout, maîtrise) = −0,08`. Un juge 3 qui passe avec un
 juge 1 nul serait **acceptable** — la mécanique marcherait sans que C2 sache s'en servir.
+
+**Résultat (dépouillé le 07/09 soir — [carnet](../recherche/campagnes/BRANCHES_PERSISTANTES_07092026_la_mecanique_marche_la_voix_reste_inerte.md))** :
+conforme à la prédiction. Juge 3 (mécaniste) **passe massivement** — h7/h1 médian
+**0,012 → 1,28**, log10 apparié `t` = **+10,55** (19/20, survit aux extrêmes) ; juges
+1 (maîtrise δ **−2,10 pt**, NS), 2 (niveau 7/20 vs 5/20, Fisher `p` = 0,73) et 4 (accord,
+NS) **nuls**. Sortie brute : `depouillement_BP.txt` · agrégat : `agregat_BP.json`.
 
 [Protocole complet](../../brains/07092026_branches_persistantes/LISEZ_MOI.md)
 
