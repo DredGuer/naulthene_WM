@@ -1,0 +1,27 @@
+{
+ "campagne": "08092026_sci01_balayage_K",
+ "commentaire": "Protocole pre-enregistre dans LISEZ_MOI.md (08/09/2026, code v41.68). Balayage K/epsilon sur l'apprenant REPARE (voix libre + detach-c2 constants sur tous les bras). Convention MES-04 : famille declaree, alpha=0.05, seuil derive par depouillement.seuil_t.",
+ "mode": "confirmatoire",
+ "graines": [11, 22, 33, 44, 55, 66, 77, 88, 99, 111, 122, 133, 144, 155, 166, 177, 188, 199, 211, 222],
+ "jours_requis": 1500,
+ "alpha": 0.05,
+ "comparaisons_prevues": 5,
+ "bras": {
+  "K1_TEMOIN":     {"dossier": "K1_TEMOIN", "prefixe": "K1_TEMOIN"},
+  "K2_NU":         {"dossier": "K2_NU", "prefixe": "K2_NU"},
+  "K4_NU":         {"dossier": "K4_NU", "prefixe": "K4_NU"},
+  "K8_NU":         {"dossier": "K8_NU", "prefixe": "K8_NU"},
+  "K16_NU":        {"dossier": "K16_NU", "prefixe": "K16_NU"},
+  "K8_CLIP_e02":   {"dossier": "K8_CLIP_e02", "prefixe": "K8_CLIP_e02"}
+ },
+ "gardes": [
+  {
+   "nom": "voix libre — gain_c1 ≡ 1,00 dans tous les bras",
+   "variable": "gain",
+   "bras": ["K1_TEMOIN", "K2_NU", "K4_NU", "K8_NU", "K16_NU", "K8_CLIP_e02"],
+   "cible": 1.0,
+   "tolerance": 0.02
+  }
+ ],
+ "exclusions_autorisees": []
+}

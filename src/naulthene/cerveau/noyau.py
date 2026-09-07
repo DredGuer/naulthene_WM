@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (C) 2026 Adrien Nault — Naulthène AGI
-#Version actuelle 41.67 — Variante LOCALE de test (Mac), terrain d'essai des mécaniques expérimentales.
+#Version actuelle 41.68 — Variante LOCALE de test (Mac), terrain d'essai des mécaniques expérimentales.
 # Versionné dans git depuis la v39.0 (2026-08-13), mais colab.py reste le script de référence :
 # rien de v18 → v41.49 n'y a été porté. Le marqueur ci-dessus suit le CHANGELOG (une entrée par
 # version) — il indiquait « 29 » jusqu'au 02/09/2026, périmé de 20 versions.
@@ -12405,6 +12405,16 @@ def executer_nuit(etat, plafond_reve=None):
             log_wandb["Rejouer_Ratio_Moy"] = _rs["ratio_moy"]
             log_wandb["Rejouer_Ratio_P90"] = _rs["ratio_p90"]
             log_wandb["Rejouer_Fraction_Clippee"] = _rs["fraction_clippee"]
+        # v41.68 — ligne CONSOLE (en plus des clés W&B) : sans elle, la distribution du
+        # ratio d'importance et la fraction clippée (indicateurs clés du balayage SCI-01)
+        # seraient invisibles sur les runs hors wandb et in-extractibles des *.log.
+        _ligne_rejouer = (f"  Rejouer (v41.68) : parité max {_rs['parite_max_delta']:.2e} · "
+                          f"entropie moy {_rs['entropie_moy']:.3f}")
+        if "ratio_moy" in _rs:
+            _ligne_rejouer += (f" · ratio moy {_rs['ratio_moy']:.4f} · p90 "
+                               f"{_rs['ratio_p90']:.4f} · clippés "
+                               f"{_rs['fraction_clippee'] * 100:.1f}%")
+        print(_ligne_rejouer)
 
     return log_wandb
 
