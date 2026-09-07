@@ -4,6 +4,50 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.63] - 2026-09-07 — Les branches persistantes du rollout
+
+### C2 évaluait une destination, pas huit plans
+
+| Type | Details |
+|------|---------|
+| **Commit** | `5f4c52b` |
+| **Catégorie** | feat (drapeau `--branches-persistantes`) |
+| **Impact** | Fonctionnel — lève une restriction protégée, sur raison mesurée |
+| **Carnet** | [ROLLOUT_06092026](../recherche/campagnes/ROLLOUT_06092026_le_trou_noir_du_reflexe.md) |
+
+Dans le rollout mental, après le premier pas, chaque branche était poursuivie par
+`argmax(tete_motrice)` — donc par C1. Mesuré sur 40 cerveaux : les 8 futurs perdent **97 %
+de leur séparation** avant l'horizon 7 (médiane h7/h1 = **0,0295**, 33/40 sous 0,10).
+
+**La cause n'est pas JEPA** : à action répétée, le modèle du monde maintient la séparation
+(**1,15** contre 0,043). C'est C1 qui ramène les 8 futurs au même point en 3 pas.
+
+⚠️ **Cette modification lève une restriction que CLAUDE.md protégeait** (« le premier pas
+branche sur les 7 actions, les suivants suivent le réflexe glouton »). La raison est
+**mesurée**, et la levée a été accordée explicitement par l'utilisateur le 06/09. **Le budget
+de calcul est inchangé** : répéter l'action est une substitution, jamais un rebranchement —
+la complexité reste `O(A × horizon)`, jamais `7^N`, ce que la restriction protégeait.
+
+`BRANCHES_PERSISTANTES = False` par défaut ⇒ comportement **bit-identique** (vérifié par
+`git stash`, 6 lignes clés identiques).
+
+**Pré-vol** : 6 grandeurs sur 6 divergent avec le drapeau (accord C1/C2 **2,8 % → 6,0 %**),
+et le **juge de réalité** passe sur un cerveau réel de la campagne K8 : ratio h7/h1
+**0,0118 → 0,7791**, soit **66×**.
+
+🔴 **Un défaut d'instrument corrigé au passage** : `sonde_horizon_branches` **réimplémentait**
+le rollout au lieu d'appeler le noyau — elle mesurait donc toujours l'ancien comportement,
+drapeau ou pas. Première mesure : ratio identique dans les deux cas, un **faux δ = 0**. C'est
+le piège de l'instrument du 01/09.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | `BRANCHES_PERSISTANTES`, `--branches-persistantes`, double surcharge `globals()` + `_module_reel` |
+| `src/naulthene/instruments/sonde_horizon_branches.py` | lit désormais la constante du noyau |
+| `src/naulthene/cerveau/noyau.py` (en-tête) | `#Version actuelle` **41.59 → 41.63** (périmé de 4 versions) |
+
+---
+
 ## [v41.62-mesure] - 2026-09-07 — Le mur du niveau 4 est franchi : +10,25 pt de maîtrise
 
 ### 8 pas de gradient par nuit au lieu d'un
@@ -117,7 +161,15 @@ exactement cette voie (`noyau.py:1556`).
 | **Impact** | Critique — ferme une hypothèse, en ouvre une, aggrave le constat de fond |
 | **Carnets** | [PPO_LAVAGAP_06092026](../recherche/campagnes/PPO_LAVAGAP_06092026_le_mur_n_est_pas_la_carte.md) · [SONDES_06092026](../recherche/campagnes/SONDES_06092026_le_levier_s_efface_le_corps_domine.md) |
 
-### 1. 🔴 PPO résout `LavaGapS5` — le mur n'est PAS la carte
+### 1. 🔴 PPO résout `LavaGapS5` — ⚠️ mais ce n'était PAS le niveau du mur
+
+> 🔴 **RECTIFIÉ le 07/09/2026 — MAUVAISE CARTE.** Le log affiche `niveau_actuel + 1`, donc
+> « Niveau 4/15 » est **`SimpleCrossingS9N1`** (index 3), pas `LavaGapS5`. Ce banc a testé PPO
+> **une carte plus loin** que le blocage. Sur la **vraie** carte du mur : PPO **36–40 %**
+> contre **25,83 %** pour Naulthène — **~1,5×**, pas 14,6×. Et `TAUX_PROMOTION = 0,60` exige
+> 60 % quand PPO plafonne à 40 % : **le mur est en partie une règle du cursus**. La mesure
+> (97,27 % sur `LavaGapS5`) reste juste ; c'est son interprétation qui était fausse.
+
 
 La baseline *« le mur n'existe pas »* (29/08) avait été mesurée sur `SimpleCrossingS9N1`,
 le niveau **3** — que Naulthène **franchit**. Refaite au niveau **4**, celui où **40 runs

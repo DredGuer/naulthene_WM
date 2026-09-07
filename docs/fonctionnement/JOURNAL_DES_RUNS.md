@@ -101,7 +101,9 @@ mais son *gradient* irrigue encore `integrateur_bio`, la couche partagée.
 Naulthène franchit — jamais au niveau **4**, où 40 runs sur 40 s'arrêtent.
 
 **Résultat** : PPO résout `LavaGapS5` à **97,27 %** contre 6,67 % pour un marcheur aléatoire.
-Le mur **n'est pas la carte**. [Carnet](../recherche/campagnes/PPO_LAVAGAP_06092026_le_mur_n_est_pas_la_carte.md)
+🔴 **RECTIFIÉ le 07/09 — mauvaise carte** : « Niveau 4/15 » est `SimpleCrossingS9N1`, pas
+`LavaGapS5` (le log affiche `niveau_actuel + 1`). Ce banc a testé **une carte plus loin**
+que le blocage. Sur la vraie carte du mur : PPO **36–40 %** contre **25,83 %** — ~1,5×. [Carnet](../recherche/campagnes/PPO_LAVAGAP_06092026_le_mur_n_est_pas_la_carte.md)
 
 ---
 

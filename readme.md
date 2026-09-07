@@ -483,15 +483,15 @@ action — nearly **double the 18.00 % ceiling** Naulthène's own geometry allow
 architectures sit within **0.7 points** of each other. The plateau is a pathology of
 Naulthène, not a property of MiniGrid.
 
-🔴 **MEASURED AT THE WALL ITSELF ON 6 SEP 2026 — and the gap widens.** This baseline was
-measured on `SimpleCrossingS9N1`, level **3**, which Naulthène **clears**; the wall is at
-level **4** (`LavaGapS5`), where **40 runs out of 40** stop. Re-run there: **PPO scores
-97.27 %** (n=5, min 90.67 %, δ_A/A = 0.000000) against **6.67 %** for the random walker —
-**14.6×**. **Naulthène never clears it.** At level 3 the gap was 2.3×; at level 4 it is
-total, on a map that is in fact **easier** for standard RL (`max_steps` 100, 5×5 grid).
-⚠️ **n = 5, below the 20-seed threshold**: the contrast is an order of magnitude above
-noise, but no fine comparison follows from it. See
-[PPO_LAVAGAP_06092026](docs/recherche/campagnes/PPO_LAVAGAP_06092026_le_mur_n_est_pas_la_carte.md).
+🔴 **CORRECTED 7 SEP 2026 — THE 6 SEP MEASUREMENT WAS ON THE WRONG MAP.** For one day this
+page claimed *"PPO solves the wall level at 97.27 % where Naulthène never passes — the gap
+widens, 14.6×"*. **That is false.** The log prints `niveau_actuel + 1`, so "Level 4/15" is
+**`SimpleCrossingS9N1`**, not `LavaGapS5`: the 6 Sep bench tested PPO **one map beyond** the
+blockage. On the **actual** wall map the data already existed (29 Aug baseline): **PPO scores
+36–40 %**, Naulthène **25.83 %** on the bench — **~1.5×**, not 14.6×. And
+**`TAUX_PROMOTION = 0.60`** demands 60 % success over 20 episodes, when **PPO itself tops out
+at 40 %**: **the wall is partly a curriculum rule**, not solely an architectural pathology.
+See [the 7 Sep general review](docs/etat_des_lieux/07092026_point_general_et_direction.md).
 
 ✅ **7 SEP 2026 — THE WALL MOVES, AND THE CAUSE IS OPTIMISER STARVATION.** Naulthène's
 policy received **ONE SINGLE gradient step per day** of ~400 ticks, against **23,680** for

@@ -31,7 +31,11 @@ argmax/2ᵉ vaut **0,392** : il en faudrait **~37** pour changer une décision.
 `--epoques-nuit 8` : maîtrise **8,75 % → 19,00 %** (δ **+10,25 pt**, `t` = **+4,81**, 15/20,
 **survit au retrait des 4 extrêmes** à `t` = +3,62, tautologie **inchangée**). À palier égal
 (niveau 4) : **10,0 % → 25,0 %**. **5 cerveaux sur 20 franchissent le niveau 5**, contre
-**0/20** au témoin — un palier jamais atteint auparavant.
+**0/20** au témoin — un palier jamais atteint auparavant. 🔴 **PRÉCISION du 07/09** : le log
+affiche `niveau_actuel + 1`, donc le mur est **`SimpleCrossingS9N1`** (index 3) et ces 5
+cerveaux viennent d'entrer dans **`LavaGapS5`** — ils ont bien franchi le vrai mur, mais
+toute mention de « LavaGapS5 = le niveau du blocage » est **fausse** (voir la rétractation
+du carnet PPO).
 
 🔴 **Le clipping de PPO NUIT, à l'inverse de l'attente théorique** : `K8_CLIP` fait −1,00 pt
 (7 cerveaux à maîtrise 0 % contre 1). Comparaison directe des deux bras K8 : **+11,25 pt**,

@@ -241,15 +241,16 @@ creuse brute** de MiniGrid, sans aucun shaping.
 trois architectures tiennent dans **0,7 point**. Le plafond est une pathologie de Naulthène,
 pas une propriété de MiniGrid.
 
-🔴 **MESURÉ AU NIVEAU DU MUR LE 06/09/2026 — et l'écart se creuse.** Cette baseline avait
-été mesurée sur `SimpleCrossingS9N1`, le niveau **3**, que Naulthène **franchit** ; le mur
-est au niveau **4** (`LavaGapS5`), où **40 runs sur 40** s'arrêtent. Refaite là-bas :
-**PPO réussit à 97,27 %** (n=5, min 90,67 %, δ_A/A = 0,000000) contre **6,67 %** pour le
-marcheur aléatoire — **14,6×**. **Naulthène n'y franchit jamais.** Au niveau 3 l'écart
-était de 2,3× ; au niveau 4 il est total, sur une carte pourtant **plus facile** pour un RL
-standard (`max_steps` 100, grille 5×5). ⚠️ **n = 5, sous le seuil des 20 graines** : le
-contraste est d'un ordre de grandeur au-dessus du bruit, mais aucune comparaison fine n'en
-découle. Voir [PPO_LAVAGAP_06092026](docs/recherche/campagnes/PPO_LAVAGAP_06092026_le_mur_n_est_pas_la_carte.md).
+🔴 **RECTIFIÉ LE 07/09/2026 — LA MESURE DU 06/09 PORTAIT SUR LA MAUVAISE CARTE.** Cette
+page a affirmé pendant un jour que *« PPO résout le niveau du mur à 97,27 % quand Naulthène
+ne passe jamais — l'écart se creuse, 14,6× »*. **C'est faux.** Le log affiche
+`niveau_actuel + 1`, donc « Niveau 4/15 » est **`SimpleCrossingS9N1`**, pas `LavaGapS5` : le
+banc du 06/09 a testé PPO **une carte plus loin** que le blocage. Sur la **vraie** carte du
+mur, la donnée existait déjà (baseline du 29/08) : **PPO fait 36–40 %**, Naulthène **25,83 %**
+au banc — **~1,5×**, pas 14,6×. Et **`TAUX_PROMOTION = 0,60`** exige 60 % de réussite sur
+20 épisodes, quand **PPO lui-même plafonne à 40 %** : **le mur est en partie une règle du
+cursus**, pas seulement une pathologie de l'architecture. Voir
+[le point général du 07/09](docs/etat_des_lieux/07092026_point_general_et_direction.md).
 
 ✅ **07/09/2026 — LE MUR SE DÉPLACE, ET LA CAUSE EST L'ANÉMIE DE L'OPTIMISEUR.** La
 politique de Naulthène ne recevait qu'**UN SEUL pas de gradient par journée** de ~400 ticks,

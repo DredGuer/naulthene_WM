@@ -1,4 +1,41 @@
-# PPO AU NIVEAU DU MUR — le mur n'est pas la carte
+# PPO SUR `LavaGapS5` — 🔴 CARNET RÉTRACTÉ : ce n'était PAS le niveau du mur
+
+> # 🔴 RÉTRACTATION DU 07/09/2026
+>
+> **Ce carnet a testé PPO sur une carte qui n'est pas celle du blocage.** Sa conclusion
+> principale est **fausse** et a été publiée dans les deux README, au CHANGELOG v41.60, au
+> journal des runs et dans le PLAN §4.
+>
+> **La cause** : un décalage de numérotation. Le log affiche `niveau_actuel + 1`
+> (`noyau.py:11344`), donc **« Niveau 4/15 » est l'index 3 = `SimpleCrossingS9N1`**, pas
+> `LavaGapS5`. Vérifié indépendamment sur les logs, qui nomment la carte jouée :
+>
+> ```
+> TEMOIN bloqué   : 🌙 Jour 1500 [Primaire 1 (Contourner)]   ← SimpleCrossingS9N1
+>                   🎓 Niveau 4/15 — maîtrise 10%
+> K8 « niveau 5 » : 🌙 Jour 1500 [Primaire 2 (Éviter le danger)] ← LavaGapS5
+> ```
+>
+> **Le mur est donc `SimpleCrossingS9N1`**, et les cerveaux K8 qui « franchissent le niveau
+> 5 » viennent en réalité **d'entrer dans `LavaGapS5`** — ils ont franchi le vrai mur.
+>
+> | Affirmation publiée | Ce qui est vrai |
+> |---|---|
+> | « PPO résout le niveau du mur à **97,27 %** quand Naulthène ne passe jamais » | mesuré sur `LavaGapS5`, **une carte plus loin** que le blocage |
+> | « L'écart se creuse : **14,6×** » | sur la **vraie** carte du mur, PPO fait **36–40 %** contre **25,83 %** pour Naulthène — **~1,5×** |
+> | « Le mur est une pathologie de cette architecture » | **partiellement une règle du cursus** : `TAUX_PROMOTION = 0,60` exige 60 % de réussite, quand **PPO lui-même plafonne à 40 %** sur cette carte |
+>
+> **Ce qui SURVIT de ce carnet** : la mesure elle-même est juste — PPO résout bien
+> `LavaGapS5` à 97,27 % (n=5, δ_A/A = 0). C'est son **interprétation** qui est fausse. Et le
+> fait est même plus intéressant retourné : `LavaGapS5` est, pour un RL standard, **plus
+> facile** que la carte qui bloque Naulthène.
+>
+> ⚠️ **Conséquence collatérale** : cinq versions de mécaniques « lave » (v41.11 → v41.27) ont
+> été construites pour une carte **hors du chemin du blocage**.
+>
+> Voir [le point général du 07/09](../../etat_des_lieux/07092026_point_general_et_direction.md).
+
+---
 
 **Date** : 2026-09-06 · **Statut** : ❌ **HYPOTHÈSE RÉFUTÉE** (§4 du plan) ·
 **n = 5 graines · δ_A/A = 0,000000** · coût : ~40 min.

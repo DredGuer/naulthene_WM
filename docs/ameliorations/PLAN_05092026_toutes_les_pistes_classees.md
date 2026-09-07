@@ -465,7 +465,7 @@ pas modifié après le verdict — s'il le contredit, on l'écrira en dessous, a
 
 | Piste | Verdict | Détail |
 |---|---|---|
-| **§4.1 PPO sur `LavaGapS5`** | ❌ **hypothèse réfutée** | PPO **97,27 %** (n=5, δ_A/A=0) contre 6,67 % aléatoire. [Carnet](../recherche/campagnes/PPO_LAVAGAP_06092026_le_mur_n_est_pas_la_carte.md) |
+| **§4.1 PPO sur `LavaGapS5`** | 🔴 **RÉTRACTÉ 07/09 — mauvaise carte** | le banc a testé **une carte plus loin** que le blocage. Vraie carte du mur : PPO **36–40 %** contre **25,83 %** (~1,5×). [Carnet](../recherche/campagnes/PPO_LAVAGAP_06092026_le_mur_n_est_pas_la_carte.md) |
 | **§2.a JEPA distingue-t-il les actions ?** | ✅ **oui — §5 débloquée** | ratio 0,48 (médiane 0,46, aucun cerveau < 0,10) |
 | **§8 dilution d'`integrateur_bio`** | ❌ **réfutée** | le corps pèse **2,5 à 5,6×** la vision |
 | **§7 table de mixage des pertes** | 🔴 **résultat fort** | le critique prend **89,24 %** du gradient d'`integrateur_bio`, 40/40 cerveaux |
@@ -474,7 +474,9 @@ pas modifié après le verdict — s'il le contredit, on l'écrira en dessous, a
 
 ### 1. 🔴 §4 (le mur est la carte) est FERMÉE — et le constat s'aggrave
 
-PPO résout `LavaGapS5` à **97,27 %** là où Naulthène ne franchit **jamais** (40/40 runs).
+🔴 **RECTIFIÉ le 07/09 : mauvaise carte.** Le blocage est sur `SimpleCrossingS9N1`, pas
+`LavaGapS5`. PPO y fait **36–40 %** contre **25,83 %** pour Naulthène — **~1,5×**, et le seuil
+de promotion (60 %) est **au-dessus de ce que PPO atteint**.
 Au niveau 3 l'écart était de 2,3× ; au niveau 4 il est total. **L'écart se creuse avec la
 facilité de la tâche.** La permutation du cursus (§4.2) perd sa justification.
 
