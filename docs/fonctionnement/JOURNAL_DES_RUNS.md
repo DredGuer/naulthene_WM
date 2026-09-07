@@ -29,6 +29,31 @@
 
 ## Runs
 
+### 🟡 `08092026_sci01_balayage_K` — Wave 1 : balayage K/ε sur l'apprenant réparé
+
+| | |
+|---|---|
+| **Début** | 2026-09-08 (v41.68) |
+| **Fin estimée** | ~18-22 h *(Wave 1 : 60 runs × 1500 j, 6 en parallèle — rythme mesuré sur le pré-vol 2 nuits)* |
+| **Fin réelle** | — |
+| **Coût** | Wave 1 : 6 bras × 10 graines × 1500 jours · Wave 2 (différée) : n=20 ciblé |
+| **Statut** | 🟡 en cours |
+
+**Pourquoi** : le point K=8 du 07/09 a été mesuré avec le **rejeu faussé** (APP-01) — il
+n'est plus un témoin valide. Le balayage re-mesure la **forme** de l'effet de K (2/4/8/16)
+et le signe du clip (ε = 0,2 à K=8) sur le socle sain (voix libre + `--detach-c2` constants
+sur tous les bras, témoin K=1 inclus). Indicateurs clés extractibles des logs : maîtrise,
+niveau, **distribution du ratio `exp(lp − lp_old)` et fraction clippée** (ligne console
+`Rejouer (v41.68)`, v41.64/68).
+
+**Pré-vol (08/09)** : manifeste validé (format strict MES-01) · 2 nuits réelles K8_NU :
+exit 0, 2 bilans, **0 violation** du garde de parité de forme, 2 lignes `Rejouer` ;
+drapeau `[VARIANTE] 8 epoques` présent.
+
+[Protocole](../../brains/08092026_sci01_balayage_K/LISEZ_MOI.md)
+
+---
+
 ### ✅ `07092026_protoA_ppo_seuil60` — PPO face à la règle 60 % du cursus
 
 | | |
