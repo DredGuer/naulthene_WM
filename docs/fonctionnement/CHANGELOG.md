@@ -10,7 +10,7 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 | Type | Details |
 |------|---------|
-| **Commit** | `N/A — en attente du commit de cette version` |
+| **Commit** | `c2cdb25` |
 | **Catégorie** | mesure (le code est en v41.62, `EPOQUES_NUIT = 1` par défaut) |
 | **Impact** | Critique — **le plus fort résultat du dépôt**, et le premier à déplacer le mur |
 | **Carnet** | [EPOQUES_07092026](../recherche/campagnes/EPOQUES_07092026_le_mur_du_niveau_4_est_franchi.md) |
