@@ -1,6 +1,8 @@
-#!/bin/zsh
+#!/bin/bash
 # SCI-01 — un run par (bras, graine). Vagues de 6 en parallèle.
-# Usage : zsh run_un.sh <BRAS> <GRAINE>
+# ⚠️ bash (PAS zsh) : $EXTRA non quoté doit être découpé en mots — zsh ne le fait pas
+# par défaut et passait "--epoques-nuit 8" comme un SEUL argument (échec argparse, 08/09).
+# Usage : bash run_un.sh <BRAS> <GRAINE>
 cd "/Users/dredguer/Documents/1. Dossier personnel important/1. Adrien/21. AGI"
 D=brains/08092026_sci01_balayage_K
 ARM="$1"; G="$2"
