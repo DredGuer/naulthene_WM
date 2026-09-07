@@ -1,0 +1,30 @@
+{
+ "campagne": "05092026_ablation_c2",
+ "commentaire": "Protocole pré-enregistré dans LISEZ_MOI.md (05/09/2026). Manifeste ajouté le 08/09/2026 au titre de MES-01 : transcription du protocole, aucune modification. Bonferroni 3 métriques (niveau, maîtrise, amplitude C1) — le seuil est désormais dérivé de n, plus écrit en dur.",
+ "mode": "confirmatoire",
+ "graines": [11, 22, 33, 44, 55, 66, 77, 88, 99, 111, 122, 133, 144, 155, 166, 177, 188, 199, 211, 222],
+ "jours_requis": 1500,
+ "alpha": 0.05,
+ "comparaisons_prevues": 3,
+ "bras": {
+  "LIBRE": {"dossier": "../04092026_cursus_complet", "prefixe": "LIBRE"},
+  "LIBRE_SANS_C2": {"dossier": ".", "prefixe": "LIBRE_SANS_C2"},
+  "TEMOIN_SANS_C2": {"dossier": ".", "prefixe": "TEMOIN_SANS_C2"}
+ },
+ "gardes": [
+  {
+   "nom": "voix libre — gain_c1 ≡ 1,00",
+   "variable": "gain",
+   "bras": ["LIBRE", "LIBRE_SANS_C2"],
+   "cible": 1.0,
+   "tolerance": 0.02
+  },
+  {
+   "nom": "régime témoin — gain_c1 renormalisé, très au-dessus du plancher 0,25",
+   "variable": "gain",
+   "bras": ["TEMOIN_SANS_C2"],
+   "minimum": 0.5
+  }
+ ],
+ "exclusions_autorisees": []
+}

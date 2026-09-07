@@ -1,0 +1,23 @@
+{
+ "campagne": "05092026_detach_c2",
+ "commentaire": "Protocole pré-enregistré dans LISEZ_MOI.md (05/09/2026). Manifeste ajouté le 08/09/2026 au titre de MES-01 : transcription du protocole, aucune modification. Seuil dérivé de n et de `comparaisons_prevues` (Bonferroni 3 métriques annoncé au LISEZ_MOI §Juges).",
+ "mode": "confirmatoire",
+ "graines": [11, 22, 33, 44, 55, 66, 77, 88, 99, 111, 122, 133, 144, 155, 166, 177, 188, 199, 211, 222],
+ "jours_requis": 1500,
+ "alpha": 0.05,
+ "comparaisons_prevues": 3,
+ "bras": {
+  "LIBRE": {"dossier": "../04092026_cursus_complet", "prefixe": "LIBRE"},
+  "LIBRE_DETACH": {"dossier": ".", "prefixe": "LIBRE_DETACH"}
+ },
+ "gardes": [
+  {
+   "nom": "voix libre — gain_c1 intact (≈ 1,00) dans les deux bras",
+   "variable": "gain",
+   "bras": ["LIBRE", "LIBRE_DETACH"],
+   "cible": 1.0,
+   "tolerance": 0.02
+  }
+ ],
+ "exclusions_autorisees": []
+}

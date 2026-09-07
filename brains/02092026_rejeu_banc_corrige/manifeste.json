@@ -1,0 +1,31 @@
+{
+ "campagne": "02092026_rejeu_banc_corrige",
+ "commentaire": "Rejeu à instrument corrigé (protocole écrit AVANT que les 20 fichiers soient là — Règle de Trace §4). Manifeste ajouté le 08/09/2026 au titre de MES-01. La cohorte n'est PAS un produit bras × graines : c'est une liste de 20 cerveaux nommés (14 du bras A, 6 du bras B, sur des sous-ensembles de graines différents) — d'où `runs` explicite. `jours_requis` ne s'applique pas : ce sont des mesures de banc, pas des journaux de run. Les deux vérifications pré-enregistrées (témoin aléatoire invariant à 5,67 % ; aucun cerveau au plafond de budget 27,0×) étaient CALCULÉES ET IGNORÉES par le script d'origine ; elles sont désormais BLOQUANTES. Bonferroni 3 métriques : le seuil n'est plus la constante 2,88 mais la valeur dérivée de n (df = n − 2 pour une corrélation).",
+ "mode": "confirmatoire",
+ "alpha": 0.05,
+ "comparaisons_prevues": 3,
+ "runs": [
+  {"nom": "A_g11", "fichier": "banc_A_g11.json"},
+  {"nom": "A_g33", "fichier": "banc_A_g33.json"},
+  {"nom": "A_g44", "fichier": "banc_A_g44.json"},
+  {"nom": "A_g66", "fichier": "banc_A_g66.json"},
+  {"nom": "A_g77", "fichier": "banc_A_g77.json"},
+  {"nom": "A_g111", "fichier": "banc_A_g111.json"},
+  {"nom": "A_g122", "fichier": "banc_A_g122.json"},
+  {"nom": "A_g133", "fichier": "banc_A_g133.json"},
+  {"nom": "A_g144", "fichier": "banc_A_g144.json"},
+  {"nom": "A_g155", "fichier": "banc_A_g155.json"},
+  {"nom": "A_g166", "fichier": "banc_A_g166.json"},
+  {"nom": "A_g177", "fichier": "banc_A_g177.json"},
+  {"nom": "A_g188", "fichier": "banc_A_g188.json"},
+  {"nom": "A_g222", "fichier": "banc_A_g222.json"},
+  {"nom": "B_g11", "fichier": "banc_B_g11.json"},
+  {"nom": "B_g44", "fichier": "banc_B_g44.json"},
+  {"nom": "B_g122", "fichier": "banc_B_g122.json"},
+  {"nom": "B_g144", "fichier": "banc_B_g144.json"},
+  {"nom": "B_g188", "fichier": "banc_B_g188.json"},
+  {"nom": "B_g211", "fichier": "banc_B_g211.json"}
+ ],
+ "gardes": [],
+ "exclusions_autorisees": []
+}

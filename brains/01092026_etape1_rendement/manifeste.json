@@ -1,0 +1,15 @@
+{
+ "campagne": "01092026_etape1_rendement",
+ "commentaire": "Campagne de BANC : la cohorte est faite de fichiers `banc_<bras>_g<graine>.json` produits par `sonde_plancher_geometrique`, pas de journaux de cursus — d'où `jours_requis` absent (aucun critère d'achèvement de run à ce niveau). Manifeste ajouté le 08/09/2026 au titre de MES-01. ⚠️ AUCUNE famille de tests n'avait été pré-enregistrée le 01/09 : le script d'origine affichait des `t` bruts, sans verdict. `comparaisons_prevues` = 2 (succès et directivité, les deux seuls tests appariés effectivement conduits) est une transcription POSTÉRIEURE — le seuil affiché est donc INDICATIF. La décision de la campagne reposait sur le juge de paix pré-enregistré au LISEZ_MOI (directivité médiane : < 6× succès, ≥ 12× échec), pas sur une significativité.",
+ "mode": "confirmatoire",
+ "graines": [11, 22, 33, 44, 55, 66, 77, 88, 99, 111, 122, 133, 144, 155, 166, 177, 188, 199, 211, 222],
+ "alpha": 0.05,
+ "comparaisons_prevues": 2,
+ "extension_log": ".json",
+ "bras": {
+  "ACTIF": {"dossier": ".", "prefixe": "banc_ACTIF"},
+  "TEMOIN": {"dossier": ".", "prefixe": "banc_TEMOIN"}
+ },
+ "gardes": [],
+ "exclusions_autorisees": []
+}

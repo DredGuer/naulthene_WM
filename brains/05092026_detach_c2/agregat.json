@@ -1,322 +1,509 @@
 {
- "LIBRE_g11": {
-  "niv": 4,
-  "mait": 10.0,
-  "gain": 1.0,
-  "c1": 3.1635,
-  "vict": 911,
-  "nuits": 1476
+ "campagne": "05092026_detach_c2",
+ "mode": "confirmatoire",
+ "couverture": {
+  "obtenus": 40,
+  "attendus": 40
  },
- "LIBRE_g22": {
-  "niv": 4,
-  "mait": 5.0,
-  "gain": 1.0,
-  "c1": 3.175,
-  "vict": 823,
-  "nuits": 1480
- },
- "LIBRE_g33": {
-  "niv": 4,
-  "mait": 5.0,
-  "gain": 1.0,
-  "c1": 3.5725,
-  "vict": 844,
-  "nuits": 1474
- },
- "LIBRE_g44": {
-  "niv": 4,
-  "mait": 10.0,
-  "gain": 1.0,
-  "c1": 5.115,
-  "vict": 917,
-  "nuits": 1477
- },
- "LIBRE_g55": {
-  "niv": 4,
-  "mait": 15.0,
-  "gain": 1.0,
-  "c1": 3.399,
-  "vict": 760,
-  "nuits": 1479
- },
- "LIBRE_g66": {
-  "niv": 4,
-  "mait": 5.0,
-  "gain": 1.0,
-  "c1": 3.9935,
-  "vict": 899,
-  "nuits": 1474
- },
- "LIBRE_g77": {
-  "niv": 4,
-  "mait": 10.0,
-  "gain": 1.0,
-  "c1": 4.2669999999999995,
-  "vict": 809,
-  "nuits": 1477
- },
- "LIBRE_g88": {
-  "niv": 4,
-  "mait": 5.0,
-  "gain": 1.0,
-  "c1": 4.213,
-  "vict": 848,
-  "nuits": 1475
- },
- "LIBRE_g99": {
-  "niv": 4,
-  "mait": 10.0,
-  "gain": 1.0,
-  "c1": 3.0134999999999996,
-  "vict": 820,
-  "nuits": 1465
- },
- "LIBRE_g111": {
-  "niv": 4,
-  "mait": 10.0,
-  "gain": 1.0,
-  "c1": 3.707,
-  "vict": 842,
-  "nuits": 1477
- },
- "LIBRE_g122": {
-  "niv": 4,
-  "mait": 15.0,
-  "gain": 1.0,
-  "c1": 4.618,
-  "vict": 904,
-  "nuits": 1480
- },
- "LIBRE_g133": {
-  "niv": 4,
-  "mait": 10.0,
-  "gain": 1.0,
-  "c1": 5.0344999999999995,
-  "vict": 879,
-  "nuits": 1486
- },
- "LIBRE_g144": {
-  "niv": 4,
-  "mait": 10.0,
-  "gain": 1.0,
-  "c1": 3.9,
-  "vict": 863,
-  "nuits": 1474
- },
- "LIBRE_g155": {
-  "niv": 4,
-  "mait": 0.0,
-  "gain": 1.0,
-  "c1": 3.6665,
-  "vict": 878,
-  "nuits": 1476
- },
- "LIBRE_g166": {
-  "niv": 4,
-  "mait": 10.0,
-  "gain": 1.0,
-  "c1": 5.3285,
-  "vict": 916,
-  "nuits": 1478
- },
- "LIBRE_g177": {
-  "niv": 4,
-  "mait": 10.0,
-  "gain": 1.0,
-  "c1": 4.945,
-  "vict": 858,
-  "nuits": 1472
- },
- "LIBRE_g188": {
-  "niv": 4,
-  "mait": 5.0,
-  "gain": 1.0,
-  "c1": 4.6899999999999995,
-  "vict": 931,
-  "nuits": 1467
- },
- "LIBRE_g199": {
-  "niv": 4,
-  "mait": 15.0,
-  "gain": 1.0,
-  "c1": 3.7615,
-  "vict": 933,
-  "nuits": 1478
- },
- "LIBRE_g211": {
-  "niv": 4,
-  "mait": 10.0,
-  "gain": 1.0,
-  "c1": 3.5629999999999997,
-  "vict": 766,
-  "nuits": 1477
- },
- "LIBRE_g222": {
-  "niv": 4,
-  "mait": 5.0,
-  "gain": 1.0,
-  "c1": 4.6555,
-  "vict": 781,
-  "nuits": 1473
- },
- "LIBRE_DETACH_g11": {
-  "niv": 4,
-  "mait": 15.0,
-  "gain": 1.0,
-  "c1": 3.896,
-  "vict": 982,
-  "nuits": 1476
- },
- "LIBRE_DETACH_g22": {
-  "niv": 4,
-  "mait": 20.0,
-  "gain": 1.0,
-  "c1": 3.0694999999999997,
-  "vict": 872,
-  "nuits": 1476
- },
- "LIBRE_DETACH_g33": {
-  "niv": 4,
-  "mait": 5.0,
-  "gain": 1.0,
-  "c1": 3.0305,
-  "vict": 890,
-  "nuits": 1484
- },
- "LIBRE_DETACH_g44": {
-  "niv": 4,
-  "mait": 15.0,
-  "gain": 1.0,
-  "c1": 5.2325,
-  "vict": 971,
-  "nuits": 1477
- },
- "LIBRE_DETACH_g55": {
-  "niv": 4,
-  "mait": 15.0,
-  "gain": 1.0,
-  "c1": 3.809,
-  "vict": 1034,
-  "nuits": 1475
- },
- "LIBRE_DETACH_g66": {
-  "niv": 4,
-  "mait": 15.0,
-  "gain": 1.0,
-  "c1": 3.8785,
-  "vict": 958,
-  "nuits": 1475
- },
- "LIBRE_DETACH_g77": {
-  "niv": 4,
-  "mait": 15.0,
-  "gain": 1.0,
-  "c1": 4.866,
-  "vict": 901,
-  "nuits": 1475
- },
- "LIBRE_DETACH_g88": {
-  "niv": 4,
-  "mait": 20.0,
-  "gain": 1.0,
-  "c1": 4.4735,
-  "vict": 943,
-  "nuits": 1483
- },
- "LIBRE_DETACH_g99": {
-  "niv": 4,
-  "mait": 15.0,
-  "gain": 1.0,
-  "c1": 3.8655,
-  "vict": 850,
-  "nuits": 1478
- },
- "LIBRE_DETACH_g111": {
-  "niv": 4,
-  "mait": 20.0,
-  "gain": 1.0,
-  "c1": 4.3845,
-  "vict": 979,
-  "nuits": 1477
- },
- "LIBRE_DETACH_g122": {
-  "niv": 4,
-  "mait": 20.0,
-  "gain": 1.0,
-  "c1": 5.1365,
-  "vict": 955,
-  "nuits": 1478
- },
- "LIBRE_DETACH_g133": {
-  "niv": 4,
-  "mait": 15.0,
-  "gain": 1.0,
-  "c1": 4.2315000000000005,
-  "vict": 1004,
-  "nuits": 1474
- },
- "LIBRE_DETACH_g144": {
-  "niv": 4,
-  "mait": 15.0,
-  "gain": 1.0,
-  "c1": 3.5069999999999997,
-  "vict": 924,
-  "nuits": 1470
- },
- "LIBRE_DETACH_g155": {
-  "niv": 4,
-  "mait": 5.0,
-  "gain": 1.0,
-  "c1": 3.7720000000000002,
-  "vict": 798,
-  "nuits": 1477
- },
- "LIBRE_DETACH_g166": {
-  "niv": 4,
-  "mait": 10.0,
-  "gain": 1.0,
-  "c1": 3.8295000000000003,
-  "vict": 929,
-  "nuits": 1480
- },
- "LIBRE_DETACH_g177": {
-  "niv": 4,
-  "mait": 5.0,
-  "gain": 1.0,
-  "c1": 3.7619999999999996,
-  "vict": 856,
-  "nuits": 1482
- },
- "LIBRE_DETACH_g188": {
-  "niv": 4,
-  "mait": 10.0,
-  "gain": 1.0,
-  "c1": 4.1205,
-  "vict": 850,
-  "nuits": 1473
- },
- "LIBRE_DETACH_g199": {
-  "niv": 4,
-  "mait": 20.0,
-  "gain": 1.0,
-  "c1": 3.707,
-  "vict": 901,
-  "nuits": 1474
- },
- "LIBRE_DETACH_g211": {
-  "niv": 4,
-  "mait": 15.0,
-  "gain": 1.0,
-  "c1": 4.6045,
-  "vict": 911,
-  "nuits": 1478
- },
- "LIBRE_DETACH_g222": {
-  "niv": 4,
-  "mait": 10.0,
-  "gain": 1.0,
-  "c1": 4.8815,
-  "vict": 962,
-  "nuits": 1478
+ "exclusions": [],
+ "gardes": [
+  {
+   "garde": "voix libre — gain_c1 intact (≈ 1,00) dans les deux bras",
+   "bras": "LIBRE",
+   "variable": "gain",
+   "moyenne": 1.0,
+   "attendu": "1.0000 ± 0.02",
+   "passe": true
+  },
+  {
+   "garde": "voix libre — gain_c1 intact (≈ 1,00) dans les deux bras",
+   "bras": "LIBRE_DETACH",
+   "variable": "gain",
+   "moyenne": 1.0,
+   "attendu": "1.0000 ± 0.02",
+   "passe": true
+  }
+ ],
+ "runs": {
+  "LIBRE_g11": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 911,
+   "nuits": 1476,
+   "mait": 10.0,
+   "gain": 1.0,
+   "c1": 3.1635,
+   "c2": 2.239,
+   "hc1": 0.3525,
+   "accord": 2.8
+  },
+  "LIBRE_g22": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 823,
+   "nuits": 1480,
+   "mait": 5.0,
+   "gain": 1.0,
+   "c1": 3.175,
+   "c2": 2.316,
+   "hc1": 0.269,
+   "accord": 25.4
+  },
+  "LIBRE_g33": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 844,
+   "nuits": 1474,
+   "mait": 5.0,
+   "gain": 1.0,
+   "c1": 3.5725,
+   "c2": 2.404,
+   "hc1": 0.567,
+   "accord": 24.1
+  },
+  "LIBRE_g44": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 917,
+   "nuits": 1477,
+   "mait": 10.0,
+   "gain": 1.0,
+   "c1": 5.115,
+   "c2": 2.379,
+   "hc1": 0.3155,
+   "accord": 0.5
+  },
+  "LIBRE_g55": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 760,
+   "nuits": 1479,
+   "mait": 15.0,
+   "gain": 1.0,
+   "c1": 3.399,
+   "c2": 2.2954999999999997,
+   "hc1": 0.29,
+   "accord": 51.9
+  },
+  "LIBRE_g66": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 899,
+   "nuits": 1474,
+   "mait": 5.0,
+   "gain": 1.0,
+   "c1": 3.9935,
+   "c2": 2.2055,
+   "hc1": 0.529,
+   "accord": 40.0
+  },
+  "LIBRE_g77": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 809,
+   "nuits": 1477,
+   "mait": 10.0,
+   "gain": 1.0,
+   "c1": 4.2669999999999995,
+   "c2": 2.572,
+   "hc1": 0.5165,
+   "accord": 29.4
+  },
+  "LIBRE_g88": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 848,
+   "nuits": 1475,
+   "mait": 5.0,
+   "gain": 1.0,
+   "c1": 4.213,
+   "c2": 2.1995,
+   "hc1": 0.574,
+   "accord": 27.9
+  },
+  "LIBRE_g99": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 820,
+   "nuits": 1465,
+   "mait": 10.0,
+   "gain": 1.0,
+   "c1": 3.0134999999999996,
+   "c2": 2.3405,
+   "hc1": 0.4015,
+   "accord": 0.0
+  },
+  "LIBRE_g111": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 842,
+   "nuits": 1477,
+   "mait": 10.0,
+   "gain": 1.0,
+   "c1": 3.707,
+   "c2": 2.2355,
+   "hc1": 0.3025,
+   "accord": 0.0
+  },
+  "LIBRE_g122": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 904,
+   "nuits": 1480,
+   "mait": 15.0,
+   "gain": 1.0,
+   "c1": 4.618,
+   "c2": 2.277,
+   "hc1": 0.481,
+   "accord": 26.0
+  },
+  "LIBRE_g133": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 879,
+   "nuits": 1486,
+   "mait": 10.0,
+   "gain": 1.0,
+   "c1": 5.0344999999999995,
+   "c2": 2.6225,
+   "hc1": 0.45,
+   "accord": 0.0
+  },
+  "LIBRE_g144": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 863,
+   "nuits": 1474,
+   "mait": 10.0,
+   "gain": 1.0,
+   "c1": 3.9,
+   "c2": 1.8559999999999999,
+   "hc1": 0.4525,
+   "accord": 33.5
+  },
+  "LIBRE_g155": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 878,
+   "nuits": 1476,
+   "mait": 0.0,
+   "gain": 1.0,
+   "c1": 3.6665,
+   "c2": 2.3165,
+   "hc1": 0.3005,
+   "accord": 33.35
+  },
+  "LIBRE_g166": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 916,
+   "nuits": 1478,
+   "mait": 10.0,
+   "gain": 1.0,
+   "c1": 5.3285,
+   "c2": 2.1,
+   "hc1": 0.5285,
+   "accord": 0.0
+  },
+  "LIBRE_g177": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 858,
+   "nuits": 1472,
+   "mait": 10.0,
+   "gain": 1.0,
+   "c1": 4.945,
+   "c2": 2.5875000000000004,
+   "hc1": 0.226,
+   "accord": 0.0
+  },
+  "LIBRE_g188": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 931,
+   "nuits": 1467,
+   "mait": 5.0,
+   "gain": 1.0,
+   "c1": 4.6899999999999995,
+   "c2": 2.8075,
+   "hc1": 0.5315000000000001,
+   "accord": 0.0
+  },
+  "LIBRE_g199": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 933,
+   "nuits": 1478,
+   "mait": 15.0,
+   "gain": 1.0,
+   "c1": 3.7615,
+   "c2": 2.3114999999999997,
+   "hc1": 0.677,
+   "accord": 13.0
+  },
+  "LIBRE_g211": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 766,
+   "nuits": 1477,
+   "mait": 10.0,
+   "gain": 1.0,
+   "c1": 3.5629999999999997,
+   "c2": 2.6295,
+   "hc1": 0.0,
+   "accord": 0.0
+  },
+  "LIBRE_g222": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 781,
+   "nuits": 1473,
+   "mait": 5.0,
+   "gain": 1.0,
+   "c1": 4.6555,
+   "c2": 2.199,
+   "hc1": 0.374,
+   "accord": 1.9
+  },
+  "LIBRE_DETACH_g11": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 982,
+   "nuits": 1476,
+   "mait": 15.0,
+   "gain": 1.0,
+   "c1": 3.896,
+   "c2": 1.907,
+   "hc1": 0.504,
+   "accord": 20.8
+  },
+  "LIBRE_DETACH_g22": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 872,
+   "nuits": 1476,
+   "mait": 20.0,
+   "gain": 1.0,
+   "c1": 3.0694999999999997,
+   "c2": 1.9315,
+   "hc1": 0.4205,
+   "accord": 30.0
+  },
+  "LIBRE_DETACH_g33": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 890,
+   "nuits": 1484,
+   "mait": 5.0,
+   "gain": 1.0,
+   "c1": 3.0305,
+   "c2": 2.3745000000000003,
+   "hc1": 0.58,
+   "accord": 6.95
+  },
+  "LIBRE_DETACH_g44": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 971,
+   "nuits": 1477,
+   "mait": 15.0,
+   "gain": 1.0,
+   "c1": 5.2325,
+   "c2": 2.3440000000000003,
+   "hc1": 0.4345,
+   "accord": 0.0
+  },
+  "LIBRE_DETACH_g55": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 1034,
+   "nuits": 1475,
+   "mait": 15.0,
+   "gain": 1.0,
+   "c1": 3.809,
+   "c2": 2.025,
+   "hc1": 0.6885,
+   "accord": 15.1
+  },
+  "LIBRE_DETACH_g66": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 958,
+   "nuits": 1475,
+   "mait": 15.0,
+   "gain": 1.0,
+   "c1": 3.8785,
+   "c2": 1.9845000000000002,
+   "hc1": 0.695,
+   "accord": 22.35
+  },
+  "LIBRE_DETACH_g77": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 901,
+   "nuits": 1475,
+   "mait": 15.0,
+   "gain": 1.0,
+   "c1": 4.866,
+   "c2": 2.2915,
+   "hc1": 0.4085,
+   "accord": 40.5
+  },
+  "LIBRE_DETACH_g88": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 943,
+   "nuits": 1483,
+   "mait": 20.0,
+   "gain": 1.0,
+   "c1": 4.4735,
+   "c2": 1.9425,
+   "hc1": 0.632,
+   "accord": 22.75
+  },
+  "LIBRE_DETACH_g99": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 850,
+   "nuits": 1478,
+   "mait": 15.0,
+   "gain": 1.0,
+   "c1": 3.8655,
+   "c2": 2.067,
+   "hc1": 0.4805,
+   "accord": 10.8
+  },
+  "LIBRE_DETACH_g111": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 979,
+   "nuits": 1477,
+   "mait": 20.0,
+   "gain": 1.0,
+   "c1": 4.3845,
+   "c2": 2.134,
+   "hc1": 0.435,
+   "accord": 0.0
+  },
+  "LIBRE_DETACH_g122": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 955,
+   "nuits": 1478,
+   "mait": 20.0,
+   "gain": 1.0,
+   "c1": 5.1365,
+   "c2": 2.0095,
+   "hc1": 0.412,
+   "accord": 2.0
+  },
+  "LIBRE_DETACH_g133": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 1004,
+   "nuits": 1474,
+   "mait": 15.0,
+   "gain": 1.0,
+   "c1": 4.2315000000000005,
+   "c2": 2.409,
+   "hc1": 0.429,
+   "accord": 0.0
+  },
+  "LIBRE_DETACH_g144": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 924,
+   "nuits": 1470,
+   "mait": 15.0,
+   "gain": 1.0,
+   "c1": 3.5069999999999997,
+   "c2": 2.1020000000000003,
+   "hc1": 0.4815,
+   "accord": 0.35
+  },
+  "LIBRE_DETACH_g155": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 798,
+   "nuits": 1477,
+   "mait": 5.0,
+   "gain": 1.0,
+   "c1": 3.7720000000000002,
+   "c2": 2.096,
+   "hc1": 0.403,
+   "accord": 8.65
+  },
+  "LIBRE_DETACH_g166": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 929,
+   "nuits": 1480,
+   "mait": 10.0,
+   "gain": 1.0,
+   "c1": 3.8295000000000003,
+   "c2": 2.074,
+   "hc1": 0.423,
+   "accord": 0.0
+  },
+  "LIBRE_DETACH_g177": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 856,
+   "nuits": 1482,
+   "mait": 5.0,
+   "gain": 1.0,
+   "c1": 3.7619999999999996,
+   "c2": 2.636,
+   "hc1": 0.581,
+   "accord": 0.0
+  },
+  "LIBRE_DETACH_g188": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 850,
+   "nuits": 1473,
+   "mait": 10.0,
+   "gain": 1.0,
+   "c1": 4.1205,
+   "c2": 2.6235,
+   "hc1": 0.5634999999999999,
+   "accord": 0.0
+  },
+  "LIBRE_DETACH_g199": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 901,
+   "nuits": 1474,
+   "mait": 20.0,
+   "gain": 1.0,
+   "c1": 3.707,
+   "c2": 1.963,
+   "hc1": 0.693,
+   "accord": 0.8
+  },
+  "LIBRE_DETACH_g211": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 911,
+   "nuits": 1478,
+   "mait": 15.0,
+   "gain": 1.0,
+   "c1": 4.6045,
+   "c2": 2.3945,
+   "hc1": 0.358,
+   "accord": 0.0
+  },
+  "LIBRE_DETACH_g222": {
+   "jours_final": 1500,
+   "niv": 4,
+   "vict": 962,
+   "nuits": 1478,
+   "mait": 10.0,
+   "gain": 1.0,
+   "c1": 4.8815,
+   "c2": 2.2345,
+   "hc1": 0.567,
+   "accord": 0.0
+  }
  }
 }

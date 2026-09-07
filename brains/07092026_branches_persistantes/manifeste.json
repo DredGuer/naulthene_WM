@@ -1,0 +1,23 @@
+{
+ "campagne": "07092026_branches_persistantes",
+ "commentaire": "Protocole pré-enregistré dans LISEZ_MOI.md (07/09/2026). Manifeste ajouté le 08/09/2026 au titre de MES-01 : transcription du protocole, aucune modification. Bonferroni 3 métriques (maîtrise, niveau, ratio h7/h1) — seuil dérivé de n. Le juge « accord C1/C2 » était DESCRIPTIF dans la version d'origine (seuil 1,96 non corrigé) ; il est désormais affiché avec le seuil de la famille pré-enregistrée, donc plus sévère, et son verdict est inchangé (NS).",
+ "mode": "confirmatoire",
+ "graines": [11, 22, 33, 44, 55, 66, 77, 88, 99, 111, 122, 133, 144, 155, 166, 177, 188, 199, 211, 222],
+ "jours_requis": 1500,
+ "alpha": 0.05,
+ "comparaisons_prevues": 3,
+ "bras": {
+  "BP": {"dossier": ".", "prefixe": "BP"},
+  "K8_NU": {"dossier": "../06092026_epoques_nuit", "prefixe": "K8_NU"}
+ },
+ "gardes": [
+  {
+   "nom": "voix libre — gain_c1 ≡ 1,00 dans les deux bras",
+   "variable": "gain",
+   "bras": ["BP", "K8_NU"],
+   "cible": 1.0,
+   "tolerance": 0.02
+  }
+ ],
+ "exclusions_autorisees": []
+}
