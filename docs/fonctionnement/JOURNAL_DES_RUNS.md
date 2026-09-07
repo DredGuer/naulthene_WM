@@ -29,15 +29,18 @@
 
 ## Runs
 
-### 🟡 `07092026_protoA_ppo_seuil60` — PPO face à la règle 60 % du cursus
+### ✅ `07092026_protoA_ppo_seuil60` — PPO face à la règle 60 % du cursus
 
 | | |
 |---|---|
 | **Début** | 2026-09-07 18:13 |
 | **Fin estimée** | ~18:50 *(dérivée du pré-vol A/A : 2 × 20 k pas en ~1 min, dont import torch)* |
-| **Fin réelle** | — |
+| **Fin réelle** | 2026-09-07 ~18:15 — 5/5 runs terminés, **0 échec** |
 | **Coût** | 5 runs PPO × 152 043 pas (arch [69,69]) · **banc** — zéro ligne de `noyau.py` |
-| **Statut** | 🟡 en cours |
+| **Statut** | ✅ terminée |
+
+**Écart estimé / réel** : ~35 min d'avance — l'estimation dérivée du pré-vol sur-comptait
+l'import torch ; 5 runs PPO en parallèle sur `mps` ≈ 2 min de calcul réel.
 
 **Pourquoi** : le seuil de promotion (`TAUX_PROMOTION` = 60 % × 20 épisodes) est au-dessus de
 ce que PPO atteint (36-40 %) sur `SimpleCrossingS9N1` — le mur du niveau 4 est-il en partie
@@ -47,6 +50,14 @@ consécutives, l'autre branche du OU).
 
 **Pré-vol (18:13)** : A/A 2 × 20 k pas — **vecteurs bit-identiques** (64 épisodes ×2) :
 la capture est valide.
+
+**Résultat ([carnet](../recherche/campagnes/PPO_AU_SEUIL_07092026_la_porte_60_n_est_pas_le_mur.md))** :
+**2/5 graines** passent au moins une fenêtre ≥ 12/20 (g11, g33 — celles qui convergent à
+~45-50 %) → verdict pré-enregistré : **le seuil 60 % n'est pas à lui seul le mur, le goulot
+est l'apprenant**. Route série : **4/5 graines** déclenchent la voie des 2 victoires
+consécutives (jusqu'à 47 occurrences) → un PPO dans le cursus (OU) ne resterait pas bloqué
+par la porte 60 %. ⚠️ n = 5, arch 69 seul, deux graines (g22, g44) convergent mal —
+instabilité de PPO lui-même, pas du script.
 
 [Protocole complet](../../brains/07092026_protoA_ppo_seuil60/LISEZ_MOI.md)
 

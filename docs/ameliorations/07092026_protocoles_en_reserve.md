@@ -39,6 +39,13 @@ demande de l'utilisateur après le [point général du 07/09](../etat_des_lieux/
 
 ## 1. Protocole A — PPO à budget égal face à la règle du cursus
 
+> 🟢 **LANCÉ et DÉPOUILLÉ le 07/09 soir** (152 043 pas, pas 600 k — décision du jour) :
+> **2/5 graines** passent au moins une fenêtre ≥ 12/20 → le seuil 60 % **n'est pas à lui
+> seul le mur, le goulot est l'apprenant** ; la route série (2 victoires consécutives)
+> suffirait à promouvoir un PPO dans le cursus (4/5 graines). **Conséquence : ne pas baisser
+> `TAUX_PROMOTION`.** Voir
+> [carnet](../recherche/campagnes/PPO_AU_SEUIL_07092026_la_porte_60_n_est_pas_le_mur.md).
+
 **Question** : le mur est-il la **règle du cursus** (seuil 60 % × 20 inatteignable), la **carte**, ou le **cerveau** ?
 
 **Pourquoi maintenant** : c'est la mesure manquante du point général §5.2. Elle borne toute décision sur `TAUX_PROMOTION` (proposition de le baisser à ~35 % le 07/09) — et elle n'exige **aucun changement du cerveau**.

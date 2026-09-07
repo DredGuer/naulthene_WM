@@ -1,0 +1,29 @@
+== brains/07092026_protoA_ppo_seuil60/ppo_g11.json  (arch 69, graine 11, 152,043 pas)
+   épisodes : 543 · taux victoire : 20.8 %
+   fenêtres de 20 : 524 · MAX victoires sur 20 : 12/20
+   fenêtres ≥ 12/20 : 5 (1.0 % des fenêtres) · premier passage épisode 472
+   route série (2 victoires consécutives) : 31 occurrence(s) · meilleure série : 5
+== brains/07092026_protoA_ppo_seuil60/ppo_g22.json  (arch 69, graine 22, 152,043 pas)
+   épisodes : 478 · taux victoire : 2.7 %
+   fenêtres de 20 : 459 · MAX victoires sur 20 : 5/20
+   fenêtres ≥ 12/20 : 0 (0.0 % des fenêtres)
+   route série (2 victoires consécutives) : 2 occurrence(s) · meilleure série : 2
+== brains/07092026_protoA_ppo_seuil60/ppo_g33.json  (arch 69, graine 33, 152,043 pas)
+   épisodes : 527 · taux victoire : 20.1 %
+   fenêtres de 20 : 508 · MAX victoires sur 20 : 12/20
+   fenêtres ≥ 12/20 : 8 (1.6 % des fenêtres) · premier passage épisode 487
+   route série (2 victoires consécutives) : 35 occurrence(s) · meilleure série : 8
+== brains/07092026_protoA_ppo_seuil60/ppo_g44.json  (arch 69, graine 44, 152,043 pas)
+   épisodes : 480 · taux victoire : 4.0 %
+   fenêtres de 20 : 461 · MAX victoires sur 20 : 4/20
+   fenêtres ≥ 12/20 : 0 (0.0 % des fenêtres)
+   route série (2 victoires consécutives) : 4 occurrence(s) · meilleure série : 3
+== brains/07092026_protoA_ppo_seuil60/ppo_g55.json  (arch 69, graine 55, 152,043 pas)
+   épisodes : 570 · taux victoire : 24.7 %
+   fenêtres de 20 : 551 · MAX victoires sur 20 : 11/20
+   fenêtres ≥ 12/20 : 0 (0.0 % des fenêtres)
+   route série (2 victoires consécutives) : 47 occurrence(s) · meilleure série : 6
+
+============================================================
+VERDICT — graines avec ≥ 1 fenêtre ≥ 12/20 : 2/5
+→ la porte 60 % est passée au moins une fois : le seuil n'est pas à lui seul le mur — le goulot est l'apprenant.

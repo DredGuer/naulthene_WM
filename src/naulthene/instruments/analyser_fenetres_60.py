@@ -92,7 +92,7 @@ def main():
         print(f"   fenêtres ≥ {SEUIL}/20 : {s['fenetres_ge_12']} "
               f"({s['fraction_fenetres_ge_12']*100:.1f} % des fenêtres)"
               + (f" · premier passage épisode {s['episode_premier_passage']}"
-                 if s["prem_passage"] else ""))
+                 if s["episode_premier_passage"] else ""))
         print(f"   route série (2 victoires consécutives) : {s['passages_2_consecutives']} "
               f"occurrence(s) · meilleure série : {s['meilleure_serie']}")
 
