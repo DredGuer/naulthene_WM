@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (C) 2026 Adrien Nault — Naulthène AGI
-#Version actuelle 41.64 — Variante LOCALE de test (Mac), terrain d'essai des mécaniques expérimentales.
+#Version actuelle 41.66 — Variante LOCALE de test (Mac), terrain d'essai des mécaniques expérimentales.
 # Versionné dans git depuis la v39.0 (2026-08-13), mais colab.py reste le script de référence :
 # rien de v18 → v41.49 n'y a été porté. Le marqueur ci-dessus suit le CHANGELOG (une entrée par
 # version) — il indiquait « 29 » jusqu'au 02/09/2026, périmé de 20 versions.
@@ -1111,7 +1111,8 @@ class AGI_Naulthene(nn.Module):
 
     @torch.no_grad()
     def simuler_futur_et_planifier(self, pensee, memoire_actuelle, horizons=(1, 3, 7),
-                                    gamma_planif=0.9, vecteur_bio=None):
+                                    gamma_planif=0.9, vecteur_bio=None,
+                                    trace_rollout=None):
         """Rollout imaginé NON-LINÉAIRE, à sauts temporels exponentiels (ex: t+1, t+3, t+7)
         plutôt qu'une chaîne pas-à-pas stricte t+1 → t+2 → t+3.
 
@@ -1211,6 +1212,23 @@ class AGI_Naulthene(nn.Module):
             valeur_horizon = self.cortex_prefrontal(pensee_branche).view(1, A)
             valeur_cumulee = valeur_cumulee + (gamma_planif ** horizon) * valeur_horizon
             pas_precedent = horizon
+
+            # v41.66 (MES-02) — TRACE D'INSPECTION OPTIONNELLE, LECTURE SEULE.
+            # La sonde d'horizon observe le rollout RÉEL par cette prise, sans aucune
+            # réimplémentation de la boucle (le piège de l'instrument du 01/09, et la
+            # duplication que MES-02 supprime). `trace_rollout = None` (défaut) ⇒ aucune
+            # instruction supplémentaire exécutée : le chemin d'entraînement est
+            # bit-identique. Quand une trace est fournie, tout tenseur remis est DÉTACHÉ
+            # sous `torch.no_grad()` : la trace ne peut ni sculpter le graphe ni modifier
+            # une valeur — elle observe, elle n'agit pas. `pensee_branche`/`mem_branche`
+            # sont les états des `A` branches AU TERME de l'horizon atteint (là où
+            # `valeur_horizon` est évaluée), exactement ce que mesure la sonde.
+            if trace_rollout is not None:
+                with torch.no_grad():
+                    trace_rollout(horizon=horizon,
+                                  pensee_branche=pensee_branche.detach(),
+                                  mem_branche=mem_branche.detach(),
+                                  valeur_horizon=valeur_horizon.detach())
 
         indecision_c2 = float(valeur_cumulee.std().item())
 

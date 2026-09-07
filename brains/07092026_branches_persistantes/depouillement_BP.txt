@@ -1,36 +1,39 @@
-=== COUVERTURE === 40/40 runs
+=== CAMPAGNE 07092026_branches_persistantes — mode CONFIRMATOIRE ===
+couverture : 40/40 runs (2 bras × 20 graines)
+exclusions : aucune
+  garde-fou « voix libre — gain_c1 ≡ 1,00 dans les deux bras » BP         gain = 1.0000 (attendu 1.0000 ± 0.02)  OK
+  garde-fou « voix libre — gain_c1 ≡ 1,00 dans les deux bras » K8_NU      gain = 1.0000 (attendu 1.0000 ± 0.02)  OK
+✅ tous les garde-fous passent, couverture conforme
+rollout h7/h1 : 40/40 mesures présentes
 
-=== JUGE 4 (GARDE-FOU) — le régime est-il le même partout ? (gain_c1 ≈ 1,00) ===
-  BP         gain_c1 moyen 1.0000  (attendu 1,00 — voix libre)  OK
-  K8_NU      gain_c1 moyen 1.0000  (attendu 1,00 — voix libre)  OK
-  => garde-fou PASSE
-
-=== JUGE 1 — MAITRISE (BP - K8_NU, apparié) ===
-  maîtrise                           d =   -2.100  t =  -0.87  NS   (7/20)
-    -> sans les 4 extremes           d =   +0.125  t =  +0.07  NS   (n=16)
+=== JUGE 1 — MAÎTRISE (BP - K8_NU, apparié) ===
+  maîtrise                         d =   -2.100  t =  -0.87  NS  (seuil 2.63, n=20)  (7/20)
+    -> sans les 4 extrêmes         d =   +0.125  t =  +0.07  NS  (seuil 2.69, n=16)  (6/16)
 
 === JUGE 2 — NIVEAU (BP - K8_NU) ===
-  niveau (apparié)                   d =   +0.100  t =  +0.70  NS   (5/20)
-    -> sans les 4 extremes           d =   +0.250  t =  +2.24  NS   (n=16)
+  niveau (apparié)                 d =   +0.100  t =  +0.70  NS  (seuil 2.63, n=20)  (5/20)
+    -> sans les 4 extrêmes         d =   +0.250  t =  +2.24  NS  (seuil 2.69, n=16)  (4/16)
   signe : 5 BP > K8_NU · 3 BP < K8_NU · 12 égaux
   Fisher (comptage ≥ 5) : BP 7/20 vs K8_NU 5/20  p = 0.7311
 
-=== JUGE 3 — MECANISTE : ratio h7/h1 du rollout (séparation des branches) ===
-  médiane BP : 1.2818   médiane K8_NU : 0.0118
-  log10(ratio) BP - K8_NU : d =   +1.868  t = +10.55  SIG  (19/20)
-    -> sans les 4 extremes           d =   +1.692  t =  +8.58  SIG  (n=16)
-  cerveaux à ratio > 0,05 : BP 20/20 · K8_NU 4/20
+=== JUGE 3 — MÉCANISTE : ratio h7/h1 du rollout (séparation des branches) ===
+  médiane BP : 1.0137   médiane K8_NU : 0.0073
+  log10(ratio) BP - K8_NU          d =   +2.251  t = +18.76  SIG (seuil 2.63, n=20)  (20/20)
+    -> sans les 4 extrêmes         d =   +2.068  t = +19.31  SIG (seuil 2.69, n=16)  (16/16)
+  cerveaux à ratio > 0,05 : BP 20/20 · K8_NU 2/20
 
 === JUGE 4 — ACCORD C1/C2 et ratio d'amplitude ===
-  accord C1/C2 % (apparié)           d =   -2.695  t =  -1.75  NS   (4/20)
-    -> sans les 4 extremes           d =   -0.866  t =  -1.66  NS   (n=16)
-  ratio C2/C1 médian : BP 0.401 · K8_NU 0.467
+  ⚠️ juge DESCRIPTIF à l'origine (seuil 1,96) ; jugé ici au seuil de la famille.
+  accord C1/C2 % (apparié)         d =   -2.695  t =  -1.75  NS  (seuil 2.63, n=20)  (4/20)
+    -> sans les 4 extrêmes         d =   -0.866  t =  -1.66  NS  (seuil 2.69, n=16)  (3/16)
+  ratio C2/C1 médian BP       0.401  (n=20)
+  ratio C2/C1 médian K8_NU    0.467  (n=20)
 
 === COMPTAGES ===
-  BP         niv>=5:  7/20 | maîtrise 0%:  0 | maîtrise moy 16.90% | victoires med 932 | niv max 5
-  K8_NU      niv>=5:  5/20 | maîtrise 0%:  1 | maîtrise moy 19.00% | victoires med 882 | niv max 5
+  BP         niv>=5:  7/20 | maîtrise 0%:  0 | maîtrise moy 16.90% | victoires méd 932 | niv max 5
+  K8_NU      niv>=5:  5/20 | maîtrise 0%:  1 | maîtrise moy 19.00% | victoires méd 882 | niv max 5
 
-=== VERIF — maîtrise à PALIER ÉGAL ===
+=== VÉRIF — maîtrise à PALIER ÉGAL ===
   BP         niv4:  20.0% (n=13) | niv5:  10.0% (n=7)
   K8_NU      niv4:  25.0% (n=15) | niv5:  10.0% (n=5)
 
