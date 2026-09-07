@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (C) 2026 Adrien Nault — Naulthène AGI
-#Version actuelle 41.66 — Variante LOCALE de test (Mac), terrain d'essai des mécaniques expérimentales.
+#Version actuelle 41.67 — Variante LOCALE de test (Mac), terrain d'essai des mécaniques expérimentales.
 # Versionné dans git depuis la v39.0 (2026-08-13), mais colab.py reste le script de référence :
 # rien de v18 → v41.49 n'y a été porté. Le marqueur ci-dessus suit le CHANGELOG (une entrée par
 # version) — il indiquait « 29 » jusqu'au 02/09/2026, périmé de 20 versions.
@@ -16,6 +16,7 @@ import wandb
 import numpy as np
 import math  # v41.2 — exp() pour la dérive métabolique et le seuil non linéaire
 import os    # v41.15 — NAULTHENE_DEVICE/THREADS, lus AVANT le choix du device ci-dessous
+from typing import NamedTuple  # v41.67 — sortie nommée de `penser()` (API-01)
 
 # v27.0 — hemisphere_audio est pur numpy (aucune dépendance PyTorch/réseau), donc
 # importable au chargement du module sans risque de cycle. Remonté ici plutôt que
@@ -686,6 +687,36 @@ NUM_ACTIONS_AVEC_C3 = 8
 # ne grandit jamais avec la neurogenèse (segments_in de tete_requete dans
 # declencher_neurogenese n'inclut donc pas ce vecteur, il n'existe même pas en entrée).
 DIM_ROUTAGE_C3 = 5         # jusqu'à 4 plugs adressables en 1_1 + 1 canal 1_X
+
+
+class SortiePenser(NamedTuple):
+    """v41.67 — API-01 : sortie NOMMÉE de `penser()`.
+
+    Un tuple positionnel à huit sorties a historiquement produit la confusion
+    `[1]` vs `[4]` (le banc lisait la VALEUR, un scalaire, au lieu de la MÉMOIRE DE
+    TRAVAIL — voir INSTRUMENT_01092026_la_memoire_du_banc.md). L'accès numérique
+    (`out[0]`, `out[4]`) reste parfaitement rétrocompatible (c'est un tuple) ;
+    l'accès par nom (`out.memoire_actuelle`, `out.valeur_etat_courant`) rend la
+    confusion impossible à la racine.
+
+    Ordre inchangé — identique au tuple historique :
+      0 logits_action (C1+C2 fusionnés, 8ème action masquée)
+      1 valeur_etat_courant (scalaire du critique — l'ANCIEN `[1]` piégé)
+      2 parametres_vocaux
+      3 pensee_enrichie
+      4 memoire_actuelle (l'ancien `[4]` que le banc devait lire)
+      5 bus_latent
+      6 logits_routage
+      7 indecision_c2
+    """
+    logits_action: object
+    valeur_etat_courant: object
+    parametres_vocaux: object
+    pensee_enrichie: object
+    memoire_actuelle: object
+    bus_latent: object
+    logits_routage: object
+    indecision_c2: object
 
 
 class AGI_Naulthene(nn.Module):
@@ -1632,9 +1663,17 @@ class AGI_Naulthene(nn.Module):
                 F.cross_entropy(logits_instinct, cible_c2)
             )
 
-        return (logits_finaux, valeur_etat_courant, parametres_vocaux,
-                pensee_enrichie, memoire_actuelle, bus_latent,
-                logits_routage, indecision_c2)
+        # v41.67 — API-01 : sortie NOMMÉE. Un tuple pur était rétrocompatible mais
+        # muet sur la SÉMANTIQUE de chaque position (confusion `[1]` vs `[4]` du 02/09).
+        # `SortiePenser` garde l'accès numérique intact et l'enrichit de l'accès par nom.
+        return SortiePenser(logits_action=logits_finaux,
+                            valeur_etat_courant=valeur_etat_courant,
+                            parametres_vocaux=parametres_vocaux,
+                            pensee_enrichie=pensee_enrichie,
+                            memoire_actuelle=memoire_actuelle,
+                            bus_latent=bus_latent,
+                            logits_routage=logits_routage,
+                            indecision_c2=indecision_c2)
 
     def generer_attente_reelle(self, pensee_enrichie, actions_idx):
         onehot = self.actions_eye[actions_idx]
