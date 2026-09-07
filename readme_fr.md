@@ -12,7 +12,7 @@ ajouter des dimensions à un vecteur — pas greffer un sous-système.
 30/08/2026** : cette ligne annonçait « 55 616 à la naissance » depuis des mois, et c'était
 faux — un cerveau naît à `BUS_REFERENCE_INITIAL = 16`, soit **7 760 paramètres** ; 55 616 est
 le même cerveau quatre neurogenèses plus tard. Mesuré, jamais estimé. La croissance ne s'arrête
-pas là : un cerveau à 1500 jours atteint une **médiane de 1 321 618 paramètres — ~24×** son
+pas là : un cerveau à 1500 jours atteint une **médiane de 1 321 618 paramètres — 28,2×** son
 total réel de naissance de **46 840** (44 cerveaux, mesuré le 07/09/2026 ; voir « La taille
 réelle » plus bas).
 
@@ -64,7 +64,10 @@ attribution du crédit, proprioception, attention descendante, dérive de repré
 cinématique — [rendement](docs/recherche/campagnes/RENDEMENT_01092026_le_gradient_assaini_ne_change_rien.md) ·
 [élan](docs/recherche/campagnes/ELAN_02092026_l_information_est_la_et_ne_sert_a_rien.md)).
 Ces deux dernières convergent sur une phrase : *l'information est là, et le réseau ne s'en
-sert pas*. Les seuls leviers qui aient jamais marché sont des propriétés du *monde*, pas du cerveau.
+sert pas*. **Jusqu'au 02/09**, les seuls leviers qui aient jamais marché étaient des
+propriétés du *monde*, pas du cerveau. **Depuis le 03-07/09, trois leviers mesurés de
+l'APPRENANT s'y ajoutent** : la voix libre (`gain_c1 ≡ 1`), `--detach-c2` (+5,25 pt),
+et les époques de nuit K (+10,25 pt, re-mesurées sur le rejeu corrigé, v41.64).
 
 **🟡 Un levier interne existe, et il ne débloque pas le cursus.** Retirer la renormalisation
 de C1 à chaque tick (`gain_c1 ≡ 1`, la « voix libre ») **double le taux de succès au banc
@@ -299,8 +302,8 @@ mesuré le plus net entre les deux, et la prochaine piste.
 
 | Métrique | Valeur |
 |---|---|
-| Niveau atteint | **4 sur 15** — 100 % des graines (n = 20 × 1500 jours, v41.23), **reproduit en v41.29** : 10/10 graines au niveau 4, 2/10 au niveau 5 (n=10, cursus complet) |
-| Niveau 5 | **4 graines sur 20** — 20 % [8–42], et le palier est **tenu** (jusqu'à 1078 nuits dessus) |
+| Niveau atteint | **4 sur 15 (`SimpleCrossingS9N1`)** — 100 % des graines (n = 20 × 1500 jours, v41.23), **reproduit en v41.29** : 10/10 graines au niveau 4, 2/10 au niveau 5 (n=10, cursus complet) |
+| Niveau 5 (`LavaGapS5`) | **4 graines sur 20** — 20 % [8–42], et le palier est **tenu** (jusqu'à 1078 nuits dessus) |
 | Ce qui a débloqué le niveau 4 | le **brain-sparing** : 0 % [0–16] → 80 % [58–92], 18 gagne / 0 perd (p < 0,001) |
 | Effet de couper C2 sur le score | **C2 est INERTE — établi le 05/09/2026 sur une ablation PROPRE** (`--sans-c2`, 20 graines × 1500 j, `gain_c1` intact) : δ maîtrise **−1,375 pt** (`t` = −1,15, NS, 5/20), **effet minimal détectable 3,42 pt**. ⚠️ Le résultat historique (« 0,0 point sur 6 niveaux ») était **confondu** — `c2_coupe` plaquait `gain_c1` à **0,25**, étranglant C1 — mais sa conclusion **survit** à la correction. 🔴 Le vrai levier est la **renormalisation de C1** : **20/20** cerveaux au niveau 4 contre **1/20** (`t` = +19,00). 🔴 **COMPLÉTÉ le 06/09/2026 — la VOIX est inerte, mais le GRADIENT NUISAIT** : `--detach-c2` en régime libre (20 graines × 1500 j) fait passer la maîtrise de **8,75 % à 14,00 %** (δ **+5,25 pt**, `t` = **+4,97**, **16/20**), et le résultat **survit au retrait des 4 extrêmes** (`t` = +4,57). Mécanisme : le critique consomme **89,24 %** du gradient d'`integrateur_bio` contre **6,57 %** pour l'acteur (40/40 cerveaux). ⚠️ **Le mur du niveau 4 tient** (20/20 des deux côtés) |
 | Valence apprise de l'**eau** | **+0,017 — sous le sol nu (+0,125)**, sur ~7 800 confirmations, 10/10 cerveaux. L'agent boit sans cesse et n'en apprend **rien**. Même signature que le bug v41.7 (valence de la nourriture à zéro sur 4 004 repas) : un résultat trop propre sur un canal à fort volume. **Canal potentiellement débranché — non vérifié** |

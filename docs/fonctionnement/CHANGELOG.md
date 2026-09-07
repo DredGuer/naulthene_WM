@@ -4,6 +4,52 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.69] - 2026-09-08 — DOC-01 : assainissement des vitrines
+
+| Type | Details |
+|------|---------|
+| **Catégorie** | docs (aucune ligne de `noyau.py` — pure documentation) |
+| **Impact** | Moyen — les vitrines racontent enfin le vrai ratio, la vraie règle de promotion et les vrais leviers |
+| **Registre** | [REGISTRE_PROBLEMES_A_CORRIGER](../../ameliorations/REGISTRE_PROBLEMES_A_CORRIGER.md) DOC-01 — exemple n°1-2-3 traités (reste : `ETAT_COURANT.md` unique + INDEX) |
+
+1. **Ratio de croissance** : « ~24× » → **28,2×** (`1 321 618 / 46 840`) dans `readme.md`,
+   `readme_fr.md` et `CLAUDE.md`, avec la distinction explicite paramètres appris seuls
+   (7 792) vs total avec buffers `base_weight` (46 840 à la naissance).
+2. **Mécanique de promotion** : la formulation « 2 victoires consécutives OU 60 % » est
+   qualifiée comme description des voies historiques (v35) ; la règle réelle du noyau
+   (`_maturite_niveau` : régularité × consolidation × autonomie ≥ `SEUIL_MATURITE`) est
+   désormais énoncée dans le CLAUDE.md.
+3. **Ambiguïté de carte** : les lignes « Niveau 4 » / « Niveau 5 » des vitrines portent
+   maintenant le couple `(env_id)` — `SimpleCrossingS9N1` et `LavaGapS5`.
+4. **Nuance des leviers** : « seuls les leviers du monde ont fonctionné » est daté
+   (jusqu'au 02/09) et complété par les trois leviers mesurés de l'apprenant (voix libre,
+   `--detach-c2`, époques de nuit).
+5. **Roadmaps** : aucune mention résiduelle du rejeu du banc « en cours » (bouclé le 02/09,
+   déjà corrigé).
+
+## [v41.68] - 2026-09-08 — SCI-01 : instrumentation du ratio de rejeu en console + protocole
+
+| Type | Details |
+|------|---------|
+| **Commit** | `2169fe4` (protocole + instrumentation) · `5f812ea` (lanceurs bash) · `eb5a012` (journal) |
+| **Catégorie** | instrument (ligne console conditionnelle) + campagne lancée |
+| **Registre** | SCI-01 (registre) — balayage K/ε en cours, Wave 1 n=10 × 6 bras |
+
+- `executer_nuit` affiche désormais une ligne console `Rejouer (v41.68)` quand
+  `EPOQUES_NUIT > 1` : parité max, entropie moy, **ratio moy/p90 et fraction clippée** —
+  ces indicateurs (clés `Rejouer_*` W&B) deviennent extractibles des `*.log` (besoin
+  SCI-01 : documenter l'effet propre de ε). Comportement numérique inchangé (impression
+  seule), en-tête 41.67 → 41.68.
+- **Campagne `08092026_sci01_balayage_K`** (protocole + manifeste strict MES-01 + lanceurs) :
+  Wave 1 = 6 bras × 10 graines × 1500 j (K1_TEMOIN, K2/K4/K8/K16_NU, K8_CLIP_e02 ; tous
+  en voix libre + `--detach-c2`). Aucun témoin historique réutilisé (rejeu faussé APP-01
+  ⇒ cerveaux du 07/09 non comparables).
+- ⚠️ Incident trace : premier lancement en zsh → `$EXTRA` non découpé → 60 faux échecs
+  argparse ; lanceurs passés en bash (`5f812ea`), relance propre (0 erreur, drapeau
+  `[VARIANTE]` présent), journal à jour.
+
+---
+
 ## [v41.67] - 2026-09-08 — API-01 : `SortiePenser`, et décision MES-04 (famille de 3)
 
 ### API-01 — la sortie de `penser()` devient nommée

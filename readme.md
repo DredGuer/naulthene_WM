@@ -11,8 +11,9 @@ layers, twelve hundred simulated days of continuous life. 🔴 **Corrected 30 Au
 line read "55,616 at birth" for months, and that was wrong — a brain is born at
 `BUS_REFERENCE_INITIAL = 16`, which is **7,760 parameters**; 55,616 is the same brain four
 neurogenesis events later. Measured, never estimated. Growth does not stop there: a brain at
-1500 days reaches a **median of 1,321,618 parameters — ~24×** its true birth total of
-**46,840** (44 brains, measured 7 Sep 2026; see "Real size" below).
+1500 days reaches a **median of 1,321,618 parameters — 28.2×** its true birth total of
+**46,840** (birth = 7,792 learned parameters alone + 39,048 plasticity buffers `base_weight`;
+**the ratio is computed on totals, never on learned parameters alone**) (44 brains, measured 7 Sep 2026; see "Real size" below).
 
 
 ### Real size: from birth to 1500 days — ✅ **measured 7 Sep 2026**
@@ -28,7 +29,7 @@ thermostat calls for it. Both bounds, counted with
 | ↳ smallest | 69 | — | — | 377,242 |
 | ↳ largest | 157 | — | — | 1,521,418 |
 
-> **The brain grows ~24× over a lifetime**, and the bus **9×**.
+> **The brain grows ~28.2× over a lifetime** (total incl. buffers), and the bus **9×**.
 >
 > ⚠️ **The spread is enormous**: 377k to 1.52M for the same code and the same number of days.
 > Since neurogenesis is triggered by JEPA error, an agent that lives and plays more episodes
@@ -87,7 +88,10 @@ assignment, proprioception, top-down attention, representational drift, and, on 
 anchoring — [rendement](docs/recherche/campagnes/RENDEMENT_01092026_le_gradient_assaini_ne_change_rien.md) ·
 [élan](docs/recherche/campagnes/ELAN_02092026_l_information_est_la_et_ne_sert_a_rien.md)).
 Those last two converge on one sentence: *the information is there, and the network does
-not use it*. The only levers that ever worked are properties of the *world*, not of the brain.
+not use it*. Until 2 Sep, the only levers that ever worked were properties of the
+*world*, not of the brain. **Since 3-7 Sep, three measured *learner* levers joined them**:
+free voice (`gain_c1 ≡ 1`), `--detach-c2` (+5.25 pt), and nightly epochs K
+(+10.25 pt, re-measured on the corrected replay, v41.64).
 
 **🟡 One internal lever exists, and it does not unlock the curriculum.** Removing the
 per-tick renormalisation of C1 (`gain_c1 ≡ 1`, the "free voice") **doubles the success rate
@@ -272,8 +276,8 @@ Two caveats, both measurable rather than rhetorical:
 
 | Metric | Value |
 |---|---|
-| Level reached | **4 out of 15** — 100 % of seeds (n = 20 × 1500 days, v41.23), **reproduced on v41.29**: 10/10 seeds reach level 4, 2/10 reach level 5 (n=10, full curriculum) |
-| Level 5 | **4 seeds out of 20** — 20 % [8–42], and the level is **held** (up to 1078 nights on it) |
+| Level reached | **4 out of 15 (`SimpleCrossingS9N1`)** — 100 % of seeds (n = 20 × 1500 days, v41.23), **reproduced on v41.29**: 10/10 seeds reach level 4, 2/10 reach level 5 (n=10, full curriculum) |
+| Level 5 (`LavaGapS5`) | **4 seeds out of 20** — 20 % [8–42], and the level is **held** (up to 1078 nights on it) |
 | What unlocked level 4 | **brain-sparing**: 0 % [0–16] → 80 % [58–92], 18 wins / 0 losses (p < 0.001) |
 | Effect of severing C2 on the score | **C2 IS INERT — established 5 Sep 2026 on a CLEAN ablation** (`--sans-c2`, 20 seeds × 1500 days, `gain_c1` intact): δ mastery **−1.375 pt** (`t` = −1.15, NS, 5/20), **minimum detectable effect 3.42 pt**. ⚠️ The historical result ("0.0 points across 6 levels") was **confounded** — `c2_coupe` pinned `gain_c1` to **0.25**, throttling C1 — but its conclusion **survives** the correction. 🔴 The real lever is C1's **renormalisation**: **20/20** brains reach level 4 against **1/20** (`t` = +19.00). 🔴 **COMPLETED 6 Sep 2026 — the VOICE is inert, but the GRADIENT was HARMFUL**: `--detach-c2` in the free regime (20 seeds × 1500 days) lifts mastery from **8.75 % to 14.00 %** (δ **+5.25 pt**, `t` = **+4.97**, **16/20**), and the result **survives dropping the four extremes** (`t` = +4.57). Mechanism: the critic consumes **89.24 %** of `integrateur_bio`'s gradient against **6.57 %** for the actor (40/40 brains). ⚠️ **The level-4 wall holds** (20/20 on both sides) |
 | Learned valence of **water** | **+0.017 — below bare floor (+0.125)**, over ~7,800 confirmations, 10/10 brains. The agent drinks constantly and learns **nothing** from it. Same signature as the v41.7 bug (food valence stuck at zero over 4,004 meals): a suspiciously clean result on a high-volume channel. **Possibly a severed channel — unverified** |

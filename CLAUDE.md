@@ -16,7 +16,10 @@ Naulthène AGI est un projet de recherche (packagé en `src/naulthene/`, cœur d
 - Une **consolidation nocturne (rêve)** à porosité adaptative : le pourcentage de souvenirs rejoués la nuit dépend de la plasticité du moment et de la richesse (importance moyenne) de la journée, pas d'une taille de batch fixe
 - Des **détecteurs de progrès génériques**, agnostiques de la carte (franchissement de portes, records de proximité à l'objectif), en plus du détecteur de jalons spécifique à `DoorKey` (cursus à 7 paliers)
 
-L'agent progresse à travers un **cursus académique** de **15 niveaux** MiniGrid (v35.0 — 5 avant), du Nourrisson (`Empty-5x5`) au Doctorat (planification longue distance), promu par **2 victoires consécutives OU 60 % de maîtrise sur une fenêtre glissante de 20 épisodes**.
+L'agent progresse à travers un **cursus académique** de **15 niveaux** MiniGrid (v35.0 — 5 avant), du Nourrisson (`Empty-5x5`) au Doctorat (planification longue distance), promu par une **maturité composée** (règle réelle du noyau : `_maturite_niveau` =
+régularité × consolidation × autonomie ≥ `SEUIL_MATURITE`) — l'ancienne présentation
+« 2 victoires consécutives OU 60 % de maîtrise sur 20 épisodes » décrit les voies
+historiques (v35), plus la mécanique actuelle de promotion.
 
 Ce n'est pas une application produit : c'est un script de recherche exécuté en continu (boucle de jours/ticks), instrumenté avec **Weights & Biases** pour le suivi expérimental — projet public [`Naulthene-AGI`](https://wandb.ai/naultadrien123-nvnc/Naulthene-AGI), ~90 métriques par nuit simulée. Pas de tests automatisés, pas de build — la validation passe par l'observation des courbes W&B et des logs console.
 
