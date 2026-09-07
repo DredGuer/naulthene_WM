@@ -61,7 +61,7 @@ Un problème ne passe à `✅ Clos` que si les quatre éléments suivants sont c
 | MES-04 | P1 | ✅ Clos | Le seuil `2,86` appliqué contredisait la famille de 3 métriques déclarée (2,625) | Décidé 08/09 : famille de 3, α = 0,05 ⇒ `t` = 2,625 (n=20) / 2,694 (n=16) |
 | QUA-01 | P1 | ✅ Clos | Absence de petite suite automatisée (CI : en attente d'infra) | Clos v41.70 — **44 tests CPU** (`test_contrats_cognitifs.py`) : API-01, APP-01, APP-02, MES-02 + 40 MES-01 ; commande unique documentée |
 | EVA-01 | P1 | 🔵 À mesurer | Le juge principal est bruité et dépend du palier atteint | Banc final standard sur cartes fixes |
-| DOC-01 | P1 | 🔴 Ouvert | L'état courant et l'historique se contredisent dans la documentation | État courant unique + miroir EN/FR |
+| DOC-01 | P1 | ✅ Clos | L'état courant et l'historique se contredisent dans la documentation | Clos v41.71 — `ETAT_COURANT.md` unique + INDEX nettoyé + miroir EN/FR vérifié |
 | PER-01 | P1 | 🟠 À reproduire | Le chargement permissif peut masquer une anomalie comme migration | Migrations explicites, strictes hors cas connus |
 | REP-01 | P2 | 🔴 Ouvert | Installation et versions non verrouillées | `pyproject`/contraintes et manifeste de run |
 | PER-02 | P2 | 🟠 À reproduire | Deux écrivains peuvent partager le même fichier temporaire de checkpoint | Temporaire unique, verrou, test d'incident |
@@ -582,9 +582,9 @@ Aucun incident de concurrence ou de coupure n'est établi.
 
 # 6. Documentation et reproductibilité
 
-## DOC-01 — L'état courant est noyé dans l'historique et contient des contradictions
+## DOC-01 — L'état courant est noyé dans l'historique et contient des contradictions — ✅ CLOS (08/09/2026)
 
-- **Priorité / statut** : **P1 — 🔴 Ouvert**
+- **Priorité / statut** : **P1 — ✅ Clos** (v41.69 `4e5410a` + miroir `6d9ae57` + clôture v41.71)
 
 ### Exemples à corriger ou requalifier
 
@@ -615,6 +615,28 @@ Aucun incident de concurrence ou de coupure n'est établi.
 - Audit croisé README EN/FR, CHANGELOG, INDEX et état courant.
 - Recalcul automatique ou script versionné pour les nombres dérivés importants.
 - Aucune archive historique effacée ; corrections annotées selon la règle de trace.
+
+### Clôture (08/09/2026, commits `4e5410a` + `6d9ae57` + v41.71)
+
+1. **Cause** : l'état courant était dispersé entre README, CHANGELOG et CLAUDE.md, avec des
+   blocs datés (02/09) qui contredisaient les résultats récents (23 réfutations, leviers de
+   l'apprenant) — la « piste en cours » de l'INDEX était dépassée depuis le 04/09.
+2. **Correction documentaire** :
+   - v41.69 (`4e5410a`) : ratio **×28,2** (46 840 → 1 321 618) partout, maturité composée,
+     `(env_id)` sur les niveaux, leviers de l'apprenant, entrée CHANGELOG v41.68 manquante ;
+   - `6d9ae57` : miroir FR du ratio + CLAUDE (protocole A dépouillé, plus « préparé ») ;
+   - **v41.71** : `docs/ETAT_COURANT.md` créé (instantané unique, réécrit après chaque
+     résultat majeur), `docs/INDEX.md` nettoyé (bloc « À lire en premier » → ETAT_COURANT,
+     carnets 07/09 ajoutés, comptages corrigés).
+3. **Vérification fraîche** : audit croisé des deux vitrines — `28,2×`/`~28,2` présent dans
+   l'intro et le bloc de mesure des deux README ; `1,01`/`1,01`, `18,76`/`18,76` et
+   `0,0073`/`0,0073` (requalification MES-02) présents des deux côtés ; résidus « ~24 » et
+   « 2,86 » **uniquement** dans les blocs historiques datés (v41.31) — conforme à la règle de
+   trace, aucune archive réécrite. Tous les liens de l'INDEX et d'ETAT_COURANT pointent vers
+   des fichiers existants (vérifié).
+4. **Entrée CHANGELOG** : [v41.71]. ⚠️ Restent hors périmètre DOC-01 : `ARC-01` (décision
+   `noyau.py`/`colab.py`, à trancher séparément) et la réduction de CLAUDE.md aux règles +
+   liens (dette documentaire, point général 07/09).
 
 ---
 
@@ -780,7 +802,7 @@ La tête d'intention reste cohérente avec la thèse du projet, mais elle dépen
 5. ✅ MES-04 : décision — famille de 3, α = 0,05 ⇒ `t` = 2,625 / 2,694. *(08/09/2026)*
 6. ✅ API-01 : `SortiePenser` nommée pour `penser()`. *(v41.67, `87b8967`)*
 7. ✅ QUA-01 : contrats noyau posés — **44 tests CPU** (v41.70). *(CI : en attente d'infra)*
-8. DOC-01 : corriger l'état courant et les termes statistiques.
+8. ✅ DOC-01 : corriger l'état courant et les termes statistiques. *(v41.69 + v41.71 — `ETAT_COURANT.md` unique + INDEX + miroir EN/FR)*
 
 ## Phase B — fiabilisation structurelle
 
@@ -814,6 +836,7 @@ La tête d'intention reste cohérente avec la thèse du projet, mais elle dépen
 | 2026-09-08 | MES-04 | ✅ Clos (décision) | CHANGELOG [v41.67] | — | Option A : famille de 3, α = 0,05 ⇒ `t` = 2,625 (n=20) / 2,694 (n=16) ; aucun `t` dans la bande litigieuse, aucun verdict basculé |
 | 2026-09-08 | API-01 | ✅ Clos | `87b8967` · CHANGELOG [v41.67] | CPU : type `SortiePenser`, index == noms sur 8/8 champs, déballage OK, `out[4] == out.memoire_actuelle` | Sortie nommée de `penser()` (NamedTuple, accès numérique rétrocompatible) |
 | 2026-09-08 | QUA-01 | ✅ Clos | v41.70 · CHANGELOG [v41.70] | **44 tests OK en 2,1 s** (CPU) : API-01 / APP-01 (16 régimes) / APP-02 / MES-02 + 40 MES-01 | `tests/test_contrats_cognitifs.py` ; commande `NAULTHENE_DEVICE=cpu venv/bin/python -m unittest discover -s tests` ; CI = point d'infra |
+| 2026-09-08 | DOC-01 | ✅ Clos | `4e5410a` · `6d9ae57` · v41.71 · CHANGELOG [v41.69] + [v41.71] | Audit croisé EN/FR : 28,2×/1,01/18,76/0,0073 présents des deux côtés, résidus historiques datés uniquement ; liens INDEX/ETAT_COURANT vérifiés | `ETAT_COURANT.md` créé (instantané unique) + INDEX nettoyé (bloc 02/09 remplacé, carnets 07/09 ajoutés) ; ARC-01 et réduction CLAUDE hors périmètre |
 
 ---
 

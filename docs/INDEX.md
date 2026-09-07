@@ -1,13 +1,15 @@
 # Index de la documentation — quelle question mène à quel document
 
-> Réorganisé le 29/08/2026. **Tout document doit figurer ici**, sinon il sera oublié.
-> `recherche/` était passé à 46 fichiers à plat : il est désormais découpé en trois niveaux.
+> Réorganisé le 29/08/2026, nettoyé le 08/09/2026 (DOC-01). **Tout document doit figurer
+> ici**, sinon il sera oublié. `recherche/` était passé à 46 fichiers à plat : il est
+> désormais découpé en trois niveaux.
 
 ## Les cinq dossiers, et ce qui fait autorité
 
 | Dossier | Nature | Fait autorité sur l'état courant ? |
 |---|---|---|
-| [`fonctionnement/`](fonctionnement/) | **normatif** | ✅ **oui** |
+| **[`ETAT_COURANT.md`](ETAT_COURANT.md)** | **l'instantané unique de l'état** (réécrit après chaque résultat majeur, DOC-01) | ✅ **oui** |
+| [`fonctionnement/`](fonctionnement/) | **normatif** (CHANGELOG, journal des runs) | ✅ **oui** |
 | [`recherche/`](recherche/) | **enquêtes** — non normatif, conserve les hypothèses réfutées | ❌ non |
 | [`ameliorations/`](ameliorations/) | **idées** proposées, non validées | ❌ non |
 | [`ameliorations_appliquees/`](ameliorations_appliquees/) | **livré**, garde la trace des options écartées | 🟡 partiellement |
@@ -15,25 +17,27 @@
 
 ---
 
-## 🔴 À lire en premier — l'état réel au 02/09/2026
+## 🔴 À lire en premier
 
-**Le tableau des suspects est vide, et le motif est devenu le résultat.** Vingt-et-une
-explications du plafond au niveau 4 ont été mesurées et réfutées. Les deux dernières
-(rendement mécanique v41.48, ancrage cinématique v41.49) ont été **livrées puis réfutées à
-n=20** et disent la même chose : qu'on retire du signal ou qu'on ajoute de l'information, le
-comportement ne bouge pas — *l'information est là, le réseau ne s'en sert pas*.
-✅ **Réserve d'instrument LEVÉE le 02/09** (rejeu 20/20) : la directivité **survit,
-affaiblie** — `r = −0,68`, **46 %** de la variance, et elle **ne survit plus** au retrait
-des 4 extrêmes. La mémoire de travail est une **source de variance**, pas un levier.
-🟡 **Piste en cours** : l'amplitude de la politique est bornée par construction
-(`gain_c1` asservi) — bras A codé, non mesuré.
+1. **[`ETAT_COURANT.md`](ETAT_COURANT.md)** — le mur réel (niveau N/15 + `env_id`), la
+   croissance ×28,2, les leviers mesurés de l'apprenant, les verrous ouverts/clos, la
+   campagne en cours. **C'est la seule source de vérité sur l'état courant.**
+2. Les carnets des résultats majeurs des derniers jours, dans l'ordre :
+   [EPOQUES_07092026](recherche/campagnes/EPOQUES_07092026_le_mur_du_niveau_4_est_franchi.md)
+   (le mur se déplace) ·
+   [BRANCHES_PERSISTANTES_07092026](recherche/campagnes/BRANCHES_PERSISTANTES_07092026_la_mecanique_marche_la_voix_reste_inerte.md)
+   (le canal est réparé, C2 ne s'en sert pas) ·
+   [DETACH_C2_06092026](recherche/campagnes/DETACH_C2_06092026_le_gradient_fantome_nuisait.md)
+   (le premier levier réel).
+3. Pour l'historique des réfutations : les deux tableaux de `recherche/` ci-dessous — une
+   piste réfutée ne se reteste pas.
 
 | Question | Document |
 |---|---|
-| Où en est le projet, sans enjolivure ? | [`../readme_fr.md`](../readme_fr.md) · [`../readme.md`](../readme.md) (EN) |
-| Qu'est-ce qui a été réfuté en dernier, et pourquoi ça converge ? | [campagnes/ELAN_02092026](recherche/campagnes/ELAN_02092026_l_information_est_la_et_ne_sert_a_rien.md) · [campagnes/RENDEMENT_01092026](recherche/campagnes/RENDEMENT_01092026_le_gradient_assaini_ne_change_rien.md) |
+| Où en est le projet, sans enjolivure ? | [`ETAT_COURANT.md`](ETAT_COURANT.md) — puis [`../readme_fr.md`](../readme_fr.md) · [`../readme.md`](../readme.md) (EN) |
+| Qu'est-ce qui a été réfuté en dernier, et pourquoi ça converge ? | [campagnes/CURSUS_04092026](recherche/campagnes/CURSUS_04092026_le_mur_tient_l_hemorragie_cesse.md) — la 23ᵉ réfutation (voix libre en cursus) · [campagnes/ELAN_02092026](recherche/campagnes/ELAN_02092026_l_information_est_la_et_ne_sert_a_rien.md) |
 | Quels chiffres publiés sont à reprendre ? | [campagnes/REJEU_02092026](recherche/campagnes/REJEU_02092026_la_directivite_survit_affaiblie.md) — les valeurs des 30-31/08 sont **remplacées** |
-| Pourquoi la politique n'est-elle jamais nette ? | [AMPLITUDE_02092026](recherche/AMPLITUDE_02092026_la_politique_ne_peut_pas_etre_nette.md) — hypothèse, **non testée** |
+| Pourquoi la politique n'est-elle jamais nette ? | [campagnes/PLATITUDE_06092026](recherche/campagnes/PLATITUDE_06092026_une_politique_sans_etat.md) — la variance est au mauvais endroit · [PAS_GRADIENT_06092026](recherche/PAS_GRADIENT_06092026_un_seul_pas_par_journee.md) — un pas de gradient par journée |
 | Le barème posé explique-t-il le plafond ? | [campagnes/COHORTE_30082026](recherche/campagnes/COHORTE_30082026_le_bareme_ne_predit_rien.md) — **non, tautologie** |
 | Que vaut l'agent face à un PPO ? | [campagnes/BASELINE_PPO_29082026](recherche/campagnes/BASELINE_PPO_29082026_le_mur_n_existe_pas.md) |
 | Qu'est-ce qui a changé, version par version ? | [fonctionnement/CHANGELOG.md](fonctionnement/CHANGELOG.md) |
@@ -56,11 +60,11 @@ des 4 extrêmes. La mémoire de travail est une **source de variance**, pas un l
 
 ## `recherche/` — trois niveaux
 
-### `recherche/enquetes_closes/` — **les pistes réfutées, série du 23/08 → 01/09/2026**
+### `recherche/enquetes_closes/` — **les pistes réfutées, série du 23/08 → 04/09/2026**
 
-Quatorze carnets, une série. À lire **avant de rouvrir une piste** : c'est ce qui évite de
-retester une idée déjà écartée. (Les réfutations à n ≥ 20 — RENDEMENT, ELAN — sont des
-**campagnes** et sont rangées dans le tableau suivant.)
+Seize carnets, une série. À lire **avant de rouvrir une piste** : c'est ce qui évite de
+retester une idée déjà écartée. (Les réfutations à n ≥ 20 — RENDEMENT, ELAN, CURSUS — sont
+des **campagnes** et sont rangées dans le tableau suivant.)
 
 | Document | Ce qui a été réfuté |
 |---|---|
@@ -89,9 +93,11 @@ retester une idée déjà écartée. (Les réfutations à n ≥ 20 — RENDEMENT
 | **[PAS_GRADIENT_06092026](recherche/PAS_GRADIENT_06092026_un_seul_pas_par_journee.md)** | ✅ **MESURE DIRECTE, zéro run** : la politique de Naulthène reçoit **UN SEUL pas de gradient par journée** de ~400 ticks (le 2ᵉ `step()`, celui du rêve, ne porte que JEPA — vérifié). Sur le même banc, PPO en fait **23 680** contre **1 500** : **63× plus de pas par tick vécu**. ⚠️ **Angle mort, pas piste écartée** — tout ce qui entoure ce gradient a été testé à n=20, jamais le NOMBRE d'applications. ⚠️ Aucun lien au plafond établi ; plus de pas peut être **pire** (MC multi-époques diverge sans clipping) |
 | **[PLATITUDE_06092026](recherche/campagnes/PLATITUDE_06092026_une_politique_sans_etat.md)** | 🔴 **POURQUOI C1 EST FIGÉ — la variance est au mauvais endroit.** Le classement des actions est dicté par des **biais moyens**, pas par l'état : ratio inter-actions/intra-temps **3,91** chez Naulthène contre **0,06** chez PPO (**60× inversé**), σ temporel d'un logit **0,108** contre **2,923** (**27×**). **38/40 cerveaux**. Naulthène est **indécis ET figé** (H = 1,930/1,946, 2,3 actions jouées sur 7) ; PPO est **décidé ET réactif**. ❌ Saturation des poids et « la tête ignore les dims qui varient » : **réfutées**. 🔴 **Découverte collatérale : 56 % des neurones de `pensee_bio` sont MORTS** (40/40 cerveaux, bus_latent 63 %) — mais **sans lien** avec la platitude (`r` = +0,13, NS) : deux pathologies distinctes |
 | **[ROLLOUT_06092026](recherche/campagnes/ROLLOUT_06092026_le_trou_noir_du_reflexe.md)** | ✅ **POURQUOI C2 N'A JAMAIS ÉVALUÉ 8 PLANS** (40 cerveaux, zéro run). Les branches du rollout perdent **97 %** de leur séparation avant h=7 (médiane 0,0295, 33/40 sous 0,10). 🔴 **La cause n'est pas JEPA** : à action répétée le ratio est **1,15** — c'est `argmax(tete_motrice)` qui ramène les 8 futurs en 3 pas. ❌ **« C1 est insensible » réfuté par témoin** (bruit calibré : 1,02 action distincte contre 1,05 pour les vrais futurs) : le vrai fait est que **la politique de C1 est plate** — il faut **doubler la norme** de la pensée pour la faire changer d'avis dans 13 % des cas, quand les futurs ne diffèrent que de **8,12 %** |
-| **[EPOQUES_07092026](recherche/campagnes/EPOQUES_07092026_le_mur_du_niveau_4_est_franchi.md)** | ✅ **LE PLUS FORT RÉSULTAT DU DÉPÔT — le mur du niveau 4 se déplace.** 8 pas de gradient par nuit au lieu d'un : maîtrise **8,75 % → 19,00 %** (δ **+10,25 pt**, `t` = **+4,81**, 15/20, **survit aux extrêmes** à `t` = +3,62), et **5 cerveaux sur 20 franchissent le niveau 5** contre **0/20**. 🔴 **Le clipping de PPO NUIT** — l'inverse de l'attente théorique (K8_CLIP : −1,00 pt, 7 cerveaux à 0 %). ⚠️ Le franchissement **ne passe pas Bonferroni** bras par bras (`p` = 0,024 vs 0,0167) et le **juge mécaniste échoue** (`t` = −2,47) : l'effet n'est pas explique par la platitude |
+| **[EPOQUES_07092026](recherche/campagnes/EPOQUES_07092026_le_mur_du_niveau_4_est_franchi.md)** | ✅ **LE PLUS FORT RÉSULTAT DU DÉPÔT — le mur se déplace** (mur réel = `SimpleCrossingS9N1`, affiché « 4/15 » ; le « niveau 5 » franchi = `LavaGapS5`, une carte au-delà). 8 pas de gradient par nuit au lieu d'un : maîtrise **8,75 % → 19,00 %** (δ **+10,25 pt**, `t` = **+4,81**, 15/20, **survit aux extrêmes** à `t` = +3,62), et **5 cerveaux sur 20 franchissent le mur** contre **0/20** — un palier que 40 runs sur 40 n'avaient jamais atteint. 🔴 **Le clipping de PPO NUIT** — l'inverse de l'attente théorique (K8_CLIP : −1,00 pt, 7 cerveaux à 0 %). ⚠️ Le franchissement **ne passe pas Bonferroni** bras par bras (`p` = 0,024 vs 0,0167) et le **juge mécaniste échoue** (`t` = −2,47) : l'effet n'est pas expliqué par la platitude |
+| **[BRANCHES_PERSISTANTES_07092026](recherche/campagnes/BRANCHES_PERSISTANTES_07092026_la_mecanique_marche_la_voix_reste_inerte.md)** | ✅ **LE CANAL EST RÉPARÉ, C2 NE S'EN SERT PAS** (20 graines × 1500 j face à K8_NU). Juge mécaniste (ratio h7/h1 du rollout) : médiane **0,0073 → 1,01** (log10 apparié `t` = **+18,76**, 20/20, survit aux extrêmes +19,31 — requalifié 08/09 par la sonde MES-02). Maîtrise (**−2,10 pt**, NS), niveau (7/20 vs 5/20, `p` = 0,73) et accord (**NS**) **nuls** — l'issue « acceptable » pré-enregistrée. La mécanique supprime l'effondrement du rollout, C2 ne sait pas s'en servir |
+| **[PPO_AU_SEUIL_07092026](recherche/campagnes/PPO_AU_SEUIL_07092026_la_porte_60_n_est_pas_le_mur.md)** | ❌ **LA PORTE 60 % N'EST PAS LE MUR** (protocole A, PPO face au seuil de promotion du cursus). **2/5 graines ≥ 12/20** fenêtres passées → le seuil n'est pas ce qui bloque ; `TAUX_PROMOTION` n'est pas abaissé |
 | **[DETACH_C2_06092026](recherche/campagnes/DETACH_C2_06092026_le_gradient_fantome_nuisait.md)** | ✅ **LE PREMIER LEVIER RÉEL EN CURSUS COMPLET.** Couper le gradient de C2 vers la couche partagée : maîtrise **8,75 % → 14,00 %** (δ **+5,25 pt**, `t` = **+4,97**, **16/20**), et le résultat **survit au retrait des 4 extrêmes** (`t` = +4,57) — le test qui avait tué la directivité et la voix libre. 🔴 La prédiction pré-enregistrée (« probablement rien ») est **réfutée**. ⚠️ **Le mur du niveau 4 tient** (20/20 des deux côtés, juge saturé) et les **victoires cumulées ne survivent pas aux extrêmes** (`t` +3,42 → +2,35) |
-| **[PPO_LAVAGAP_06092026](recherche/campagnes/PPO_LAVAGAP_06092026_le_mur_n_est_pas_la_carte.md)** | ❌ **LE MUR N'EST PAS LA CARTE.** La baseline « le mur n'existe pas » avait été mesurée au niveau **3** ; refaite au niveau **4** (`LavaGapS5`, où 40 runs sur 40 s'arrêtent) : **PPO réussit à 97,27 %** (n=5, min 90,67 %, δ_A/A = 0,000000) contre **6,67 %** pour le marcheur aléatoire — **14,6×**. 🔴 L'écart **se creuse** avec la facilité : 2,3× au niveau 3, ~tout au niveau 4. Retire sa justification à la permutation du cursus |
+| **[PPO_LAVAGAP_06092026](recherche/campagnes/PPO_LAVAGAP_06092026_le_mur_n_est_pas_la_carte.md)** | ⚠️ **CARNET RÉTRACTÉ le 07/09** — PPO y résout `LavaGapS5` à **97,27 %**, mais cette carte n'était **PAS** celle du blocage : le mur réel est `SimpleCrossingS9N1` (index 3, affiché « 4/15 »), et `LavaGapS5` (index 4) est une carte **au-delà** du mur — jamais atteinte par Naulthène, jamais mesurée contre PPO sur la bonne carte. La preuve « le mur n'est pas la carte » reste à faire sur `SimpleCrossingS9N1` |
 | **[SONDES_06092026](recherche/campagnes/SONDES_06092026_le_levier_s_efface_le_corps_domine.md)** | ✅ **DEUX SONDES À COÛT ZÉRO** (40 cerveaux). 🔴 **Le levier de l'agent s'efface** : la sensibilité de JEPA à l'action est divisée par **10** entre un cerveau neuf (ratio 4,79) et un cerveau de 1500 j (**0,48**) — `δ_action` ÷5, `δ_temps` ×2,5. ❌ **La dilution d'`integrateur_bio` est RÉFUTÉE** : le corps pèse **2,5 à 5,6×** la vision. 🔴 **Une norme n'est PAS un usage** — `élan` pèse 3,41× et son effet fut **nul à n=20**. 3 canaux au plancher Xavier (vocal, Exo-Sens, présence auditive). 🔴 **3ᵉ sonde** : le **critique consomme 89,24 %** du gradient d'`integrateur_bio` (l'entrée unique de la décision) contre **6,57 %** pour l'acteur — **40/40 cerveaux**, et la voix libre divise cette domination par 2,4 |
 | **[ABLATION_C2_05092026](recherche/campagnes/ABLATION_C2_05092026_l_organe_muet.md)** | ✅ **C2 EST MUET — la question est tranchée.** Première ablation qui isole vraiment C2 (`--sans-c2`, `gain_c1` intact vs **0,25** pour `c2_coupe`). δ maîtrise **−1,375** (`t` = −1,15, NS, 5/20), effet minimal détectable **3,42 pt**. ⚠️ Le juge « niveau » est **SATURÉ** (40 runs au plafond du niv. 4). ⚠️ L'inversion de maîtrise du juge 3 est un **artefact de palier** (10,0 % vs 10,0 % à niveau égal). 🔴 Le vrai levier est la **renormalisation de C1** : **20/20** au niveau 4 contre **1/20** |
 | **[ATROPHIE_05092026](recherche/campagnes/ATROPHIE_05092026_la_boucle_de_compensation.md)** | ✅ **MÉCANISME DU RÉGIME TÉMOIN ÉTABLI** (zéro run) : `C1` **s'atrophie chez 20 témoins sur 20** (−0,81 d'amplitude brute, `t` = −7,82) et `gain_c1` monte d'exactement ce qu'il faut pour le masquer (+1,05, `t` = +7,96 ; `r` = **−0,75**, compensation serrée). Écart apparié final **+3,26**, `t` = **+16,55**, 20/20. 🔴 **Rectifie le mot « effondrement »** : **0 régression de niveau** sur 40 runs. ❌ Réfute la « voix figée » — le signe est **inversé** (`r` = −0,67) |
@@ -117,7 +123,7 @@ retester une idée déjà écartée. (Les réfutations à n ≥ 20 — RENDEMENT
 | Document | Sujet |
 |---|---|
 | [dia_Aout_2026.md](recherche/dia_Aout_2026.md) | **le diagnostic système** — plus utile que le README |
-| [AMPLITUDE_02092026](recherche/AMPLITUDE_02092026_la_politique_ne_peut_pas_etre_nette.md) | 🟡 **hypothèse mécanique, non testée** : `gain_c1` asservi à `2,1 × f` et C2 z-scoré bornent l'amplitude des logits joués — la politique **ne peut pas** devenir nette ; 1 pas d'optimiseur/nuit contre ≈ 23 700 pour PPO (**59×**) ; l'ablation « C2 coupé = 0,0 » est **confondue** (force = 0 ⇒ gain C1 = 0,25). Corrélations n=20 toutes NS, banc à 3 bras proposé |
+| [AMPLITUDE_02092026](recherche/AMPLITUDE_02092026_la_politique_ne_peut_pas_etre_nette.md) | 🟡 **hypothèse mécanique** : `gain_c1` asservi à `2,1 × f` et C2 z-scoré bornent l'amplitude des logits joués — la politique **ne peut pas** devenir nette ; l'ablation « C2 coupé = 0,0 » est **confondue** (force = 0 ⇒ gain C1 = 0,25). Corrélations n=20 toutes NS. ⚠️ La prémisse « 1 pas d'optimiseur/nuit » a été **mesurée directement** le 06/09 ([PAS_GRADIENT](recherche/PAS_GRADIENT_06092026_un_seul_pas_par_journee.md)) ; la réponse au plafond est venue des époques de nuit ([EPOQUES_07092026](recherche/campagnes/EPOQUES_07092026_le_mur_du_niveau_4_est_franchi.md)) |
 | [BOUSSOLE_01092026](recherche/BOUSSOLE_01092026_le_latent_n_est_pas_metrique.md) | 🟡 mesure exploratoire (n=1) **avant de coder** : l'agent est **aveugle au but 84 %** du temps et le reconnaît à **d' = 8,89** — mais le latent **n'est pas métrique** (`r = +0,13`). Boussole non codée |
 | [recherche_bug_or_not_bug.md](recherche/recherche_bug_or_not_bug.md) | **les 18 erreurs de diagnostic**, H1→H18 |
 | [ETAT_DU_PROJET_aout_2026.md](recherche/ETAT_DU_PROJET_aout_2026.md) | état du projet |
