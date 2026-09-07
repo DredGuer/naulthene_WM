@@ -534,6 +534,7 @@ Il n'y a ni linter ni suite de tests automatisés configurés. Toute vérificati
 | Un **instrument est corrigé** | ✅ ce qu'il mesurait faux, et depuis quand |
 | Un **artefact est écarté** | ✅ le test qui l'a écarté, pas seulement sa conclusion |
 | Du code est modifié | ✅ CHANGELOG (règle préexistante) |
+| **Un run est lancé** | ✅ **[`JOURNAL_DES_RUNS.md`](docs/fonctionnement/JOURNAL_DES_RUNS.md)** — titre, début, fin estimée, pourquoi (voir §2bis) |
 
 ⚠️ **L'échec compte autant que le succès.** Sur ce projet, les défauts trouvés dans le banc
 d'essai ont plus fait avancer que les mécaniques ajoutées. Une piste morte non écrite sera
@@ -550,6 +551,33 @@ Un document de mesure contient, sans exception :
    résultat, y compris quand elles ne trouvent rien.
 5. **Les limites**, écrites par soi-même avant que quelqu'un d'autre ne les trouve.
 6. **Ce que cela ferme et ce que cela laisse ouvert.**
+
+### 2bis. 🔴 OBLIGATOIRE — le journal des runs, écrit AU LANCEMENT
+
+**Tout run lancé s'inscrit dans [`docs/fonctionnement/JOURNAL_DES_RUNS.md`](docs/fonctionnement/JOURNAL_DES_RUNS.md)
+AVANT que le premier processus démarre.** Le `LISEZ_MOI.md` de campagne porte le
+**protocole** ; ce journal porte le **calendrier**. Les deux sont obligatoires.
+
+| Champ | Règle |
+|---|---|
+| **Titre** | le nom de la campagne, jamais la conclusion espérée |
+| **Date de début** | `date "+%Y-%m-%d %H:%M"` **au lancement**, jamais reconstruite après coup |
+| **Fin estimée** | dérivée du **rythme mesuré** après ~30 min de run, jamais devinée |
+| **Fin réelle** | remplie à la fin — **l'écart avec l'estimation est une information** |
+| **Pourquoi on le lance** | la question posée, en une phrase, telle qu'elle a été formulée |
+| **Statut** | 🟡 en cours · ✅ terminée · ❌ échouée/annulée |
+
+⚠️ **Pourquoi cette règle existe** (07/09/2026) : la campagne des branches persistantes avait
+son protocole complet et **aucun horodatage versionné** — début, fin estimée et fin réelle
+n'existaient que dans les métadonnées du système de fichiers, qui ne survivent **ni à un
+`git clone` ni à une copie**. Et l'estimation annoncée à l'oral (« ~2 h ») s'est révélée
+fausse d'un **facteur 3** : le rythme réel mesuré donnait **~6 h**. Un écart de cette taille
+est invisible sans trace écrite, et il fausse toute planification qui s'appuie dessus.
+
+⚠️ **Une campagne ANNULÉE reste au journal, avec sa raison.** Le 05/09, une campagne audio de
+8 h a été annulée par son propre pré-vol (ablation **vide** : aucun gradient n'avait jamais
+traversé l'organe). C'est exactement le genre d'entrée qui évite de la relancer six semaines
+plus tard.
 
 ### 3. L'agrégat machine, à côté du texte
 

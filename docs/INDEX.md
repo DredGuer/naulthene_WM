@@ -47,6 +47,7 @@ des 4 extrêmes. La mémoire de travail est une **source de variance**, pas un l
 | Document | Rôle |
 |---|---|
 | [CHANGELOG.md](fonctionnement/CHANGELOG.md) | **la référence factuelle**, version par version |
+| **[JOURNAL_DES_RUNS.md](fonctionnement/JOURNAL_DES_RUNS.md)** | 🔴 **NORMATIF** — une ligne par campagne, écrite **au lancement** : titre, date de début, fin estimée (dérivée du rythme mesuré), fin réelle, pourquoi. Les campagnes **annulées** y restent avec leur raison |
 | [LANCEMENT.md](fonctionnement/LANCEMENT.md) | commandes, dépannage |
 | [explications_readme.md](fonctionnement/explications_readme.md) | détail algorithmique, §15 sens |
 | [Parcourt_readme.md](fonctionnement/Parcourt_readme.md) | parcours de lecture |
