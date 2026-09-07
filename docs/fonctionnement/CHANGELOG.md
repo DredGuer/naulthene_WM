@@ -4,6 +4,47 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.67] - 2026-09-08 — API-01 : `SortiePenser`, et décision MES-04 (famille de 3)
+
+### API-01 — la sortie de `penser()` devient nommée
+
+| Type | Details |
+|------|---------|
+| **Commit** | `87b8967` |
+| **Catégorie** | interface (NamedTuple) — ordre du tuple inchangé, aucun consommateur cassé |
+| **Impact** | Moyen — rend impossible à la racine la confusion `[1]` vs `[4]` (INSTRUMENT_01092026) |
+| **Registre** | [REGISTRE_PROBLEMES_A_CORRIGER](../../ameliorations/REGISTRE_PROBLEMES_A_CORRIGER.md) API-01 → ✅ Clos |
+
+`penser()` retourne désormais un `SortiePenser(NamedTuple)` — mêmes huit champs, même ordre
+(`logits_action`, `valeur_etat_courant`, `parametres_vocaux`, `pensee_enrichie`,
+`memoire_actuelle`, `bus_latent`, `logits_routage`, `indecision_c2`). L'accès numérique
+(`out[0]`, `out[4]`) reste rétrocompatible (c'est un tuple) ; l'accès par nom
+(`out.memoire_actuelle`, `out.valeur_etat_courant`) supprime la confusion sémantique.
+
+**Vérification (CPU)** : type `SortiePenser` ; `index == nom` sur les **8** champs ;
+déballage 8-tuple OK ; `out[4] == out.memoire_actuelle`, `out[1] ==
+out.valeur_etat_courant`. Les instruments existants lisent toujours par index — valides,
+migration aux noms au fil de l'eau (QUA-01/DOC-01).
+
+### MES-04 — décision : la famille de 3 est la convention
+
+Le seuil appliqué historiquement (2,861 = α 0,01, famille de 5) contredisait la règle
+déclarée (« Bonferroni 3 métriques » = **2,625** à n=20). **Décision (08/09/2026)** : la
+famille de 3 est la convention — seuils **2,625** (n=20) et **2,694** (n=16 après retrait
+des extrêmes), déjà dérivés par `depouillement.seuil_t` depuis la v41.65. Le résidu
+conservateur 2,861 est abandonné (écart non documenté, pas une politique).
+
+**Conséquence** : aucun verdict publié ne bascule — aucun `t` du dépôt ne tombe dans la
+bande [2,625 ; 2,861) (le plus proche, juge 2 de K8, vaut +2,52, toujours NS). Les manifestes
+transcrivent déjà la famille 3.
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | en-tête **41.66 → 41.67** ; `SortiePenser` (NamedTuple) ; retour de `penser()` nommé |
+| REGISTRE MES-04 / API-01 | → ✅ Clos (décision / interface posée) |
+
+---
+
 ## [v41.66] - 2026-09-08 — MES-02 : la sonde observe le rollout RÉEL (trace lecture seule)
 
 ### La racine (registre MES-02) — l'instrument recopiait la boucle de C2

@@ -56,9 +56,9 @@ Un problème ne passe à `✅ Clos` que si les quatre éléments suivants sont c
 | MES-01 | P0 | ✅ Clos | Le dépouillement peut publier sur une cohorte incomplète ou un garde-fou échoué | Corrigé v41.65 (`54c1867`) — primitive stricte + manifestes, 6 scripts migrés |
 | MES-02 | P0 | ✅ Clos | La sonde du rollout réimplémente encore le noyau | Corrigé v41.66 (`48aa8a6`) — trace `trace_rollout` + sonde canonique |
 | APP-03 | P1 | 🔴 Ouvert | Deux identités/configurations du module `noyau` | Point d'entrée léger et configuration unique |
-| API-01 | P1 | 🔴 Ouvert | Le tuple positionnel de `penser()` est fragile | Sortie nommée et validations de forme |
+| API-01 | P1 | ✅ Clos | Le tuple positionnel de `penser()` est fragile | Corrigé v41.67 (`87b8967`) — `SortiePenser` (NamedTuple) |
 | MES-03 | P1 | 🔴 Ouvert | Des dispersions de récompense sont présentées comme parts du gradient | Corriger le vocabulaire et mesurer séparément |
-| MES-04 | P1 | 🟡 À décider | Le seuil `2,86` appliqué contredit la famille de 3 métriques déclarée (2,625) | Trancher : famille de 3, ou α = 0,01 assumé |
+| MES-04 | P1 | ✅ Clos | Le seuil `2,86` appliqué contredisait la famille de 3 métriques déclarée (2,625) | Décidé 08/09 : famille de 3, α = 0,05 ⇒ `t` = 2,625 (n=20) / 2,694 (n=16) |
 | QUA-01 | P1 | 🟠 Amorcé | Absence de petite suite automatisée et de CI | `tests/` livré en v41.65 (40 tests) ; reste `penser()` et la CI |
 | EVA-01 | P1 | 🔵 À mesurer | Le juge principal est bruité et dépend du palier atteint | Banc final standard sur cartes fixes |
 | DOC-01 | P1 | 🔴 Ouvert | L'état courant et l'historique se contredisent dans la documentation | État courant unique + miroir EN/FR |
@@ -361,9 +361,12 @@ entropie — mais pas une attribution Bio contre Env et pas leurs directions ou 
 
 ---
 
-## MES-04 — Le seuil appliqué contredit la famille de tests déclarée
+## MES-04 — Le seuil appliqué contredisait la famille de tests déclarée — ✅ CLOS (décision 08/09/2026)
 
-- **Priorité / statut** : **P1 — 🟡 À décider** (constaté le 08/09/2026 pendant MES-01)
+- **Priorité / statut** : **P1 — ✅ Clos (décision)** — famille déclarée de **3** métriques,
+  α = 0,05 ⇒ `t` = **2,625** (n=20, df=19) et **2,694** (n=16 après retrait des extrêmes).
+  Le résidu conservateur 2,861 (α = 0,01) est abandonné : ce n'était pas une convention,
+  c'était un écart non documenté.
 
 ### Le fait
 
@@ -385,21 +388,24 @@ phrases de la même ligne ne désignent pas le même test.
 - **Aucun `t` du dépôt ne tombe dans la bande litigieuse.** Le plus proche est le juge 2 de
   K8 (niveau, `t` = **+2,52**, contre un seuil de 2,625) : près du seuil, toujours NS.
 
-### La décision à prendre
+### La décision (prise le 08/09/2026 — option A)
 
-| Option | Effet |
-|---|---|
-| **A — famille de 3 assumée** (2,625 / 2,694) | cohérent avec les LISEZ_MOI ; desserre légèrement le critère des campagnes futures |
-| **B — α = 0,01 assumé** (2,861 / 2,947) | conserve le comportement historique ; il faut alors corriger la phrase « Bonferroni 3 métriques » partout |
+**Famille de 3 assumée, α = 0,05** : seuils `t` = **2,625** (n = 20) et **2,694** (n = 16),
+dérivés par `depouillement.seuil_t` (v41.65). C'est la valeur exacte de la règle déclarée
+dans les LISEZ_MOI. Le résidu conservateur 2,861 (α = 0,01, famille de 5) est **abandonné** :
+ce n'était pas une convention, c'était un écart non documenté — conserver l'écart parce qu'il
+est conservateur reviendrait à documenter une faute de frappe comme une politique.
 
-Les manifestes livrés en v41.65 transcrivent la famille **déclarée** (option A) parce qu'un
-manifeste transcrit un protocole, il ne le réécrit pas. ⚠️ **Tant que ce point n'est pas
-tranché, ne requalifier en « significatif » aucun résultat qui ne passait pas 2,86.**
+**Conséquences** : aucun verdict publié ne bascule (aucun `t` dans la bande litigieuse — le
+plus proche, le juge 2 de K8, vaut +2,52 < 2,625, toujours NS). Les manifestes transcrivent
+déjà la famille 3 (v41.65) et les dépouillements affichent déjà les seuils dérivés 2,63/2,69.
 
-### Critères de clôture
+### Critères de clôture — vérifiés
 
-- Option choisie, écrite une seule fois, et reportée dans les manifestes.
-- Vérification qu'aucun verdict publié ne bascule sous l'option retenue (déjà fait pour A).
+- Option choisie, écrite une seule fois, reportée dans les manifestes : ✅ (manifestes v41.65,
+  familles `comparaisons_prevues` = 3, α = 0,05).
+- Aucun verdict publié ne bascule sous l'option retenue : ✅ vérifié (aucun `t` dans la bande
+  [2,625 ; 2,861)).
 
 ---
 
@@ -433,9 +439,9 @@ Une promotion change aussi la carte finale sur laquelle la maîtrise est lue.
 
 # 5. API, tests et persistance
 
-## API-01 — Le contrat positionnel de `penser()` est fragile
+## API-01 — Le contrat positionnel de `penser()` est fragile — ✅ CLOS (08/09/2026)
 
-- **Priorité / statut** : **P1 — 🔴 Ouvert**
+- **Priorité / statut** : **P1 — ✅ Clos** (v41.67, commit `87b8967`)
 
 ### Preuves
 
@@ -456,6 +462,19 @@ s'agit pas d'un bug actif démontré.
 - Test de compatibilité avec le déballage existant pendant la migration.
 - Aucun nouvel accès numérique dans les instruments.
 - Tests des champs et de leurs formes.
+
+### Clôture (08/09/2026, commit `87b8967`)
+
+1. **Cause** : tuple positionnel de 8 sorties, muet sur la sémantique de chaque position —
+   confusion historique `[1]` (valeur) vs `[4]` (mémoire de travail), `INSTRUMENT_01092026`.
+2. **Correction** : `SortiePenser(NamedTuple)` (v41.67) — ordre **inchangé**, accès numérique
+   rétrocompatible, accès par nom (`out.memoire_actuelle`, `out.valeur_etat_courant`…)
+   impossible à confondre à la racine.
+3. **Vérification fraîche (CPU)** : type `SortiePenser` ; `index == nom` sur les **8** champs ;
+   déballage 8-tuple OK ; `out[4] == out.memoire_actuelle`, `out[1] ==
+   out.valeur_etat_courant`. Les instruments existants qui lisent par index restent valides
+   (rétrocompatibilité) ; migration aux noms au fil de l'eau (QUA/DOC).
+4. **Entrée CHANGELOG** : [v41.67].
 
 ---
 
@@ -743,10 +762,10 @@ La tête d'intention reste cohérente avec la thèse du projet, mais elle dépen
 2. ✅ APP-02 : test de gradient K + detach. *(v41.64)*
 3. ✅ MES-01 : rendre le dépouillement strict. *(v41.65)*
 4. ✅ **MES-02 : supprimer la duplication instrument/noyau.** *(v41.66, `48aa8a6`)*
-5. MES-04 : trancher la famille de tests (2,625 déclaré contre 2,861 appliqué).
-6. API-01 et QUA-01 : installer la première suite de contrats — **amorcée** par `tests/`
-   (40 tests stdlib) livré avec MES-01 ; reste à couvrir `penser()` et à installer la CI.
-7. DOC-01 : corriger l'état courant et les termes statistiques.
+5. ✅ MES-04 : décision — famille de 3, α = 0,05 ⇒ `t` = 2,625 / 2,694. *(08/09/2026)*
+6. ✅ API-01 : `SortiePenser` nommée pour `penser()`. *(v41.67, `87b8967`)*
+7. QUA-01 : étendre la suite `tests/` (40 tests stdlib, v41.65) à `penser()` et installer la CI.
+8. DOC-01 : corriger l'état courant et les termes statistiques.
 
 ## Phase B — fiabilisation structurelle
 
@@ -777,6 +796,8 @@ La tête d'intention reste cohérente avec la thèse du projet, mais elle dépen
 | 2026-09-08 | MES-01 | ✅ Clos | `54c1867` · CHANGELOG [v41.65] | 40 tests `unittest` verts ; épreuves réelles : rollout retiré → exit 1, log tronqué 900/1500 → exit 1 et agrégat binairement inchangé ; re-dépouillement des 6 campagnes, 0 verdict changé, parité champ à champ 0/60 divergence | Primitive `depouillement.py` + `journal_cursus.py` + 6 manifestes ; 6 scripts migrés |
 | 2026-09-08 | MES-02 | ✅ Clos | `48aa8a6` · CHANGELOG [v41.66] | A : payload sémantique 0 diff (K=8 réel) · B : trace on/off δ 0,0 · C′ : 1,177 vs 0,009 · C : BP médiane 1,0137 vs K8 0,0073 | Trace `trace_rollout` + sonde réécrite sans boucle ; **juge 3 BP requalifié** (t +10,55 → +18,76, autres juges inchangés) |
 | 2026-09-08 | MES-04 | 🟡 À décider | — | Constatée pendant le re-dépouillement MES-01 | La famille déclarée (3 métriques ⇒ 2,625) contredit le seuil appliqué (2,861 = α 0,01) ; erreur conservatrice, aucun résultat retiré |
+| 2026-09-08 | MES-04 | ✅ Clos (décision) | CHANGELOG [v41.67] | — | Option A : famille de 3, α = 0,05 ⇒ `t` = 2,625 (n=20) / 2,694 (n=16) ; aucun `t` dans la bande litigieuse, aucun verdict basculé |
+| 2026-09-08 | API-01 | ✅ Clos | `87b8967` · CHANGELOG [v41.67] | CPU : type `SortiePenser`, index == noms sur 8/8 champs, déballage OK, `out[4] == out.memoire_actuelle` | Sortie nommée de `penser()` (NamedTuple, accès numérique rétrocompatible) |
 
 ---
 
