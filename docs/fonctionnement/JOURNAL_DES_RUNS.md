@@ -89,8 +89,9 @@ juge 1 nul serait **acceptable** — la mécanique marcherait sans que C2 sache 
 
 **Résultat (dépouillé le 07/09 soir — [carnet](../recherche/campagnes/BRANCHES_PERSISTANTES_07092026_la_mecanique_marche_la_voix_reste_inerte.md))** :
 conforme à la prédiction. Juge 3 (mécaniste) **passe massivement** — h7/h1 médian
-**0,012 → 1,28**, log10 apparié `t` = **+10,55** (19/20, survit aux extrêmes) ; juges
-1 (maîtrise δ **−2,10 pt**, NS), 2 (niveau 7/20 vs 5/20, Fisher `p` = 0,73) et 4 (accord,
+**0,0073 → 1,01**, log10 apparié `t` = **+18,76** (20/20, survit aux extrêmes à +19,31 ;
+🔴 requalifié le 08/09 par la sonde MES-02, contexte et corps réels — CHANGELOG [v41.66]) ;
+juges 1 (maîtrise δ **−2,10 pt**, NS), 2 (niveau 7/20 vs 5/20, Fisher `p` = 0,73) et 4 (accord,
 NS) **nuls**. Sortie brute : `depouillement_BP.txt` · agrégat : `agregat_BP.json`.
 
 [Protocole complet](../../brains/07092026_branches_persistantes/LISEZ_MOI.md)

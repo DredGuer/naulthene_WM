@@ -54,7 +54,7 @@ Un problème ne passe à `✅ Clos` que si les quatre éléments suivants sont c
 | APP-01 | P0 | ✅ Clos | La politique rejouée la nuit n'est pas la politique ayant collecté les actions | Corrigé v41.64 (`6d6bcaa`) — rejeu sur politique complète |
 | APP-02 | P0 | ✅ Clos | `--detach-c2` n'est pas conservé dans les époques supplémentaires | Corrigé v41.64 (`6d6bcaa`) — detach sur chaque passe |
 | MES-01 | P0 | ✅ Clos | Le dépouillement peut publier sur une cohorte incomplète ou un garde-fou échoué | Corrigé v41.65 (`54c1867`) — primitive stricte + manifestes, 6 scripts migrés |
-| MES-02 | P0 | 🔴 Ouvert | La sonde du rollout réimplémente encore le noyau | Observer le vrai rollout ou partager une primitive |
+| MES-02 | P0 | ✅ Clos | La sonde du rollout réimplémente encore le noyau | Corrigé v41.66 (`48aa8a6`) — trace `trace_rollout` + sonde canonique |
 | APP-03 | P1 | 🔴 Ouvert | Deux identités/configurations du module `noyau` | Point d'entrée léger et configuration unique |
 | API-01 | P1 | 🔴 Ouvert | Le tuple positionnel de `penser()` est fragile | Sortie nommée et validations de forme |
 | MES-03 | P1 | 🔴 Ouvert | Des dispersions de récompense sont présentées comme parts du gradient | Corriger le vocabulaire et mesurer séparément |
@@ -280,9 +280,9 @@ pas cette situation impossible.
 
 ---
 
-## MES-02 — La sonde des branches réimplémente toujours le rollout
+## MES-02 — La sonde des branches réimplémente toujours le rollout — ✅ CLOS (08/09/2026)
 
-- **Priorité / statut** : **P0 — 🔴 Ouvert**
+- **Priorité / statut** : **P0 — ✅ Clos** (v41.66, commit `48aa8a6`, CHANGELOG [v41.66])
 
 ### Preuves
 
@@ -305,6 +305,29 @@ les tirages aléatoires ou le graphe utile à l'apprentissage.
 - Test d'égalité des états intermédiaires entre sonde et noyau.
 - Couverture des branches persistantes, du corps dans le rollout et de plusieurs horizons.
 - Correction de la promesse documentaire.
+
+### Clôture (08/09/2026, commit `48aa8a6`)
+
+1. **Cause** : la sonde recopiait la boucle de rollout (sauts/horizons/argmax/corps) et
+   imposait contexte et vecteur bio **nuls** — tout écart futur noyau/instrument l'aurait
+   fait mentir (maladie de l'INSTRUMENT_01092026).
+2. **Correction (option retenue : trace lecture seule)** : `trace_rollout=None` ajouté à
+   `simuler_futur_et_planifier` (dernier argument, `None` = zéro instruction exécutée) ;
+   au terme de chaque horizon la trace reçoit `pensee_branche`/`mem_branche`/
+   `valeur_horizon` **détachés sous `no_grad`**. La sonde est réécrite : états réels
+   (env, mémoire, contexte épisodique, corps au repos), **un seul appel** à la méthode
+   canonique, séparation calculée sur les tenseurs observés. **Zéro boucle de rollout
+   dans l'instrument.**
+3. **Vérifications fraîches (CPU)** : A — jour K=8 réel corrigé vs d'origine : payload
+   sémantique **0 différence** ; B — trace on/off : retour strictement identique
+   (δ 0,0), collecteur remplit h1/h3/h7 ; C′ — `BRANCHES_PERSISTANTES` on/off
+   discriminant (1,177 vs 0,009) ; C — cohorte BP 20 : médiane **1,0137** vs témoin K8
+   **0,0073**.
+4. **Entrée CHANGELOG** : [v41.66]. 🔴 **Requalification** : l'ancien protocole biaisait
+   les niveaux absolus (BP 1,28 → 1,01 ; K8 0,0118 → 0,0073) ; le juge 3 BP re-dépouillé
+   est **renforcé** (`t` +10,55 → +18,76, 20/20, extrêmes +19,31), tous les autres juges
+   inchangés. Documents citant les anciens niveaux requalifiés (carnet BP, vitrines,
+   CLAUDE.md, journal des runs).
 
 ---
 
@@ -704,7 +727,7 @@ La tête d'intention reste cohérente avec la thèse du projet, mais elle dépen
 
 ### Conditions avant implémentation
 
-1. MES-02 clos : mesure prise sur le vrai rollout.
+1. MES-02 clos : mesure prise sur le vrai rollout. *(✅ clos 08/09/2026, `48aa8a6` — sonde sur trace)*
 2. Fidélité multi-horizon mesurée, pas seulement séparation géométrique.
 3. APP-01/APP-02 clos : politique et gradient cohérents.
 4. Campagne de soustraction réalisée sous le meilleur apprenant connu.
@@ -719,7 +742,7 @@ La tête d'intention reste cohérente avec la thèse du projet, mais elle dépen
 1. ✅ APP-01 : test de parité collecte/rejeu et définition du contrat. *(v41.64)*
 2. ✅ APP-02 : test de gradient K + detach. *(v41.64)*
 3. ✅ MES-01 : rendre le dépouillement strict. *(v41.65)*
-4. **MES-02 : supprimer la duplication instrument/noyau.** ← prochain P0
+4. ✅ **MES-02 : supprimer la duplication instrument/noyau.** *(v41.66, `48aa8a6`)*
 5. MES-04 : trancher la famille de tests (2,625 déclaré contre 2,861 appliqué).
 6. API-01 et QUA-01 : installer la première suite de contrats — **amorcée** par `tests/`
    (40 tests stdlib) livré avec MES-01 ; reste à couvrir `penser()` et à installer la CI.
@@ -752,6 +775,7 @@ La tête d'intention reste cohérente avec la thèse du projet, mais elle dépen
 | 2026-09-07 | APP-01 | ✅ Clos | `6d6bcaa` · CHANGELOG [v41.64] | T1 CPU : parité de formule 32 régimes × 2 (delta ≤ 1,5e-8) ; K=8 réel 0 violation du garde de forme | Rejeu sur politique complète (C1+C2), contexte k1/k2 figé par tick |
 | 2026-09-07 | APP-02 | ✅ Clos | `6d6bcaa` · CHANGELOG [v41.64] | T2 CPU : grad critique `integrateur_bio` 2,891 → 0,000 (detach) ; K=8 + detach réel exit 0 | Détachement du critique appliqué sur chaque passe |
 | 2026-09-08 | MES-01 | ✅ Clos | `54c1867` · CHANGELOG [v41.65] | 40 tests `unittest` verts ; épreuves réelles : rollout retiré → exit 1, log tronqué 900/1500 → exit 1 et agrégat binairement inchangé ; re-dépouillement des 6 campagnes, 0 verdict changé, parité champ à champ 0/60 divergence | Primitive `depouillement.py` + `journal_cursus.py` + 6 manifestes ; 6 scripts migrés |
+| 2026-09-08 | MES-02 | ✅ Clos | `48aa8a6` · CHANGELOG [v41.66] | A : payload sémantique 0 diff (K=8 réel) · B : trace on/off δ 0,0 · C′ : 1,177 vs 0,009 · C : BP médiane 1,0137 vs K8 0,0073 | Trace `trace_rollout` + sonde réécrite sans boucle ; **juge 3 BP requalifié** (t +10,55 → +18,76, autres juges inchangés) |
 | 2026-09-08 | MES-04 | 🟡 À décider | — | Constatée pendant le re-dépouillement MES-01 | La famille déclarée (3 métriques ⇒ 2,625) contredit le seuil appliqué (2,861 = α 0,01) ; erreur conservatrice, aucun résultat retiré |
 
 ---

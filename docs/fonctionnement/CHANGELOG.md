@@ -4,6 +4,69 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.66] - 2026-09-08 — MES-02 : la sonde observe le rollout RÉEL (trace lecture seule)
+
+### La racine (registre MES-02) — l'instrument recopiait la boucle de C2
+
+| Type | Details |
+|------|---------|
+| **Commit** | `48aa8a6` |
+| **Catégorie** | fix (MES-02 P0 du registre) — trace d'inspection dans `simuler_futur_et_planifier`, instrument réécrit |
+| **Impact** | Critique — la mesure du rollout ne peut plus diverger du calcul réel ; chiffres du juge 3 BP **requalifiés** |
+| **Registre** | [REGISTRE_PROBLEMES_A_CORRIGER](../../ameliorations/REGISTRE_PROBLEMES_A_CORRIGER.md) MES-02 → ✅ Clos |
+
+`sonde_horizon_branches.py` recopiait la boucle temporelle du rollout (sauts, horizons,
+continuation par argmax, projection du corps). Toute divergence future dans
+`_solliciter_c2_neocortex`/`simuler_futur_et_planifier` aurait fait mentir l'instrument —
+et la sonde imposait en plus un contexte et un vecteur bio **nuls**.
+
+**Corrections** :
+1. `simuler_futur_et_planifier` reçoit `trace_rollout=None` (dernier argument) : au terme
+   de chaque horizon, si une trace est fournie, elle reçoit `pensee_branche/mem_branche/
+   valeur_horizon` **détachés sous `torch.no_grad()`**. `None` par défaut ⇒ aucune
+   instruction supplémentaire dans le chemin d'entraînement (**invariance structurelle**).
+2. La sonde est réécrite : **aucune boucle de rollout** — elle échantillonne des états
+   réels (env, chaîne mémorielle, contexte épisodique réel, corps réel au repos via
+   `BiologicalHomeostasisEngine`), appelle la méthode **canonique** avec sa trace, puis
+   calcule la séparation inter-branches sur les tenseurs observés.
+
+### Validation (CPU, `experiences/prevol_mes02.py` + journées réelles)
+
+| Test | Contrat | Résultat |
+|---|---|---|
+| **A** — invariance entraînement | jour K=8 réel, code corrigé vs d'origine (stash) | ✅ payload sémantique **0 différence** + logs identiques |
+| **B** — trace on/off | cerveau gelé : même retour (δ 0,0) ; collecteur remplit h1/h3/h7 | ✅ diff `['0.0e+00','0.0e+00']` ; pensées (8, 145) capturées |
+| **C′** — discrimination | cerveau BP gelé, `BRANCHES_PERSISTANTES` on/off | ✅ 1,177 vs 0,009 (h7 0,244 vs 0,0019) |
+| **C** — cohorte BP (20) | re-mesure avec la sonde corrigée | ✅ médiane BP **1,0137** vs témoin K8 **0,0073** |
+
+### 🔴 Requalification du juge 3 BP — l'ancien protocole biaisait les niveaux absolus
+
+La sonde corrigée (contexte épisodique et corps réels, plus de zéros) change les niveaux
+absolus de séparation. Re-dépouillement strict :
+
+| Juge 3 mécaniste | Avant (sonde réimplémentée) | **Après (sonde corrigée)** |
+|---|---|---|
+| médiane h7/h1 BP | 1,2818 | **1,0137** |
+| médiane h7/h1 K8_NU | 0,0118 | **0,0073** |
+| log10 apparié BP − K8 | `t` = +10,55 · 19/20 | **`t` = +18,76 · 20/20** |
+| sans les 4 extrêmes | `t` = +8,58 | **`t` = +19,31** (16/16) |
+| cerveaux BP > 0,05 | 20/20 (K8 : 4/20) | 20/20 (K8 : 2/20) |
+
+**Le verdict du juge 3 est inchangé et renforcé** : la mécanique des branches persistantes
+sépare massivement les futurs (≈ ×139 contre témoin, au lieu de ×108) — et **tous les
+autres juges sont inchangés** (maîtrise −2,10 · niveau +0,10 · comptages identiques).
+Les documents qui citaient les anciens niveaux absolus sont requalifiés dans le même
+commit (carnet BP, vitrines EN/FR, CLAUDE.md, journal des runs).
+
+| Fichier modifié | Changement |
+|-----------------|------------|
+| `src/naulthene/cerveau/noyau.py` | en-tête **41.64 → 41.66** ; `trace_rollout` dans `simuler_futur_et_planifier` |
+| `src/naulthene/instruments/sonde_horizon_branches.py` | **réécrit** — zéro boucle de rollout, états réels, méthode canonique + trace |
+| `experiences/prevol_mes02.py` | **créé** — tests B et C′ |
+| `brains/*/rollout_h7h1`, `brains/07092026_rollout_k8` | **re-mesurés** (40 JSON) ; `depouillement_BP.txt` réécrit |
+
+---
+
 ## [v41.65] - 2026-09-08 — MES-01 : le dépouillement REFUSE de publier sur une campagne invalide
 
 ### La racine (registre MES-01) — six scripts, un seul défaut, recopié six fois

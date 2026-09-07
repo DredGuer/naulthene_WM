@@ -52,9 +52,10 @@ Voir `docs/recherche/campagnes/EPOQUES_07092026_le_mur_du_niveau_4_est_franchi.m
 ### 🟡 BRANCHES PERSISTANTES — DÉPOUILLÉES LE 07/09 : LE CANAL EST RÉPARÉ, C2 NE S'EN SERT PAS
 
 Campagne `07092026_branches_persistantes` (20 graines × 1500 j face à K8_NU, juges
-pré-enregistrés, seuil Bonferroni `t` = 2,86). Juge mécaniste (ratio h7/h1 du rollout)
-**passe massivement** : médiane **0,012 → 1,28** (log10 apparié `t` = +10,55, 19/20,
-survit aux extrêmes à +8,58) ; maîtrise (**−2,10 pt**, NS), niveau (**7/20 vs 5/20**,
+pré-enregistrés). Juge mécaniste (ratio h7/h1 du rollout) **passe massivement** : médiane
+**0,0073 → 1,01** (log10 apparié `t` = +18,76, 20/20, survit aux extrêmes à +19,31 —
+🔴 requalifié le 08/09 par la sonde MES-02 : contexte et corps réels, CHANGELOG [v41.66]) ;
+maîtrise (**−2,10 pt**, NS), niveau (**7/20 vs 5/20**,
 Fisher `p` = 0,73) et accord (**NS**) **nuls** — l'issue « acceptable » pré-enregistrée :
 la mécanique supprime l'effondrement du rollout, C2 ne sait pas s'en servir (argument de
 la v42, qui reste **troisième** derrière la réparation de l'apprenant et la campagne de

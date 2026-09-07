@@ -39,11 +39,11 @@ d'intention »*.
 | **1. Maîtrise** | δ > 0, `t` > 2,86 | δ **−2,10 pt** · `t` = **−0,87** · 7/20 | ❌ **nul** |
 | ↳ sans les 4 extrêmes | | δ +0,125 · `t` = +0,07 (n=16) | ❌ nul |
 | **2. Niveau** | δ > 0 · Fisher bras par bras | δ +0,10 · `t` = +0,70 · **Fisher `p` = 0,7311** (7/20 vs 5/20) | ❌ **nul** |
-| **3. Mécaniste** (ratio h7/h1) | **monte** vers ~0,78 (banc) | médiane **0,012 → 1,28** · log10 apparié `t` = **+10,55** · **19/20** | ✅ **PASSE, massivement** |
-| ↳ sans les 4 extrêmes | | `t` = **+8,58** (n=16) | ✅ survit |
+| **3. Mécaniste** (ratio h7/h1) | **monte** vers ~0,78 (banc) | médiane **0,0073 → 1,01** · log10 apparié `t` = **+18,76** · **20/20** | ✅ **PASSE, massivement** |
+| ↳ sans les 4 extrêmes | | `t` = **+19,31** (n=16) | ✅ survit |
 | **4. Accord C1/C2** | part des ticks d'accord **monte** | δ **−2,70 pt** · `t` = −1,75 · 4/20 | ❌ **nul** |
 
-**Compléments** : 20/20 cerveaux BP à ratio > 0,05 (contre 4/20 pour K8_NU) · ratio C2/C1
+**Compléments** : 20/20 cerveaux BP à ratio > 0,05 (contre 2/20 pour K8_NU) · ratio C2/C1
 médian 0,401 (BP) vs 0,467 (K8_NU) · maîtrise moyenne **16,90 %** (BP) vs 19,00 % (K8_NU)
 · **0 cerveau BP à maîtrise 0 %** (1 chez K8_NU) · victoires médianes 932 vs 882 ·
 **40/40 runs couverts, 0 inachevé**.
@@ -62,8 +62,9 @@ le palier franchi — il n'y a **pas** d'apprentissage gagné sur `LavaGapS5` no
 
 **Établi** :
 - Les branches persistantes **suppriment l'effondrement du rollout** sur les 20 cerveaux
-  entraînés avec elles (médiane h7/h1 = 1,28, au-dessus de la cible banc 0,78). La
-  mécanique fait **exactement** ce qu'elle prétend (juge de réalité).
+  entraînés avec elles (médiane h7/h1 = 1,01, loin au-dessus de la cible banc 0,78 ; chiffres
+  **requalifiés le 08/09/2026 par la sonde MES-02** — contexte et corps réels, voir
+  CHANGELOG [v41.66]). La mécanique fait **exactement** ce qu'elle prétend (juge de réalité).
 - Ce canal réparé **ne change aucun comportement mesuré** : maîtrise, niveau, accord —
   tous nuls au seuil corrigé, y compris après retrait des extrêmes.
 - La campagne confirme le pattern du dépôt : **réparer ce que C2 voit ne suffit pas** —

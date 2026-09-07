@@ -509,8 +509,11 @@ NOT USE IT.** Keeping each rollout branch on **its own action** (instead of lett
 `argmax` collapse them back together) was a pre-registered prerequisite of the v42 intention
 head, with an honest prediction: *little behavioural effect expected*. **Depouillement, 20
 paired seeds × 1500 days vs K8_NU**: the mechanistic judge **passes massively** — median
-rollout separation h7/h1 rises from **0.012 to 1.28** (paired log10 `t` = **+10.55**, 19/20,
-**survives dropping the four extremes** at +8.58; 20/20 brains > 0.05 vs 4/20 for K8_NU).
+rollout separation h7/h1 rises from **0.0073 to 1.01** (paired log10 `t` = **+18.76**, 20/20,
+**survives dropping the four extremes** at +19.31; 20/20 brains > 0.05 vs 2/20 for K8_NU).
+🔴 Figures **requalified 8 Sep 2026** by the MES-02-corrected sonde (real context and body —
+the old instrument measured on null context/bio and biased absolute levels; verdict
+unchanged and stronger; see CHANGELOG [v41.66]).
 **Every behavioural judge is null**: mastery δ **−2.10 pt** (`t` = −0.87, 7/20), level
 **7/20 vs 5/20** (Fisher `p` = 0.73), C1/C2 agreement δ −2.70 (`t` = −1.75); guardrail
 `gain_c1` = 1.0000 in both arms. This is the pre-registered **"acceptable" outcome** — the

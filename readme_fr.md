@@ -268,9 +268,12 @@ TOUJOURS PAS.** Garder chaque branche du rollout sur **son propre geste** (au li
 laisser `argmax(C1)` les faire converger) était un prérequis pré-enregistré de la v42,
 avec une prédiction honnête : *effet comportemental peu probable*. **Dépouillement, 20
 graines appariées × 1500 jours face à K8_NU** : le juge mécaniste **passe massivement** —
-séparation médiane h7/h1 du rollout de **0,012 → 1,28** (log10 apparié `t` = **+10,55**,
-19/20, **survit au retrait des 4 extrêmes** à +8,58 ; 20/20 cerveaux > 0,05 contre 4/20
-pour K8_NU). **Tous les juges comportementaux sont nuls** : maîtrise δ **−2,10 pt**
+séparation médiane h7/h1 du rollout de **0,0073 → 1,01** (log10 apparié `t` = **+18,76**,
+20/20, **survit au retrait des 4 extrêmes** à +19,31 ; 20/20 cerveaux > 0,05 contre 2/20
+pour K8_NU). 🔴 **Chiffres requalifiés le 08/09/2026 par la sonde MES-02 corrigée**
+(contexte et corps réels — l'ancien instrument mesurait sur contexte/vecteur bio nuls et
+biaisait les niveaux absolus ; verdict inchangé et renforcé, CHANGELOG [v41.66]). **Tous les
+juges comportementaux sont nuls** : maîtrise δ **−2,10 pt**
 (`t` = −0,87, 7/20), niveau **7/20 contre 5/20** (Fisher `p` = 0,73), accord C1/C2
 δ −2,70 (`t` = −1,75) ; garde-fou `gain_c1` = 1,0000 des deux côtés. C'est l'issue
 **« acceptable » pré-enregistrée** — la mécanique marche, et C2 ne sait toujours pas s'en
