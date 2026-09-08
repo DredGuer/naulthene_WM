@@ -2213,7 +2213,19 @@ python train_naulthene.py --run-name "Run_15_Doctorat_Focus" --wandb-project "Na
 
 ### 3. Variante Locale de Test (Mac, expérimental)
 
-`src/naulthene/cerveau/noyau.py` (ex-`agi_local_test.py`, non versionné dans git, scratch personnel) reprend `src/naulthene/cerveau/colab.py` avec deux différences : détection du device `mps`/`cuda`/`cpu` (Apple Silicon) et depuis la v18.0 (expérimentale, voir [Architecture Homéostatique Biologique](#architecture-homéostatique-biologique-expérimental)) l'Architecture Homéostatique Biologique, pas encore portée sur le script de référence.
+> 🔴 **Note de correction (08/09/2026, ARC-01)** : ce paragraphe décrit l'état d'avant la
+> décision ARC-01. Depuis, **`noyau.py` est la source de vérité opérationnelle UNIQUE** et
+> `colab.py` (v17) est une **archive historique** : la « reprise de colab.py » et le
+> « portage sur le script de référence » décrits ci-dessous n'existent plus comme projet —
+> voir [`CLAUDE.md`](CLAUDE.md) §1 et `docs/ETAT_COURANT.md`.
+
+`src/naulthene/cerveau/noyau.py` (ex-`agi_local_test.py`) reprend historiquement
+`src/naulthene/cerveau/colab.py` avec deux différences : détection du device
+`mps`/`cuda`/`cpu` (Apple Silicon) et depuis la v18.0 (expérimentale, voir [Architecture
+Homéostatique Biologique](#architecture-homéostatique-biologique-expérimental)) l'Architecture
+Homéostatique Biologique. ⚠️ Depuis la v39.0 le fichier est **versionné dans git** (un
+accident ne l'efface plus), et depuis ARC-01 (08/09/2026) il **est** le fichier de référence
+du projet.
 
 ```bash
 python3.12 -m venv venv && source venv/bin/activate

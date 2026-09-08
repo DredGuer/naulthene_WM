@@ -4,8 +4,10 @@
 > résultat majeur (règle DOC-01, point général du 07/09/2026). Ce fichier porte **l'état** ;
 > l'histoire, les rétractations et les mesures détaillées vivent dans le CHANGELOG et les
 > carnets de campagne. Les README EN/FR restent la vitrine publique (miroir strict).
-> Dernière mise à jour : **08/09/2026 ~00:15** (clôture DOC-01 — v41.69 `4e5410a`, miroir
-> `6d9ae57`, v41.71 : ce fichier + INDEX nettoyé).
+> Dernière mise à jour : **08/09/2026 ~08:00** (ARC-01 v41.72 : `noyau.py` source de vérité
+> unique, `colab.py` archive — ce fichier + registre + en-têtes ; le dégraissage de CLAUDE.md
+> fait partie de la même réduction). Historique : v41.71 DOC-01, v41.69 `4e5410a`, miroir
+> `6d9ae57`.
 
 ---
 
@@ -64,23 +66,25 @@ La neurogenèse étend `dim_bus` (16 → 145 médian, **×9**) quand l'erreur JE
 
 - **✅ Clos (Phase A zéro campagne longue)** : APP-01 · APP-02 · MES-01 · MES-02 · MES-04
   (décision : famille de 3, α = 0,05 ⇒ `t` = 2,625 n=20 / 2,694 n=16) · API-01 · QUA-01
-  (**44 tests CPU**) · **DOC-01** (ce fichier + INDEX nettoyé + miroir EN/FR vérifié).
+  (**44 tests CPU**) · **DOC-01** (ce fichier + INDEX nettoyé + miroir EN/FR vérifié) ·
+  **ARC-01** (08/09, v41.72 : `noyau.py` = source de vérité unique, `colab.py` = archive v17).
 - **🔴 Ouverts (P1/P2)** : APP-03 (deux identités du module) · MES-03 (vocabulaire
   dispersions) · REP-01 (install non verrouillée) · PER-01/PER-02 (migrations, écriture
   partagée — à reproduire).
 - **🟡 À mesurer / décider** : EVA-01 (juge bruité) · SCI-01 (balayage K — **en cours**) ·
-  SCI-02 à SCI-05 · **ARC-01** (source de vérité `noyau.py` vs `colab.py` — décision à
-  prendre : `colab.py` est resté à « Version actuelle 17. » quand `noyau.py` est en 41.68).
+  SCI-02 à SCI-05.
 
 ## En cours
 
 - **SCI-01 Wave 1 — balayage K/ε** (`brains/08092026_sci01_balayage_K`) : 6 bras
   (K1_TEMOIN, K2_NU, K4_NU, K8_NU, K16_NU, K8_CLIP_e02) × 10 graines × 1500 jours, socle
   voix libre + `--detach-c2`, **lancée le 08/09 (v41.68)** — au moment de cet instantané
-  (~00:10), K1_TEMOIN g11-g66 sont **~jour 250-270/1500**, croissance continue vérifiée
-  (~10 j/min sur les 6 témoins, pas d'échec). Fin estimée : ~18-22 h. Dépouillement strict
-  (MES-01) ensuite. Wave 2 (n=20 confirmatoire, ε = 0,5) différée selon la forme de la
-  Wave 1.
+  (~08:00) : **K1_TEMOIN 10/10 terminés** (0 échec), **K2_NU 8/10** terminés (2 en cours),
+  K4_NU 4 runs en cours (~640-890/1500), K8_NU/K16_NU/K8_CLIP_e02 pas encore lancés.
+  ⚠️ L'estimation de lancement (~18-22 h) a été dérivée des bras K1/K2 — rythme réel mesuré
+  supérieur sur ces bras, mais K16 (16 époques/nuit) n'est pas encore lancé : l'estimation
+  reste à confirmer sur les bras lourds. Dépouillement strict (MES-01) à la fin. Wave 2
+  (n=20 confirmatoire, ε = 0,5) différée selon la forme de la Wave 1.
 
 ## Règles en vigueur
 

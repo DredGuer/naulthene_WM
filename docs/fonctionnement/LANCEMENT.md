@@ -339,8 +339,8 @@ précédentes). Relance simplement la même commande pour reprendre.
 
 ### ⚠️ Cristallisation Souple (v26.0-experimental) active sur ce cerveau
 
-Depuis v26.0, `NaultheneLinearSynaptique.cycle_sommeil()` (dans `noyau.py`, non versionné —
-voir `CLAUDE.md`, section "Variante Locale de Test") protège de l'érosion nocturne les synapses
+Depuis v26.0, `NaultheneLinearSynaptique.cycle_sommeil()` (dans `noyau.py`, source de vérité
+unique depuis ARC-01 — voir `CLAUDE.md` §1) protège de l'érosion nocturne les synapses
 sollicitées fortement et régulièrement sur plusieurs nuits (`myeline_cumul`, cliquet
 `cristallisee`, falaise sigmoïde `K_RAIDEUR_CRISTAL` — voir `docs/fonctionnement/explications_readme.md` §8.5
 pour le détail algorithmique). Cette mécanique est **transparente en usage normal** — aucune
@@ -438,7 +438,7 @@ série) — recalculées tick par tick sur le MÊME cerveau que celui qui joue d
 pygame pur (pas de fenêtre matplotlib séparée, qui serait fragile à faire cohabiter avec pygame
 sur macOS). Pour un diagnostic plus poussé (heatmap de myélinisation, courbe de variance),
 utiliser `irm_cerveau.py` séparément (voir sa propre commande de lancement dans
-[Architecture](../../CLAUDE.md#architecture)).
+[Architecture](../../CLAUDE.md#5-architecture-où-trouver-quoi)).
 
 ⚠️ **Prérequis** : il faut un `.brain` à observer — lance d'abord le Cursus (section 6) pendant
 au moins une nuit pour produire `brains/naulthene_cursus.brain`, ou utilise directement le

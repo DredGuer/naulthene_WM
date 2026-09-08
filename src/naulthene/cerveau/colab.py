@@ -1,6 +1,12 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (C) 2026 Adrien Nault — Naulthène AGI
 #Version actuelle 17.
+#
+# 🔒 ARCHIVE HISTORIQUE (décision ARC-01, 08/09/2026 — v41.72).
+# Ce fichier n'est PLUS la source de vérité du projet : la source opérationnelle unique est
+# `noyau.py` (v41.68+). `colab.py` est figé en v17 et conservé tel quel comme archive datée —
+# ne pas y porter de mécanique, ne pas le présenter comme script de référence. La liste des
+# mécaniques qui y manquent (v18 → v41.x) est le CHANGELOG.
 
 import torch
 import torch.nn as nn

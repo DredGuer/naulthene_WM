@@ -43,7 +43,32 @@ CLAUDE.md aux règles + liens (dette documentaire, point général 07/09).
 
 ---
 
-## [v41.70] - 2026-09-08 — QUA-01 : suite de contrats CPU du noyau (44 tests)
+## [v41.72] - 2026-09-08 — ARC-01 : `noyau.py` source de vérité unique, `colab.py` classé archive v17
+
+| Type | Details |
+|------|---------|
+| **Catégorie** | docs + commentaires d'en-tête (aucune ligne de logique modifiée) |
+| **Impact** | Structurel — il n'existe plus qu'**une** implémentation cognitive active (`noyau.py`) ; `colab.py` n'est plus une cible de portage ni une référence à citer |
+| **Registre** | [REGISTRE_PROBLEMES_A_CORRIGER](../ameliorations/REGISTRE_PROBLEMES_A_CORRIGER.md) ARC-01 → ✅ **Clos** (option 1 actée) |
+
+1. **Décision** : `noyau.py` (v41.68) est officiellement la **source de vérité
+   opérationnelle unique** du projet. `colab.py` (v17) est **classé archive historique**,
+   figé tel quel — plus jamais « script de référence », aucun portage noyau → colab
+   attendu, aucune mécanique écrite pour colab.
+2. **`colab.py`** : en-tête marqué « 🔒 ARCHIVE HISTORIQUE (ARC-01, v41.72) » —
+   **commentaires uniquement, zéro ligne de code modifiée**.
+3. **`noyau.py`** : en-tête mis à jour (« SOURCE DE VÉRITÉ OPÉRATIONNELLE UNIQUE »,
+   colab = archive) + un commentaire v41.43 requalifié — **commentaires uniquement**.
+4. **CLAUDE.md dégraissé** (126 Ko → 37 Ko) : réécrit en « règles + liens » — source de
+   vérité, dogmes, invariants d'ingénierie (toutes les règles conservées, justifications
+   mesurées renvoyées au CHANGELOG/chantiers), règles de trace/mesure/miroir, workflow git et
+   maintenance. Le récit des campagnes (23 réfutations, murs, leviers) passe aux carnets et à
+   `ETAT_COURANT.md` ; la « Variante Locale (Mac) » (noyau = essai / colab = référence) a
+   disparu au profit de la section 1 « Source de vérité ».
+
+---
+
+## [v41.71] - 2026-09-08 — DOC-01 : `ETAT_COURANT.md` créé, INDEX nettoyé, DOC-01 clos
 
 | Type | Details |
 |------|---------|

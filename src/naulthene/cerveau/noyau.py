@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (C) 2026 Adrien Nault — Naulthène AGI
-#Version actuelle 41.68 — Variante LOCALE de test (Mac), terrain d'essai des mécaniques expérimentales.
-# Versionné dans git depuis la v39.0 (2026-08-13), mais colab.py reste le script de référence :
-# rien de v18 → v41.49 n'y a été porté. Le marqueur ci-dessus suit le CHANGELOG (une entrée par
-# version) — il indiquait « 29 » jusqu'au 02/09/2026, périmé de 20 versions.
-# Différences permanentes avec colab.py : détection du device MPS (Apple Silicon) et
+#Version actuelle 41.68 — SOURCE DE VÉRITÉ OPÉRATIONNELLE UNIQUE du projet (décision ARC-01,
+# 08/09/2026, v41.72). `colab.py` (v17) est une archive historique figée — aucune mécanique n'y
+# est plus portée. Le marqueur ci-dessus suit le CHANGELOG (une entrée par version) — il
+# indiquait « 29 » jusqu'au 02/09/2026, périmé de 20 versions.
+# Différences historiques avec colab.py : détection du device MPS (Apple Silicon) et
 # jours_totaux réglé pour des runs locaux plus courts que les 400 jours de Colab.
 
 import torch
@@ -5311,8 +5311,8 @@ INERTIE_OUBLI_RENDEMENT = 50.0  # le cliquet du rendement de référence : mont�
 # de sa conclusion (mesuré le 30/08 : solde affiché −4,1621 contre +0,4579 réel).
 # C'était l'une des quatre récompenses posées de l'audit du dogme, et celle qui rendait
 # `mourir` (0.0) MOINS CHER que `se cogner` (−0.01).
-# ⚠️ `colab.py` (script de référence) la conserve et l'utilise : la suppression ne vaut
-# que pour `noyau.py`, conformément à la séparation essai/référence du projet.
+# ⚠️ `colab.py` (archive v17, ARC-01) la conserve encore : la suppression ne vaut
+# que pour `noyau.py`, source de vérité depuis le 08/09/2026.
 
 # --- CRISTALLISATION SOUPLE (v26.0-experimental, §A.5 AMELIORATION_V1.md, correctif
 # "Falaise" sigmoïde) ---

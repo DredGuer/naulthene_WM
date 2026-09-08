@@ -70,7 +70,7 @@ Un problème ne passe à `✅ Clos` que si les quatre éléments suivants sont c
 | SCI-03 | P2 | 🔵 À mesurer | La neurogenèse globale produit beaucoup de capacité inactive | Trajectoire des activations puis témoin à taille fixe |
 | SCI-04 | P2 | 🔵 À mesurer | Le ratio Bio/Env est non tranché et mal nommé « gradient » | Mesure causale avec échelle dérivée |
 | SCI-05 | P3 | 🟡 À décider | La tête d'intention C2 serait construite avant validation complète de ses entrées | Reporter après fidélité du rollout et ablations |
-| ARC-01 | P2 | 🟡 À décider | `colab.py` reste nommé référence alors que le développement réel vit dans `noyau.py` | Décider et documenter la source de vérité |
+| ARC-01 | P2 | ✅ Clos | `colab.py` reste nommé référence alors que le développement réel vit dans `noyau.py` | Décidé 08/09 (v41.72) : `noyau.py` source de vérité unique, `colab.py` = archive v17 |
 
 ---
 
@@ -665,15 +665,15 @@ n'a toutefois été reproduit.
 
 ---
 
-## ARC-01 — La source de vérité `noyau.py` / `colab.py` n'est pas décidée
+## ARC-01 — La source de vérité `noyau.py` / `colab.py` n'est pas décidée — ✅ CLOS (08/09/2026)
 
-- **Priorité / statut** : **P2 — 🟡 À décider**
+- **Priorité / statut** : **P2 — ✅ Clos** (v41.72 — option 1 actée)
 
 ### Constat
 
-La documentation nomme encore `colab.py` script de référence alors que l'essentiel de
-l'évolution et des campagnes récentes vit dans `noyau.py`. Une référence très en retard n'est
-plus une référence reproductible.
+La documentation nommait encore `colab.py` script de référence alors que l'essentiel de
+l'évolution et des campagnes récentes vit dans `noyau.py` (figé en v17 contre v41.68, ~24
+versions d'écart). Une référence très en retard n'est plus une référence reproductible.
 
 ### Options
 
@@ -687,6 +687,24 @@ plus une référence reproductible.
 - Décision écrite dans la documentation normative.
 - Une seule implémentation cognitive active, ou test automatique de parité.
 - Commandes de lancement mises à jour.
+
+### Clôture (08/09/2026, v41.72)
+
+1. **Décision** : option 1 actée — **`noyau.py` est la source de vérité opérationnelle
+   unique** ; `colab.py` (v17) est **classé archive historique**, conservé tel quel, plus
+   jamais « script de référence ». Aucun portage colab → noyau n'est plus attendu ; aucune
+   mécanique ne doit être écrite pour colab.
+2. **Correction documentaire** : en-tête `colab.py` marqué archive (commentaires, zéro
+   changement de code) · en-tête `noyau.py` mis à jour (« source de vérité », colab archive) ·
+   CHANGELOG [v41.72] · CLAUDE.md dégraissé (section « Variante locale » réécrite : colab
+   n'est plus la référence).
+3. **Vérification fraîche** : `colab.py` ne porte plus AUCUNE auto-désignation comme
+   « script de référence » — le seul emploi du terme est l'interdiction posée par le bandeau
+   d'archive (vérifié : 1 occurrence, dans la phrase « ne pas le présenter comme script de
+   référence » ajoutée par cette clôture) ; colab.py inchangé fonctionnellement (aucune ligne
+   de code modifiée) ; commandes de lancement des runs actuels (SCI-01) toutes sur
+   `noyau.py` — déjà le cas.
+4. **Entrée CHANGELOG** : [v41.72].
 
 ---
 
@@ -808,7 +826,7 @@ La tête d'intention reste cohérente avec la thèse du projet, mais elle dépen
 
 7. APP-03 : module/configuration uniques.
 8. PER-01/PER-02 : migrations et sauvegardes.
-9. REP-01/ARC-01 : environnement et source de vérité.
+9. ✅ ARC-01 : source de vérité — `noyau.py`, colab archive. *(v41.72)* · REP-01 : environnement (ouvert).
 10. EVA-01 : banc final standardisé.
 
 ## Phase C — campagnes
@@ -837,6 +855,7 @@ La tête d'intention reste cohérente avec la thèse du projet, mais elle dépen
 | 2026-09-08 | API-01 | ✅ Clos | `87b8967` · CHANGELOG [v41.67] | CPU : type `SortiePenser`, index == noms sur 8/8 champs, déballage OK, `out[4] == out.memoire_actuelle` | Sortie nommée de `penser()` (NamedTuple, accès numérique rétrocompatible) |
 | 2026-09-08 | QUA-01 | ✅ Clos | v41.70 · CHANGELOG [v41.70] | **44 tests OK en 2,1 s** (CPU) : API-01 / APP-01 (16 régimes) / APP-02 / MES-02 + 40 MES-01 | `tests/test_contrats_cognitifs.py` ; commande `NAULTHENE_DEVICE=cpu venv/bin/python -m unittest discover -s tests` ; CI = point d'infra |
 | 2026-09-08 | DOC-01 | ✅ Clos | `4e5410a` · `6d9ae57` · v41.71 · CHANGELOG [v41.69] + [v41.71] | Audit croisé EN/FR : 28,2×/1,01/18,76/0,0073 présents des deux côtés, résidus historiques datés uniquement ; liens INDEX/ETAT_COURANT vérifiés | `ETAT_COURANT.md` créé (instantané unique) + INDEX nettoyé (bloc 02/09 remplacé, carnets 07/09 ajoutés) ; ARC-01 et réduction CLAUDE hors périmètre |
+| 2026-09-08 | ARC-01 | ✅ Clos | v41.72 · CHANGELOG [v41.72] | `colab.py` : aucune auto-désignation « script de référence » hors le bandeau d'interdiction (1 occurrence ajoutée par la clôture) ; zéro ligne de code modifiée ; runs actuels tous sur `noyau.py` | Option 1 : `noyau.py` source de vérité unique, `colab.py` classé archive v17 ; en-têtes mis à jour (commentaires seuls) |
 
 ---
 
