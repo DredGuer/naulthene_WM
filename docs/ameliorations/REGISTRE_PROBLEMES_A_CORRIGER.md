@@ -63,7 +63,7 @@ Un problème ne passe à `✅ Clos` que si les quatre éléments suivants sont c
 | EVA-01 | P1 | 🔵 À mesurer | Le juge principal est bruité et dépend du palier atteint | Banc final standard sur cartes fixes |
 | DOC-01 | P1 | ✅ Clos | L'état courant et l'historique se contredisent dans la documentation | Clos v41.71 — `ETAT_COURANT.md` unique + INDEX nettoyé + miroir EN/FR vérifié |
 | PER-01 | P1 | 🟠 À reproduire | Le chargement permissif peut masquer une anomalie comme migration | Migrations explicites, strictes hors cas connus |
-| REP-01 | P2 | 🔴 Ouvert | Installation et versions non verrouillées | `pyproject`/contraintes et manifeste de run |
+| REP-01 | P2 | 🔴 Ouvert | Installation et versions non verrouillées | v41.73 — `pyproject.toml` + `constraints-lock.txt` + spec `ENVIRONNEMENT.md` livrés ; clôture = vérif env vierge (après SCI-01) |
 | PER-02 | P2 | 🟠 À reproduire | Deux écrivains peuvent partager le même fichier temporaire de checkpoint | Temporaire unique, verrou, test d'incident |
 | SCI-01 | P2 | 🔵 À mesurer | K=8 est un point favorable, pas un optimum ni une valeur dérivée | Balayage K et politique d'arrêt |
 | SCI-02 | P2 | 🔵 À mesurer | Le benchmark PPO n'est pas égalisé selon tous les budgets | Comparaisons séparées interactions/calcul/mémoire |
@@ -642,7 +642,9 @@ Aucun incident de concurrence ou de coupure n'est établi.
 
 ## REP-01 — Environnement d'installation insuffisamment verrouillé
 
-- **Priorité / statut** : **P2 — 🔴 Ouvert**
+- **Priorité / statut** : **P2 — 🔴 Ouvert** (livraison à froid faite le 08/09/2026 — clôture
+  en attente de la vérification en environnement vierge, différée pour ne pas concurrencer
+  SCI-01 Wave 1)
 
 ### Constat
 
@@ -657,11 +659,28 @@ n'a toutefois été reproduit.
 - Fournir un fichier de contraintes ou lock de référence.
 - Enregistrer avec chaque campagne : commit, Python, Torch, MiniGrid, Gymnasium, device et flags.
 
+### Avancement (08/09/2026, v41.73 — zéro run, machine laissée à SCI-01)
+
+1. **`pyproject.toml` créé** — Python ≥ 3.12, dépendances cœur en **planchers larges**
+   (numpy/torch/gymnasium/minigrid/wandb), extras découpés par imports réels (audio · arene ·
+   irm · professeur · plug-http · baseline-ppo · visualisation · exocortex · tout).
+2. **`constraints-lock.txt` créé** — lock de référence figé sur le venv **mesuré**
+   (`pip freeze`, 66 paquets, versions exactes ; Python 3.12.12, torch MPS).
+3. **`docs/fonctionnement/ENVIRONNEMENT.md`** — spécification normative : installation
+   reproductible, enregistrement d'environnement par campagne (bloc du `LISEZ_MOI.md`),
+   procédure de mise à jour, critères de clôture.
+4. ⚠️ **Décision de forme** : l'environnement de campagne va dans le `LISEZ_MOI.md`, **pas**
+   dans `manifeste.json` — le schéma MES-01 est strict (clé inconnue → échec de
+   `depouillement.py`, vérifié). L'environnement est une trace de campagne, pas une contrainte
+   de dépouillement.
+
 ### Critères de clôture
 
 - Installation dans un environnement vierge.
 - Import minimal et test CPU réussis.
 - Manifeste d'environnement joint aux nouvelles campagnes.
+
+*(À exécuter après la fin de SCI-01 Wave 1 : §6 d'ENVIRONNEMENT.md.)*
 
 ---
 
@@ -856,6 +875,7 @@ La tête d'intention reste cohérente avec la thèse du projet, mais elle dépen
 | 2026-09-08 | QUA-01 | ✅ Clos | v41.70 · CHANGELOG [v41.70] | **44 tests OK en 2,1 s** (CPU) : API-01 / APP-01 (16 régimes) / APP-02 / MES-02 + 40 MES-01 | `tests/test_contrats_cognitifs.py` ; commande `NAULTHENE_DEVICE=cpu venv/bin/python -m unittest discover -s tests` ; CI = point d'infra |
 | 2026-09-08 | DOC-01 | ✅ Clos | `4e5410a` · `6d9ae57` · v41.71 · CHANGELOG [v41.69] + [v41.71] | Audit croisé EN/FR : 28,2×/1,01/18,76/0,0073 présents des deux côtés, résidus historiques datés uniquement ; liens INDEX/ETAT_COURANT vérifiés | `ETAT_COURANT.md` créé (instantané unique) + INDEX nettoyé (bloc 02/09 remplacé, carnets 07/09 ajoutés) ; ARC-01 et réduction CLAUDE hors périmètre |
 | 2026-09-08 | ARC-01 | ✅ Clos | v41.72 · CHANGELOG [v41.72] | `colab.py` : aucune auto-désignation « script de référence » hors le bandeau d'interdiction (1 occurrence ajoutée par la clôture) ; zéro ligne de code modifiée ; runs actuels tous sur `noyau.py` | Option 1 : `noyau.py` source de vérité unique, `colab.py` classé archive v17 ; en-têtes mis à jour (commentaires seuls) |
+| 2026-09-08 | REP-01 | 🔴 Ouvert (livraison à froid) | v41.73 · CHANGELOG [v41.73] | zéro run — inventaire du venv mesuré (Python 3.12.12, 66 paquets, torch MPS) ; syntaxe/liens vérifiés | `pyproject.toml` (planchers + extras) · `constraints-lock.txt` (lock mesuré) · spec `ENVIRONNEMENT.md` ; clôture = env vierge + 44 tests, différée après SCI-01 |
 
 ---
 

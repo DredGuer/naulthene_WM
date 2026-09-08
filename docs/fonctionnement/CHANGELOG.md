@@ -43,6 +43,33 @@ CLAUDE.md aux règles + liens (dette documentaire, point général 07/09).
 
 ---
 
+## [v41.73] - 2026-09-08 — REP-01 : environnement verrouillé — pyproject + lock de référence + spec
+
+| Type | Details |
+|------|---------|
+| **Catégorie** | infra/docs (zéro ligne de `noyau.py`, zéro run — machine laissée à SCI-01) |
+| **Impact** | Reproductibilité — l'environnement a un fichier de contraintes et une spécification normative ; la clôture reste subordonnée à la vérification en environnement vierge |
+| **Registre** | [REGISTRE_PROBLEMES_A_CORRIGER](../ameliorations/REGISTRE_PROBLEMES_A_CORRIGER.md) REP-01 → 🔴 Ouvert (livraison à froid faite) |
+
+1. **`pyproject.toml`** (racine, créé) : Python ≥ 3.12 ; dépendances cœur en **planchers
+   larges** (numpy/torch/gymnasium/minigrid/wandb) ; **extras** découpés par imports réels
+   (audio · arene · irm · professeur · plug-http · baseline-ppo · visualisation · exocortex ·
+   tout). ⚠️ Ne change pas le mode de lancement (`PYTHONPATH=src python -m` reste la règle) ;
+   version de packaging distincte de la version cognitive de `noyau.py`.
+2. **`constraints-lock.txt`** (créé) : lock de référence = `pip freeze` **mesuré** du venv de
+   développement (08/09/2026, 66 paquets, Python 3.12.12, torch 2.13.0 MPS).
+3. **`docs/fonctionnement/ENVIRONNEMENT.md`** (créé) : spécification normative — installation
+   reproductible, bloc d'environnement par campagne (§4), procédure de mise à jour (§5),
+   critères de clôture (§6).
+4. **INDEX** : nouvelle entrée `ENVIRONNEMENT.md` dans le tableau `fonctionnement/`.
+5. **Décision de forme** : l'environnement de campagne va dans le `LISEZ_MOI.md`, **pas** dans
+   le `manifeste.json` — schéma MES-01 strict (clé inconnue → échec de `depouillement.py`).
+
+**Clôture REP-01 différée** : critères §6 (env vierge → import minimal → 44 tests CPU) à
+exécuter après la fin de SCI-01 Wave 1, sans concurrencer les runs.
+
+---
+
 ## [v41.72] - 2026-09-08 — ARC-01 : `noyau.py` source de vérité unique, `colab.py` classé archive v17
 
 | Type | Details |

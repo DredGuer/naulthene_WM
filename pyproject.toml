@@ -1,0 +1,76 @@
+# ============================================================================
+# REP-01 — environnement verrouillé (livraison à froid, 08/09/2026)
+#
+# Règle du projet : planchers LARGES ici (ce que le code exige), et un LOCK de
+# référence figé sur les versions MESURÉES du venv de développement dans
+# `constraints-lock.txt`. L'installation reproductible se fait avec
+# `pip install -c constraints-lock.txt` (voir docs/fonctionnement/ENVIRONNEMENT.md).
+#
+# ⚠️ Ce fichier ne rend PAS le projet installable "pip install ." : le dépôt se
+# lance toujours depuis sa racine avec `PYTHONPATH=src` et `python -m` (discipline
+# CLAUDE.md §5/§10). pyproject déclare les dépendances et leurs bornes ; il ne
+# change pas le mode de lancement.
+#
+# La version cognitive du projet vit dans l'en-tête de `noyau.py`
+# (`#Version actuelle`), PAS ici. Cette version est la version de PACKAGING.
+# ============================================================================
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "naulthene-agi"
+description = "Naulthène AGI — agent cognitif autonome hybride (RL + JEPA + mémoire épisodique + homéostasie neuro-mimétique)."
+readme = "readme_fr.md"
+requires-python = ">=3.12"
+license = "AGPL-3.0-or-later"
+authors = [{ name = "Adrien Nault" }]
+keywords = ["agi", "cognitive", "jepa", "reinforcement-learning", "minigrid"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    # Planchers LARGES — ce que le code exige, mesuré le 08/09/2026 sur le venv
+    # de référence (versions exactes dans constraints-lock.txt).
+    "numpy>=1.26",
+    "torch>=2.1",
+    "gymnasium>=1.0",
+    "minigrid>=3.0",
+    "wandb>=0.17",
+]
+
+[project.optional-dependencies]
+# Extras — un module = un besoin, découpé selon les imports réels (08/09/2026).
+# Cœur cognitif seul (cursus, jour/nuit) : pas d'extra, dépendances ci-dessus.
+audio = ["sounddevice>=0.4"]        # src/naulthene/audio/hemisphere_audio.py (micro)
+arene = ["pygame-ce>=2.4"]          # src/naulthene/instruments/arene_visuelle.py + lancer_arene (pygame)
+irm = ["matplotlib>=3.8"]           # src/naulthene/instruments/irm_cerveau.py
+professeur = ["requests>=2.31"]     # src/naulthene/audio/professeur_gemma.py (Ollama HTTP)
+plug-http = ["requests>=2.31"]      # src/naulthene/exocortex/plugs/plug_http.py
+baseline-ppo = ["stable-baselines3>=2.3"]  # src/naulthene/instruments/banc_ppo*.py
+# Regroupements usuels
+visualisation = ["pygame-ce>=2.4", "matplotlib>=3.8"]
+exocortex = ["requests>=2.31"]
+tout = [
+    "sounddevice>=0.4",
+    "pygame-ce>=2.4",
+    "matplotlib>=3.8",
+    "requests>=2.31",
+    "stable-baselines3>=2.3",
+]
+[project.urls]
+Repository = "https://github.com/DredGuer/naulthene_WM.git"
+
+[tool.setuptools]
+# Package src-layout : le code est dans src/naulthene. Le lancement reste
+# PYTHONPATH=src python -m ..., mais un install -e . fonctionnerait aussi.
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]

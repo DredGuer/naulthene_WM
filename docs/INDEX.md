@@ -53,6 +53,7 @@
 | [CHANGELOG.md](fonctionnement/CHANGELOG.md) | **la référence factuelle**, version par version |
 | **[JOURNAL_DES_RUNS.md](fonctionnement/JOURNAL_DES_RUNS.md)** | 🔴 **NORMATIF** — une ligne par campagne, écrite **au lancement** : titre, date de début, fin estimée (dérivée du rythme mesuré), fin réelle, pourquoi. Les campagnes **annulées** y restent avec leur raison |
 | [LANCEMENT.md](fonctionnement/LANCEMENT.md) | commandes, dépannage |
+| **[ENVIRONNEMENT.md](fonctionnement/ENVIRONNEMENT.md)** | 🔒 **REP-01** — Python supporté, dépendances (pyproject), lock de référence, enregistrement d'environnement par campagne |
 | [explications_readme.md](fonctionnement/explications_readme.md) | détail algorithmique, §15 sens |
 | [Parcourt_readme.md](fonctionnement/Parcourt_readme.md) | parcours de lecture |
 
