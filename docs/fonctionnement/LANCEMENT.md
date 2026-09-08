@@ -464,6 +464,26 @@ PYTHONPATH=src python -m naulthene.instruments.lancer_arene
 Pour fermer : `Ctrl+C` dans le terminal, ou clic sur la croix de la fenêtre — les deux sont gérés
 proprement (fermeture de la fenêtre pygame + de l'environnement MiniGrid, sans traceback).
 
+#### ⚠️ Dépannage — premier lancement lent ou `TimeoutError: [Errno 60]`
+
+**Symptôme** (observé le 08/09/2026) : au premier lancement, l'Arène se fige au
+« 🔥 Préchauffage de la référence vocale » puis meurt parfois sur un `TimeoutError: [Errno 60]`
+dans l'import de scipy/numba.
+
+**Cause** : le préchauffage vocal appelle `librosa.feature.mfcc`, dont le **premier appel
+compile le code JIT de numba** — 46,9 s mesuré une fois, mais **> 180 s sous charge** (machine
+occupée par une campagne d'entraînement). Le timeout est un symptôme de cette compilation
+concurrente, pas d'un fichier corrompu ni d'iCloud.
+
+**Parade (une fois, le cache persiste dans `~/.cache/numba`)** :
+
+```bash
+venv/bin/python3 -c "import numpy as np, librosa; librosa.feature.mfcc(y=np.zeros(22050, dtype='float32'), sr=22050)"
+```
+
+Attendre ~1 min la première fois, puis relancer l'Arène : le 2ᵉ appel MFCC passe en ~2 s.
+Si le cache est purgé ou sur une nouvelle machine, refaire cette commande avant l'Arène.
+
 ---
 
 ## 8. Le Port Exocortex C3 (v28.0-expérimental) — tester un cerveau neuf avec/sans plug
