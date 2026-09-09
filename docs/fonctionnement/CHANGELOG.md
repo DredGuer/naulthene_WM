@@ -43,6 +43,32 @@ CLAUDE.md aux règles + liens (dette documentaire, point général 07/09).
 
 ---
 
+## [v41.75] - 2026-09-09 — REP-01 : script de validation d'environnement vierge prêt (exécution différée)
+
+| Type | Details |
+|------|---------|
+| **Catégorie** | infra/docs (zéro ligne de code exécutée — préparation à froid pendant SCI-01 Wave 2) |
+| **Impact** | Clôture REP-01 prête à l'emploi : un « presse-bouton » validera l'environnement vierge dès la fin de la campagne |
+| **Registre** | [REGISTRE_PROBLEMES_A_CORRIGER](../ameliorations/REGISTRE_PROBLEMES_A_CORRIGER.md) REP-01 → 🔴 Ouvert (script prêt) |
+
+1. **`scripts/verifier_environnement.sh` créé** (racine, nouveau dossier `scripts/`) : crée un
+   venv **vierge hors dépôt** (`/tmp/venv_rep01_validation`, défaut — hors iCloud), installe
+   `-c constraints-lock.txt -e '.[tout]'`, puis vérifie : (1) import minimal du cœur (CPU),
+   (2) les 44 tests de contrats, (3) rapport des versions installées vs lock
+   (numpy/torch/gymnasium/minigrid/wandb). **Garde anti-contention** : refuse de s'exécuter si
+   un processus `noyau.py` tourne (testée : refuse pendant Wave 2 — comportement voulu).
+   Syntaxe bash vérifiée (`bash -n`).
+2. **`docs/fonctionnement/ENVIRONNEMENT.md` §6 réécrit** : référence le script presse-bouton,
+   liste les 5 critères de clôture, et pose l'avertissement anti-contention (plusieurs Go à
+   télécharger — jamais pendant une campagne, risque de fausser les mesures et d'OOM).
+3. **Registre REP-01** : ligne de suivi v41.75 ajoutée.
+
+**Exécution différée** : après `WAVE 2 TERMINEE` + dépouillement SCI-01 à n=20 — le script est
+conçu pour être lancé tel quel à ce moment-là (la garde anti-contention lèvera le refus dès que
+la machine sera libre).
+
+---
+
 ## [v41.74-mesure] - 2026-09-09 — SCI-01 Wave 1 dépouillée : la forme est une cloche, optimum K=8, le clip ne nuit plus
 
 | Type | Details |

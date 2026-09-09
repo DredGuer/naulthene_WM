@@ -61,6 +61,28 @@ palier — le niveau porte la réponse. Wave 2 (graines 122→222) requise pour 
 [Protocole](../../brains/08092026_sci01_balayage_K/LISEZ_MOI.md) ·
 [Dépouillement Wave 1](../../brains/08092026_sci01_balayage_K/depouillement_wave1.txt)
 
+### 🟡 `08092026_sci01_balayage_K` — Wave 2 : n=20 ciblé (graines 122→222)
+
+| | |
+|---|---|
+| **Début** | 2026-09-09 (v41.68 — même code que la Wave 1, aucun changement de logique depuis) |
+| **Fin estimée** | ~40-45 h *(dérivée du rythme mesuré Wave 1 : ~43 h pour 60 runs, bras lourds dominants)* |
+| **Fin réelle** | — |
+| **Coût** | 6 bras × 10 graines (122, 133, 144, 155, 166, 177, 188, 199, 211, 222) × 1500 jours |
+| **Statut** | 🟡 en cours |
+
+**Pourquoi** : compléter la cohorte à **n=20 par bras** (règle cardinale : aucun test formel
+sous 20 graines). La Wave 1 (n=10) a montré une **cloche 0/0/8/10/3** (optimum K=8) et un
+**clip inerte** (~8 % de fraction clippée) — la Wave 2 absorbera la variance inter-individuelle
+et tranchera si K=8 est le socle moteur, au dépouillement final sur `manifeste.json` (20
+graines).
+
+**Pré-vol** : aucun nouveau nécessaire — code identique à la Wave 1 (le seul commit sur
+`noyau.py` depuis, ARC-01 `7849f4d`, ne touche que des commentaires d'en-tête) ; pré-vol Wave 1
+(manifeste validé, 2 nuits K8_NU exit 0, garde de parité 0 violation) déjà couvert.
+
+[Protocole](../../brains/08092026_sci01_balayage_K/LISEZ_MOI.md)
+
 #### 🗒️ Point d'étape — 08/09/2026 09:37 (24 runs terminés / 60)
 
 **Avancement** : K1_TEMOIN **10/10** · K2_NU **10/10** · K4_NU **4/10** (g11, g22, g33, g44) ·

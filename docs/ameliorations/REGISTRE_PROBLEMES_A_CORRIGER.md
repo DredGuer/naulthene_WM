@@ -63,7 +63,7 @@ Un problème ne passe à `✅ Clos` que si les quatre éléments suivants sont c
 | EVA-01 | P1 | 🔵 À mesurer | Le juge principal est bruité et dépend du palier atteint | Banc final standard sur cartes fixes |
 | DOC-01 | P1 | ✅ Clos | L'état courant et l'historique se contredisent dans la documentation | Clos v41.71 — `ETAT_COURANT.md` unique + INDEX nettoyé + miroir EN/FR vérifié |
 | PER-01 | P1 | 🟠 À reproduire | Le chargement permissif peut masquer une anomalie comme migration | Migrations explicites, strictes hors cas connus |
-| REP-01 | P2 | 🔴 Ouvert | Installation et versions non verrouillées | v41.73 — `pyproject.toml` + `constraints-lock.txt` + spec `ENVIRONNEMENT.md` livrés ; clôture = vérif env vierge (après SCI-01) |
+| REP-01 | P2 | 🔴 Ouvert | Installation et versions non verrouillées | v41.73 + v41.75 — pyproject + lock + spec + script `verifier_environnement.sh` prêts ; clôture = exécution env vierge (après SCI-01 Wave 2) |
 | PER-02 | P2 | 🟠 À reproduire | Deux écrivains peuvent partager le même fichier temporaire de checkpoint | Temporaire unique, verrou, test d'incident |
 | SCI-01 | P2 | 🔵 À mesurer | K=8 est un point favorable, pas un optimum ni une valeur dérivée | Wave 1 dépouillée (09/09) : cloche 0/0/8/10/3, optimum K=8, clip inerte ; Wave 2 (n=20) pour le verdict |
 | SCI-02 | P2 | 🔵 À mesurer | Le benchmark PPO n'est pas égalisé selon tous les budgets | Comparaisons séparées interactions/calcul/mémoire |
@@ -877,6 +877,7 @@ La tête d'intention reste cohérente avec la thèse du projet, mais elle dépen
 | 2026-09-08 | ARC-01 | ✅ Clos | v41.72 · CHANGELOG [v41.72] | `colab.py` : aucune auto-désignation « script de référence » hors le bandeau d'interdiction (1 occurrence ajoutée par la clôture) ; zéro ligne de code modifiée ; runs actuels tous sur `noyau.py` | Option 1 : `noyau.py` source de vérité unique, `colab.py` classé archive v17 ; en-têtes mis à jour (commentaires seuls) |
 | 2026-09-08 | REP-01 | 🔴 Ouvert (livraison à froid) | v41.73 · CHANGELOG [v41.73] | zéro run — inventaire du venv mesuré (Python 3.12.12, 66 paquets, torch MPS) ; syntaxe/liens vérifiés | `pyproject.toml` (planchers + extras) · `constraints-lock.txt` (lock mesuré) · spec `ENVIRONNEMENT.md` ; clôture = env vierge + 44 tests, différée après SCI-01 |
 | 2026-09-09 | SCI-01 | 🔵 À mesurer (Wave 1 faite) | v41.74-mesure · CHANGELOG [v41.74-mesure] | Dépouillement strict : 60/60 couverts, gardes gain_c1 = 1,0000, aucun `t` ne passe Bonferroni (n=10) | Wave 1 : cloche 0/0/8/10/3 (optimum K=8), clip inerte (fraction ~8 %) ; carnet `SCI01_WAVE1_09092026` ; Wave 2 (n=20) pour le verdict |
+| 2026-09-09 | REP-01 | 🔴 Ouvert (script prêt) | v41.75 · CHANGELOG [v41.75] | zéro run — syntaxe bash OK ; garde anti-contention testée (refuse si noyau.py actif) | `scripts/verifier_environnement.sh` créé (venv vierge /tmp + import + 44 tests + rapport versions) ; exécution différée après SCI-01 Wave 2 |
 
 ---
 

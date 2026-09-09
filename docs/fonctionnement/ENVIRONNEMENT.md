@@ -85,12 +85,36 @@ L'environnement est une trace de campagne, pas une contrainte de dépouillement.
 
 ## 6. Critères de clôture REP-01 (à exécuter après la campagne en cours)
 
-1. Installation dans un **environnement vierge** (nouveau venv, `pip install -c
-   constraints-lock.txt -e .[tout]`).
+### Outil presse-bouton : `scripts/verifier_environnement.sh`
+
+Le script [`scripts/verifier_environnement.sh`](../../scripts/verifier_environnement.sh)
+automatise toute la clôture : il crée un venv **vierge hors dépôt** (`/tmp/venv_rep01_validation`,
+hors iCloud), installe depuis le lock, et exécute les trois vérifications. Il **refuse de
+s'exécuter si un processus `noyau.py` tourne** (garde anti-contention).
+
+```bash
+bash scripts/verifier_environnement.sh            # venv par défaut /tmp/venv_rep01_validation
+bash scripts/verifier_environnement.sh /tmp/venv_rep01_v2   # chemin explicite
+```
+
+Code de sortie : `0` = validation OK · `≠0` = échec (log détaillé à
+`<venv>_validation.log`, freeze à `<venv>_freeze.txt`).
+
+### Les quatre critères (ce que le script vérifie)
+
+1. **Installation dans un environnement vierge** (nouveau venv hors dépôt, `pip install -c
+   constraints-lock.txt -e '.[tout]'`).
 2. **Import minimal** : `PYTHONPATH=src python -c "import naulthene.cerveau.noyau"` (CPU).
 3. **Tests CPU** : `NAULTHENE_DEVICE=cpu venv/bin/python -m unittest discover -s tests`
    → 44 tests OK.
-4. Campagne suivante avec le bloc §4 rempli — sert de vérification de bout en bout.
+4. **Versions installées vs lock** : le script compare numpy/torch/gymnasium/minigrid/wandb
+   au lock et signale tout écart.
+5. Campagne suivante avec le bloc §4 rempli — sert de vérification de bout en bout.
 
-> État : livraison à froid **faite** (08/09/2026) ; clôture **en attente** des critères 1-4,
-> différée pour ne pas concurrencer la campagne SCI-01 Wave 1 qui tourne (machine réservée).
+⚠️ **Ne jamais exécuter le script pendant qu'une campagne tourne** : l'installation
+télécharge plusieurs Go (torch, scipy, librosa…) — la contention I/O fausserait les mesures
+et risquerait un OOM. Attendre `WAVE X TERMINEE` dans le `campagne.log`.
+
+> État : livraison à froid **faite** (08/09/2026) ; script de clôture **prêt** (09/09) ;
+> exécution **en attente** de la fin de SCI-01 Wave 2 (n=20) pour ne pas concurrencer les
+> runs (garde anti-contention intégrée au script).
