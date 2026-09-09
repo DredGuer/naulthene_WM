@@ -29,15 +29,15 @@
 
 ## Runs
 
-### 🟡 `08092026_sci01_balayage_K` — Wave 1 : balayage K/ε sur l'apprenant réparé
+### ✅ `08092026_sci01_balayage_K` — Wave 1 : balayage K/ε sur l'apprenant réparé
 
 | | |
 |---|---|
 | **Début** | 2026-09-08 (v41.68) |
 | **Fin estimée** | ~18-22 h *(Wave 1 : 60 runs × 1500 j, 6 en parallèle — rythme mesuré sur le pré-vol 2 nuits)* |
-| **Fin réelle** | — |
-| **Coût** | Wave 1 : 6 bras × 10 graines × 1500 jours · Wave 2 (différée) : n=20 ciblé |
-| **Statut** | 🟡 en cours |
+| **Fin réelle** | 2026-09-09 ~18:55 — **60/60 runs, 0 échec** (écart ~×2 sur l'estimation : les bras lourds K16/K8_CLIP sont ~2× plus lents que K1-K8, rythme mesuré ~2,7 j/min K16 · ~5,8 j/min K8_CLIP) |
+| **Coût** | Wave 1 : 6 bras × 10 graines × 1500 jours · Wave 2 (différée) : n=20 ciblé (graines 122→222) |
+| **Statut** | ✅ Wave 1 terminée et **dépouillée** (09/09) — verdict final en attente de la Wave 2 (n=20) |
 
 **Pourquoi** : le point K=8 du 07/09 a été mesuré avec le **rejeu faussé** (APP-01) — il
 n'est plus un témoin valide. Le balayage re-mesure la **forme** de l'effet de K (2/4/8/16)
@@ -50,7 +50,65 @@ niveau, **distribution du ratio `exp(lp − lp_old)` et fraction clippée** (lig
 exit 0, 2 bilans, **0 violation** du garde de parité de forme, 2 lignes `Rejouer` ;
 drapeau `[VARIANTE] 8 epoques` présent.
 
-[Protocole](../../brains/08092026_sci01_balayage_K/LISEZ_MOI.md)
+**Résultat Wave 1 (dépouillement strict 09/09, n=10 par bras — voir le
+[carnet](../recherche/campagnes/SCI01_WAVE1_09092026_la_forme_en_cloche.md))** :
+franchissements du mur `SimpleCrossingS9N1` → `LavaGapS5` : **0/10 · 0/10 · 8/10 · 10/10 ·
+3/10** pour K = 1, 2, 4, 8, 16 — **forme en cloche, optimum K=8**. Le clip ε=0,2 **ne nuit
+plus** (K8_CLIP_e02 = 10/10 ; fraction clippée ~8 % — clip quasi inerte car le ratio est
+déjà sain). ⚠️ Aucun `t` ne passe Bonferroni à n=10 ; le juge maîtrise est confondu par le
+palier — le niveau porte la réponse. Wave 2 (graines 122→222) requise pour le verdict final.
+
+[Protocole](../../brains/08092026_sci01_balayage_K/LISEZ_MOI.md) ·
+[Dépouillement Wave 1](../../brains/08092026_sci01_balayage_K/depouillement_wave1.txt)
+
+#### 🗒️ Point d'étape — 08/09/2026 09:37 (24 runs terminés / 60)
+
+**Avancement** : K1_TEMOIN **10/10** · K2_NU **10/10** · K4_NU **4/10** (g11, g22, g33, g44) ·
+K8_NU / K16_NU / K8_CLIP_e02 non lancés. 0 échec sur les 24 runs terminés.
+
+**Premières mesures directes (fin de run, aucun `t` — cohorte incomplète, pas de verdict)** :
+
+- **K1_TEMOIN** : maîtrise finale moyenne **11,5 %** (médiane 12,5, min 5, max 20) · niveau
+  4/15 partout · **0/10** franchissements.
+- **K2_NU** : maîtrise finale moyenne **13,0 %** (médiane 15,0, min 5, max 20) · niveau 4/15
+  partout · **0/10** franchissements.
+- **K4_NU** (4 terminés) : **3/4** au niveau 5/15 (`LavaGapS5`, l'étage au-delà du mur
+  `SimpleCrossingS9N1` — g11, g33, g44) · g22 reste en 4/15 (maîtrise 30 %). Signal précoce
+  cohérent avec l'effet seuil de K=8 du 07/09, mais **n=4 = anecdote statistique** : rien ne
+  sera calculé avant les 10 runs du bras.
+
+**⚠️ Réserve méthodologique — Juge 4 (mécaniste, ratio/clippés) sur les bras NU** : dans
+`noyau.py`, `ratios_epochs` n'est rempli que si `RATIO_CLIPPE_ACTIF` (`~2224`) — les bras NU
+(K1→K16) ne loguent donc que `parité max · entropie moy` en console, et W&B étant offline,
+la distribution du ratio n'est **pas** consignée sur disque pour eux. Seul K8_CLIP_e02 (non
+lancé) portera la télémétrie ratio/p90/fraction clippée dans cette Wave 1. Acté : pas de
+modification de code pendant que la campagne tourne ; correction prévue pour la Wave 2
+(observation pure du ratio sur tous les bras, `RATIO_CLIPPE_ACTIF` inactif compris).
+
+#### 🗒️ Point d'étape — 09/09/2026 15:42 (55 runs terminés / 60 — bras K16 et K8_CLIP en cours de bouclage)
+
+**Avancement** : K1_TEMOIN 10/10 · K2_NU 10/10 · K4_NU 10/10 · K8_NU 10/10 · **K16_NU 10/10**
+(terminé ~15:20) · **K8_CLIP_e02 5/10** terminés + 5 en cours (g66 ~1457 j, g77 ~682, g88 ~211,
+g99 ~197, g111 ~92). 0 échec sur les 55 runs terminés.
+
+**Forme provisoire des franchissements du mur `SimpleCrossingS9N1` → `LavaGapS5` (comptage
+sur bras complets — AUCUN test, le dépouillement MES-01 attendra `WAVE 1 TERMINEE`) :**
+
+| K | Franchissements / 10 | Lecture |
+|---|---|---|
+| K=1 | 0/10 | sous le seuil |
+| K=2 | 0/10 | sous le seuil |
+| K=4 | 8/10 | saut de phase |
+| K=8 (nu) | 10/10 | maximum apparent |
+| K=16 | **3/10** | retombée — **forme en cloche, optimum ~K=8** |
+| K=8 + clip ε=0,2 | **5/5 sur terminés** | ⚠️ signal **renversé** vs 07/09 (où le clip « nuisait ») — maîtrises 15-35 %, plus saines que K8_NU pur (souvent 0-10 %) |
+
+⚠️ **K8_CLIP inverse la conclusion du 07/09** (le « clipping nuit » avait été mesuré nuisible à
+−1,00 pt sur le rejeu faussé) : sur le socle réparé, 5/5 des terminés franchissent avec des
+maîtrises finales élevées. **n=5, pas de verdict** — mais c'est le fil le plus chaud du
+dépouillement à venir. L'estimation de lancement (~18-22 h) est **dépassée d'un facteur ~2**
+(rythme réel des bras lourds : ~2,7 j/min K16 · ~5,8 j/min K8_CLIP) — écart consigné, la fin
+réelle sera reportée dans l'en-tête de campagne.
 
 ---
 

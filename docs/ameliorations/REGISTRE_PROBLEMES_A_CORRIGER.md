@@ -65,7 +65,7 @@ Un problème ne passe à `✅ Clos` que si les quatre éléments suivants sont c
 | PER-01 | P1 | 🟠 À reproduire | Le chargement permissif peut masquer une anomalie comme migration | Migrations explicites, strictes hors cas connus |
 | REP-01 | P2 | 🔴 Ouvert | Installation et versions non verrouillées | v41.73 — `pyproject.toml` + `constraints-lock.txt` + spec `ENVIRONNEMENT.md` livrés ; clôture = vérif env vierge (après SCI-01) |
 | PER-02 | P2 | 🟠 À reproduire | Deux écrivains peuvent partager le même fichier temporaire de checkpoint | Temporaire unique, verrou, test d'incident |
-| SCI-01 | P2 | 🔵 À mesurer | K=8 est un point favorable, pas un optimum ni une valeur dérivée | Balayage K et politique d'arrêt |
+| SCI-01 | P2 | 🔵 À mesurer | K=8 est un point favorable, pas un optimum ni une valeur dérivée | Wave 1 dépouillée (09/09) : cloche 0/0/8/10/3, optimum K=8, clip inerte ; Wave 2 (n=20) pour le verdict |
 | SCI-02 | P2 | 🔵 À mesurer | Le benchmark PPO n'est pas égalisé selon tous les budgets | Comparaisons séparées interactions/calcul/mémoire |
 | SCI-03 | P2 | 🔵 À mesurer | La neurogenèse globale produit beaucoup de capacité inactive | Trajectoire des activations puis témoin à taille fixe |
 | SCI-04 | P2 | 🔵 À mesurer | Le ratio Bio/Env est non tranché et mal nommé « gradient » | Mesure causale avec échelle dérivée |
@@ -876,6 +876,7 @@ La tête d'intention reste cohérente avec la thèse du projet, mais elle dépen
 | 2026-09-08 | DOC-01 | ✅ Clos | `4e5410a` · `6d9ae57` · v41.71 · CHANGELOG [v41.69] + [v41.71] | Audit croisé EN/FR : 28,2×/1,01/18,76/0,0073 présents des deux côtés, résidus historiques datés uniquement ; liens INDEX/ETAT_COURANT vérifiés | `ETAT_COURANT.md` créé (instantané unique) + INDEX nettoyé (bloc 02/09 remplacé, carnets 07/09 ajoutés) ; ARC-01 et réduction CLAUDE hors périmètre |
 | 2026-09-08 | ARC-01 | ✅ Clos | v41.72 · CHANGELOG [v41.72] | `colab.py` : aucune auto-désignation « script de référence » hors le bandeau d'interdiction (1 occurrence ajoutée par la clôture) ; zéro ligne de code modifiée ; runs actuels tous sur `noyau.py` | Option 1 : `noyau.py` source de vérité unique, `colab.py` classé archive v17 ; en-têtes mis à jour (commentaires seuls) |
 | 2026-09-08 | REP-01 | 🔴 Ouvert (livraison à froid) | v41.73 · CHANGELOG [v41.73] | zéro run — inventaire du venv mesuré (Python 3.12.12, 66 paquets, torch MPS) ; syntaxe/liens vérifiés | `pyproject.toml` (planchers + extras) · `constraints-lock.txt` (lock mesuré) · spec `ENVIRONNEMENT.md` ; clôture = env vierge + 44 tests, différée après SCI-01 |
+| 2026-09-09 | SCI-01 | 🔵 À mesurer (Wave 1 faite) | v41.74-mesure · CHANGELOG [v41.74-mesure] | Dépouillement strict : 60/60 couverts, gardes gain_c1 = 1,0000, aucun `t` ne passe Bonferroni (n=10) | Wave 1 : cloche 0/0/8/10/3 (optimum K=8), clip inerte (fraction ~8 %) ; carnet `SCI01_WAVE1_09092026` ; Wave 2 (n=20) pour le verdict |
 
 ---
 

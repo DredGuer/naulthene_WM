@@ -1,0 +1,63 @@
+{
+ "campagne": "08092026_sci01_balayage_K",
+ "commentaire": "Wave 1 SEULE du balayage SCI-01 (10 graines 11→111, 6 bras, code v41.68). Manifeste dedie au depouillement strict de la Wave 1 (le manifeste parent couvre Waves 1+2 = 20 graines). Convention MES-04 : famille de 5, alpha=0.05, seuil derive par depouillement.seuil_t. Wave 2 (graines 122→222) differee : verdict final a n=20 apres completude du manifeste parent.",
+ "mode": "confirmatoire",
+ "graines": [
+  11,
+  22,
+  33,
+  44,
+  55,
+  66,
+  77,
+  88,
+  99,
+  111
+ ],
+ "jours_requis": 1500,
+ "alpha": 0.05,
+ "comparaisons_prevues": 5,
+ "bras": {
+  "K1_TEMOIN": {
+   "dossier": "K1_TEMOIN",
+   "prefixe": "K1_TEMOIN"
+  },
+  "K2_NU": {
+   "dossier": "K2_NU",
+   "prefixe": "K2_NU"
+  },
+  "K4_NU": {
+   "dossier": "K4_NU",
+   "prefixe": "K4_NU"
+  },
+  "K8_NU": {
+   "dossier": "K8_NU",
+   "prefixe": "K8_NU"
+  },
+  "K16_NU": {
+   "dossier": "K16_NU",
+   "prefixe": "K16_NU"
+  },
+  "K8_CLIP_e02": {
+   "dossier": "K8_CLIP_e02",
+   "prefixe": "K8_CLIP_e02"
+  }
+ },
+ "gardes": [
+  {
+   "nom": "voix libre — gain_c1 ≡ 1,00 dans tous les bras",
+   "variable": "gain",
+   "bras": [
+    "K1_TEMOIN",
+    "K2_NU",
+    "K4_NU",
+    "K8_NU",
+    "K16_NU",
+    "K8_CLIP_e02"
+   ],
+   "cible": 1.0,
+   "tolerance": 0.02
+  }
+ ],
+ "exclusions_autorisees": []
+}

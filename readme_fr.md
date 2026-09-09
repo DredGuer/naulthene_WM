@@ -263,8 +263,23 @@ Avec **8 pas par nuit** (20 graines appariées × 1500 j) : maîtrise **8,75 % �
 (δ **+10,25 pt**, `t` = **+4,81**, 15/20, survit au retrait des 4 extrêmes), et **5 cerveaux
 sur 20 franchissent le niveau 5** contre **0/20** au témoin. 🔴 **Le clipping de PPO NUIT
 ici** (−1,00 pt). ⚠️ Le franchissement **ne passe pas Bonferroni** (`p` = 0,024 vs 0,0167) et
-le mur **se déplace sans tomber** : 15/20 restent au niveau 4. Voir
+le mur **se déplace sans tomber** : 15/20 restent au niveau 4. ⚠️ **Ce point K=8 a été mesuré
+avec le rejeu nocturne faussé (APP-01)** — c'est une *tendance*, pas un témoin valide. Voir
 [EPOQUES_07092026](docs/recherche/campagnes/EPOQUES_07092026_le_mur_du_niveau_4_est_franchi.md).
+
+✅ **09/09/2026 — SCI-01 VAGUE 1, BALAYAGE K/ε SUR L'APPRENANT RÉPARÉ (n=10 par bras × 1500
+j) : LA FORME EST UNE CLOCHE, OPTIMUM À K=8, ET LE CLIP NE NUIT PLUS.** Re-mesuré sur le
+socle sain (voix libre + `--detach-c2`, rejeu nocturne corrigé, code v41.68). Franchissements
+du mur `SimpleCrossingS9N1` → `LavaGapS5` : **0/10 · 0/10 · 8/10 · 10/10 · 3/10** pour
+K = 1, 2, 4, 8, 16 — **une courbe en cloche qui culmine à K=8**, K=16 retombant
+(sur-apprentissage probable). **Le clip PPO (ε=0,2) ne nuit plus** : K8_CLIP_e02 franchit
+**10/10**, comme K8_NU — le « le clip nuit » du 07/09 avait été mesuré sur le rejeu faussé.
+Le juge mécaniste l'explique : ratio ~0,994, p90 ~1,006, **fraction clippée ~8 % seulement**
+— le clip mord à peine car le ratio reste déjà proche de 1. ⚠️ **n=10, aucun `t` ne passe
+Bonferroni** (seuil 3,25) ; les comparaisons de maîtrise sont **confondues par le palier**
+(les franchisseurs sont mesurés sur le `LavaGapS5` plus dur) ; des comptages, pas des tests.
+La vague 2 (graines 122→222) est requise pour le verdict à n=20. Voir
+[SCI01_WAVE1](docs/recherche/campagnes/SCI01_WAVE1_09092026_la_forme_en_cloche.md).
 
 🟡 **07/09/2026 — BRANCHES PERSISTANTES (v41.63) : LE CANAL EST RÉPARÉ, C2 NE S'EN SERT
 TOUJOURS PAS.** Garder chaque branche du rollout sur **son propre geste** (au lieu de

@@ -505,8 +505,23 @@ this PPO on the same bench — **63× fewer per tick lived**. One step shifts th
 (δ **+10.25 pt**, `t` = **+4.81**, 15/20, survives dropping the four extremes), and **5 brains
 out of 20 clear level 5** against **0/20** for the control. 🔴 **PPO's clipping HURTS here**
 (−1.00 pt). ⚠️ The crossing **does not pass Bonferroni** (`p` = 0.024 vs 0.0167) and the wall
-**moves without falling**: 15/20 remain at level 4. See
+**moves without falling**: 15/20 remain at level 4. ⚠️ **This K=8 point was measured with the
+flawed nightly replay (APP-01)** — it is a *tendency*, not a valid control. See
 [EPOQUES_07092026](docs/recherche/campagnes/EPOQUES_07092026_le_mur_du_niveau_4_est_franchi.md).
+
+✅ **9 SEP 2026 — SCI-01 WAVE 1, K/ε SWEEP ON THE REPAIRED LEARNER (n=10 per arm, 1500
+days): THE SHAPE IS A BELL, PEAK AT K=8, AND THE CLIP NO LONGER HURTS.** Re-measured on the
+healthy base (free voice + `--detach-c2`, corrected nightly replay, code v41.68). Wall
+crossings `SimpleCrossingS9N1` → `LavaGapS5`: **0/10 · 0/10 · 8/10 · 10/10 · 3/10** for
+K = 1, 2, 4, 8, 16 — **a bell curve peaking at K=8**, K=16 falling back (likely
+over-fitting). **The PPO clip (ε=0.2) no longer hurts**: K8_CLIP_e02 clears **10/10**, like
+K8_NU — the "clipping hurts" result of 7 Sep was measured on the flawed replay. The
+mechanistic judge explains why: ratio ~0.994, p90 ~1.006, **clipped fraction only ~8 %** —
+the clip barely bites because the ratio already stays near 1. ⚠️ **n=10, no `t` passes
+Bonferroni** (threshold 3.25); mastery comparisons are **confounded by level** (crossers are
+measured on the harder `LavaGapS5`); counts only, not tests. Wave 2 (seeds 122→222) needed
+for the n=20 verdict. See
+[SCI01_WAVE1](docs/recherche/campagnes/SCI01_WAVE1_09092026_la_forme_en_cloche.md).
 
 🟡 **7 SEP 2026 — BRANCHES PERSISTANTES (v41.63): THE CHANNEL IS REPAIRED, C2 STILL DOES
 NOT USE IT.** Keeping each rollout branch on **its own action** (instead of letting C1's

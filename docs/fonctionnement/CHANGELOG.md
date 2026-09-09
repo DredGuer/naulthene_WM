@@ -43,6 +43,43 @@ CLAUDE.md aux règles + liens (dette documentaire, point général 07/09).
 
 ---
 
+## [v41.74-mesure] - 2026-09-09 — SCI-01 Wave 1 dépouillée : la forme est une cloche, optimum K=8, le clip ne nuit plus
+
+| Type | Details |
+|------|---------|
+| **Catégorie** | mesure (0 ligne de code — campagne 60 runs + dépouillement strict) |
+| **Impact** | Scientifique majeur — la forme de l'effet de K est une **cloche** (0/0/8/10/3 pour K=1/2/4/8/16) ; le « clipping nuit » du 07/09 est **requalifié** sur socle réparé |
+| **Registre** | SCI-01 → 🟡 à mesurer (Wave 1 faite ; Wave 2 différée pour le verdict n=20) |
+
+**Campagne** : `brains/08092026_sci01_balayage_K` (Wave 1 : 6 bras × 10 graines × 1500 j,
+code v41.68, socle voix libre + `--detach-c2`, rejeu corrigé APP-01). **60/60 runs, 0 échec**,
+terminée le 09/09 ~18:55 (écart ×2 sur l'estimation de lancement — bras lourds ~2× plus
+lents).
+
+**Dépouillement strict MES-01** (09/09, `depouiller_SCI01.py` + `manifeste_wave1.json`
+créés — le manifeste parent couvre Waves 1+2 à 20 graines) : 60/60 couverts, gardes
+`gain_c1` = 1,0000 partout, `agregat_wave1.json` écrit.
+
+**Résultats (comptages, n=10 — aucun `t` ne passe Bonferroni, seuil 3,25)** :
+
+1. **Franchissements du mur `SimpleCrossingS9N1` → `LavaGapS5` : 0/10 · 0/10 · 8/10 ·
+   10/10 · 3/10** pour K = 1, 2, 4, 8, 16 — **forme en cloche, optimum K=8**, retombée à
+   K=16 (sur-apprentissage probable : maîtrises finales souvent 0 % chez K16).
+2. 🔴 **Le clip ε=0,2 ne nuit plus** : K8_CLIP_e02 = **10/10** comme K8_NU. Le « clipping
+   nuit » du 07/09 (−1,00 pt) avait été mesuré sur le **rejeu faussé** (APP-01) — requalifié.
+3. **Juge mécaniste** (ratio/clippés, télémétrie `Rejouer` — seulement sur K8_CLIP) :
+   ratio ~0,994 · p90 ~1,006 · **fraction clippée 5,3–10,8 %** — le clip mord à peine car le
+   ratio reste déjà ~1 ; NU et CLIP quasi identiques.
+4. ⚠️ Le juge maîtrise appariée est **confondu par le palier** (les franchisseurs sont
+   mesurés sur `LavaGapS5`, plus dur) — le niveau porte la réponse, pas la maîtrise croisée.
+
+**Docs** : carnet `docs/recherche/campagnes/SCI01_WAVE1_09092026_la_forme_en_cloche.md` ·
+journal des runs (fin réelle + résultat) · README EN/FR (bloc 09 SEP, miroir strict, avec la
+réserve APP-01 ajoutée au bloc EPOQUES du 07/09 des deux côtés). La **réserve instrument
+Juge 4** (ratio non logué sur bras NU) reste actée pour la Wave 2.
+
+---
+
 ## [v41.73] - 2026-09-08 — REP-01 : environnement verrouillé — pyproject + lock de référence + spec
 
 | Type | Details |
