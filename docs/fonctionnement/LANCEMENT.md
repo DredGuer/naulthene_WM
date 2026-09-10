@@ -524,11 +524,20 @@ PYTHONPATH=src venv/bin/python3 -m naulthene.instruments.cerveau_3d \
     --source cerveau --brain brains/<campagne>/<cerveau>.brain --port 8770 --hz 15
 
 # ── ÉTAPE 2 — PASSERELLE : un run EN COURS alimente la page, depuis un autre terminal ───────
-# Terminal 1 (le spectateur) :
-PYTHONPATH=src venv/bin/python3 -m naulthene.instruments.cerveau_3d --serveur-seul --udp 9998 --port 8770
+# Terminal 1 (le spectateur) — à lancer EN PREMIER. ⚠️ --structure-fichier n'est pas un confort :
+# la trame `structure` (305 Ko) ne passe pas dans un datagramme UDP, le run l'écrit à côté du
+# `.brain` et le serveur la relit (au démarrage, puis à chaque neurogenèse, sans redémarrer).
+PYTHONPATH=src venv/bin/python3 -m naulthene.instruments.cerveau_3d --serveur-seul --udp 9998 \
+    --port 8770 --structure-fichier "brains/<campagne>/run.brain.vis01_structure.json"
+# (fichier absent au démarrage = normal : la bannière affiche « AUCUNE structure lue », puis la
+#  structure est publiée dès que le run l'écrit. --structure-fichier exige --serveur-seul.)
 # Terminal 2 (le run observé — n'importe quel run, y compris une campagne de 1500 jours) :
 PYTHONPATH=src venv/bin/python3 -m naulthene.cerveau.noyau --graine 11 --jours 200 \
     --brain "brains/<campagne>/run.brain" --telemetrie-3d udp:127.0.0.1:9998
+# Le témoin, pendant que le run tourne (même port que la bannière) :
+curl -s http://127.0.0.1:8770/structure | python3 -c "import json,sys; d=json.load(sys.stdin); \
+    print(len(d['couches']), 'couches, dim_bus', d['dim_bus'])"
+# → 12 couches, dim_bus 68   (mesuré : brains/VIS01_etape2_fichier_10092026/LISEZ_MOI.md)
 ```
 
 Puis ouvre **<http://127.0.0.1:8770>** dans un navigateur (la bannière du serveur le rappelle).
@@ -555,6 +564,7 @@ disque — l'instrument n'appelle aucune sauvegarde. Le mode `--source factice` 
 | `--hz CADENCE` | cadence de publication des trames d'activité (défaut 15 — le **tick du cerveau** n'est jamais ralenti par l'affichage) |
 | `--udp PORT` | écoute aussi les trames reçues en UDP sur ce port (étape 2) |
 | `--serveur-seul` | ne produit **aucune** trame locale : sert la page et reçoit l'UDP |
+| `--structure-fichier CHEMIN` | le fichier où un run écrit sa trame `structure` (`<brain>.vis01_structure.json`) : **relu au démarrage puis à chaque changement** et publié dans le bus, sans redémarrer le serveur — c'est ce qui rend l'étape 2 complète. **Exige `--serveur-seul`** (une source locale publie déjà sa propre structure ; deux publieurs feraient clignoter la scène sans rien dire — le refus tombe avant de lier un port). Un chemin **absent**, non ordinaire, illisible, trop gros (> 64 Mio) ou au JSON invalide n'est jamais fatal : la dernière structure valide reste publiée, l'incident est **compté** et visible (`/sante` → `structure_fichier`, bannière, bilan imprimé à l'arrêt) |
 | `--duree SECONDES` | s'arrête tout seul après ce délai (défaut : jusqu'à `Ctrl-C`) |
 
 ### Ce que la page montre, et ce qu'elle ne dit pas
@@ -567,22 +577,61 @@ cerveau écrit). ⚠️ La disposition est une **convention de lecture** (l'ordr
 **pas une affirmation anatomique** : Naulthène n'a ni cortex ni lobe. Le seuil d'affichage est une
 **commodité de lecture**, jamais une mesure.
 
-### 🔴 Limite connue de l'étape 2 (écrite, pas cachée)
+### ✅ L'étape 2 fonctionne de bout en bout — et les deux limites qui restent
 
 La trame `structure` (305 Ko à `dim_bus = 145`) ne peut **pas** passer par UDP — plafond dur de
 **65 507 octets** par datagramme, mesuré (avenant du 10/09/2026, reproduit dans l'entrée
 `[v41.76]` du CHANGELOG). Le run l'écrit donc dans un **fichier** à côté du `.brain`
 (`<brain>.vis01_structure.json`), et seules `activite` (~3,6 Ko) et `evenement` (~90 o) prennent
-l'UDP.
+l'UDP. **Ce fichier est désormais LU par le serveur du spectateur** (`--structure-fichier`,
+tâche 11) : au démarrage, puis à **chaque changement** (signature `mtime` + taille, fil de veille
+dédié à 1 Hz — aucun accès disque sur la voie chaude), et **sans redémarrer le serveur**. Un run
+EN COURS alimente donc réellement la page, structure comprise.
 
-⚠️ **La lecture de ce fichier par le serveur du spectateur n'est PAS encore implémentée** (le
-serveur reçoit aujourd'hui `activite`/`evenement` par UDP, et ne connaît les `structure` que de sa
-source locale). Conséquence, en `--serveur-seul --udp` : les trames d'activité **arrivent**, mais
-la page reste sur « en attente de la structure… ». C'est la moitié « lue par le serveur » de
-l'avenant qui manque — elle est enregistrée au registre (**VIS-01**, statut « livré en partie »)
-plutôt que tue. Ce qui **marche** aujourd'hui à l'étape 2 : le run n'est jamais ralenti ni modifié
-(preuve A/A `brains/VIS01_preuve/LISEZ_MOI.md`), et il dépose sa structure sur le disque, relue à
-la main ou par un futur spectateur.
+Vérifié **de bout en bout** le 10/09/2026 avec un run réel (`brains/VIS01_etape2_fichier_10092026/`)
+— serveur lancé **avant** le run, donc fichier **absent** au démarrage, run de 60 jours, graine 11,
+un `curl` par seconde comme témoin (`poll_structure.txt`) :
+
+| Instant | `GET /structure` | `sequence_structure` | Compteurs de veille |
+|---|---|---|---|
+| 19:28:51 — serveur seul, **fichier absent** | **`{}`** | **0** | `publications 0`, `absences 12` |
+| 19:28:57 — run lancé à 19:28:53 | **12 couches, `dim_bus` 16** | **1** | `publications 1` |
+| 19:29:00 → 19:29:31 | `dim_bus` 32 → 48 → 51 → 67 | 2 → 5 | `publications` idem |
+| 19:30:14 (run fini à 19:30:08) | **`dim_bus` 68** | **6** | `publications 6`, `illisibles 0`, `invalides 0` |
+
+La **scène se reconstruit à chaque neurogenèse** (5 republications observées en 75 s, sans
+redémarrer le serveur), la structure arrive **en tête du flux SSE** (avant toute activité), et la
+trame finale pèse **88 488 o** — au-dessus du plafond dur de 65 507 o d'un datagramme : le fichier
+n'était pas un confort, c'était la seule voie.
+
+**Deux limites restent vraies, et sont écrites ici :**
+
+1. **La veille publie le DERNIER état, pas l'historique.** Le run a écrit **11** structures, le
+   serveur en a publié **6** : deux neurogenèses dans la **même seconde** n'en donnent qu'une
+   (celle du dernier état). Sans conséquence — le bus ne garde que la dernière structure, et
+   `dim_bus` ne décroît jamais — mais à savoir avant de compter les trames.
+2. **Le bilan d'arrêt ne s'imprime pas si le processus tourne en arrière-plan d'un shell non
+   interactif** (constat de manipulation, pas un défaut du code) : le processus hérite `SIGINT`
+   **ignoré**, donc `Ctrl-C` et `kill -INT` ne déclenchent pas le `finally` qui imprime
+   `📡 structure : …`. Au premier plan (l'usage ci-dessus), la ligne sort normalement.
+
+Ce qui n'est **toujours pas** prouvé, et n'est pas caché : le rendu three.js réel (aucun navigateur
+ouvert — le transport est prouvé, pas l'image), le coût de la veille avec plusieurs clients SSE, et
+l'essai sur un `dim_bus` mature (~145, trame de 305 Ko — ici 68, trame de 88 Ko).
+
+🔴 **RÉTRACTATIONS DU 10/09/2026 (tâche 11 ; ancien énoncé en regard, dogme « rien sans écrit ») —
+CE QUI ÉTAIT ÉCRIT DANS CETTE SECTION ÉTAIT DEVENU FAUX :**
+
+| Énoncé publié dans cette section | ❌ FAUX — re-mesuré le 10/09/2026 | Corrigé en |
+|---|---|---|
+| « La lecture de ce fichier par le serveur du spectateur **n'est PAS encore implémentée** » | Elle l'est depuis la tâche 11 (commit `2fad056`) : `--structure-fichier` relit le fichier au démarrage et à chaque changement. Mesuré : `/structure` rend **12 couches, `dim_bus` 68**, `sequence_structure` monte à **6**, compteurs `illisibles 0`, `invalides 0` | « Ce fichier est désormais LU par le serveur du spectateur » |
+| « en `--serveur-seul --udp` : les trames d'activité **arrivent**, mais la page reste sur « en attente de la structure… » » | La page n'attend plus **dès que `--structure-fichier` est donné** : elle reçoit la structure en tête de flux SSE et la reconstruit 5 fois pendant le run. Elle n'attend que si l'option est omise ou le chemin faux — auquel cas la bannière et `/sante` le disent en clair | « le run EN COURS alimente la page, structure comprise » |
+| « elle est enregistrée au registre (**VIS-01**, statut « livré en partie ») » | L'étape 2 est **complète** : l'activité et les événements par UDP, la structure par le fichier relu. Le registre est passé à **✅ Clos** | « l'étape 2 est branchée de bout en bout » |
+| « il dépose sa structure sur le disque, relue à la main ou par un futur spectateur » | Le futur spectateur est arrivé : la relecture est automatique, **pendant** le run (`brains/VIS01_etape2_fichier_10092026/poll_structure.txt`, 111 lignes, une par seconde) | « relue automatiquement par le serveur, à chaque changement » |
+
+Le fond de l'avertissement de transport **n'est pas touché** : `structure` reste écrite dans un
+fichier, jamais émise par UDP (88 488 o > 65 507 o, mesuré ici encore). Seule la moitié « lue par
+le serveur », qui manquait, est livrée.
 
 ### Le bilan de télémétrie en fin de run (nouveauté de clôture)
 
@@ -608,8 +657,8 @@ drapeau est là : le run témoin reste identique, ligne pour ligne, à celui d'a
 | Le `.brain` observé reste bit-identique (SHA-256 + `torch.equal`) | `brains/VIS01_preuve/` · `tests/test_cerveau_3d.py::TestSpectateur` — **re-vérifié le 10/09/2026** : `sha256 74553e6e…` inchangée après 5 579 ticks observés |
 | Le cerveau observé ne dérive pas (normes de poids avant/après) | **re-vérifié le 10/09/2026** : `base_weight 13.674509…` et `myeline_M 0.163461…` **égales au bit** après 5 579 ticks · `[v41.76]` du CHANGELOG (tâche 8) |
 | **Surcoût du rapporteur, chiffré** (ticks/s avec et sans hooks, même cerveau, même graine) | **364,0 ticks/s sans le drapeau, 337,4 avec** — soit **+7,87 % de temps / −7,30 % de débit**, sur 3 paires de 50 jours (20 000 ticks) ; chiffres bruts et limites dans `brains/VIS01_surcout_10092026/LISEZ_MOI.md`. ⚠️ **Minorant** (mesuré à `bus = 32 → 71`) : **observer coûte ≈ 7,5 %**, c'est pourquoi le drapeau est éteint par défaut |
-| Le canal tient la cadence (trames émises/écrites/perdues) | ligne de bilan de fin de run ci-dessus — mesuré avec un serveur réel : **81 envoyées, 0 perdue, 13 activité + 68 événements reçus** |
-| Les commandes de cette section **fonctionnent telles quelles** | **vérifié le 10/09/2026** : étape 0 et étape 1 servent la page en **HTTP 200** (1 702 o) ; l'étape 2 reçoit bien l'activité et les événements — mais **pas** la structure (limite ci-dessus) |
+| Le canal tient la cadence (trames émises/écrites/perdues) | ligne de bilan de fin de run ci-dessus — mesuré avec un serveur réel : **81 envoyées, 0 perdue, 13 activité + 68 événements reçus** ; **re-mesuré le 10/09/2026 à l'étape 2 complète** : **4 463 datagrammes envoyés, 0 perdu**, et sur le **même flux SSE** **4 `structure` + 252 `activite` + 1 404 `evenement`**, la structure **en tête de flux** — `brains/VIS01_etape2_fichier_10092026/LISEZ_MOI.md` §5 |
+| Les commandes de cette section **fonctionnent telles quelles** | **vérifié le 10/09/2026** : étape 0 et étape 1 servent la page en **HTTP 200** (1 702 o) ; l'étape 2 reçoit l'activité, les événements **et la structure** — **12 couches, `dim_bus` 68, 6 publications** sur un run de 60 jours (`brains/VIS01_etape2_fichier_10092026/LISEZ_MOI.md`). ⚠️ Cette ligne disait « l'étape 2 reçoit bien l'activité et les événements — mais **pas** la structure (limite ci-dessus) » : c'est la limite retirée ci-dessus, rétractée avec son ancien énoncé |
 
 ---
 

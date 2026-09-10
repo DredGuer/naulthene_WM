@@ -2,7 +2,9 @@
 
 > **Statut** : ✅ **LIVRÉ le 10/09/2026** (les 10 tâches du
 > [`PLAN_VIS-01_cerveau_3d.md`](PLAN_VIS-01_cerveau_3d.md) sont closes, jusqu'au commit `3281f3e`
-> puis la clôture documentaire). Nature : **instrument de visualisation**, pas une mécanique
+> puis la clôture documentaire ; **tâche 11** (`2fad056` + `433cc14`) : le serveur relit le fichier
+> de structure — **l'étape 2 est complète et vérifiée de bout en bout**, voir l'avenant de §4).
+> Nature : **instrument de visualisation**, pas une mécanique
 > cognitive.
 > **Périmètre** : étapes 0 et 1 sans aucun impact sur `noyau.py` ; l'étape 2 est la seule qui
 > touche le noyau (drapeau additif, éteint par défaut, comportement bit-identique sans lui).
@@ -11,8 +13,9 @@
 > lecture seule** (pas de mode « vivre ») · documentation = **ce chantier + `INDEX.md` +
 > registre**.
 > ⚠️ **Ce document est conservé tel qu'il a été validé** : ses écarts avec ce qui a été livré sont
-> écrits en **avenants** à leur place (le transport de la trame `structure`, §4 ; les bornes
-> sensorielles, §5), jamais réécrits en silence. Usage : [`LANCEMENT.md` §7bis](../fonctionnement/LANCEMENT.md).
+> écrits en **avenants** à leur place (le transport de la trame `structure` **et la relecture du
+> fichier**, §4 ; les bornes sensorielles, §5), jamais réécrits en silence. Usage :
+> [`LANCEMENT.md` §7bis](../fonctionnement/LANCEMENT.md).
 
 ---
 
@@ -150,6 +153,63 @@ structure est sur le disque, complète et à jour. Ce qui manque est un chemin d
 à part entière, **hors des fichiers autorisés de la clôture**. Enregistré au registre (VIS-01,
 « livré en partie ») et dans `LANCEMENT.md` §7bis.
 
+#### ✅ Avenant du 10/09/2026 (tâche 11) — la moitié « lue par le serveur » est LIVRÉE
+
+Le constat ci-dessus **n'est plus vrai** depuis la tâche 11 (`2fad056` code + tests, `433cc14`
+traces) : **le serveur du spectateur relit le fichier de structure**. `--structure-fichier CHEMIN`
+(exige `--serveur-seul`) construit un `VeilleurStructureFichier` : un fil **dédié** (démon, 1 Hz,
+aucun accès disque sur la voie chaude) qui relit le fichier **au démarrage** — premier tour
+**synchrone**, pour que la toute première connexion du navigateur voie une structure déjà présente —
+puis **à chaque changement**, sur **signature** (`mtime_ns` + taille : l'émetteur écrit de façon
+atomique par `os.replace`, donc la signature change à chaque publication). Une trame refusée
+n'écrase **rien** (la dernière structure valide reste publiée), et l'incident est **compté**
+(`publications` / `absences` / `illisibles` / `invalides` + `derniere_erreur`), visible dans la
+bannière, dans `/sante` (bloc `structure_fichier`) et dans le bilan d'arrêt `📡 structure : …`.
+
+**La commande qui le prouve** — protocole exact de
+`brains/VIS01_etape2_fichier_10092026/` (serveur lancé **avant** le run, donc fichier **absent** au
+démarrage ; nouvelles valeurs de port pour ne pas gêner un serveur déjà ouvert) :
+
+```bash
+# terminal 1 — le serveur (fichier absent au démarrage : c'est le cas normal)
+PYTHONPATH=src venv/bin/python3 -m naulthene.instruments.cerveau_3d --serveur-seul --udp 9998 \
+    --port 8771 --structure-fichier \
+    brains/VIS01_etape2_fichier_10092026/etape2.brain.vis01_structure.json
+
+# terminal 2 — le run observé (ici un cerveau NEUF, né à dim_bus = 16)
+PYTHONPATH=src venv/bin/python3 -m naulthene.cerveau.noyau --graine 11 --jours 60 --no-wandb \
+    --brain brains/VIS01_etape2_fichier_10092026/etape2.brain --telemetrie-3d udp:127.0.0.1:9998
+
+# le témoin, PENDANT le run (le port est celui de la bannière)
+curl -s http://127.0.0.1:8771/structure | python3 -c "import json,sys; d=json.load(sys.stdin); \
+    print(len(d['couches']), 'couches, dim_bus', d['dim_bus'])"
+# → 12 couches, dim_bus 68
+```
+
+| Fait mesuré (10/09/2026, 19:28 → 19:30) | Valeur |
+|---|---|
+| `/structure` avant que le run écrive le fichier | **`{}`**, `sequence_structure` **0**, `absences 12` |
+| `/structure` 4 s après le lancement du run (19:28:57) | **12 couches, `dim_bus` 16**, `sequence_structure` **1** |
+| `/structure` en fin de run (60 jours en 75 s) | **`dim_bus` 68**, `sequence_structure` **6**, `illisibles 0`, `invalides 0` |
+| Flux SSE (client connecté pendant le run) | **4 trames `structure`** (`dim_bus` 16, 32, 48, 51) + **252 `activite`** + **1 404 `evenement`**, la structure **en tête de flux** |
+| Trame finale | **88 488 o** — toujours au-dessus du plafond dur de **65 507 o** d'un datagramme : le fichier reste la **seule** voie |
+| Ce qui reste vrai | le run a écrit **11** structures, le serveur en a publié **6** : la veille publie le **dernier** état (deux neurogenèses dans la même seconde ⇒ une seule publication) |
+
+🔴 **RÉTRACTATION DU 10/09/2026 (tâche 11 ; ancien énoncé en regard, dogme « rien sans écrit ») —
+CE QUE DISAIT CE DOCUMENT :**
+
+| Énoncé publié dans ce document | ❌ FAUX — re-mesuré le 10/09/2026 | Corrigé en |
+|---|---|---|
+| « Qui relit ce fichier \| **personne** : `grep -rn "vis01_structure" src/` ne rend que `noyau.py` » | Le `grep` rend **trois** fichiers : `noyau.py` (l'émetteur), `cerveau_3d/serveur.py` (`VeilleurStructureFichier`), `cerveau_3d/__main__.py` (`--structure-fichier`) | « le serveur du spectateur le relit, au démarrage et à chaque changement » |
+| « en `--serveur-seul`, la page reste sur « en attente de la structure… » — l'étape 2 est **livrée en partie** » | La page n'attend plus **dès que `--structure-fichier` est donné** : 6 publications mesurées pendant un run de 75 s, sans redémarrer le serveur. L'étape 2 est **complète** | « l'étape 2 est livrée, structure comprise » |
+| « Ce qui manque est un chemin de lecture (`--structure <fichier>`, ou une surveillance du dossier) … une tâche à part entière, **hors des fichiers autorisés de la clôture** » | Le chemin de lecture a été livré (tâche 11) : le « manque » était une limite de **périmètre** (liste de fichiers close), pas une impossibilité technique | « `--structure-fichier` (tâche 11), livré » |
+
+⚠️ **La veille n'est PAS un historique** : elle publie le **dernier** état connu, sur signature —
+11 structures écrites par le run, 6 publiées. C'est la limite principale du mécanisme (avec une
+latence possible d'une seconde, la cadence de veille, et une signature réduite à `mtime_ns` +
+taille) ; les cinq limites sont consignées dans le `LISEZ_MOI.md` de la campagne (§4, écrites
+d'avance) et dans le rapport de la tâche 11 (§6).
+
 ### Formes exactes (indicatives, à figer à l'implémentation)
 
 ```jsonc
@@ -256,7 +316,10 @@ PYTHONPATH=src venv/bin/python3 -m naulthene.instruments.cerveau_3d \
     --brain brains/08092026_sci01_balayage_K/K4_NU/K4_NU_g11.brain --port 8770 --hz 15
 
 # étape 2 — serveur seul, puis un run observé depuis un autre terminal
-PYTHONPATH=src venv/bin/python3 -m naulthene.instruments.cerveau_3d --serveur-seul --udp 9998 --port 8770
+# ⚠️ `--structure-fichier` est REQUIS à l'étape 2 (avenant de la tâche 11, §4) : sans lui la page
+# reste sur « en attente de la structure… », la trame `structure` ne passant pas par UDP.
+PYTHONPATH=src venv/bin/python3 -m naulthene.instruments.cerveau_3d --serveur-seul --udp 9998 \
+    --port 8770 --structure-fichier "brains/<campagne>/run.brain.vis01_structure.json"
 PYTHONPATH=src venv/bin/python3 -m naulthene.cerveau.noyau --graine 11 --jours 200 \
     --brain "brains/<campagne>/run.brain" --telemetrie-3d udp:127.0.0.1:9998
 ```
@@ -392,7 +455,7 @@ factice) ; le point 6 instancie un cerveau minuscule (`dim_bus = 16`). Tous sont
 | **Le cerveau observé ne dérive pas** | normes de `base_weight` et `myeline_M` avant/après, à l'étape 1 | ✅ faite (tâche 8, `[v41.76]`) |
 | **Surcoût du rapporteur — chiffré, jamais estimé** | ticks/s avec et sans hooks, même graine, même cerveau | ✅ **faite le 10/09** : **364,0 → 337,4 ticks/s**, soit **+7,87 % de temps / −7,30 % de débit** (3 paires de 20 000 ticks ; `brains/VIS01_surcout_10092026/LISEZ_MOI.md`) — **minorant**, mesuré à `bus = 32 → 71` |
 | **Étape 2 : run bit-identique sans drapeau** | deux runs même graine (5 jours) avec et sans télémétrie active, `diff` des niveaux promus — **le test qui compte** | ✅ **faite (tâche 9)** : `diff` vide ; **re-mesurée par la clôture sur 3 paires de 50 jours** (`diff` vide, `dim_bus` final identique des deux côtés) — `brains/VIS01_preuve/LISEZ_MOI.md` |
-| **Le canal tient la cadence** | nombre de trames émises/affichées/perdues sur une session, reporté tel quel | 🟡 **faite côté ÉMISSION, partielle côté AFFICHAGE** : 81 envoyées / **0 perdue** / 13 activité + 68 événements **reçues par un vrai serveur** ; le nombre de trames **affichées** dépend du lien manquant `structure` (avenant §4) |
+| **Le canal tient la cadence** | nombre de trames émises/affichées/perdues sur une session, reporté tel quel | ✅ **faite le 10/09 (tâche 11)** : **4 463 datagrammes envoyés / 0 perdu**, et **4 `structure` + 252 `activite` + 1 404 `evenement`** reçus par un vrai serveur **sur le même flux SSE**, la structure **en tête de flux** (`brains/VIS01_etape2_fichier_10092026/LISEZ_MOI.md` §5). ⚠️ Cette ligne disait « 🟡 **faite côté ÉMISSION, partielle côté AFFICHAGE** … le nombre de trames **affichées** dépend du lien manquant `structure` (avenant §4) » : le lien est livré. Reste non prouvé : le **rendu** three.js lui-même (aucun navigateur ouvert) |
 
 ## 11. Ce qui est explicitement écarté (YAGNI)
 
