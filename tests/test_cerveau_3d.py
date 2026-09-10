@@ -16,6 +16,19 @@ import numpy as np
 from naulthene.cerveau.telemetrie import serialiser   # tâche 4 : l'écouteur UDP reçoit des OCTETS
 
 
+def json_strict(brut: bytes):
+    """`json.loads` qui REJETTE les littéraux `NaN`/`Infinity` — ce que fait `JSON.parse`.
+
+    ⚠️ `json.loads` seul les ACCEPTE (même `allow_nan=False` n'existe qu'à l'écriture) : un test
+    qui se contenterait de `json.loads` sur un corps pollué passerait au vert et ne prouverait
+    rien. `parse_constant` est le seul crochet qui reproduit la sévérité du navigateur.
+    """
+    def refuser(constante):
+        raise ValueError(f"littéral non JSON dans le corps : {constante}")
+    return json.loads(brut.decode("utf-8") if isinstance(brut, bytes) else brut,
+                      parse_constant=refuser)
+
+
 class TestCodecMatrices(unittest.TestCase):
     def test_quantification_respecte_la_borne_d_erreur(self):
         from naulthene.cerveau.telemetrie import quantifier_matrice, dequantifier_matrice
@@ -285,6 +298,33 @@ class TestServeur(unittest.TestCase):
             return lire(nb_lignes, delai)
 
     @staticmethod
+    def _rend_la_main(appel, delai=3.0):
+        """`True` si `appel()` rend la main avant `delai` — jamais bloquant pour la suite.
+
+        ⚠️ Un `arreter()` défaillant bloque POUR TOUJOURS (`shutdown()` attend un événement que
+        seul `serve_forever()` arme : sondé par le reviewer, encore bloqué après 3 s). L'appeler
+        directement ferait pendre toute la suite de tests : on l'exécute dans un fil DÉMON
+        surveillé, et une exception est remontée à l'appelant, jamais avalée.
+        """
+        import threading
+        resultat = {}
+
+        def _appeler():
+            try:
+                appel()
+            except BaseException as erreur:   # remontée telle quelle par l'appelant
+                resultat["erreur"] = erreur
+
+        fil = threading.Thread(target=_appeler, name="arret-sous-surveillance", daemon=True)
+        fil.start()
+        fil.join(timeout=delai)
+        if fil.is_alive():
+            return False
+        if "erreur" in resultat:
+            raise resultat["erreur"]
+        return True
+
+    @staticmethod
     def _evenements(lignes):
         """`[(nom, charge)]` — les lignes brutes d'un flux SSE, décodées."""
         trouves, nom = [], None
@@ -367,6 +407,141 @@ class TestServeur(unittest.TestCase):
                 suivants = self._evenements(lire(3))
                 self.assertEqual([nom for nom, _ in suivants], ["evenement"], suivants)
                 self.assertEqual(suivants[0][1]["genre"], "victoire")
+        finally:
+            serveur.arreter()
+
+    def test_activite_avec_valeur_non_finie_part_en_null_sur_le_flux(self):
+        """I1 : une valeur NON FINIE présente dans le bus part en `null`, jamais en `NaN`.
+
+        Le chemin est réellement atteignable : `json.loads` (donc `deserialiser`, donc
+        l'écouteur UDP de cette tâche) ACCEPTE les littéraux `NaN`/`Infinity`. Un `NaN` publié
+        ainsi dans le bus produisait `data: {...,"dopamine":NaN}` — que `JSON.parse` REJETTE :
+        la page tombait au lieu d'afficher un cerveau dans un état inattendu (spec §9).
+
+        Le corps est vérifié par l'absence de littéral ET par un parseur STRICT (celui de
+        `json.loads` accepte `NaN` : il ne prouverait rien seul).
+        """
+        from naulthene.cerveau.telemetrie import BusTrames, trame_structure
+        from naulthene.instruments.cerveau_3d.serveur import ServeurCerveau3D
+
+        bus = BusTrames()
+        bus.publier_structure(trame_structure([], [], {"dim_bus": 16}))
+        # Publiée EN MÉMOIRE, les trois valeurs non finies, à DEUX profondeurs : la conversion
+        # doit être RÉCURSIVE (un `dict` de listes, pas seulement la racine).
+        bus.publier_activite({"type": "activite", "version": 1, "tick": 1,
+                              "scalaires": {"dopamine": float("nan"),
+                                            "energie": float("inf"),
+                                            "variance_bus": float("-inf")},
+                              "matrices": {"analyseur": [0.5, float("nan")]}})
+        serveur = ServeurCerveau3D(bus, port=0)
+        serveur.demarrer_en_thread()
+        try:
+            lignes = self._client_sse(serveur.port)
+            donnees = [l for l in lignes if l.startswith("data: ")]
+            self.assertTrue(donnees, lignes)
+            for ligne in donnees:                      # aucun littéral, sur AUCUN événement
+                self.assertNotIn("NaN", ligne, ligne)
+                self.assertNotIn("Infinity", ligne, ligne)
+            charge = json_strict(donnees[-1][len("data: "):])
+            self.assertEqual(charge["scalaires"]["dopamine"], None)
+            self.assertEqual(charge["scalaires"]["energie"], None)
+            self.assertEqual(charge["scalaires"]["variance_bus"], None)
+            self.assertEqual(charge["matrices"]["analyseur"], [0.5, None])
+            self.assertEqual(charge["tick"], 1)         # le reste de la trame est intact
+        finally:
+            serveur.arreter()
+
+    def test_structure_avec_valeur_non_finie_part_en_null_sur_structure(self):
+        """I1, sonde du reviewer rejouée de bout en bout : datagramme avec `NaN` littéral.
+
+        Un vrai `EcouteurUDP` (celui de cette tâche) reçoit `{"type":"structure",...,
+        "dim_bus":NaN}` — écrit par un émetteur qui n'est PAS `serialiser` (le seul protégé) —
+        le publie dans le bus, et `/structure` doit servir un corps SANS littéral `NaN`.
+        """
+        import socket as sock
+        import time
+        import urllib.request
+        from naulthene.cerveau.telemetrie import BusTrames
+        from naulthene.instruments.cerveau_3d.serveur import EcouteurUDP, ServeurCerveau3D
+
+        bus = BusTrames()
+        ecouteur = EcouteurUDP(bus, port=0)
+        ecouteur.demarrer_en_thread()
+        serveur = ServeurCerveau3D(bus, port=0)
+        serveur.demarrer_en_thread()
+        emetteur = sock.socket(sock.AF_INET, sock.SOCK_DGRAM)
+        try:
+            emetteur.sendto(b'{"type":"structure","version":1,"dim_bus":NaN}',
+                            ("127.0.0.1", ecouteur.port))
+            limite = time.time() + 3.0
+            while bus.structure() is None and time.time() < limite:
+                time.sleep(0.05)
+            self.assertIsNotNone(bus.structure(), "le datagramme NaN n'est pas arrivé au bus")
+            with urllib.request.urlopen(
+                    f"http://127.0.0.1:{serveur.port}/structure", timeout=3.0) as r:
+                brut = r.read()
+            self.assertNotIn(b"NaN", brut, brut)
+            self.assertNotIn(b"Infinity", brut, brut)
+            charge = json_strict(brut)                  # ce que `JSON.parse` doit accepter
+            self.assertIsNone(charge["dim_bus"])
+            self.assertEqual(charge["type"], "structure")
+        finally:
+            serveur.arreter()
+            ecouteur.arreter()
+            emetteur.close()
+
+    def test_flux_survit_a_une_trame_refusee_par_la_ceinture_stricte(self):
+        """I1 : `allow_nan=False` est une CEINTURE — un `ValueError` ne tue pas le fil.
+
+        Le `NaN` en CLÉ (jamais en valeur) n'est pas converti par l'assainissement des valeurs,
+        mais `json.dumps(..., allow_nan=False)` le REFUSE (`ValueError`) : c'est exactement le
+        cas que le ruling décrit. La trame refusée est sautée et COMPTÉE ; le flux continue de
+        servir les suivantes (sans le `try/except`, le fil de gestion mourrait et plus rien
+        n'arriverait ; sans `allow_nan=False`, la trame partirait en `{"NaN":1}`).
+
+        ⚠️ On ATTEND que le refus ait eu lieu (compteur, lu par la route publique : une trame
+        refusée ne produit AUCUNE ligne dans le flux) avant de publier la suivante. Sans cette
+        attente, le canal d'activité n'ayant qu'un emplacement, la trame polluée pourrait être
+        ÉCRASÉE avant d'être tentée — le test passerait alors sans rien prouver.
+        """
+        import time
+        import urllib.error
+        import urllib.request
+        from naulthene.cerveau.telemetrie import BusTrames, trame_structure, trame_activite
+        from naulthene.instruments.cerveau_3d.serveur import ServeurCerveau3D
+
+        bus = BusTrames()
+        bus.publier_structure(trame_structure([], [], {"dim_bus": 16}))
+        # Clé flottante non finie : `assainir_json` ne touche pas les CLÉS, la ceinture les refuse.
+        bus.publier_activite({"type": "activite", "version": 1, "scalaires": {float("nan"): 1}})
+        serveur = ServeurCerveau3D(bus, port=0)
+        serveur.demarrer_en_thread()
+
+        def _compteur_refus():
+            with urllib.request.urlopen(f"http://127.0.0.1:{serveur.port}/sante",
+                                        timeout=3.0) as r:
+                return json.loads(r.read())["emissions_refusees"]
+
+        try:
+            with self._flux(serveur.port) as lire:
+                self.assertEqual([nom for nom, _ in self._evenements(lire(3))], ["structure"])
+                limite = time.time() + 5.0
+                while _compteur_refus() < 1 and time.time() < limite:
+                    time.sleep(0.02)
+                self.assertEqual(_compteur_refus(), 1,
+                                 "la trame à clé non finie n'a pas été ATTAQUÉE puis refusée")
+                bus.publier_activite(trame_activite({}, {"tick": 2}, {"tick": 2}))
+                suivants = self._evenements(lire(3))
+                self.assertEqual([nom for nom, _ in suivants], ["activite"], suivants)
+                self.assertEqual(suivants[0][1]["scalaires"]["tick"], 2)
+            # La même ceinture sur la route JSON : la clé non finie est refusée ⇒ 500 COMPTÉ
+            # (l'échec reste visible), jamais un corps que `JSON.parse` rejetterait.
+            bus.publier_structure({"type": "structure", "version": 1, "dim_bus": 16,
+                                   float("nan"): 1})
+            with self.assertRaises(urllib.error.HTTPError) as capture:
+                urllib.request.urlopen(f"http://127.0.0.1:{serveur.port}/structure", timeout=3.0)
+            self.assertEqual(capture.exception.code, 500)
+            self.assertEqual(_compteur_refus(), 2)
         finally:
             serveur.arreter()
 
@@ -492,6 +667,52 @@ class TestServeur(unittest.TestCase):
                 self.assertEqual(r.status, 200)
         finally:
             second.arreter()
+
+    def test_arreter_sans_demarrage_rend_la_main_et_libere_le_port(self):
+        """I2 : `arreter()` sans `demarrer_en_thread()` ne doit PAS bloquer (sonde du reviewer).
+
+        `shutdown()` attend un événement que seul `serve_forever()` arme : appelé sans démarrage
+        il bloque INDÉFINIMENT, et `server_close()` n'est alors jamais atteint — le socket
+        d'écoute reste lié. Le test ne se contente pas de mesurer la durée : il vérifie que le
+        port est réellement RENDU.
+        """
+        import urllib.request
+        from naulthene.cerveau.telemetrie import BusTrames
+        from naulthene.instruments.cerveau_3d.serveur import ServeurCerveau3D
+
+        serveur = ServeurCerveau3D(BusTrames(), port=0)
+        port = serveur.port
+        self.assertTrue(self._rend_la_main(serveur.arreter),
+                        "arreter() sans demarrer_en_thread() bloque encore")
+        # Le socket est LIBÉRÉ : un second serveur reprend le même port (sinon EADDRINUSE).
+        second = ServeurCerveau3D(BusTrames(), port=port)
+        try:
+            second.demarrer_en_thread()
+            with urllib.request.urlopen(f"http://127.0.0.1:{port}/sante", timeout=2.0) as r:
+                self.assertEqual(r.status, 200)
+        finally:
+            second.arreter()
+
+    def test_arreter_est_idempotent_sur_les_deux_chemins(self):
+        """I2 : le ruling est « sûr ET idempotent », sur le chemin jamais démarré ET le démarré.
+
+        Deux appels de suite, dans les deux états : le second ne doit ni bloquer, ni lever.
+        """
+        import urllib.request
+        from naulthene.cerveau.telemetrie import BusTrames
+        from naulthene.instruments.cerveau_3d.serveur import ServeurCerveau3D
+
+        jamais_demarre = ServeurCerveau3D(BusTrames(), port=0)
+        self.assertTrue(self._rend_la_main(jamais_demarre.arreter))
+        self.assertTrue(self._rend_la_main(jamais_demarre.arreter))   # idempotent
+
+        demarre = ServeurCerveau3D(BusTrames(), port=0)
+        demarre.demarrer_en_thread()
+        port = demarre.port
+        self.assertTrue(self._rend_la_main(demarre.arreter))
+        self.assertTrue(self._rend_la_main(demarre.arreter))          # idempotent
+        with self.assertRaises(OSError):            # plus personne n'écoute (URLError ⊂ OSError)
+            urllib.request.urlopen(f"http://127.0.0.1:{port}/sante", timeout=1.0)
 
     def test_flux_ouvert_ne_bloque_pas_les_autres_requetes(self):
         """Critère n°2 : un client qui lit le flux n'empêche personne d'autre d'être servi.
