@@ -15,6 +15,9 @@ from __future__ import annotations
 
 import base64
 import json
+import socket
+import threading
+from collections import deque
 
 import numpy as np
 
@@ -192,3 +195,107 @@ def deserialiser(octets: bytes) -> dict | None:
     if not isinstance(trame, dict) or "type" not in trame:
         return None
     return trame
+
+
+# --- 4. Le bus borné (le présent, jamais du retard) et l'émetteur non bloquant ---
+
+TAILLE_FILE_EVENEMENTS = 32
+
+
+class BusTrames:
+    """Le point de rendez-vous entre qui produit les trames et qui les sert.
+
+    Choix assumé (spec §9) : l'activité n'est PAS une file — seule la DERNIÈRE trame est gardée.
+    Si le serveur ou le navigateur prend du retard, on saute des images plutôt que d'accumuler
+    du passé : on regarde un cerveau vivant, pas un enregistrement.
+    """
+
+    def __init__(self, taille_evenements: int = TAILLE_FILE_EVENEMENTS):
+        self._verrou = threading.Lock()
+        self._structure = None
+        self._activite = None
+        self._evenements = deque(maxlen=int(taille_evenements))
+        self._sequence = 0
+        self._evenements_total = 0
+
+    def publier_structure(self, trame: dict) -> None:
+        with self._verrou:
+            self._structure = trame
+
+    def publier_activite(self, trame: dict) -> None:
+        with self._verrou:
+            self._activite = trame
+            self._sequence += 1
+
+    def publier_evenement(self, trame: dict) -> None:
+        with self._verrou:
+            self._evenements.append(trame)
+            self._evenements_total += 1
+
+    @property
+    def sequence(self) -> int:
+        with self._verrou:
+            return self._sequence
+
+    def structure(self):
+        with self._verrou:
+            return self._structure
+
+    def activite(self):
+        with self._verrou:
+            return self._activite
+
+    def evenements_depuis(self, index: int) -> tuple[list, int]:
+        """`index` = valeur précédente de `compteurs()["evenements_total"]`. Renvoie les
+        événements encore en file après cet index, et le nouveau total."""
+        with self._verrou:
+            total = self._evenements_total
+            en_file = list(self._evenements)
+        manquants = total - len(en_file)
+        return en_file[max(0, index - manquants):], total
+
+    def compteurs(self) -> dict:
+        with self._verrou:
+            return {"sequence": self._sequence,
+                    "evenements_total": self._evenements_total,
+                    "evenements_en_file": len(self._evenements)}
+
+
+def analyser_cible_udp(cible: str) -> tuple:
+    """`"udp:hote:port"` → `(hote, port)`. Une cible mal formée est une ERREUR DE CONFIGURATION :
+    elle doit planter au démarrage, pas produire un silence qu'on prendrait pour un cerveau lent.
+    """
+    morceaux = str(cible).split(":")
+    if len(morceaux) != 3 or morceaux[0] != "udp":
+        raise ValueError(f"cible de télémétrie invalide : {cible!r} (attendu « udp:hote:port »)")
+    return morceaux[1], int(morceaux[2])
+
+
+class EmetteurUDP:
+    """Envoie une trame sans jamais attendre. Toute erreur ⇒ trame PERDUE, comptée, jamais une
+    exception qui remonterait dans la boucle du cerveau."""
+
+    def __init__(self, cible: str):
+        self._adresse = analyser_cible_udp(cible)
+        self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self._socket.setblocking(False)
+        self._envoyees, self._perdues = 0, 0
+
+    def envoyer(self, trame: dict) -> bool:
+        try:
+            self._socket.sendto(serialiser(trame), self._adresse)
+        except (OSError, ValueError):
+            self._perdues += 1
+            return False
+        self._envoyees += 1
+        return True
+
+    def fermer(self) -> None:
+        try:
+            self._socket.close()
+        except OSError:
+            pass
+
+    def compteurs(self) -> dict:
+        return {"envoyees": self._envoyees, "perdues": self._perdues,
+                "cible": f"{self._adresse[0]}:{self._adresse[1]}"}

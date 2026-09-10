@@ -133,3 +133,53 @@ class TestTramesEtDisposition(unittest.TestCase):
                 trame = trame_activite({}, {"dopamine": valeur}, {"tick": 7})
                 with self.assertRaises(ValueError):
                     serialiser(trame)
+
+
+class TestBusEtEmetteur(unittest.TestCase):
+    def test_le_bus_ne_garde_que_la_derniere_activite(self):
+        from naulthene.cerveau.telemetrie import BusTrames, trame_activite
+        bus = BusTrames()
+        for tick in (1, 2, 3):
+            bus.publier_activite(trame_activite({}, {"tick": tick}, {"tick": tick}))
+        self.assertEqual(bus.activite()["scalaires"]["tick"], 3)
+        self.assertEqual(bus.sequence, 3)
+
+    def test_file_d_evenements_bornee(self):
+        from naulthene.cerveau.telemetrie import BusTrames, trame_evenement
+        bus = BusTrames(taille_evenements=32)
+        for i in range(40):
+            bus.publier_evenement(trame_evenement("choc_dopamine", {"tick": i}))
+        nouveaux, total = bus.evenements_depuis(0)
+        self.assertEqual(total, 40)
+        self.assertEqual(len(nouveaux), 32)
+        self.assertEqual(nouveaux[-1]["tick"], 39)
+
+    def test_cible_udp_invalide_refusee_au_demarrage(self):
+        from naulthene.cerveau.telemetrie import analyser_cible_udp
+        self.assertEqual(analyser_cible_udp("udp:127.0.0.1:9998"), ("127.0.0.1", 9998))
+        for mauvaise in ("127.0.0.1:9998", "udp:127.0.0.1", "tcp:1.2.3.4:5"):
+            with self.assertRaises(ValueError):
+                analyser_cible_udp(mauvaise)
+
+    def test_emetteur_livre_les_octets_et_ne_bloque_jamais(self):
+        import socket as sock
+        from naulthene.cerveau.telemetrie import EmetteurUDP, trame_evenement, serialiser
+        ecoute = sock.socket(sock.AF_INET, sock.SOCK_DGRAM)
+        ecoute.bind(("127.0.0.1", 0))
+        ecoute.settimeout(2.0)
+        port = ecoute.getsockname()[1]
+        emetteur = EmetteurUDP(f"udp:127.0.0.1:{port}")
+        trame = trame_evenement("victoire", {"tick": 5})
+        self.assertTrue(emetteur.envoyer(trame))
+        recu, _ = ecoute.recvfrom(65535)
+        self.assertEqual(recu, serialiser(trame))
+        emetteur.fermer()
+        ecoute.close()
+
+    def test_envoi_vers_port_ferme_est_perdu_sans_exception(self):
+        from naulthene.cerveau.telemetrie import EmetteurUDP, trame_evenement
+        emetteur = EmetteurUDP("udp:127.0.0.1:1")   # port réservé, rien n'écoute
+        for _ in range(3):
+            emetteur.envoyer(trame_evenement("choc_dopamine", {"tick": 1}))
+        self.assertGreaterEqual(emetteur.compteurs()["envoyees"] + emetteur.compteurs()["perdues"], 3)
+        emetteur.fermer()
