@@ -2094,3 +2094,389 @@ class TestRapporteur(unittest.TestCase):
             rapporteur.detacher()
         self.assertIn("valeurs", str(capture.exception))
         self.assertIn(f"{self.DIM_BUS} attendues", str(capture.exception))
+
+
+# ---------------------------------------------------------------------------
+# Tâche 8 — le SPECTATEUR-PILOTE : un VRAI cerveau qui vit, en lecture seule stricte
+# ---------------------------------------------------------------------------
+
+def _sha256(chemin) -> str:
+    """L'empreinte du fichier, relue sur le DISQUE à chaque appel (jamais une valeur mémorisée)."""
+    import hashlib
+    with open(chemin, "rb") as fichier:
+        return hashlib.sha256(fichier.read()).hexdigest()
+
+
+def _brain_neuf(dossier, ticks_vecus: int = 0) -> str:
+    """Cristallise un `.brain` RÉEL (naissance, `bus = 16`) dans `dossier` et rend son chemin.
+
+    ⚠️ L'esquisse de la tâche enchaîne `PersistanceAnatomique(chemin).charger_ou_naitre()` puis
+    `open(chemin, "rb")`. C'est FAUX, et MESURÉ : `charger_ou_naitre()` fait naître un agent EN
+    MÉMOIRE et n'écrit RIEN sur le disque (c'est `PersistanceAnatomique.sauvegarder` qui
+    cristallise). Le test de l'esquisse lèverait donc `FileNotFoundError` avant même d'appeler
+    `jouer_cerveau` : il échouerait pour une mauvaise raison et ne mesurerait rien de la lecture
+    seule. La naissance est ici suivie de sa cristallisation explicite — ce que fait tout run réel
+    (Cuve, cursus) avant qu'un instrument puisse observer son `.brain`.
+
+    `ticks_vecus` fait vivre le cerveau AVANT de le cristalliser : le `.brain` obtenu démarre alors
+    à un `tick_absolu` non nul, comme tous les cerveaux de campagne (`K4_NU_g11.brain` : 537 329).
+    C'est ce qui permet de distinguer le compteur de VIE du compteur de SESSION.
+    """
+    from naulthene.cerveau.persistance import PersistanceAnatomique
+    chemin = os.path.join(str(dossier), "naissance.brain")
+    persistance = PersistanceAnatomique(chemin)
+    etat = persistance.charger_ou_naitre()
+    if ticks_vecus:
+        from naulthene.cerveau.noyau import demarrer_journee, traiter_tick
+        demarrer_journee(etat)
+        for _ in range(int(ticks_vecus)):
+            traiter_tick(etat)
+        etat.env.close()
+    persistance.sauvegarder(etat)
+    return chemin
+
+
+class TestSpectateurLectureSeule(unittest.TestCase):
+    """Tâche 8 — le mode où le viewer fait lui-même vivre un vrai `.brain` et l'affiche.
+
+    ⚠️ La promesse du chantier n'est pas « aucun poids modifié » — cette formulation est FAUSSE
+    et le dépôt l'a déjà corrigée dans deux docstrings (`lancer_arene.py`, `irm_cerveau.py`) :
+    `traiter_tick` déclenche la LTP par pic de dopamine (`fortifier_synapses`), qui écrit EN
+    PLACE dans `base_weight`/`myeline_M`, sans `backward()` et sans que `eval()` l'arrête. Ce qui
+    est vrai et testable, c'est que le FICHIER `.brain` n'est jamais touché : aucune sauvegarde
+    n'est appelée, donc l'octet sur le disque ne peut pas changer. C'est ce que ces tests
+    mesurent (SHA-256 avant/après, liste du dossier), et non une neutralité que personne ne peut
+    promettre.
+    """
+
+    def test_le_fichier_brain_est_bit_identique(self):
+        """🔴 LE CRITÈRE CENTRAL — un cerveau qui vit 1 s garde un SHA-256 IDENTIQUE.
+
+        Le dossier du `.brain` est aussi comparé AVANT/APRÈS : c'est ce qui attrape une écriture
+        qui ne viserait pas le fichier lui-même — un `.tmp` de `sauvegarder` (il en crée un avant
+        `os.replace`, `persistance.py`), un log, une empreinte de W&B hors ligne.
+        """
+        from naulthene.cerveau.telemetrie import BusTrames
+        from naulthene.instruments.cerveau_3d.spectateur import jouer_cerveau
+
+        with tempfile.TemporaryDirectory() as dossier:
+            # Le cerveau a vécu 5 ticks AVANT d'être cristallisé : le `.brain` observé démarre donc
+            # à `tick_absolu = 5`, comme tous les cerveaux de campagne.
+            chemin = _brain_neuf(dossier, ticks_vecus=5)
+            avant = _sha256(chemin)
+            fichiers_avant = sorted(os.listdir(dossier))
+            bus = BusTrames()
+            resultat = jouer_cerveau(bus, chemin, duree=1.0)
+            apres = _sha256(chemin)
+
+            self.assertEqual(avant, apres, "le fichier .brain a été écrit pendant l'observation")
+            self.assertEqual(fichiers_avant, sorted(os.listdir(dossier)),
+                             "un fichier nouveau est apparu dans le dossier du .brain")
+            # La preuve est renvoyée, et elle dit la même chose que le disque — jamais une
+            # valeur mémorisée avant une écriture qui aurait eu lieu entre-temps.
+            self.assertEqual(resultat["brain_sha256_avant"], avant)
+            self.assertEqual(resultat["brain_sha256_apres"], apres)
+            # Témoin : le cerveau a VRAIMENT vécu (sans lui, un spectateur inerte passerait
+            # le test d'empreinte — l'absence totale d'écriture n'est pas une preuve d'usage).
+            self.assertGreater(resultat["ticks_observes"], 0)
+            # ⚠️ `ticks_observes` (les ticks joués par CETTE session) n'est PAS `tick_absolu` (le
+            # compteur de VIE du cerveau, restauré du `.brain` et survivant aux résurrections).
+            # Les confondre fait écrire « 538 834 ticks observés » après quatre secondes : c'est
+            # MESURÉ, c'est exactement ce que le premier verdict imprimé disait sur
+            # `K4_NU_g11.brain`. La relation est exacte, donc discriminante — la session part de 5
+            # et n'ajoute que ses propres ticks.
+            self.assertEqual(resultat["tick_absolu"], 5 + resultat["ticks_observes"])
+            self.assertIsNotNone(bus.structure())
+            self.assertEqual(len(bus.structure()["couches"]), 12)
+            self.assertGreater(bus.sequence, 0)
+
+    def test_le_spectateur_n_appelle_jamais_les_portes_de_l_ecriture(self):
+        """Non négociable n°1 : `executer_nuit`, `apprendre_journee`, `sauvegarder` JAMAIS.
+
+        ⚠️ Les trois portes sont remplacées par des PIÈGES QUI LÈVENT : le test n'inspecte pas une
+        liste d'appels, il ÉCHOUE si l'une est franchie. Le témoin d'ARMEMENT (chaque piège est
+        franchi une fois à la main, et doit lever) est ce qui empêche un nom mal orthographié de
+        rendre le test vide — un piège jamais armé passe au vert exactement comme un spectateur
+        vertueux, et c'est le défaut que ce témoin existe pour attraper.
+
+        ⚠️ Conséquence de conception assumée : les compteurs ci-dessous n'attrapent le vrai
+        `traiter_tick` que si `spectateur` l'appelle par le MODULE (`noyau.traiter_tick`) et non
+        par un `from … import` figé à l'import — c'est le prix d'un module espionnable, et le
+        second témoin (`appels["traiter_tick"] >= 1`) le dit à voix haute plutôt que de le taire.
+        """
+        import naulthene.cerveau.noyau as noyau
+        from naulthene.cerveau.persistance import PersistanceAnatomique
+        from naulthene.cerveau.telemetrie import BusTrames
+        from naulthene.instruments.cerveau_3d import spectateur
+
+        def piege(*_args, **_kwargs):
+            raise AssertionError("le spectateur a franchi une porte d'écriture")
+
+        with tempfile.TemporaryDirectory() as dossier:
+            chemin = _brain_neuf(dossier)
+            vrai_tick, vrai_journee = noyau.traiter_tick, noyau.demarrer_journee
+            vrais = {"executer_nuit": noyau.executer_nuit,
+                     "apprendre_journee": noyau.AGI_Naulthene.apprendre_journee,
+                     "sauvegarder": PersistanceAnatomique.sauvegarder}
+            appels = {"traiter_tick": 0, "demarrer_journee": 0}
+
+            def tick_compte(*args, **kwargs):
+                appels["traiter_tick"] += 1
+                return vrai_tick(*args, **kwargs)
+
+            def journee_comptee(*args, **kwargs):
+                appels["demarrer_journee"] += 1
+                return vrai_journee(*args, **kwargs)
+
+            noyau.executer_nuit = piege
+            noyau.AGI_Naulthene.apprendre_journee = piege
+            PersistanceAnatomique.sauvegarder = piege
+            noyau.traiter_tick = tick_compte
+            noyau.demarrer_journee = journee_comptee
+            try:
+                for arme in (noyau.executer_nuit, noyau.AGI_Naulthene.apprendre_journee,
+                             PersistanceAnatomique.sauvegarder):
+                    with self.assertRaises(AssertionError):
+                        arme(None)
+                resultat = spectateur.jouer_cerveau(BusTrames(), chemin, duree=1.0)
+            finally:
+                noyau.executer_nuit = vrais["executer_nuit"]
+                noyau.AGI_Naulthene.apprendre_journee = vrais["apprendre_journee"]
+                PersistanceAnatomique.sauvegarder = vrais["sauvegarder"]
+                noyau.traiter_tick = vrai_tick
+                noyau.demarrer_journee = vrai_journee
+
+            self.assertGreater(resultat["tick_absolu"], 0)
+            self.assertGreaterEqual(appels["traiter_tick"], 1)
+            self.assertGreaterEqual(appels["demarrer_journee"], 1)
+            self.assertEqual(_sha256(chemin), resultat["brain_sha256_avant"])
+
+    def test_un_brain_absent_est_refuse_sans_etre_cree(self):
+        """Non négociable n°4 — un spectateur ne fait JAMAIS naître un cerveau.
+
+        `PersistanceAnatomique.charger_ou_naitre()` sait fabriquer un agent neuf quand le fichier
+        manque : pour un spectateur, ce serait une création SILENCIEUSE (le viewer afficherait un
+        cerveau de démonstration en le présentant comme celui qu'on lui a demandé d'observer, et
+        l'auteur croirait avoir regardé son run). Le refus est donc explicite, avant tout
+        chargement, et RIEN ne doit apparaître dans le dossier.
+        """
+        from naulthene.cerveau.telemetrie import BusTrames
+        from naulthene.instruments.cerveau_3d.spectateur import jouer_cerveau
+
+        with tempfile.TemporaryDirectory() as dossier:
+            chemin = os.path.join(dossier, "jamais_ne.brain")
+            bus = BusTrames()
+            with self.assertRaises(FileNotFoundError) as capture:
+                jouer_cerveau(bus, chemin, duree=1.0)
+            self.assertIn("jamais_ne.brain", str(capture.exception))
+            self.assertFalse(os.path.exists(chemin), "un cerveau a été créé par le spectateur")
+            self.assertEqual(os.listdir(dossier), [])
+            self.assertIsNone(bus.structure(), "le refus a quand même publié une trame")
+
+    def test_un_arret_deja_arme_ne_joue_aucun_tick(self):
+        """L'arrêt est testé EN TÊTE de tour (`boucle_factice` a la même discipline).
+
+        Un arrêt armé pendant un tick ne doit pas en publier un de plus ; un arrêt armé AVANT le
+        premier n'en joue aucun. La scène, elle, est publiée quand même : la page reçoit la forme
+        du cerveau observé même si rien ne bouge, sinon un Ctrl-C immédiat laisserait un écran
+        vide qui ne dit pas si le cerveau est lent ou si le branchement est mort.
+        """
+        import threading
+        from naulthene.cerveau.telemetrie import BusTrames
+        from naulthene.instruments.cerveau_3d.spectateur import jouer_cerveau
+
+        with tempfile.TemporaryDirectory() as dossier:
+            chemin = _brain_neuf(dossier)
+            avant = _sha256(chemin)
+            arret = threading.Event()
+            arret.set()
+            bus = BusTrames()
+            resultat = jouer_cerveau(bus, chemin, arret=arret, duree=10.0)
+            self.assertEqual(resultat["tick_absolu"], 0)
+            self.assertEqual(resultat["ticks_observes"], 0)
+            self.assertEqual(bus.sequence, 0, "une trame d'activité a été publiée sans tick")
+            self.assertEqual(bus.sequence_structure, 1)
+            self.assertEqual(avant, _sha256(chemin))
+
+    def test_la_trame_porte_dopamine_faim_et_action(self):
+        """Ruling — `dopamine`, `faim` et l'action jouée vivent dans `etat`, pas dans l'agent.
+
+        Le rapporteur ne peut pas les lire sur l'agent : s'ils ne sont pas passés dans `meta`, la
+        clé est ABSENTE de la trame et la page retombe sur son défaut d'affichage — « dopamine
+        0,000 » sur un cerveau qui en a 7. Le témoin est le plus discriminant possible : la
+        dopamine d'un vrai cerveau est bornée à `DOPAMINE_MIN = 0,001` par le noyau, donc une
+        valeur nulle ou absente ne peut PAS être une mesure.
+        """
+        from naulthene.cerveau.noyau import DOPAMINE_MAX
+        from naulthene.cerveau.telemetrie import NUM_ACTIONS, BusTrames
+        from naulthene.instruments.cerveau_3d.spectateur import jouer_cerveau
+
+        with tempfile.TemporaryDirectory() as dossier:
+            chemin = _brain_neuf(dossier)
+            bus = BusTrames()
+            resultat = jouer_cerveau(bus, chemin, duree=1.0)
+            scalaires = bus.activite()["scalaires"]
+
+            self.assertGreater(scalaires["dopamine"], 0.0)
+            self.assertLessEqual(scalaires["dopamine"], DOPAMINE_MAX)
+            # `faim = 1 − satiete` : un cerveau neuf naît rassasié (satiete = 1,0), la faim part
+            # donc de 0 — c'est la BORNE qui est assertée ici, jamais une valeur attendue.
+            self.assertGreaterEqual(scalaires["faim"], 0.0)
+            self.assertLessEqual(scalaires["faim"], 1.0)
+            self.assertIsInstance(scalaires["action"], int)
+            self.assertGreaterEqual(scalaires["action"], 0)
+            self.assertLess(scalaires["action"], NUM_ACTIONS)
+            # Cohérence méta ↔ retour : la trame publiée vient d'un tick RÉELLEMENT joué (la
+            # publication est throttlée, donc elle peut être en retard sur le dernier tick —
+            # jamais en avance, et jamais au tick 0 d'un cerveau qui a vécu).
+            self.assertGreater(bus.activite()["tick"], 0)
+            self.assertLessEqual(bus.activite()["tick"], resultat["tick_absolu"])
+            self.assertLessEqual(bus.activite()["jour"], resultat["jour"])
+
+    def test_le_menage_de_journee_borne_la_memoire(self):
+        """Mesuré : sans `demarrer_journee` périodique, l'observation FUIT — et vite.
+
+        Protocole (cerveau neuf, `bus = 16`, `NAULTHENE_DEVICE=cpu`) : 6 blocs de 400 ticks, pic
+        RSS relevé toutes les 400 ticks.
+
+        | Bloc | pic RSS sans ménage | pic RSS avec ménage (`ticks_par_jour = 400`) |
+        |---|---|---|
+        | (départ) | 323 Mo | 322 Mo |
+        | 400  | 361 Mo | 361 Mo |
+        | 800  | 396 Mo | 361 Mo |
+        | 1200 | 430 Mo | 361 Mo |
+        | 1600 | 464 Mo | 361 Mo |
+        | 2000 | 498 Mo | 361 Mo |
+        | 2400 | 531 Mo | 361 Mo |
+
+        Soit ≈ 88 Ko par tick (`memoire_moyen_terme`, `jepa_losses`, `recompenses_journee`
+        grandissent d'une entrée par tick : mesuré, 2400 entrées à 2400 ticks). À la cadence
+        réelle du `.brain` de campagne observé (~440 ticks/s), cinq minutes d'observation
+        exigeraient ~11 Go : le spectateur mourrait avant l'auteur. Le ménage est donc fait tous
+        les `ticks_par_jour` ticks, exactement comme `lancer_arene.py` (« ménage mémoire », même
+        boucle d'observation).
+
+        ⚠️ Le seuil du module est ABAISSÉ par le test (`mock.patch.object`) : exiger 400 ticks
+        réels rendrait le test tributaire de la vitesse de la machine. `jour == 1 + menages` est
+        l'invariant vérifiable — le seul autre appelant de `demarrer_journee` est la boucle
+        d'entraînement, jamais atteinte ici.
+        """
+        from unittest import mock
+        from naulthene.cerveau.telemetrie import BusTrames
+        from naulthene.instruments.cerveau_3d import spectateur
+
+        with tempfile.TemporaryDirectory() as dossier:
+            chemin = _brain_neuf(dossier)
+            with mock.patch.object(spectateur, "TICKS_PAR_JOURNEE", 50):
+                resultat = spectateur.jouer_cerveau(BusTrames(), chemin, duree=1.0)
+            self.assertGreaterEqual(resultat["menages"], 1,
+                                    "aucun ménage de journée : la mémoire du spectateur fuit")
+            self.assertEqual(resultat["jour"], 1 + resultat["menages"])
+            self.assertEqual(_sha256(chemin), resultat["brain_sha256_avant"])
+
+
+class TestCliModeCerveau(unittest.TestCase):
+    """Critère n°3 — la CLI en mode `cerveau` : elle démarre, annonce l'URL, et REFUSE net.
+
+    ⚠️ Les refus sont vérifiés AVANT tout chargement (aucune ligne `http://` dans la sortie) : un
+    refus qui aurait déjà lié le port laisserait un serveur derrière lui.
+
+    ⚠️ L'environnement du sous-processus est RECOPIÉ (`os.environ`) et non réduit à
+    `PATH=/usr/bin:/bin` comme les tests du mode factice : le mode `cerveau` charge `torch`, qui
+    a besoin de `HOME` (caches) et doit être forcé en `cpu` pour que la mesure soit reproductible.
+    """
+
+    def _cli(self, arguments, delai=300):
+        return subprocess.run(
+            ["venv/bin/python3", "-m", "naulthene.instruments.cerveau_3d", *arguments],
+            cwd=str(RACINE_DEPOT),
+            env={**os.environ, "PYTHONPATH": "src", "NAULTHENE_DEVICE": "cpu"},
+            capture_output=True, text=True, timeout=delai)
+
+    def test_la_cli_refuse_un_brain_inexistant(self):
+        """Non négociable n°4, côté CLI : code de sortie ≠ 0, message clair, AUCUN fichier créé."""
+        with tempfile.TemporaryDirectory() as dossier:
+            chemin = os.path.join(dossier, "jamais_ne.brain")
+            resultat = self._cli(["--source", "cerveau", "--brain", chemin,
+                                  "--port", "0", "--duree", "1"])
+            sortie = resultat.stdout + resultat.stderr
+            self.assertNotEqual(resultat.returncode, 0)
+            self.assertIn(chemin, sortie)
+            self.assertNotIn("http://", sortie, "le serveur a été monté avant le refus")
+            self.assertFalse(os.path.exists(chemin), "la CLI a fait naître un cerveau")
+            self.assertEqual(os.listdir(dossier), [])
+
+    def test_la_cli_refuse_le_mode_cerveau_sans_brain(self):
+        """`--source cerveau` sans `--brain` : on refuse, on ne devine pas un cerveau par défaut."""
+        resultat = self._cli(["--source", "cerveau", "--port", "0", "--duree", "1"])
+        sortie = resultat.stdout + resultat.stderr
+        self.assertNotEqual(resultat.returncode, 0)
+        self.assertIn("--brain", sortie)
+        self.assertNotIn("http://", sortie)
+
+    def test_la_cli_refuse_cerveau_avec_serveur_seul(self):
+        """`--serveur-seul` nie la source locale : les deux ensemble sont contradictoires.
+
+        Sans ce refus, `--source cerveau --brain X --serveur-seul` chargerait… rien, en silence :
+        l'auteur croirait observer X et regarderait un écran vide. Un silence qui a l'air d'un
+        cerveau lent est exactement ce que la télémétrie refuse ailleurs (spec §9).
+        """
+        with tempfile.TemporaryDirectory() as dossier:
+            chemin = _brain_neuf(dossier)
+            resultat = self._cli(["--source", "cerveau", "--brain", chemin, "--serveur-seul",
+                                  "--port", "0", "--duree", "1"])
+            sortie = resultat.stdout + resultat.stderr
+            self.assertNotEqual(resultat.returncode, 0)
+            self.assertIn("--serveur-seul", sortie)
+            self.assertNotIn("http://", sortie)
+
+    def test_la_cli_joue_le_brain_et_imprime_l_empreinte(self):
+        """Bout en bout : la CLI sert la page, fait vivre le cerveau, et dit l'empreinte.
+
+        C'est le seul test qui traverse le VRAI point d'entrée (import paresseux de `spectateur`,
+        fil source, fil serveur, arrêt sur `--duree`) : les tests unitaires ci-dessus ne
+        prouveraient pas que le mode est branché dans la CLI.
+        """
+        with tempfile.TemporaryDirectory() as dossier:
+            chemin = _brain_neuf(dossier)
+            avant = _sha256(chemin)
+            resultat = self._cli(["--source", "cerveau", "--brain", chemin,
+                                  "--port", "0", "--duree", "1"])
+            sortie = resultat.stdout + resultat.stderr
+            self.assertEqual(resultat.returncode, 0, sortie[-2000:])
+            self.assertIn("http://127.0.0.1:", resultat.stdout)
+            self.assertIn("lecture seule", resultat.stdout)
+            self.assertIn(avant, sortie, "l'empreinte du .brain n'est pas imprimée à l'arrêt")
+            # Le VERDICT est cherché sans tenir compte de la casse : c'est le MOT qui compte, pas
+            # la typographie de l'écran (le verdict s'affiche en capitales).
+            self.assertIn("bit-identique", sortie.lower())
+            # ⚠️ Le NOMBRE de ticks annoncé doit être celui de la SESSION, et le verdict doit le
+            # nommer comme tel : sur un cerveau de campagne, `tick_absolu` vaut 537 329 — écrire
+            # « 537 329 ticks observés » après quatre secondes serait un mensonge d'étiquette.
+            self.assertIn("ticks observés", sortie)
+            self.assertEqual(avant, _sha256(chemin))
+            self.assertEqual(sorted(os.listdir(dossier)), ["naissance.brain"])
+
+    def test_le_mode_factice_de_la_cli_ne_charge_toujours_pas_torch(self):
+        """Le mode `factice` doit continuer de s'ouvrir sur une machine SANS cerveau.
+
+        ⚠️ `__main__` importe désormais `spectateur` (donc `torch` et `noyau`) : si cet import
+        était en TÊTE de fichier, `--source factice` chargerait torch — et la démonstration de
+        l'étape 0 ne s'ouvrirait plus là où torch n'est pas installé. L'import est donc
+        PARESSEUX, et ce test le fige dans un interpréteur NEUF : le processus de test, lui, a
+        déjà importé torch via les tests du rapporteur, `sys.modules` y est contaminé et un test
+        en cours de processus passerait au vert sans rien prouver.
+        """
+        code = ("import sys\n"
+                "import naulthene.instruments.cerveau_3d.__main__\n"
+                "charges = sorted(m for m in sys.modules\n"
+                "                 if m == 'torch' or m.startswith('torch.')\n"
+                "                 or m == 'naulthene.cerveau.noyau')\n"
+                "print('|'.join(charges))\n")
+        resultat = subprocess.run(
+            [sys.executable, "-c", code], cwd=str(RACINE_DEPOT),
+            env={**os.environ, "PYTHONPATH": "src"}, capture_output=True, text=True, timeout=180)
+        self.assertEqual(resultat.returncode, 0, resultat.stderr[-2000:])
+        self.assertEqual(resultat.stdout.strip(), "",
+                         f"la CLI a chargé un cerveau sans qu'on le lui demande : "
+                         f"{resultat.stdout.strip()}")
