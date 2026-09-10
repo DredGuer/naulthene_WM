@@ -12,6 +12,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -1294,3 +1295,121 @@ class TestLogiqueDeLaPage(unittest.TestCase):
         for i, couleur in enumerate(self.sonde["couleurs_construction"]):
             # 0,21 et non 0,20 : la couleur transite par un `Float32Array` (0,20 → 0,200000003).
             self.assertLessEqual(max(couleur), 0.21, f"instance {i} non colorée : {couleur}")
+
+
+# ---------------------------------------------------------------------------
+# Tâche 6 — la source factice, la CLI et la démonstration (étape 0)
+# ---------------------------------------------------------------------------
+
+RACINE_DEPOT = Path(__file__).resolve().parent.parent
+
+
+class TestSourceFactice(unittest.TestCase):
+    """La démonstration de l'étape 0 : un cerveau SYNTHÉTIQUE, sans `torch` ni `.brain`.
+
+    ⚠️ Ces tests sont aussi la FIXTURE des tests du rendu (ruling du plan) : le mode factice
+    n'est pas jetable, c'est ce qui permet de regarder la page et le serveur sans cerveau.
+    """
+
+    def test_forme_factice_egale_forme_reelle(self):
+        """La fixture ne doit pas dériver de l'architecture réelle.
+
+        ⚠️ C'est la garantie que `definir_couches` cite dans sa propre docstring — et c'est le nom
+        qu'elle cite (`test_forme_factice_egale_forme_reelle`). L'esquisse de code du plan
+        l'appelle `test_la_forme_factice_egale_la_forme_reelle` : un seul nom peut exister, sans
+        quoi la citation de `telemetrie.py` pointerait dans le vide.
+
+        La table doit décrire les couches d'un agent NEUF, comparées **en bloc** (`nom →
+        (entree, sortie)`), jamais couche par couche — seule la comparaison en bloc discrimine
+        une permutation de deux `entree` entre deux couches de même produit (cf. le
+        contre-exemple mesuré du test de la tâche 2). Un agent neuf suffit : `dim_bus` ne change
+        pas les formes relatives, et les `entree` non multiples du bus (`153 = 145 + 8`,
+        `189 = 145 + 44`) sont vérifiés à `dim_bus = 16`.
+        """
+        from naulthene.cerveau.noyau import AGI_Naulthene, DIM_VISUELLE
+        from naulthene.cerveau.telemetrie import definir_couches
+        couches = definir_couches(16)
+        agent = AGI_Naulthene(dim_visuelle=DIM_VISUELLE, dim_bus=16)
+        reelles = {c["nom"]: (getattr(agent, c["nom"]).in_features,
+                              getattr(agent, c["nom"]).out_features) for c in couches}
+        attendues = {c["nom"]: (c["entree"], c["sortie"]) for c in couches}
+        self.assertEqual(reelles, attendues)
+
+    def test_boucle_factice_publie_structure_et_activite(self):
+        """Critère n°1 : ~1 s à 20 Hz ⇒ une structure de 12 couches et ≥ 10 trames d'activité.
+
+        ⚠️ Le seuil asserté est 10 et non 20 : les 20 trames attendues dépendent de
+        l'ordonnancement de la machine, et exiger le maximum exact ferait échouer le test au
+        premier hoquet sans qu'aucun contrat soit cassé. 10 est le plancher que la boucle ne
+        peut pas manquer — elle publie sa première trame AVANT de dormir.
+        """
+        from naulthene.cerveau.telemetrie import BusTrames
+        from naulthene.instruments.cerveau_3d.factice import boucle_factice
+        bus = BusTrames()
+        boucle_factice(bus, hz=20.0, dim_bus=16, duree=1.0)
+        self.assertIsNotNone(bus.structure())
+        self.assertEqual(len(bus.structure()["couches"]), 12)
+        self.assertGreaterEqual(bus.sequence, 10)
+        self.assertIn("porte_visuelle", bus.activite()["neurones"])
+
+    def test_cli_repond_a_l_aide(self):
+        """`--aide` est le contrat de la CLI (et non `--help` seul) : la sortie la NOMME.
+
+        ⚠️ Trois assertions AJOUTÉES au test du plan, parce que le test tel qu'il est écrit
+        passe au vert sur la panne même qu'il doit détecter : `python -m <paquet>` sans
+        `__main__.py` écrit `No module named naulthene.instruments.cerveau_3d.__main__` — une
+        sortie qui CONTIENT déjà la chaîne `cerveau_3d`. Sans le code de retour, le test ne
+        distinguait pas « la CLI répond » de « la CLI n'existe pas ».
+        """
+        resultat = subprocess.run(
+            ["venv/bin/python3", "-m", "naulthene.instruments.cerveau_3d", "--aide"],
+            cwd=str(RACINE_DEPOT),          # `PYTHONPATH=src` est RELATIF à la racine du dépôt
+            env={"PYTHONPATH": "src", "PATH": "/usr/bin:/bin"}, capture_output=True, text=True,
+            timeout=120)
+        sortie = resultat.stdout + resultat.stderr
+        self.assertEqual(resultat.returncode, 0, sortie[-2000:])
+        self.assertNotIn("No module named", sortie)
+        self.assertIn("cerveau_3d", sortie)
+        # Les options du contrat (plan, tâche 6) sont TOUTES annoncées par l'aide.
+        for option in ("--source", "--brain", "--port", "--hz", "--udp",
+                       "--serveur-seul", "--duree"):
+            self.assertIn(option, sortie, f"{option} absent de l'aide")
+
+    def test_le_mode_factice_ne_charge_ni_torch_ni_noyau(self):
+        """Point n°1 de la tâche : `factice` doit tourner sur une machine SANS cerveau.
+
+        ⚠️ Mesuré dans un INTERPRÉTEUR NEUF (`-c`), jamais dans le processus de test : la suite
+        importe `torch` (le test d'anti-dérive ci-dessus), donc `sys.modules` y est contaminé et
+        un test en cours de processus passerait au vert sans rien prouver — même piège que
+        `json.loads`, qui accepte `NaN` alors que `JSON.parse` le refuse (cf. `json_strict`).
+        """
+        code = ("import sys\n"
+                "import naulthene.instruments.cerveau_3d.factice\n"
+                "charges = sorted(m for m in sys.modules\n"
+                "                 if m == 'torch' or m.startswith('torch.')\n"
+                "                 or m == 'naulthene.cerveau.noyau')\n"
+                "print('|'.join(charges))\n")
+        resultat = subprocess.run(
+            [sys.executable, "-c", code], cwd=str(RACINE_DEPOT),
+            env={**os.environ, "PYTHONPATH": "src"}, capture_output=True, text=True, timeout=180)
+        self.assertEqual(resultat.returncode, 0, resultat.stderr[-2000:])
+        self.assertEqual(resultat.stdout.strip(), "",
+                         f"la source factice a chargé un cerveau : {resultat.stdout.strip()}")
+
+    def test_cli_affiche_l_url_du_serveur_et_sort_apres_la_duree(self):
+        """Critère n°3, seconde moitié : la CLI annonce l'URL, puis rend la main sur `--duree`.
+
+        `--port 0` laisse le système choisir un port LIBRE, que la bannière affiche tel quel
+        (c'est le port réellement lié, jamais celui demandé) : deux exécutions simultanées ne se
+        marchent pas dessus. Le processus doit se terminer SEUL — sinon `timeout` le tue et
+        l'assertion ne dit plus rien.
+        """
+        resultat = subprocess.run(
+            ["venv/bin/python3", "-m", "naulthene.instruments.cerveau_3d",
+             "--source", "factice", "--port", "0", "--duree", "1"],
+            cwd=str(RACINE_DEPOT),
+            env={"PYTHONPATH": "src", "PATH": "/usr/bin:/bin"}, capture_output=True, text=True,
+            timeout=90)
+        self.assertEqual(resultat.returncode, 0, resultat.stderr[-2000:])
+        self.assertIn("http://127.0.0.1:", resultat.stdout)
+        self.assertIn("lecture seule", resultat.stdout)
