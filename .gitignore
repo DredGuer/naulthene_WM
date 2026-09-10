@@ -98,3 +98,14 @@ docs/naulthene_cosmologie/
 # artefacts de travail d'une exécution locale (comme les .log de campagne), régénérables et
 # sans intérêt pour un lecteur du dépôt : le plan et la spec, eux, SONT versionnés.
 .superpowers/
+
+# VIS-01 (10/09/2026) — SORTIES de la télémétrie du cerveau 3D. Un dump de structure pèse de
+# 13 Ko à 300 Ko selon `dim_bus` : c'est une sortie de run, régénérable depuis le code et la
+# graine, exactement comme les `*.log` de campagne et les JSON d'ablation déjà ignorés plus haut.
+# ⚠️ Ce qui TRACE une campagne reste versionné et n'est pas concerné : `LISEZ_MOI.md`, `chrono.txt`,
+# `poll_structure.txt`, et les comptes rendus de vérification.
+brains/**/*.vis01_structure.json
+# Rendus HTML ponctuels (vérification de la page dans un navigateur) : captures d'un instant,
+# sans intérêt hors de la machine qui les a produites.
+brains/**/verif_*.html
+brains/**/e2e_page.html

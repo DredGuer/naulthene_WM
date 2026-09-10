@@ -605,7 +605,7 @@ par couche (mesuré sur `brains/VIS01_etape2_fichier_10092026/etape2.brain.vis01
 | **Poids d'une synapse → seuil d'affichage** sous le curseur, RELATIF au poids le plus fort de la couche | ✅ livré | `if (!(valeur >= seuil)) continue;`, `app.js:229` ; le curseur change le nombre d'arêtes (testé) |
 | **Activation nulle (ou absente) → gris sourd**, jamais une couleur inventée | ✅ livré | `app.js:171`, `app.js:296` — un `null` donne le MÊME gris qu'un zéro |
 | **Bornes sensorielles → comptées** (`· N entrées non neuronales (bornes)`), jamais dessinées et jamais reliées | ✅ livré | `horsBornes`, `app.js:231` et `app.js:267` (avenant « bornes » de la spec §5) |
-| **Scalaires** (dopamine, faim, planification, action) → **en TEXTE** dans la ligne d'information | ✅ livré | `app.js`, ligne `texte_infos` |
+| **Scalaires** (dopamine, planification, action) → **en TEXTE** dans la ligne d'information | ✅ livré (⚠️ `faim` est **transportée mais pas affichée** : voir la rétractation ci-dessous) | `document.getElementById('infos')`, `app.js:301-305` |
 | Épaisseur / opacité **par arête** = poids | 🟡 **livré à MOITIÉ** (le seuil, oui ; l'épaisseur, non) | un seul `LineBasicMaterial`, `app.js:242` |
 | Gaine claire = **myéline** | ❌ **NON livré** | `myeline_M` absent de la trame `structure` |
 | Arête blanche = **synapse cristallisée** | ❌ **NON livré** | `cristallisee` absent de la trame, et non lu par `rapporteur.py` |

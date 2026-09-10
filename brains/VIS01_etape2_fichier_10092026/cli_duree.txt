@@ -1,0 +1,7 @@
+🧠 Cerveau 3D — VIS-01
+   source     : serveur seul — aucune trame produite ici
+   serveur    : http://127.0.0.1:8772
+   structure  : brains/VIS01_etape2_fichier_10092026/etape2.brain.vis01_structure.json — structure chargée : 12 couche(s), dim_bus = 68 (relue à chaque changement, 1 publication(s))
+   ⚠️  lecture seule : ce processus n'écrit aucun .brain et n'entraîne rien.
+   → ouvrez http://127.0.0.1:8772 dans un navigateur (Ctrl-C pour arrêter).
+📡 structure : 1 publication(s) depuis brains/VIS01_etape2_fichier_10092026/etape2.brain.vis01_structure.json — 0 absence(s), 0 illisible(s), 0 invalide(s).
