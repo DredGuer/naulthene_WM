@@ -71,7 +71,7 @@ Un problème ne passe à `✅ Clos` que si les quatre éléments suivants sont c
 | SCI-04 | P2 | 🔵 À mesurer | Le ratio Bio/Env est non tranché et mal nommé « gradient » | Mesure causale avec échelle dérivée |
 | SCI-05 | P3 | 🟡 À décider | La tête d'intention C2 serait construite avant validation complète de ses entrées | Reporter après fidélité du rollout et ablations |
 | ARC-01 | P2 | ✅ Clos | `colab.py` reste nommé référence alors que le développement réel vit dans `noyau.py` | Décidé 08/09 (v41.72) : `noyau.py` source de vérité unique, `colab.py` = archive v17 |
-| VIS-01 | P3 | 🟡 À décider | Le cerveau n'est observable qu'à plat (courbes, barres, heatmap) : sa structure spatiale, sa croissance et ses neurones morts ne se voient pas | Chantier d'instrument — spec **validée le 10/09** (`ameliorations/CHANTIER_VIS-01_cerveau_3d_irm_vivante.md`) ; étapes 0/1 sans impact sur `noyau.py`, étape 2 = drapeau additif + test bit-identique |
+| VIS-01 | P3 | 🟠 Livré en partie | Le cerveau n'est observable qu'à plat (courbes, barres, heatmap) : sa structure spatiale, sa croissance et ses neurones morts ne se voient pas | **Livré le 10/09/2026** — IRM 3D vivante (`cerveau_3d`) + drapeau `--telemetrie-3d` dans `noyau.py`, documentés dans [`LANCEMENT.md` §7bis](../fonctionnement/LANCEMENT.md). Preuves : run **bit-identique** sans le drapeau (A/A 5 j + 3 paires de 50 j), empreinte SHA-256 du `.brain`, **surcoût chiffré : +7,9 % de temps / −7,3 % de débit**. **Reste** : le serveur ne relit pas `<brain>.vis01_structure.json` ⇒ la page attend la structure en `--serveur-seul` (section VIS-01 ci-dessous) |
 | DOC-02 | P2 | 🟠 Corrigé (clôture suspendue) | La garantie « ne modifie aucun poids » de `irm_cerveau.py` et `lancer_arene.py` est **inexacte** : `fortifier_synapses` écrit sous `no_grad`, sans `backward()` | Docstrings corrigées 10/09 (mesure : trace nulle ⇒ écriture nulle) ; **entrée CHANGELOG en attente** de la décision de version (voir la section DOC-02) |
 | DOC-03 | P2 | 🟠 Corrigé en partie | L'en-tête de version de `noyau.py` retardait de 7 versions, la tête du CHANGELOG n'était pas dans l'ordre décroissant, et **deux entrées distinctes portent le même numéro v41.71** (v41.70 manquant) | Décision de l'auteur (10/09) : **le CHANGELOG fait foi** → en-tête porté à **41.75**, tête du CHANGELOG remise en ordre décroissant ; reste à trancher le titre de l'entrée QUA-01 (voir la section DOC-03) |
 
@@ -442,9 +442,11 @@ Une promotion change aussi la carte finale sur laquelle la maîtrise est lue.
 
 ## VIS-01 — Le cerveau n'est observable qu'à plat (chantier d'instrument)
 
-- **Priorité / statut** : **P3 — 🟡 À décider** (spec validée le 10/09/2026, aucune ligne écrite)
-- **Nature** : capacité manquante, pas un défaut. Enregistré ici parce que la spec porte **deux
-  découvertes** qui, elles, sont des défauts (voir « Découvertes » ci-dessous).
+- **Priorité / statut** : **P3 — 🟠 Livré en partie** (les 10 tâches du plan sont closes le
+  10/09/2026 ; il reste **un** lien manquant, voir « Ce qui reste ouvert »).
+- **Nature** : capacité manquante, pas un défaut. Enregistré ici parce que la spec portait **deux
+  découvertes** qui, elles, étaient des défauts (voir « Découvertes » ci-dessous — les deux sont
+  désormais traitées sous `DOC-02` et `DOC-03`).
 
 ### Constat
 
@@ -455,19 +457,61 @@ neurogenèse, neurones fonctionnellement morts (**56 %** de `pensee_bio`, mesur�
 cerveaux). Aucun ne peut être branché sur un **run en cours** : la télémétrie par tick ne contient
 que `dopamine`, `faim` et `parametres_vocaux`.
 
-### Amélioration proposée
+### Ce qui a été livré, et ce qui ne l'est pas (10/09/2026)
 
 Chantier **VIS-01** ([`CHANTIER_VIS-01_cerveau_3d_irm_vivante.md`](CHANTIER_VIS-01_cerveau_3d_irm_vivante.md)) : IRM 3D vivante
 rendue en **three.js vendorisé**, alimentée par un **rapporteur par forward hooks** en lecture
 seule (discipline MES-02), servie par un **serveur stdlib** (aucune dépendance ajoutée).
+Commandes d'usage : [`LANCEMENT.md` §7bis](../fonctionnement/LANCEMENT.md).
 
-| Étape | Contenu | Impact sur `noyau.py` |
-|---|---|---|
-| 0 | démonstration, source factice | aucun |
-| 1 | spectateur-pilote sur un vrai `.brain`, lecture seule | aucun |
-| 2 | passerelle UDP + drapeau `--telemetrie-3d` | **oui** — additif, éteint par défaut, test bit-identique exigé |
+| Étape | Contenu | Impact sur `noyau.py` | État |
+|---|---|---|---|
+| 0 | démonstration, source factice | aucun | ✅ `--source factice` |
+| 1 | spectateur-pilote sur un vrai `.brain`, lecture seule | aucun | ✅ `--source cerveau --brain …`, empreinte SHA-256 imprimée à l'arrêt |
+| 2 | passerelle UDP + drapeau `--telemetrie-3d` | **oui** — additif, éteint par défaut, test bit-identique exigé | 🟠 **EN PARTIE** : le run émet (activité + événements, **0 perdu**) et écrit sa structure ; **le serveur ne relit pas le fichier de structure** |
 
-### Découvertes faites au cadrage (hors périmètre VIS-01, à trancher)
+### Les quatre éléments de la règle de clôture
+
+1. **Cause / décision explicitée** : le cerveau n'était observable qu'à plat — aucune capacité de
+   rendu **structurel**. Décisions de cadrage du 10/09 : rendu Web/three.js vendorisé, sujet =
+   activité tick par tick, disposition = plaques stratifiées + colonne du bus, spectateur
+   **strictement en lecture seule**, aucun mode « vivre ».
+2. **Correction / changement documentaire référencé** : commits `8eb7830` → `3281f3e` (page,
+   serveur, rapporteur, spectateur-pilote, source factice, drapeau dans `noyau.py`) puis la clôture
+   documentaire ; spec à jour avec ses **avenants** (transport de `structure`, bornes comptées) ;
+   usage documenté dans `LANCEMENT.md` §7bis ; `INDEX.md` à jour.
+3. **Vérification fraîche (reproduite le 10/09/2026)** :
+   - **Le drapeau ne change rien au run** : `diff` des niveaux promus **vide** sur l'A/A (5 jours,
+     `brains/VIS01_preuve/LISEZ_MOI.md`), **re-mesuré par la clôture sur 3 paires de 50 jours**
+     (20 000 ticks) — `diff` vide, **`dim_bus` final identique (71)**.
+   - **Empreinte** : le `.brain` observé n'est jamais ouvert en écriture (SHA-256 avant/après en
+     mode spectateur) ; les deux `.brain` de l'A/A sont identiques au contenu (97 tenseurs
+     `torch.equal`, archive au même SHA-256).
+   - **Surcoût du rapporteur, chiffré** (jamais estimé) : **364,0 ticks/s sans le drapeau contre
+     337,4 avec**, soit **+7,87 % de temps de boucle / −7,30 % de débit** — 3 paires entrelacées de
+     50 jours partant du même cerveau copié à la même graine, dispersion intra-bras 0,47–1,55 %
+     (`brains/VIS01_surcout_10092026/LISEZ_MOI.md`). **Minorant** : mesuré à `bus = 32 → 71`.
+   - **Le canal tient la cadence** : avec un serveur réel, **81 datagrammes envoyés / 0 perdu**,
+     **13 trames d'activité + 68 événements reçus**, page servie en HTTP 200.
+4. **Entrée CHANGELOG** : `[v41.76] - 2026-09-10 — VIS-01 tâche 9 : la passerelle
+   --telemetrie-3d` (portée, preuves, et limite : le surcoût n'était alors pas mesuré). Le journal
+   des runs porte les deux campagnes : `VIS01_preuve` (A/A) et `VIS01_surcout_10092026`.
+
+### Ce qui reste ouvert (pour ne pas clore à tort)
+
+- 🔴 **Le lien manquant de l'étape 2** : le run écrit `<brain>.vis01_structure.json` (305 Ko à
+  `dim_bus = 145`, trop gros pour un datagramme) mais **aucun code ne le relit**
+  (`grep -rn "vis01_structure" src/` ne rend que `noyau.py`). En `--serveur-seul`, `/structure`
+  rend `{}` et `sequence_structure` reste `0` — mesuré. Il manque un chemin de lecture dans le
+  serveur du spectateur (`--structure <fichier>`, ou une surveillance du dossier) :
+  `cerveau_3d/serveur.py` + `cerveau_3d/__main__.py`, **hors des fichiers autorisés de la clôture**.
+- Le surcoût n'est **pas** mesuré à `dim_bus = 145` (c'est l'encodage des trames qui grossit avec
+  le bus), ni sous charge machine, ni avec un navigateur connecté.
+- **Quatre écarts de revue (M-1 à M-6 de la tâche 9)** restent ouverts : canal `evenement` absent
+  du chemin `vocal_isole`, clé `action` ajoutée au fichier de structure selon le chemin d'écriture,
+  etc. — ils n'ont pas été traités par la clôture (liste de fichiers close).
+
+### Découvertes faites au cadrage (hors périmètre VIS-01) — traitées
 
 1. 🔴 **La garantie « ne modifie aucun poids » est inexacte** dans les docstrings
    d'`irm_cerveau.py` (l. 35-38) et de `lancer_arene.py` (l. 39-42). `traiter_tick` →
@@ -477,19 +521,20 @@ seule (discipline MES-02), servie par un **serveur stdlib** (aucune dépendance 
    **numériquement nulle** pour tout `.brain` sauvegardé après une nuit (`cycle_sommeil` remet la
    trace à zéro, ~364). ⚠️ Elle **ne l'est pas** pour un `.brain` sauvegardé en pleine journée —
    cas réel : la **micro-sieste de la Cuve**. Le **fichier** n'est jamais modifié dans les deux cas.
-   → à formuler comme `DOC-02` (correction de deux docstrings + entrée CHANGELOG).
-2. 🟡 **Écart de version** : `noyau.py` déclare `#Version actuelle 41.68` quand le CHANGELOG porte
-   **v41.75** et `ETAT_COURANT.md` **v41.72** ; et dans le CHANGELOG, `[v41.71]` est en tête
-   (ligne 7) alors que `[v41.75]` est en ligne 46. Deux lectures possibles (docs = même version,
-   ou en-tête en retard) → décision de l'auteur requise **avant** l'étape 2, qui ajoutera une
-   entrée de CHANGELOG.
+   → suivi sous `DOC-02` (docstrings corrigées ; entrée CHANGELOG en attente).
+2. 🟡 **Écart de version** : `noyau.py` déclarait `#Version actuelle 41.68` quand le CHANGELOG
+   portait **v41.75** et `ETAT_COURANT.md` **v41.72** ; et la tête du CHANGELOG n'était pas dans
+   l'ordre décroissant. → **tranché le 10/09** (`DOC-03`) : **le CHANGELOG fait foi**, l'en-tête de
+   `noyau.py` est passé à **41.76** avec l'entrée `[v41.76]`.
 
-### Critères de clôture
+### Critères de clôture (énoncés au cadrage — état)
 
-- Étapes 0 et 1 livrées, empreinte du `.brain` observé **identique** avant/après, surcoût du
+- ✅ Étapes 0 et 1 livrées, empreinte du `.brain` observé **identique** avant/après, surcoût du
   rapporteur **mesuré et reporté**.
-- Étape 2 : run **bit-identique sans le drapeau** (deux runs même graine, `diff` des promotions).
-- Tests ajoutés et verts avec la commande unique existante ; `LANCEMENT.md` documente l'instrument.
+- ✅ Étape 2 : run **bit-identique sans le drapeau** (deux runs même graine, `diff` des promotions
+  — et 3 paires de 50 jours à la clôture).
+- 🟠 Tests ajoutés et verts avec la commande unique existante ; `LANCEMENT.md` documente
+  l'instrument — **fait**, mais l'étape 2 reste **partielle** (structure non relue par le serveur).
 
 ---
 

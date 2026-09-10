@@ -486,6 +486,127 @@ Si le cache est purgé ou sur une nouvelle machine, refaire cette commande avant
 
 ---
 
+## 7bis. Le cerveau 3D — l'IRM vivante (VIS-01, v41.76)
+
+Une page Web locale qui montre **la structure du cerveau** — pas ses courbes : ses **12 plaques**
+(les 12 couches `NaultheneLinearSynaptique`), la **colonne du bus latent** au centre, et les
+**220 255 synapses** du cerveau mesuré, allumées par l'**activité réelle** du tick. Là où l'Arène
+(§7) et `irm_cerveau.py` affichent des séries temporelles, celui-ci affiche le **graphe de calcul**
+lui-même, en trois dimensions, dans le navigateur.
+
+Aucune dépendance n'est ajoutée : `three.js` est **vendorisé** dans le dépôt (aucun CDN au runtime),
+le serveur est en bibliothèque standard (`http.server` + `socket`), et le flux va du cerveau au
+navigateur par **SSE** (et **UDP** à l'étape 2). Rien à installer, rien à compiler.
+
+Chantier complet : [`CHANTIER_VIS-01_cerveau_3d_irm_vivante.md`](../ameliorations/CHANTIER_VIS-01_cerveau_3d_irm_vivante.md)
+· plan : [`PLAN_VIS-01_cerveau_3d.md`](../ameliorations/PLAN_VIS-01_cerveau_3d.md).
+
+### Les trois commandes (copiables telles quelles)
+
+Depuis la **racine du dépôt**, venv actif (`source venv/bin/activate`), terminal 1 :
+
+```bash
+# ── ÉTAPE 0 — DÉMONSTRATION : source factice, aucun cerveau chargé ──────────────────────────
+# Sert la page + une activité synthétique déterministe (mêmes plaques, mêmes positions).
+# C'est le mode à utiliser pour juger la FORME sans attendre ni risque : ni torch, ni MiniGrid.
+PYTHONPATH=src venv/bin/python3 -m naulthene.instruments.cerveau_3d --source factice --port 8770
+
+# ── ÉTAPE 1 — SPECTATEUR-PILOTE : un VRAI `.brain` vit et s'affiche, en lecture seule ───────
+# Le cerveau joue pour de vrai (patterns de `lancer_arene.py`) : aucun fichier n'est écrit par
+# le spectateur (empreinte SHA-256 avant/après imprimée), `executer_nuit` n'est jamais appelé.
+PYTHONPATH=src venv/bin/python3 -m naulthene.instruments.cerveau_3d \
+    --source cerveau --brain brains/<campagne>/<cerveau>.brain --port 8770 --hz 15
+
+# ── ÉTAPE 2 — PASSERELLE : un run EN COURS alimente la page, depuis un autre terminal ───────
+# Terminal 1 (le spectateur) :
+PYTHONPATH=src venv/bin/python3 -m naulthene.instruments.cerveau_3d --serveur-seul --udp 9998 --port 8770
+# Terminal 2 (le run observé — n'importe quel run, y compris une campagne de 1500 jours) :
+PYTHONPATH=src venv/bin/python3 -m naulthene.cerveau.noyau --graine 11 --jours 200 \
+    --brain "brains/<campagne>/run.brain" --telemetrie-3d udp:127.0.0.1:9998
+```
+
+Puis ouvre **<http://127.0.0.1:8770>** dans un navigateur (la bannière du serveur le rappelle).
+`Ctrl-C` dans le terminal ferme proprement (le serveur, l'écoute UDP, l'environnement).
+
+> ⚠️ En lecture seule : aucun `.brain` n'est écrit, `executer_nuit`/`apprendre_journee` ne sont
+> jamais appelés. Le fichier observé reste **bit-identique** (vérifié par empreinte SHA-256).
+
+**Cette phrase est exacte au sens du FICHIER, et il faut la lire ainsi** (la nuance est celle que
+le chantier a mesurée, découverte D1) : le `.brain` n'est **jamais ouvert en écriture** par le
+spectateur, et son empreinte est imprimée à l'arrêt ; mais **en mémoire**, un cerveau observé qui
+vit exécute `traiter_tick` → `fortifier_synapses`, qui écrit la LTP d'un pic dopaminergique dans
+`base_weight`/`myeline_M` **sans `backward()`**. Ces écritures ne repartent **jamais** sur le
+disque — l'instrument n'appelle aucune sauvegarde. Le mode `--source factice` et le mode
+`--serveur-seul`, eux, ne chargent aucun cerveau du tout.
+
+### Les options
+
+| Option | Effet |
+|---|---|
+| `--source factice` \| `cerveau` | qui produit les trames (défaut : `factice`) |
+| `--brain CHEMIN` | le `.brain` **existant** à observer — **obligatoire** en mode `cerveau` (un cerveau absent est refusé : un spectateur ne fait jamais naître un cerveau) |
+| `--port N` | port d'écoute HTTP (défaut **8770** ; `0` = port libre, affiché) |
+| `--hz CADENCE` | cadence de publication des trames d'activité (défaut 15 — le **tick du cerveau** n'est jamais ralenti par l'affichage) |
+| `--udp PORT` | écoute aussi les trames reçues en UDP sur ce port (étape 2) |
+| `--serveur-seul` | ne produit **aucune** trame locale : sert la page et reçoit l'UDP |
+| `--duree SECONDES` | s'arrête tout seul après ce délai (défaut : jusqu'à `Ctrl-C`) |
+
+### Ce que la page montre, et ce qu'elle ne dit pas
+
+Chaque encodage est **déclaré** (spec §5) : intensité émissive = activation du neurone,
+épaisseur/opacité = poids de la synapse (sous un **seuil d'affichage** réglable côté navigateur),
+gaine claire = myéline, arête blanche = synapse cristallisée, gris sourd = neurone dont
+l'activation est nulle, halo = dopamine, flash puis gravure = choc dopaminergique (le moment où le
+cerveau écrit). ⚠️ La disposition est une **convention de lecture** (l'ordre du flux de données),
+**pas une affirmation anatomique** : Naulthène n'a ni cortex ni lobe. Le seuil d'affichage est une
+**commodité de lecture**, jamais une mesure.
+
+### 🔴 Limite connue de l'étape 2 (écrite, pas cachée)
+
+La trame `structure` (305 Ko à `dim_bus = 145`) ne peut **pas** passer par UDP — plafond dur de
+**65 507 octets** par datagramme, mesuré (avenant du 10/09/2026, reproduit dans l'entrée
+`[v41.76]` du CHANGELOG). Le run l'écrit donc dans un **fichier** à côté du `.brain`
+(`<brain>.vis01_structure.json`), et seules `activite` (~3,6 Ko) et `evenement` (~90 o) prennent
+l'UDP.
+
+⚠️ **La lecture de ce fichier par le serveur du spectateur n'est PAS encore implémentée** (le
+serveur reçoit aujourd'hui `activite`/`evenement` par UDP, et ne connaît les `structure` que de sa
+source locale). Conséquence, en `--serveur-seul --udp` : les trames d'activité **arrivent**, mais
+la page reste sur « en attente de la structure… ». C'est la moitié « lue par le serveur » de
+l'avenant qui manque — elle est enregistrée au registre (**VIS-01**, statut « livré en partie »)
+plutôt que tue. Ce qui **marche** aujourd'hui à l'étape 2 : le run n'est jamais ralenti ni modifié
+(preuve A/A `brains/VIS01_preuve/LISEZ_MOI.md`), et il dépose sa structure sur le disque, relue à
+la main ou par un futur spectateur.
+
+### Le bilan de télémétrie en fin de run (nouveauté de clôture)
+
+Un run lancé avec `--telemetrie-3d` imprime désormais **une ligne de bilan** à sa dernière journée :
+
+```
+📡 [TÉLÉMÉTRIE 3D] bilan de fin de run : 3 structure(s) écrite(s), 0 ratée(s), 0 erreur(s) de
+télémétrie — 12 345 datagramme(s) envoyé(s) à 127.0.0.1:9998, 0 perdu(s).
+```
+
+Sans elle, une télémétrie **morte au tick 3** d'un run de 1500 jours (dossier non inscriptible,
+cible injoignable, garde-fou de forme qui rejette toutes les captures) se terminait sans une seule
+trame **et sans un seul message** : le premier échec est imprimé, les suivants seulement comptés.
+Les trois compteurs sont des compteurs de **vie** (cumul du run, jamais réarmés par journée —
+c'est ce qui rend une mort en cours de run visible à la fin). La ligne n'est imprimée **que** si le
+drapeau est là : le run témoin reste identique, ligne pour ligne, à celui d'avant VIS-01.
+
+### Les preuves, et où elles sont écrites
+
+| Preuve | Où |
+|---|---|
+| Le drapeau `--telemetrie-3d` ne change RIEN au run (A/A, graine 11, 5 jours) | `brains/VIS01_preuve/LISEZ_MOI.md` (⚠️ entrée écrite **après** les runs — l'écart y est consigné) |
+| Le `.brain` observé reste bit-identique (SHA-256 + `torch.equal`) | `brains/VIS01_preuve/` · `tests/test_cerveau_3d.py::TestSpectateur` — **re-vérifié le 10/09/2026** : `sha256 74553e6e…` inchangée après 5 579 ticks observés |
+| Le cerveau observé ne dérive pas (normes de poids avant/après) | **re-vérifié le 10/09/2026** : `base_weight 13.674509…` et `myeline_M 0.163461…` **égales au bit** après 5 579 ticks · `[v41.76]` du CHANGELOG (tâche 8) |
+| **Surcoût du rapporteur, chiffré** (ticks/s avec et sans hooks, même cerveau, même graine) | **364,0 ticks/s sans le drapeau, 337,4 avec** — soit **+7,87 % de temps / −7,30 % de débit**, sur 3 paires de 50 jours (20 000 ticks) ; chiffres bruts et limites dans `brains/VIS01_surcout_10092026/LISEZ_MOI.md`. ⚠️ **Minorant** (mesuré à `bus = 32 → 71`) : **observer coûte ≈ 7,5 %**, c'est pourquoi le drapeau est éteint par défaut |
+| Le canal tient la cadence (trames émises/écrites/perdues) | ligne de bilan de fin de run ci-dessus — mesuré avec un serveur réel : **81 envoyées, 0 perdue, 13 activité + 68 événements reçus** |
+| Les commandes de cette section **fonctionnent telles quelles** | **vérifié le 10/09/2026** : étape 0 et étape 1 servent la page en **HTTP 200** (1 702 o) ; l'étape 2 reçoit bien l'activité et les événements — mais **pas** la structure (limite ci-dessus) |
+
+---
+
 ## 8. Le Port Exocortex C3 (v28.0-expérimental) — tester un cerveau neuf avec/sans plug
 
 Le Port Exocortex (`src/naulthene/exocortex/`) ajoute un canal optionnel au-dessus du Cœur

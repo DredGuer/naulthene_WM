@@ -29,6 +29,79 @@
 
 ## Runs
 
+### 🟡 `VIS01_surcout_10092026` — le surcoût du rapporteur (spec VIS-01 §10)
+
+| | |
+|---|---|
+| **Début** | 2026-09-10 19:08 *(entrée écrite à 19:07, AVANT le premier lancement — l'horodatage de chaque run est aussi enregistré dans `chrono.txt`, dans le dossier de campagne)* |
+| **Fin estimée** | **~19:16** (≈ 8 min) — dérivée du rythme **MESURÉ** de la preuve A/A de la tâche 9 (5 jours en ≈ 9 s de temps mural, démarrage de ≈ 3,5 s inclus ⇒ ≈ 3,6 j/s ⇒ 50 jours ≈ 58 s par run) : 2 pré-vols (5 jours) + 2 runs `--jours 0` + 6 runs de 50 jours + marges |
+| **Fin réelle** | **2026-09-10 19:15:38** — **écart ≈ −1 min sur l'estimation (~7 min 30 au lieu de ~8 min)**, soit **−6 %** : le rythme dérivé de la preuve A/A était bon à ~2 % près (58 s prévus, 58–62 s mesurés par run). Les **3 démarrages supplémentaires** (19:15→19:16) ont été ajoutés **après** la mesure pour resserrer le coût fixe : c'est un ajout au protocole, consigné comme tel |
+| **Coût** | 6 runs × 50 jours (20 000 ticks) sur le **même cerveau copié** 6 fois (`aa_temoin.brain`, `bus = 32`, graine 11) : 3 répétitions par bras, entrelacées · plus 2 pré-vols de 5 jours, 4 mesures de démarrage `--jours 0` par bras, et un run de 1 jour observé par un vrai serveur (`e2e`) |
+| **Statut** | ✅ terminée et **dépouillée** — **≈ +7,5 % de temps de run, soit −7,3 % de ticks/s (364,0 → 337,4)** |
+
+**Pourquoi** : la spec VIS-01 §10 exige une preuve « **surcoût du rapporteur — chiffré, jamais
+estimé** : ticks/s avec et sans hooks, même graine, même cerveau ». C'est la **seule preuve du
+chantier qui n'avait jamais été faite** (la spec §13 le dit noir sur blanc : « Aucune mesure de
+performance n'a été faite »). Question posée : *un run qui vit est-il ralenti par les 12 forward
+hooks du rapporteur, et de combien, en ticks/s ?*
+
+**Résultat** : temps mural médian **58,05 s (SANS) vs 62,14 s (AVEC)** sur 20 000 ticks, démarrage
+soustrait : **364,0 vs 337,4 ticks/s**, soit **+7,87 % de temps de boucle / −7,30 % de débit**
+(l'écart vaut +7,05 % à +7,87 % selon la convention de soustraction du démarrage — la dispersion
+entre répétitions d'un même bras est de 0,47 à 1,55 %, donc **5 à 15 fois plus petite que
+l'effet**). Les deux bras ont promu les **mêmes niveaux** (`diff` vide sur les 3 paires) et fini au
+**même `dim_bus` (71)** : la mesure compare bien la même chose. ⚠️ **Minorant** : mesuré à
+`bus = 32 → 71`, pas au `dim_bus = 145` de la spec, et c'est l'encodage des trames qui grossit avec
+le bus.
+
+Protocole complet et chiffres bruts : [`brains/VIS01_surcout_10092026/LISEZ_MOI.md`](../../brains/VIS01_surcout_10092026/LISEZ_MOI.md).
+⚠️ Le dossier de campagne a été créé **avant** le premier run, et aucun `.brain` existant n'est
+écrasé : chaque run part d'une **copie fraîche** du même cerveau (celle de
+`brains/VIS01_preuve/`), sous un nom propre.
+
+**Découverte annexe (mesurée pendant la clôture, et écrite ici parce qu'elle a coûté un run)** : en
+`--serveur-seul`, la **structure n'arrive pas** — le run écrit bien
+`<brain>.vis01_structure.json`, mais **aucun code ne relit ce fichier** (l'étape 2 est donc livrée
+**en partie** ; les trames d'activité et d'événement, elles, arrivent : 13 + 68 pour le run `e2e`).
+Détail et preuves : section 8 du `LISEZ_MOI` de la campagne.
+
+---
+
+### ✅ `VIS01_preuve` — la preuve A/A de `--telemetrie-3d` (tâche 9) — **entrée écrite APRÈS les runs**
+
+| | |
+|---|---|
+| **Début** | 2026-09-10 18:47:45 |
+| **Fin estimée** | *(aucune — voir l'écart de trace ci-dessous : l'entrée n'existait pas au lancement)* |
+| **Fin réelle** | 2026-09-10 18:48:03 — **18 s pour les deux runs** (bien plus court que les « plusieurs minutes » annoncées : cerveau neuf `bus = 16`, CPU, 2 000 ticks par run) |
+| **Coût** | 2 runs × 5 jours, graine 11, même code : `aa_temoin.brain` (aucun drapeau) vs `aa_telemetrie.brain` (`--telemetrie-3d udp:127.0.0.1:9998`) · + un run bout en bout `--jours 1` avec un listener UDP réel (`e2e/`, 18:49:21) |
+| **Statut** | ✅ terminée et **dépouillée** — `diff` des niveaux promus **VIDE** |
+
+**Pourquoi** : la spec VIS-01 §10 exige que le drapeau `--telemetrie-3d` (étape 2, la seule qui
+touche `noyau.py`) laisse le run **bit-identique** sans lui. Preuve de non-effet, pas mesure
+d'effet.
+
+**Résultat** : `diff` des niveaux promus **vide** (5 × `Niveau 1` de chaque côté — témoin ATTEINT),
+`tick_absolu = 2 000` des deux côtés, `.brain` **identiques au contenu** (97 tenseurs
+`torch.equal`, 130 entrées d'archive au même SHA-256 ; l'écart brut de 520 o est la longueur du nom
+de fichier × 130 entrées, rétracté dans le CHANGELOG `[v41.76]`). Une **vraie neurogenèse** a eu
+lieu dans le bras observé (`Thermostat: MUTATION +16 !`), donc le point d'appel « après
+neurogenèse » a bien été traversé.
+
+🔴 **Écart de trace, consigné et non masqué** : ces runs ont été lancés **sans** entrée de journal
+au lancement et **sans** `LISEZ_MOI.md` de campagne — la liste des fichiers autorisés du brief de la
+tâche 9 était close et le commit ciblé devait ne rien contenir d'autre (le rapport de la tâche 9
+l'a écrit comme préoccupation, pas caché). La présente ligne et le `LISEZ_MOI.md` ont été écrits le
+**10/09/2026 à 19:06**, soit **~18 min après la fin des runs**. Les horodatages ci-dessus sont
+reconstruits depuis le journal du système de fichiers (`mtime` des `.brain` : 18:47:54 et 18:48:03)
+et la première ligne horodatée des logs `wandb` (18:47:47) — jamais depuis une estimation de
+mémoire. Le verdict et les chiffres n'en dépendent pas : c'est **la règle de trace** qui était
+violée, et c'est elle qui est réparée.
+
+Protocole complet : [`brains/VIS01_preuve/LISEZ_MOI.md`](../../brains/VIS01_preuve/LISEZ_MOI.md).
+
+---
+
 ### ✅ `08092026_sci01_balayage_K` — Wave 1 : balayage K/ε sur l'apprenant réparé
 
 | | |

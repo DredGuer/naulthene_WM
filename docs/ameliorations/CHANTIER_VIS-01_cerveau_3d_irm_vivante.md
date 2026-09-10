@@ -1,13 +1,18 @@
 # CHANTIER VIS-01 — Le Cerveau 3D : une IRM vivante en trois dimensions
 
-> **Statut** : 📋 **spec validée par l'auteur le 10/09/2026** — **aucune ligne de code écrite**
-> à ce stade. Nature : **instrument de visualisation**, pas une mécanique cognitive.
+> **Statut** : ✅ **LIVRÉ le 10/09/2026** (les 10 tâches du
+> [`PLAN_VIS-01_cerveau_3d.md`](PLAN_VIS-01_cerveau_3d.md) sont closes, jusqu'au commit `3281f3e`
+> puis la clôture documentaire). Nature : **instrument de visualisation**, pas une mécanique
+> cognitive.
 > **Périmètre** : étapes 0 et 1 sans aucun impact sur `noyau.py` ; l'étape 2 est la seule qui
 > touche le noyau (drapeau additif, éteint par défaut, comportement bit-identique sans lui).
 > **Décisions de cadrage prises le 10/09** : rendu Web/three.js · sujet = **activité tick par
 > tick** · disposition = **plaques stratifiées + colonne du bus** · spectateur **strictement en
 > lecture seule** (pas de mode « vivre ») · documentation = **ce chantier + `INDEX.md` +
 > registre**.
+> ⚠️ **Ce document est conservé tel qu'il a été validé** : ses écarts avec ce qui a été livré sont
+> écrits en **avenants** à leur place (le transport de la trame `structure`, §4 ; les bornes
+> sensorielles, §5), jamais réécrits en silence. Usage : [`LANCEMENT.md` §7bis](../fonctionnement/LANCEMENT.md).
 
 ---
 
@@ -94,6 +99,57 @@ réversible, pas un biais silencieux.
 > d'un cerveau plus gros elles resteraient bornées par le seuil d'affichage. Le seuil est une
 > **commodité de lecture**, jamais une mesure — et l'interface l'affiche comme telle.
 
+### 🔴 Avenant du 10/09/2026 — le canal `structure` ne passe **pas** par UDP (mesuré)
+
+Cet avenant **corrige ce document** : la version initiale de ce chantier prévoyait les trois trames
+sur le même transport UDP (étape 2). **C'est infaisable**, et la mesure est sans appel — relevée
+pendant la tâche 6, puis **reproduite indépendamment par un relecteur** :
+
+| Fait mesuré | Valeur |
+|---|---|
+| Trame `structure` à `dim_bus = 145` | **305 086 octets** |
+| Trame `structure` à `dim_bus = 16` (naissance) | **13 517 octets** |
+| Plafond **dur** d'un datagramme UDP | **65 507 octets** — insensible même à `SO_SNDBUF = 1 Mo` |
+| `SO_SNDBUF` UDP par défaut sur macOS | **9 216 octets** ⇒ `OSError [Errno 40] Message too long` dès 13 517 |
+| Trame `activite` à `dim_bus = 145` | **≈ 3 600 octets** ✅ passe |
+| Trame `evenement` | **≈ 90 octets** ✅ passe |
+
+**Conséquence observée de bout en bout** : en `--serveur-seul --udp`, la structure n'arrive jamais
+et la page reste sur « en attente de la structure… ».
+
+**Le protocole de l'étape 2 devient donc :**
+
+| Canal | Transport | Pourquoi |
+|---|---|---|
+| `structure` (rare : démarrage + chaque neurogenèse) | **FICHIER** déposé par le run, lu par le serveur du spectateur | 305 Ko ne tiennent pas dans un datagramme ; la morceler imposerait un réassemblage sans perte garantie pour un gain nul (elle change au plus deux fois par vie) |
+| `activite` (~3,6 Ko, 15 Hz) et `evenement` (~90 o) | **UDP**, comme prévu | légers, et une perte y est bénigne par construction (« le présent, jamais du retard ») |
+
+⚠️ **Second mur, mesuré lui aussi** : à `SO_SNDBUF` par défaut, les trames d'**activité** meurent en
+silence au-delà de `dim_bus ≈ 409` (408 → 9 198 o acceptés, 409 → 9 230 o perdus) — une neurogenèse
+suffit à franchir ce seuil. Contrairement au plafond dur, **ce mur-là se relève** :
+`EmetteurUDP` doit poser un `SO_SNDBUF` explicite.
+
+#### 🔴 Constat de clôture du 10/09/2026 — la moitié « lue par le serveur » n'est pas implémentée
+
+Le tableau ci-dessus décrit la cible : « `structure` → **FICHIER** déposé par le run, **lu par le
+serveur du spectateur** ». **La seconde moitié n'existe pas.** Mesuré en clôture, avec un vrai
+serveur et un vrai run (`brains/VIS01_surcout_10092026/`, section 8 de son `LISEZ_MOI.md`) :
+
+| Fait | Valeur mesurée |
+|---|---|
+| Run lancé avec `--telemetrie-3d` + serveur en `--serveur-seul --udp 9998` | 81 datagrammes envoyés, **0 perdu** |
+| Ce que le serveur a reçu | **13 trames d'activité + 68 événements** (`/sante` : `sequence` 13, `evenements_total` 68) |
+| Ce que le serveur a reçu comme `structure` | **rien** — `/structure` rend `{}`, `sequence_structure` reste **0** |
+| Où va la structure | dans `<brain>.vis01_structure.json` (30 517 o ici), écrit par `noyau.py` |
+| Qui relit ce fichier | **personne** : `grep -rn "vis01_structure" src/` ne rend que `noyau.py` |
+
+**Conséquence** : en `--serveur-seul`, la page reste sur « en attente de la structure… » — l'étape 2
+est **livrée en partie**. Le run, lui, est bien observé sans être modifié (preuve A/A de §10), et sa
+structure est sur le disque, complète et à jour. Ce qui manque est un chemin de lecture
+(`--structure <fichier>`, ou une surveillance du dossier) dans le serveur du spectateur : une tâche
+à part entière, **hors des fichiers autorisés de la clôture**. Enregistré au registre (VIS-01,
+« livré en partie ») et dans `LANCEMENT.md` §7bis.
+
 ### Formes exactes (indicatives, à figer à l'implémentation)
 
 ```jsonc
@@ -139,6 +195,25 @@ ce qui rend deux cerveaux comparables.
 **Bornes sensorielles** (non neuronales, dessinées distinctement) : vision 147, audio 130,
 `vecteur_bio` 44, actions 8 — elles expliquent les `entree` non multiples du bus
 (189 = 145 + 44, 153 = 145 + 8).
+
+### Avenant du 10/09/2026 (clôture) — les bornes sont **COMPTÉES**, pas **DESSINÉES**
+
+Le mot « dessinées » ci-dessus est **faux au regard de ce qui a été livré** : aucun glyphe, aucune
+forme, aucune couleur n'est produite pour une borne. La page **compte** les entrées non neuronales
+qu'elle écarte et l'**affiche en clair** dans sa ligne d'information
+(`app.js`, `construireAretes()` → `horsBornes`, rendu `· N entrées non neuronales (bornes)`), et
+elle ne relie par aucune arête une entrée de borne à un neurone — une borne n'est pas un neurone,
+et lui dessiner un nœud inventerait une anatomie qui n'existe pas (§5, premier avertissement).
+
+**Pourquoi l'écart est assumé plutôt que corrigé** : dessiner les bornes n'ajouterait aucune
+information mesurable (leur `dim` est déjà dans la trame `structure`, sous `bornes[]`, et
+`planDesEntrees` s'en sert pour savoir quelles entrées viennent d'un neurone du bus) ; le **compte**
+suffit à expliquer au lecteur pourquoi un `entree` n'est pas un multiple du bus (189 = 145 + 44,
+153 = 145 + 8). Ce qui est affiché est donc exact : les bornes sont **déclarées** dans la trame,
+**exclues** des arêtes, et **comptées** à l'écran — jamais muettes, jamais simulées en neurones.
+
+⚠️ Aucun test ne fige ce point : `tests/test_cerveau_3d.py` vérifie que les `bornes` sont dans la
+trame et que les arêtes relient deux neurones distincts, pas le libellé de la ligne d'information.
 
 ### Encodage visuel — chaque canal a un sens mesuré
 
@@ -211,8 +286,29 @@ mécanique cognitive. Un émetteur de télémétrie n'est **pas** une mécanique
 | **Aucun fichier écrit** | `persistance.sauvegarder` n'est jamais appelé : **le `.brain` observé reste identique sur le disque** (vérifiable par empreinte) |
 | **Aucun `backward()`** | vrai, mais **insuffisant** à lui seul — voir la découverte D1 ci-dessous |
 | **Comportement inchangé dans le cerveau observé** | `register_forward_hook` n'altère pas la valeur de sortie ; le rapporteur ne fait que lire. Toute écriture qu'il ferait serait un bug, pas un effet de bord attendu |
-| **Un run n'est jamais ralenti** | réseau **UDP** et **file bornée** : si le serveur est absent, lent ou saturé, la trame est **perdue**, jamais le tick retardé. Aucun `send` bloquant, aucune attente |
+| **Un run n'est jamais ralenti** | réseau **UDP** et **file bornée** : si le serveur est absent, lent ou saturé, la trame est **perdue**, jamais le tick retardé. Aucun `send` bloquant, aucune attente — ⚠️ **vrai au sens du RÉSEAU, faux au sens du CALCUL** : l'instrument lui-même coûte, et c'est désormais chiffré (avenant ci-dessous) |
 | **Pas de fuite hors de la machine** | le serveur écoute sur `127.0.0.1` |
+
+### Avenant de clôture du 10/09/2026 — « jamais ralenti » : le réseau, oui ; le calcul, non (mesuré)
+
+La ligne ci-dessus a été écrite comme une garantie sur le **réseau**, et elle tient : un
+consommateur absent, lent ou saturé ne retarde jamais un tick (UDP non bloquant, file bornée) —
+mesuré, **0 datagramme perdu sur 3 762**.
+
+Mais elle se lit facilement comme « la télémétrie est gratuite », **et c'est faux**. La preuve
+« surcoût du rapporteur — chiffré, jamais estimé » de §10 a été faite en clôture
+([`brains/VIS01_surcout_10092026/LISEZ_MOI.md`](../../brains/VIS01_surcout_10092026/LISEZ_MOI.md)) :
+
+| Mesure (même cerveau copié, même graine 11, 3 paires de 50 jours = 20 000 ticks) | SANS le drapeau | AVEC le drapeau |
+|---|---:|---:|
+| Temps mural médian | **58,05 s** | **62,14 s** |
+| **ticks/s** (démarrage soustrait) | **364,0** | **337,4** |
+| Écart | — | **+7,87 % de temps · −7,30 % de débit** (de +7,05 % à +7,87 % selon la convention de soustraction du démarrage ; dispersion intra-bras 0,47–1,55 %) |
+
+Ce chiffre est un **minorant** : il est mesuré à `bus = 32 → 71`, et c'est l'encodage des trames qui
+grossit avec le bus (le `dim_bus = 145` de cette spec n'a pas été mesuré). C'est la raison d'être du
+mode `--serveur-seul` par défaut et du drapeau **éteint par défaut** : observer coûte ~7,5 %, donc
+on observe quand on veut regarder.
 
 ### D1 — la garantie « ne modifie aucun poids » des instruments existants est inexacte (mesuré)
 
@@ -288,15 +384,15 @@ factice) ; le point 6 instancie un cerveau minuscule (`dim_bus = 16`). Tous sont
 6. le rapporteur, `hooks` actifs **et** inactifs, produit des sorties de couche **identiques**
    (témoin que l'observation n'observe pas en modifiant).
 
-**Preuves** (dogme « rien sans témoin ») :
+**Preuves** (dogme « rien sans témoin ») — état au **10/09/2026**, à la clôture du chantier :
 
-| Preuve | Protocole |
-|---|---|
-| **Le fichier `.brain` n'est pas touché** | empreinte SHA-256 avant/après une session de spectateur-pilote |
-| **Le cerveau observé ne dérive pas** | normes de `base_weight` et `myeline_M` avant/après, à l'étape 1 |
-| **Surcoût du rapporteur — chiffré, jamais estimé** | ticks/s avec et sans hooks, même graine, même cerveau |
-| **Étape 2 : run bit-identique sans drapeau** | deux runs même graine (5 jours) avec et sans télémétrie active, `diff` des niveaux promus — **le test qui compte** |
-| **Le canal tient la cadence** | nombre de trames émises/affichées/perdues sur une session, reporté tel quel |
+| Preuve | Protocole | État |
+|---|---|---|
+| **Le fichier `.brain` n'est pas touché** | empreinte SHA-256 avant/après une session de spectateur-pilote | ✅ faite (tâche 8, `[v41.76]`) |
+| **Le cerveau observé ne dérive pas** | normes de `base_weight` et `myeline_M` avant/après, à l'étape 1 | ✅ faite (tâche 8, `[v41.76]`) |
+| **Surcoût du rapporteur — chiffré, jamais estimé** | ticks/s avec et sans hooks, même graine, même cerveau | ✅ **faite le 10/09** : **364,0 → 337,4 ticks/s**, soit **+7,87 % de temps / −7,30 % de débit** (3 paires de 20 000 ticks ; `brains/VIS01_surcout_10092026/LISEZ_MOI.md`) — **minorant**, mesuré à `bus = 32 → 71` |
+| **Étape 2 : run bit-identique sans drapeau** | deux runs même graine (5 jours) avec et sans télémétrie active, `diff` des niveaux promus — **le test qui compte** | ✅ **faite (tâche 9)** : `diff` vide ; **re-mesurée par la clôture sur 3 paires de 50 jours** (`diff` vide, `dim_bus` final identique des deux côtés) — `brains/VIS01_preuve/LISEZ_MOI.md` |
+| **Le canal tient la cadence** | nombre de trames émises/affichées/perdues sur une session, reporté tel quel | 🟡 **faite côté ÉMISSION, partielle côté AFFICHAGE** : 81 envoyées / **0 perdue** / 13 activité + 68 événements **reçues par un vrai serveur** ; le nombre de trames **affichées** dépend du lien manquant `structure` (avenant §4) |
 
 ## 11. Ce qui est explicitement écarté (YAGNI)
 
@@ -336,5 +432,12 @@ factice) ; le point 6 instancie un cerveau minuscule (`dim_bus = 16`). Tous sont
   `|trace_activation|max = 0,000e+00` sur les 12 couches. **Dérivés** de ces formes (arithmétique,
   pas mesure) : 1 182 neurones de sortie, 220 255 synapses, 3 152 octets de trame d'activité.
   Taille de three.js minifié : `three.module.min.js` v0.180.0, **338 908 octets**.
-- ⚠️ **Aucune mesure de performance n'a été faite** : le surcoût du rapporteur (§10) est à
-  mesurer, pas à supposer.
+- ✅ ~~⚠️ **Aucune mesure de performance n'a été faite** : le surcoût du rapporteur (§10) est à
+  mesurer, pas à supposer.~~ **FAIT le 10/09/2026** : **364,0 → 337,4 ticks/s** (SANS vs AVEC le
+  drapeau), soit **+7,87 % de temps de run / −7,30 % de débit**, sur 3 paires entrelacées de
+  50 jours (20 000 ticks) partant du **même cerveau copié** à la **même graine** — dispersion
+  intra-bras 0,47–1,55 %, donc l'effet est 5 à 15 fois plus grand que le bruit. **Minorant** :
+  mesuré à `bus = 32 → 71`, pas au `dim_bus = 145` de ce document (c'est l'encodage des trames qui
+  grossit avec le bus). Détail, chiffres bruts et limites :
+  [`brains/VIS01_surcout_10092026/LISEZ_MOI.md`](../../brains/VIS01_surcout_10092026/LISEZ_MOI.md) ·
+  entrée de journal : [`JOURNAL_DES_RUNS.md`](../fonctionnement/JOURNAL_DES_RUNS.md).
