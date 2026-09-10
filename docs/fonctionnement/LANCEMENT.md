@@ -10,6 +10,9 @@ voir §6ter), le Port Exocortex C3 (`src/naulthene/exocortex/`, v28.0-expérimen
 le Bus Sensoriel des 5 sens (`src/naulthene/cerveau/bus_sensoriel.py`, v29.0-expérimental, voir
 §9), l'Exo-Sens — le 6ᵉ sens (v30.0-expérimental, voir §10) et les métriques de calibrage
 (v30.1, voir §11), et l'Odorat Topologique & la Clinotaxie (v32.0-expérimental, voir §13).
+Il couvre aussi le **cerveau 3D — l'IRM vivante** (`src/naulthene/instruments/cerveau_3d/`,
+chantier VIS-01, v41.76, voir **§7bis**) : la structure du cerveau dans le navigateur, y compris
+branchée sur un run en cours.
 Voir `readme_fr.md` pour l'architecture complète, `CHANGELOG.md` pour
 l'historique des versions, et [`ameliorations_appliquees/`](../ameliorations_appliquees/) pour
 les documents de conception historiques.
@@ -463,6 +466,9 @@ PYTHONPATH=src python -m naulthene.instruments.lancer_arene
 
 Pour fermer : `Ctrl+C` dans le terminal, ou clic sur la croix de la fenêtre — les deux sont gérés
 proprement (fermeture de la fenêtre pygame + de l'environnement MiniGrid, sans traceback).
+
+ℹ️ **L'Arène montre ce que le cerveau FAIT ; §7bis (le cerveau 3D) montre ce qu'il EST** — ses 12
+plaques, ses synapses et leur allumage, dans le navigateur, sans fenêtre graphique à installer.
 
 #### ⚠️ Dépannage — premier lancement lent ou `TimeoutError: [Errno 60]`
 
