@@ -25,7 +25,7 @@ objet de télémétrie n'est construit et le tick ne gagne qu'un `getattr` et un
 | Fait mesuré (reproduit dans ce commit) | Valeur |
 |---|---|
 | Trame `structure` à `dim_bus = 145` | **305 053 octets** (avenant : 305 086) |
-| Trame `structure` à `dim_bus = 96` (= `DIM_BUS_MAX` sur cette machine) | **152 472 octets** |
+| Trame `structure` à `dim_bus = 96` (le plancher historique ; `DIM_BUS_MAX = 160` sur cette machine) | **152 472 octets** |
 | Trame `structure` à `dim_bus = 16` | 13 488 octets (avenant : 13 517) |
 | Plafond **dur** d'un datagramme UDP | **65 507 octets** |
 | Trame `activite` mesurée à `dim_bus = 409` | **9 252 octets** |
@@ -58,8 +58,13 @@ objet de télémétrie n'est construit et le tick ne gagne qu'un `getattr` et un
   `diff` des niveaux promus **VIDE** (5 lignes « Niveau 1 » de chaque côté — le témoin est
   ATTEINT, ce n'est pas une comparaison vide) ; les journaux console sont identiques hors bruit
   `wandb` et nom de fichier ; les deux `.brain` sont **identiques au contenu** (97 tenseurs
-  `torch.equal`, `optimizer_state_dict` identique, 130 entrées d'archive au même sha256 — seule
-  la compression zlib du `data.pkl` diffère de 520 octets, à contenu décompressé égal).
+  `torch.equal`, `optimizer_state_dict` identique, 130 entrées d'archive au même CRC, au même
+  `compress_size` et au même SHA-256 — `data.pkl` : 18 562 o des deux côtés, même CRC). L'écart
+  de taille (602 143 − 601 623 = **520 o**) est le **nom de fichier embarqué dans les 130 entrées
+  d'archive** (`aa_telemetrie.brain`, 4 caractères de plus que `aa_temoin.brain`) : les en-têtes
+  locaux sont ramenés à la même taille par le bourrage d'alignement de `torch.save`, les deux
+  fichiers sont en **méthode 0 (stockée)** et leurs octets de charge utile sont identiques **aux
+  mêmes offsets**.
 - Bout en bout : un listener UDP réel reçoit **11 `activite` + 16 `evenement`** sur un run d'un
   jour, et le fichier de structure apparaît (13 603 octets, `dim_bus = 16`).
 - **126 → 136 tests** (`NAULTHENE_DEVICE=cpu venv/bin/python -m unittest discover -s tests`,
@@ -73,6 +78,19 @@ objet de télémétrie n'est construit et le tick ne gagne qu'un `getattr` et un
 
 ⚠️ **Le spectateur n'est PAS branché sur le fichier de structure** (tâche ultérieure, hors
 périmètre) : cette version PRODUIT le fichier, elle ne le lit pas.
+
+🔴 **RÉTRACTATIONS DU 10/09/2026 (revue indépendante ; ancien énoncé en regard, dogme « rien sans
+écrit ») — DEUX ÉNONCÉS DE CETTE ENTRÉE ÉTAIENT FAUX :**
+
+| Énoncé publié dans cette entrée | ❌ FAUX — re-mesuré ici | Corrigé en |
+|---|---|---|
+| « Trame `structure` à `dim_bus = 96` (= `DIM_BUS_MAX` sur cette machine) » | `DIM_BUS_MAX = 160` sur cette machine : `max(96, BUS_REFERENCE_INITIAL × √FACTEUR_TEMPS_MATURITE)` = `max(96, 16 × √100)`, la borne **temps** gouvernant (la borne RAM donnerait 784 — elle ne mord pas). **96 est le plancher historique**, pas le plafond | « le plancher historique ; `DIM_BUS_MAX = 160` sur cette machine » |
+| « seule la compression zlib du `data.pkl` diffère de 520 octets, à contenu décompressé égal » | **Aucune zlib nulle part** : les 130 entrées des deux `.brain` sont en **méthode 0 (stockée)** et portent le **même CRC, le même `compress_size`, le même `file_size` et le même SHA-256** (130 sur 130 ; `data.pkl` = 18 562 o des deux côtés, même CRC) ; les offsets d'en-tête local, les offsets de début de données et **les octets de charge utile sont identiques**. Le seul écart est le **nom de fichier** (4 caractères de plus) : +520 o dans les en-têtes locaux, annulés à l'octet près par −520 o de bourrage d'alignement, et +520 o dans le répertoire central → **520 o** de taille de fichier | « le nom de fichier embarqué dans les 130 entrées d'archive » |
+
+Le fond de l'avenant **n'est pas touché** : à `dim_bus = 96` la structure mesurée fait
+**152 472 o**, soit 2,3× le plafond dur de 65 507 o — `structure` reste écrite dans un fichier,
+jamais émise par UDP. Seules ces deux phrases changent : aucune mesure, aucun autre chiffre et
+aucune ligne de code de cette version n'est modifié (correction `docs`, même version).
 
 ---
 
