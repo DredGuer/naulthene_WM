@@ -464,7 +464,27 @@ class Rapporteur:
         """Publie un choc dopaminergique (fait daté du canal `evenement`) et renvoie sa trame.
 
         Le rapporteur ne DOSE pas un choc : il relaie une intensité qu'on lui donne (le noyau la
-        connaît, lui). Le retour existe pour que le mode sans bus (tâche 9) puisse le relayer.
+        connaît, lui).
+
+        🔴 RÉTRACTATION DU 10/09/2026 (vague finale, constat I7 — nit). L'ancienne docstring
+        finissait par : « Le retour existe pour que le mode sans bus (tâche 9) puisse le
+        relayer. » **Cet énoncé était faux** : aucun appelant de production n'existe.
+        `noyau._emettre_evenement` construit sa trame lui-même (`trame_evenement(genre, …)` puis
+        `emetteur.envoyer(...)`) et n'appelle jamais cette méthode — vérifié par
+        `grep -rn "signal_choc" src/`, qui ne rend que cette définition. Les SEULS appelants sont
+        les tests de la tâche 7 (`test_signal_choc_et_bus_absent`).
+
+        **Décision : corriger l'énoncé plutôt que déléguer à `signal_choc`** (l'autre branche
+        proposée par le constat). Raison : déléguer ferait passer le canal `evenement` du noyau par
+        un objet `Rapporteur` que le mode sans rapporteur branché n'a pas (`_emettre_evenement` ne
+        dépend QUE de `etat.telemetrie`, c'est ce qui rend le choc émissible sans hooks) ; ce
+        serait un changement de COMPORTEMENT pour une méthode qui ne sert à rien en production —
+        exactement ce que la vague interdit. La méthode reste : elle est testée, elle est l'API
+        naturelle d'un rapporteur autonome, et la retirer sortirait du périmètre de ce tour.
+
+        ⚠️ Ce qu'elle fait EST donc du code non appelé en production. C'est écrit ici pour qu'on ne
+        la croie pas branchée : un instrument dont on croit qu'il émet quelque chose est pire
+        qu'un instrument absent.
         """
         trame = trame_evenement("choc_dopamine", dict(meta or {}), intensite=float(intensite))
         self._chocs += 1

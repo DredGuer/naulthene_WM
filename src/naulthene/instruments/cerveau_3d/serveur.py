@@ -3,9 +3,14 @@
 """
 VIS-01 — le serveur du cerveau 3D : sert la page, pousse les trames, écoute l'UDP.
 
-⚠️ Bibliothèque standard UNIQUEMENT (`http.server`, `socket`, `json`, `base64`) : aucune
-dépendance n'est ajoutée au projet (spec §3). Le serveur ne connaît pas le cerveau : il ne
-connaît que le `BusTrames` qu'on lui donne.
+⚠️ Bibliothèque standard UNIQUEMENT (`http.server`, `socket`, `json`, `stat`, `threading`,
+`time`, `pathlib`, `urllib.parse`) : aucune dépendance n'est ajoutée au projet (spec §3). Le
+serveur ne connaît pas le cerveau : il ne connaît que le `BusTrames` qu'on lui donne.
+
+⚠️ Rétractation du 10/09/2026 (vague finale, constat I7 — nit) : cet énoncé citait `base64`
+parmi les modules utilisés. **C'était faux** : `base64` n'est ni importé ni utilisé ici (il l'est
+dans `telemetrie.py`, qui encode les matrices de poids). Remplacé par la liste RÉELLE des
+imports, pour que la phrase reste vérifiable en trois lignes.
 
 ⚠️ Ne PAS activer HTTP/1.1 : le flux SSE n'a ni `Content-Length` ni `chunked`, et un client
 HTTP/1.1 attendrait une fin de corps qui n'arrive jamais. En HTTP/1.0 (défaut), le corps se
@@ -25,6 +30,13 @@ plafond dur de 65 507), et personne ne lisait ce fichier avant la tâche 11 : la
 Tout passe par `assainir_json` (une valeur non finie devient `null`), et `allow_nan=False`
 reste en ceinture à l'intérieur des `try/except` — un `ValueError` n'est pas un `OSError` :
 non rattrapé, il tuerait le fil de gestion.
+
+⚠️ Invariant de ROBUSTESSE DU PARSING (constat I4, vague finale) : un datagramme n'est JAMAIS
+une entrée de confiance. `deserialiser` (`telemetrie.py`) rattrape `RecursionError` en plus des
+erreurs de décodage, et les deux ceintures d'émission ci-dessus rattrapent `RecursionError` en
+plus de `ValueError`/`TypeError` — parce qu'`assainir_json` est RÉCURSIF : mesuré, une charge
+imbriquée à 1 000 niveaux franchit `json.loads` (donc `deserialiser`) et le fait lever. Sans ces
+trois filets, le fil `ecouteur-udp` ou le fil de gestion mourait **sans message ni compteur**.
 """
 from __future__ import annotations
 
@@ -129,10 +141,13 @@ class ServeurCerveau3D:
                 try:
                     donnees = json.dumps(assainir_json(charge), separators=(",", ":"),
                                          allow_nan=False).encode("utf-8")
-                except (ValueError, TypeError) as erreur:
+                except (ValueError, TypeError, RecursionError) as erreur:
                     # Ceinture : `assainir_json` rend ce chemin inatteignable pour une VALEUR
                     # non finie ; il reste une clé flottante non finie, que `allow_nan=False`
                     # refuse. L'échec est COMPTÉ et rendu visible (500), jamais silencieux.
+                    # ⚠️ `RecursionError` (constat I4, vague finale) : `assainir_json` est
+                    # RÉCURSIF, et une charge profondément imbriquée le fait lever — mesuré,
+                    # 1 000 niveaux passent `json.loads` (donc `deserialiser`) et le font lever.
                     serveur._emissions_refusees += 1
                     return self.send_error(500, f"charge non serialisable : {erreur}")
                 self.send_response(200)
@@ -215,11 +230,18 @@ class ServeurCerveau3D:
                 SAUTÉE et COMPTÉE, et le flux continue de servir les suivantes. (`TypeError`
                 est rattrapé de même : un scalaire non sérialisable publié en mémoire — le cas
                 `np.float32` de la spec §4 — ne doit pas tuer le fil non plus.)
+
+                ⚠️ `RecursionError` AJOUTÉ le 10/09/2026 (constat I4, vague finale) — et ce n'est
+                pas une ceinture de confort : `assainir_json` est RÉCURSIF, et il existe une
+                fenêtre MESURÉE où `json.loads` accepte une charge que lui refuse (1 000 niveaux
+                d'imbrication passent le parseur, 800 passent les deux). Une telle trame franchit
+                donc `deserialiser`, entre dans le bus, et tuait le fil de gestion à la première
+                connexion — le même mode d'échec silencieux que le constat I4 dénonce côté écoute.
                 """
                 try:
                     charge_propre = json.dumps(assainir_json(charge), separators=(",", ":"),
                                                allow_nan=False)
-                except (ValueError, TypeError):
+                except (ValueError, TypeError, RecursionError):
                     serveur._emissions_refusees += 1
                     return
                 corps = f"event: {nom}\ndata: {charge_propre}\n\n"

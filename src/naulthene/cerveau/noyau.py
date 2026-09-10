@@ -672,16 +672,35 @@ def _meta_telemetrie(etat) -> dict:
     07/09/2026 — l'index seul ne dit pas de quel monde on parle, et deux cursus peuvent
     partager un index).
 
+    🔴 CORRECTION DU 10/09/2026 (vague finale, constat I1) — `niveau` porte AUSSI `affiche`.
+    L'énoncé ci-dessus était exact mais INCOMPLET, et le trou a coûté un affichage entier :
+    `app.js` ne rend le niveau QUE si `trame.niveau.affiche` existe
+    (`static/app.js` : `(trame.niveau && trame.niveau.affiche) ? '· niveau …' : ''`), alors que
+    la spec §4 montre `{"index": 3, "affiche": "4/15", "env_id": …}` depuis l'origine du chantier.
+    `spectateur._meta_etat` la produisait déjà (étape 1) ; cette fonction-ci, non — donc la page
+    n'affichait **aucun niveau dans le seul mode où l'observation dure 1500 jours**
+    (`--serveur-seul` + `--telemetrie-3d`), et l'affichait en étape 1. Artefact mesuré :
+    `brains/VIS01_etape2_fichier_10092026/structure_apres_run.json` → `niveau` valait
+    `{'index': 2, 'env_id': '…'}`, sans `affiche`.
+    ⚠️ `affiche` est DÉRIVÉE de `len(PROGRAMME)` — jamais un `15` en dur (le cursus a déjà changé
+    de taille, et `PROGRAMME` est la seule source).
+    ⚠️ La couture qui manquait n'était pas un test absent mais un test MAL PLACÉ : chaque
+    producteur était vérifié seul. `tests/test_cerveau_3d.py::
+    test_meta_niveau_meme_forme_pour_les_deux_producteurs` compare désormais les CLÉS des deux
+    producteurs (spectateur et noyau).
+
     `dopamine`, `faim` et `force_planification` vivent dans `etat`, pas sur l'agent : ils
     arrivent par ici, jamais inventés par l'instrument (le rapporteur les range ensuite dans
     `scalaires`, voir `rapporteur.SCALAIRES_DU_CALLER`). L'action JOUÉE n'est connue qu'en queue
     de tick : elle s'ajoute au même dictionnaire dans `_emettre_tick`.
     """
+    _index = int(getattr(etat, "niveau_actuel", 0))
     return {
         "tick": int(getattr(etat, "tick_absolu", 0)),
         "jour": int(getattr(etat, "jour", 0)),
         "dim_bus": int(etat.agent.dim_bus),
-        "niveau": {"index": int(getattr(etat, "niveau_actuel", 0)),
+        "niveau": {"index": _index,
+                   "affiche": f"{_index + 1}/{len(PROGRAMME)}",
                    "env_id": getattr(etat, "env_id", "?")},
         "dopamine": float(getattr(etat, "teneur_dopamine", 0.0)),
         "faim": float(etat.moteur_bio.faim()),

@@ -187,10 +187,31 @@ def serialiser(trame: dict) -> bytes:
 
 def deserialiser(octets: bytes) -> dict | None:
     """`None` sur tout ce qui n'est pas une trame exploitable — jamais une exception : un
-    datagramme tronqué ne doit pas tuer la boucle d'écoute (spec §9)."""
+    datagramme tronqué ne doit pas tuer la boucle d'écoute (spec §9).
+
+    🔴 CORRECTION DU 10/09/2026 (vague finale, constat I4) — `RecursionError` est rattrapé ICI.
+    La docstring ci-dessus était un ÉNONCÉ FAUX depuis la tâche 4 : elle promettait « jamais une
+    exception », et le `except` ne couvrait que `UnicodeDecodeError` et `JSONDecodeError`. Or le
+    scanner JSON de `json.loads` est RÉCURSIF et lève `RecursionError` (une sous-classe de
+    `RuntimeError`, donc **ni** `ValueError` **ni** `OSError`) sur un datagramme profondément
+    imbriqué. Mesuré : `deserialiser(b"[" * 20000)` levait avant cette correction. Appelé HORS du
+    `try` de `EcouteurUDP._boucle` (`serveur.py`, la boucle ne couvrait que `recvfrom`), il tuait
+    le fil `ecouteur-udp` — **en silence**, sans message et sans compteur : la page se figeait sur
+    une dernière image, indiscernable d'un cerveau lent. Même angle mort pour la relecture du
+    fichier de structure (`VeilleurStructureFichier`, `serveur.py`).
+
+    ⚠️ CE QUE CE RATTRAPAGE NE PROTÈGE PAS, ET QUI A ÉTÉ MESURÉ ICI (10/09/2026) : `assainir_json`
+    (`serveur.py`), qui est RÉCURSIF en Python et vit dans un `try/except (ValueError, TypeError)`.
+    Il existe une fenêtre où `json.loads` ACCEPTE ce que `assainir_json` refuse — mesuré :
+    `{"type": "activite", "x": [[[…]]]}` à **1 000** niveaux d'imbrication passe `json.loads` et
+    fait lever `assainir_json` (à 800, les deux passent). Une trame ainsi construite franchirait
+    donc `deserialiser`, entrerait dans le bus, et tuerait le fil de gestion SSE à la première
+    connexion. `serveur.py` a reçu le même rattrapage sur ses deux ceintures : `deserialiser` est
+    la PREMIÈRE barrière (le chemin UDP), pas la seule.
+    """
     try:
         trame = json.loads(octets.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError):
+    except (UnicodeDecodeError, json.JSONDecodeError, RecursionError):
         return None
     if not isinstance(trame, dict) or "type" not in trame:
         return None

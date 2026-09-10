@@ -32,6 +32,17 @@ CHEMIN` fait relire ce fichier au serveur — au démarrage, puis à chaque chan
 dans le bus, sans quoi la page restait sur « en attente de la structure… » pendant qu'`activite` et
 `evenement`, eux, arrivaient bien par UDP. L'option exige `--serveur-seul` : une source locale
 publie déjà sa propre structure, et deux publieurs feraient clignoter la scène sans rien dire.
+
+⚠️ LES REFUS SONT SYMÉTRIQUES (correction du 10/09/2026, vague finale, constat I6). Deux
+combinaisons d'options étaient acceptées puis IGNORÉES EN SILENCE, c'est-à-dire qu'elles faisaient
+montrer à la page autre chose que ce que l'auteur croyait regarder — les deux sont corrigées :
+
+| Combinaison | Ce qui se passait | Correction |
+|---|---|---|
+| `--source factice --brain X` | le chemin était accepté puis jamais ouvert (l'aide de `--brain` annonçait « le `.brain` EXISTANT à observer » sans dire que le mode factice ne le lisait pas) | refus explicite dans `main`, avant de lier un port |
+| une source `factice` qui meurt sur une exception | l'erreur était imprimée sur `stderr` mais le tableau de bord `issue` restait vide, donc la CLI rendait **0** | `issue["erreur"]` posé par `_cible_factice`, donc sortie ≠ 0 — le mode factice est désormais aussi strict que le mode `cerveau` |
+
+Voir `tests/test_cerveau_3d.py::TestCliModeCerveau`.
 """
 from __future__ import annotations
 
@@ -86,7 +97,10 @@ def construire_analyseur() -> argparse.ArgumentParser:
                            help="qui produit les trames (défaut : factice)")
     analyseur.add_argument("--brain", default=None, metavar="CHEMIN",
                            help="le `.brain` EXISTANT à observer (obligatoire en mode « cerveau » ; "
-                                "un cerveau absent est refusé, jamais fait naître)")
+                                "un cerveau absent est refusé, jamais fait naître). ⚠️ Refusé "
+                                "avec « --source factice » : la source synthétique n'ouvre aucun "
+                                "`.brain`, et l'ignorer en silence ferait passer une forme "
+                                "inventée pour un vrai cerveau")
     analyseur.add_argument("--port", type=int, default=PORT_DEFAUT,
                            help=f"port d'écoute HTTP (défaut : {PORT_DEFAUT} ; 0 = port libre)")
     analyseur.add_argument("--hz", type=float, default=HZ_DEFAUT, metavar="CADENCE",
@@ -122,6 +136,10 @@ def _verifier_mode_cerveau(options) -> None:
     3. `--serveur-seul` : nier la source locale ET demander un cerveau est contradictoire. Sans ce
        refus, `--brain X` serait ignoré en silence et l'écran resterait vide — un silence qui a
        l'air d'un cerveau lent.
+
+    ⚠️ Les deux derniers sont SYMÉTRIQUES de deux refus du mode `factice` (constat I6, vague
+    finale) : `--source factice --brain X` est refusé dans `main` pour la même raison, et une
+    source factice qui meurt fait désormais sortir la CLI en erreur.
     """
     if options.serveur_seul:
         raise SystemExit(
@@ -143,13 +161,21 @@ def _verifier_mode_cerveau(options) -> None:
             f"--brain {options.brain}")
 
 
-def _cible_factice(bus, options, arret):
-    """La source factice dans son fil, avec un échec VISIBLE.
+def _cible_factice(bus, options, arret, issue):
+    """La source factice dans son fil, avec un échec VISIBLE — ET COMPTÉ COMME UN ÉCHEC.
 
     ⚠️ Une exception dans un fil meurt en silence : la page resterait figée sur une dernière
     image, ce qui est indiscernable d'un cerveau lent — exactement ce que la télémétrie refuse
     par ailleurs (spec §9 : un état inattendu est MONTRÉ, jamais corrigé en silence).
     `boucle_factice` est écrite pour ne jamais lever, mais « écrite pour » n'est pas « garanti ».
+
+    🔴 CORRECTION DU 10/09/2026 (vague finale, constat I6) — `issue["erreur"]` est posé ICI.
+    L'ancienne version armait `arret` en imprimant sur `stderr`, mais **ne posait pas
+    `issue["erreur"]`** : le tableau de bord restait vide, donc `main` rendait **0** sur une
+    source morte (`return 1 if isinstance(issue.get("erreur"), BaseException) else 0`). Un script
+    qui teste la CLI, ou un `--duree` lancé dans un `&&`, lisait un succès là où la démonstration
+    n'avait rien montré — le mode d'échec que la branche `cerveau` refusait déjà. La règle est
+    donc rendue SYMÉTRIQUE : mourir est un échec dans les deux modes.
     """
     def cible():
         try:
@@ -158,6 +184,7 @@ def _cible_factice(bus, options, arret):
         except Exception as erreur:              # noqa: BLE001 — l'échec est RECOPIÉ à l'écran
             print(f"⚠️  la source factice s'est arrêtée sur une erreur : {erreur!r}",
                   file=sys.stderr, flush=True)
+            issue["erreur"] = erreur
             arret.set()
     return cible
 
@@ -318,6 +345,34 @@ def main(argv=None) -> int:
         except Exception as erreur:               # noqa: BLE001 — le refus est RECOPIÉ à l'écran
             raise SystemExit(f"--source cerveau exige le moteur du cerveau (torch, noyau) : "
                              f"{erreur!r}")
+    elif options.brain:
+        # 🔴 CORRECTION DU 10/09/2026 (vague finale, constat I6) — le refus SYMÉTRIQUE.
+        # L'ancienne version acceptait `--source factice --brain X` puis **ignorait `--brain` en
+        # silence** : `_verifier_mode_cerveau` n'est appelé que pour `--source cerveau`, et rien
+        # n'était dit. L'auteur croyait donc regarder SON cerveau alors que la page montrait la
+        # source synthétique — un mensonge par omission du même genre que ceux que la spec §9
+        # interdit, et d'autant plus coûteux qu'un `.brain` de 1500 jours ne se distingue pas à
+        # l'œil d'une sinusoïde bien réglée. On REFUSE au lieu d'avertir : un avertissement noyé
+        # dans une bannière de sept lignes ne se lit pas, et le coût du refus est nul (il tombe
+        # avant de lier un port, d'importer `torch` ou d'ouvrir un fichier).
+        # ⚠️ DEUX configurations rendent `--brain` inerte, et le message dit LAQUELLE est la
+        # bonne : un refus qui se trompe de cause oblige à relire le code (le refus est un
+        # diagnostic, pas seulement un « non »).
+        if options.serveur_seul:
+            cause = ("--serveur-seul ne produit AUCUNE trame locale : ce cerveau ne serait "
+                     "jamais chargé")
+            remede = (f"« --source cerveau --brain {options.brain} » pour l'observer ici (sans "
+                      f"--serveur-seul), ou « --serveur-seul --udp PORT » pour recevoir les "
+                      f"trames d'un run (étape 2)")
+        else:
+            cause = ("--source factice est SYNTHÉTIQUE, elle n'ouvre aucun `.brain` : la page "
+                     "montrerait une forme inventée, indiscernable d'un vrai cerveau")
+            remede = (f"« --source cerveau --brain {options.brain} » pour observer ce fichier, ou "
+                      f"« --source factice » seul pour la démonstration sans cerveau")
+        raise SystemExit(
+            f"--brain {options.brain} serait ignoré en silence : {cause}. C'est exactement le "
+            f"mode d'échec que la spec §9 refuse (un silence qui a l'air d'un cerveau lent). "
+            f"Choisissez : {remede}.")
     if options.hz <= 0.0:
         raise SystemExit(f"--hz invalide : {options.hz!r} (attendu > 0)")
     if options.structure_fichier and not options.serveur_seul:
@@ -360,7 +415,7 @@ def main(argv=None) -> int:
                 cible, nom_du_fil = _cible_cerveau(jouer_cerveau, bus, options, arret, issue), \
                     "spectateur-cerveau"
             else:
-                cible, nom_du_fil = _cible_factice(bus, options, arret), "source-factice"
+                cible, nom_du_fil = _cible_factice(bus, options, arret, issue), "source-factice"
             fil_source = threading.Thread(target=cible, name=nom_du_fil, daemon=True)
             fil_source.start()
 

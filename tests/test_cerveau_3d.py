@@ -19,7 +19,9 @@ from pathlib import Path
 
 import numpy as np
 
-from naulthene.cerveau.telemetrie import serialiser   # tâche 4 : l'écouteur UDP reçoit des OCTETS
+from naulthene.cerveau.telemetrie import deserialiser, serialiser   # tâche 4 : l'écouteur UDP
+#                                                                     reçoit des OCTETS ; le
+#                                                                     constat I4 teste le refus
 
 
 def json_strict(brut: bytes):
@@ -801,6 +803,114 @@ class TestServeur(unittest.TestCase):
             emetteur.close()
         finally:
             ecouteur.arreter()
+
+    def test_datagramme_profond_ne_tue_pas_le_fil_d_ecoute(self):
+        """🔴 CONSTAT I4 (vague finale) — un datagramme JSON PROFOND tuait le fil EN SILENCE.
+
+        `deserialiser` promettait « jamais une exception » et ne rattrapait que
+        `UnicodeDecodeError`/`JSONDecodeError` ; le scanner de `json.loads` est récursif et lève
+        `RecursionError`, qui n'est **ni** `ValueError` **ni** `OSError`. Appelé HORS du `try` de
+        la boucle (`deserialiser(octets)` après le `recvfrom`), il tuait le fil `ecouteur-udp`
+        sans message ni compteur : la page se figeait sur une dernière image, indiscernable d'un
+        cerveau lent — exactement ce que la spec §9 refuse.
+
+        ⚠️ Le témoin n'est pas « aucune exception » mais **le fil est VIVANT ET COMPTE** : une
+        trame valide envoyée APRÈS le datagramme profond doit encore arriver. C'est ce qui
+        distingue un rattrapage d'un fil mort (un `try` qui aurait avalé l'erreur puis quitté la
+        boucle passerait un test qui ne regarderait que les compteurs).
+        """
+        import socket as sock
+        import time
+        from naulthene.cerveau.telemetrie import BusTrames, trame_activite
+        from naulthene.instruments.cerveau_3d.serveur import EcouteurUDP
+
+        # Le payload de la mesure : plus profond que la pile du parseur JSON. Mesuré ici, la
+        # bascule se situe entre 5 000 et 10 000 niveaux (`sys.getrecursionlimit() = 1000` — le
+        # scanner C de `json.loads` consomme plusieurs niveaux Python par niveau JSON).
+        for profondeur in (5000, 10000, 60000):
+            self.assertIsNone(deserialiser(b"[" * profondeur),
+                              f"un datagramme de {profondeur} niveaux n'est plus refusé par "
+                              f"`deserialiser`")
+        profond = b"[" * 60000
+
+        bus = BusTrames()
+        ecouteur = EcouteurUDP(bus, port=0)
+        ecouteur.demarrer_en_thread()
+        try:
+            emetteur = sock.socket(sock.AF_INET, sock.SOCK_DGRAM)
+            # ⚠️ `SO_SNDBUF` relevé AVANT l'envoi, exactement comme `EmetteurUDP` (et pour la
+            # même raison, mesurée : le défaut macOS de 9 216 octets refuse en `Errno 40` tout
+            # datagramme plus gros). Sans cette ligne, le test mesurerait la taille du tampon
+            # d'ENVOI du test, pas le refus du parseur.
+            emetteur.setsockopt(sock.SOL_SOCKET, sock.SO_SNDBUF, 1 << 20)
+            emetteur.sendto(profond, ("127.0.0.1", ecouteur.port))
+            time.sleep(0.4)
+            self.assertIsNone(bus.activite())
+            # LE témoin : le fil doit être ENCORE VIVANT, et le refus COMPTÉ.
+            self.assertTrue(ecouteur._fil.is_alive(),
+                            "le fil `ecouteur-udp` est mort sur le datagramme profond")
+            self.assertGreaterEqual(ecouteur.compteurs()["ignorees"], 1,
+                                    "le datagramme profond n'a pas été compté : l'échec "
+                                    "redeviendrait silencieux")
+            emetteur.sendto(serialiser(trame_activite({}, {"tick": 77}, {"tick": 77})),
+                            ("127.0.0.1", ecouteur.port))
+            limite = time.time() + 3.0
+            while bus.activite() is None and time.time() < limite:
+                time.sleep(0.05)
+            self.assertIsNotNone(bus.activite(),
+                                 "la trame suivante n'arrive plus : le fil ne sert plus personne")
+            self.assertEqual(bus.activite()["tick"], 77)
+            emetteur.close()
+        finally:
+            ecouteur.arreter()
+
+    def test_une_charge_profonde_ne_tue_pas_le_fil_du_flux_sse(self):
+        """La SECONDE moitié du constat I4, et elle a été MESURÉE ici avant d'être corrigée.
+
+        `assainir_json` (`serveur.py`) est RÉCURSIF en Python et vit dans un
+        `try/except (ValueError, TypeError)`. Il existe donc une fenêtre où `json.loads` ACCEPTE
+        une charge que `assainir_json` REFUSE — mesuré sur cette machine
+        (`sys.getrecursionlimit() = 1000`) : à **800** niveaux d'imbrication les deux passent, à
+        **1 000** `json.loads` passe et `assainir_json` lève `RecursionError`. Une trame ainsi
+        construite franchit donc `deserialiser` (elle est bien un `dict` avec un `type`), entre
+        dans le bus, et tuait le fil de gestion à la première connexion : **le rattrapage dans
+        `deserialiser` seul ne suffisait pas**, contrairement à ce que la correction I4 supposait.
+
+        ⚠️ Le témoin est `emissions_refusees` qui MONTE et le flux qui CONTINUE de servir : sans
+        le rattrapage, `_evenement_sse` levait, sortait de `_flux` et le fil de gestion mourait.
+        """
+        from naulthene.cerveau.telemetrie import BusTrames, trame_evenement, trame_structure
+        from naulthene.instruments.cerveau_3d.serveur import ServeurCerveau3D, assainir_json
+
+        # 1. La fenêtre est RÉELLE : on la mesure ici, sinon ce test serait décoratif.
+        charge_profonde = json.loads('{"type":"activite","x":' + "[" * 1000 + "]" * 1000 + "}")
+        with self.assertRaises(RecursionError):
+            assainir_json(charge_profonde)
+        # ... et elle FRANCHIT bien `deserialiser` (donc le premier filet ne suffit pas).
+        self.assertIsNotNone(deserialiser(serialiser(charge_profonde)),
+                             "la charge profonde ne franchit plus `deserialiser` : la fenêtre a "
+                             "changé de forme, ce test doit être relu")
+
+        bus = BusTrames()
+        bus.publier_structure(trame_structure([], [], {"dim_bus": 16}))
+        serveur = ServeurCerveau3D(bus, port=0)
+        serveur.demarrer_en_thread()
+        try:
+            # ⚠️ Les faits sont publiés APRÈS la connexion : le curseur du flux part du total
+            # COURANT (`dernier_evenement`), donc ce qui précède la connexion n'est jamais rejoué
+            # (ruling de la tâche 5) — publier avant ferait un test vert qui ne lit rien.
+            with self._flux(serveur.port) as lire:
+                self.assertEqual([nom for nom, _ in self._evenements(lire(3))], ["structure"])
+                bus.publier_evenement(charge_profonde)
+                bus.publier_evenement(trame_evenement("choc_dopamine", {"tick": 4}))
+                evenements = self._evenements(lire(3))
+                self.assertEqual([nom for nom, _ in evenements], ["evenement"], evenements)
+                self.assertEqual(evenements[0][1]["genre"], "choc_dopamine",
+                                 "le flux n'a pas survécu à la charge profonde")
+            self.assertGreaterEqual(serveur._emissions_refusees, 1,
+                                    "la charge refusée n'a pas été COMPTÉE (échec silencieux)")
+        finally:
+            serveur.arreter()
 
     def test_datagramme_de_type_inconnu_est_compte_mais_ne_remplit_aucun_canal(self):
         """Un `type` que le serveur ne connaît pas ne doit pas se déguiser en trame valide.
@@ -1763,6 +1873,51 @@ class TestSourceFactice(unittest.TestCase):
                               getattr(agent, c["nom"]).out_features) for c in couches}
         attendues = {c["nom"]: (c["entree"], c["sortie"]) for c in couches}
         self.assertEqual(reelles, attendues)
+
+    def test_bornes_factices_egales_bornes_du_cerveau(self):
+        """🔴 NIT I7 (vague finale) — `bornes_factices` n'était épinglée par AUCUN témoin.
+
+        Le constat : la table des bornes de la source factice (`factice.py`) est consommée
+        DIRECTEMENT par la page (`planDesEntrees` dans `app.js` découpe les entrées neuronales
+        selon `rang_entree`) et par la trame `structure` publiée en mode factice — et pourtant
+        aucun test ne la comparait à quoi que ce soit. Sa voisine `definir_couches` (les 12
+        couches) avait déjà son anti-dérive depuis la tâche 6 ; les BORNES, non, alors qu'elles
+        portent la même promesse (« miroir exact de `bornes_du_cerveau` », dit sa docstring).
+
+        Le témoin est donc le jumeau de `test_forme_factice_egale_forme_reelle`, sur l'autre
+        table : comparaison **EN BLOC** (`nom@couche` → dict complet), jamais champ par champ —
+        une permutation de deux `rang_entree` entre `generateur_attente` et
+        `generateur_attente_audio` (qui portent les mêmes valeurs) passerait inaperçue d'une
+        comparaison champ par champ.
+
+        ⚠️ DEUX `dim_bus`, et c'est le second qui compte : `DIM_BUS_FICTIF = 145` est la valeur que
+        la démonstration de l'étape 0 publie RÉELLEMENT, et c'est le seul paramètre dont
+        `bornes_factices` dépend (`rang_entree` du vecteur bio vaut `[db, db + 44]`). Tester à 16
+        seul ne dirait rien du cas affiché.
+
+        ⚠️ La conversion en `tuple` est ce qui rend la comparaison insensible à l'ORDRE des
+        éléments de `rang_entree` tout en restant sensible à leur contenu — l'ordre des bornes dans
+        la liste n'est pas un contrat (la page indexe par `couche`), le contenu l'est.
+        """
+        from naulthene.cerveau.noyau import AGI_Naulthene, DIM_VISUELLE
+        from naulthene.instruments.cerveau_3d.factice import DIM_BUS_FICTIF, bornes_factices
+        from naulthene.instruments.cerveau_3d.rapporteur import bornes_du_cerveau
+
+        def _bloc(bornes):
+            return {b["nom"] + "@" + b["couche"]: {k: (tuple(v) if isinstance(v, list) else v)
+                                                   for k, v in b.items()}
+                    for b in bornes}
+
+        for dim_bus in (16, DIM_BUS_FICTIF):
+            with self.subTest(dim_bus=dim_bus):
+                agent = AGI_Naulthene(dim_visuelle=DIM_VISUELLE, dim_bus=dim_bus)
+                self.assertEqual(_bloc(bornes_factices(dim_bus)),
+                                 _bloc(bornes_du_cerveau(agent)),
+                                 "la table des bornes de la source factice a dérivé de ce que "
+                                 "l'agent témoigne : la page découperait les entrées de travers")
+                self.assertEqual(sorted(bornes_factices(dim_bus)[0]),
+                                 sorted(bornes_du_cerveau(agent)[0]),
+                                 "les deux tables n'ont pas les mêmes CLÉS de borne")
 
     def test_boucle_factice_publie_structure_et_activite(self):
         """Critère n°1 : ~1 s à 20 Hz ⇒ une structure de 12 couches et ≥ 10 trames d'activité.
@@ -2944,6 +3099,73 @@ class TestCliModeCerveau(unittest.TestCase):
             self.assertEqual(avant, _sha256(chemin))
             self.assertEqual(sorted(os.listdir(dossier)), ["naissance.brain"])
 
+    def test_la_cli_refuse_le_mode_factice_avec_un_brain(self):
+        """🔴 CONSTAT I6 (vague finale) — `--source factice --brain X` était accepté puis IGNORÉ.
+
+        `_verifier_mode_cerveau` n'est appelé que dans la branche `--source cerveau` : en mode
+        factice, le chemin était donc avalé sans un mot, et la page montrait la forme SYNTHÉTIQUE
+        pendant que l'auteur croyait regarder son `.brain`. Deux exigences de la vague : le refus
+        arrive AVANT de lier un port (aucune ligne `http://`), et il est SYMÉTRIQUE de
+        `--source cerveau --serveur-seul`, qui refusait déjà pour la même raison.
+
+        ⚠️ Le témoin négatif compte autant : `--source factice` SEUL doit continuer de marcher
+        (c'est la promesse de l'étape 0, testée juste à côté). Un refus trop large casserait la
+        démonstration sans cerveau.
+
+        ⚠️ Le SECOND cas (`--serveur-seul --brain X`, source factice par défaut) est refusé par la
+        même garde, avec une cause DIFFÉRENTE : ce n'est pas la source factice qui rend le chemin
+        inerte, c'est `--serveur-seul` qui ne produit aucune trame locale. Le message doit dire
+        laquelle des deux — un refus qui se trompe de cause oblige à relire le code.
+        """
+        with tempfile.TemporaryDirectory() as dossier:
+            chemin = os.path.join(dossier, "jamais_ouvert.brain")
+            resultat = self._cli(["--source", "factice", "--brain", chemin,
+                                  "--port", "0", "--duree", "1"])
+            sortie = resultat.stdout + resultat.stderr
+            self.assertNotEqual(resultat.returncode, 0, sortie[-1000:])
+            self.assertIn("--source factice", sortie)
+            self.assertIn(chemin, sortie)
+            self.assertNotIn("http://", sortie, "le serveur a été monté avant le refus")
+            self.assertEqual(os.listdir(dossier), [])
+
+            resultat = self._cli(["--serveur-seul", "--brain", chemin, "--port", "0",
+                                  "--duree", "1"])
+            sortie = resultat.stdout + resultat.stderr
+            self.assertNotEqual(resultat.returncode, 0, sortie[-1000:])
+            self.assertIn("--serveur-seul", sortie)
+            self.assertNotIn("http://", sortie, "le serveur a été monté avant le refus")
+            self.assertEqual(os.listdir(dossier), [])
+
+    def test_une_source_factice_morte_fait_sortir_la_cli_en_erreur(self):
+        """🔴 CONSTAT I6 (vague finale) — la CLI sortait en **0** sur une source factice morte.
+
+        `_cible_factice` imprimait l'erreur sur `stderr` et armait `arret`, mais **ne posait pas
+        `issue["erreur"]`** : `main` rendait donc `0` (`return 1 if isinstance(issue.get("erreur"),
+        BaseException) else 0`) — un script qui enchaîne `--duree … && …` lisait un succès là où
+        la démonstration n'avait rien montré. Le mode `cerveau` refusait déjà ce mensonge ; la
+        règle est ici rendue SYMÉTRIQUE.
+
+        ⚠️ L'échec est INJECTÉ (`boucle_factice` remplacée par une fonction qui lève) : on teste
+        le CHEMIN D'ÉCHEC de la CLI, pas la source factice elle-même — qui, elle, est écrite pour
+        ne jamais lever, ce qui est exactement pourquoi ce défaut ne se voyait pas en usage normal.
+        ⚠️ `--port 0` et `--duree 3` : un port libre (deux tests peuvent tourner en parallèle) et
+        une échéance qui borne le test si jamais le fil ne meurt pas.
+        """
+        import naulthene.instruments.cerveau_3d.__main__ as cli
+
+        def _meurt(*_args, **_kwargs):
+            raise RuntimeError("source factice morte (injecté par le test du constat I6)")
+
+        original = cli.boucle_factice
+        cli.boucle_factice = _meurt
+        try:
+            code = cli.main(["--source", "factice", "--port", "0", "--duree", "3"])
+        finally:
+            cli.boucle_factice = original
+        self.assertEqual(code, 1,
+                         "la CLI rend 0 alors que la source factice est morte : "
+                         "l'échec est de nouveau silencieux")
+
     def test_le_mode_factice_de_la_cli_ne_charge_toujours_pas_torch(self):
         """Le mode `factice` doit continuer de s'ouvrir sur une machine SANS cerveau.
 
@@ -3376,6 +3598,61 @@ class TestTelemetrieDuNoyau(unittest.TestCase):
                 self.assertEqual(trame["tick"], int(etat.tick_absolu))
             finally:
                 etat.env.close()
+
+    # --- 4bis. LA COUTURE ENTRE LES DEUX PRODUCTEURS (vague finale, constat I1) ---------------
+
+    def test_meta_niveau_meme_forme_pour_les_deux_producteurs(self):
+        """🔴 LA COUTURE QUI MANQUAIT (constat bloquant I1) : `niveau` a les MÊMES CLÉS pour le
+        noyau (`_meta_telemetrie`, étape 2) et pour le spectateur (`_meta_etat`, étape 1).
+
+        Le défaut corrigé n'était pas « un test absent » mais **un test MAL PLACÉ** : chaque
+        producteur était vérifié SEUL (`test_un_evenement_est_emis_la_ou_le_cerveau_grave` pour le
+        noyau, les tests du spectateur pour `_meta_etat`), donc rien ne comparait les deux — et
+        `_meta_telemetrie` a pu omettre `affiche` sans qu'aucun test ne rougisse. Or `app.js` ne
+        rend le niveau QUE si `trame.niveau.affiche` existe : la page n'affichait **aucun** niveau
+        en `--serveur-seul` (le mode des campagnes de 1500 jours) et l'affichait en étape 1.
+        Artefact mesuré : `brains/VIS01_etape2_fichier_10092026/structure_apres_run.json` →
+        `niveau` = `{'index': 2, 'env_id': '…'}`, sans `affiche`.
+
+        ⚠️ Le test compare les CLÉS, pas les valeurs : les deux producteurs ne produisent pas les
+        mêmes valeurs au même instant (le spectateur lit `etat` au démarrage, le noyau en queue de
+        tick), mais ils doivent décrire le MÊME OBJET — c'est la définition d'un miroir.
+        """
+        import inspect
+        import naulthene.cerveau.noyau as N
+        from naulthene.cerveau.noyau import _meta_telemetrie
+        from naulthene.instruments.cerveau_3d.spectateur import _meta_etat
+
+        with tempfile.TemporaryDirectory() as dossier:
+            etat = self._etat(dossier)
+            try:
+                niveau_noyau = _meta_telemetrie(etat)["niveau"]
+                niveau_spectateur = _meta_etat(etat)["niveau"]
+            finally:
+                etat.env.close()
+
+        self.assertEqual(sorted(niveau_noyau), sorted(niveau_spectateur),
+                         "les deux producteurs ne décrivent pas le même objet `niveau` : "
+                         "`app.js` a besoin d'`affiche`, et la spec §4 la montre depuis l'origine")
+        # 1. `affiche` est là, et c'est bien la forme que la page sait rendre (`4/15`).
+        self.assertIn("affiche", niveau_noyau)
+        self.assertEqual(niveau_spectateur["affiche"], niveau_noyau["affiche"])
+        # 2. ... et elle est DÉRIVÉE de `PROGRAMME`, jamais un `15` en dur : le cursus a déjà
+        #    changé de taille une fois, et `PROGRAMME` est la seule source de cette borne.
+        self.assertEqual(niveau_noyau["affiche"],
+                         f"{niveau_noyau['index'] + 1}/{len(N.PROGRAMME)}")
+        self.assertEqual(niveau_noyau["affiche"].split("/")[1], str(len(N.PROGRAMME)))
+        source = inspect.getsource(_meta_telemetrie)
+        self.assertIn("len(PROGRAMME)", source,
+                      "la borne de `affiche` n'est plus dérivée de `PROGRAMME` : un `15` en dur "
+                      "mentirait dès que le cursus change de taille")
+        # 3. Le témoin de non-tautologie : ce test ÉCHOUAIT avant la correction. On rejoue la
+        #    trame d'avant (`{"index", "env_id"}`) et on vérifie que la comparaison de clés la
+        #    REJETTE — sans quoi ce test passerait aussi sur le code fautif.
+        avant_correction = {"index": niveau_noyau["index"], "env_id": niveau_noyau["env_id"]}
+        self.assertNotEqual(sorted(avant_correction), sorted(niveau_spectateur),
+                            "la comparaison de clés ne distingue pas l'ancienne forme : "
+                            "elle ne peut pas être le témoin du constat I1")
 
     def test_les_points_d_appel_sont_branches_dans_le_tick_et_dans_la_nuit(self):
         """Le CÂBLAGE des points d'appel — un test de forme, et ses limites sont dites.

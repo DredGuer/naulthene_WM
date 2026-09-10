@@ -79,6 +79,18 @@ objet de télémétrie n'est construit et le tick ne gagne qu'un `getattr` et un
 ⚠️ **Le spectateur n'est PAS branché sur le fichier de structure** (tâche ultérieure, hors
 périmètre) : cette version PRODUIT le fichier, elle ne le lit pas.
 
+🔴 **PRÉCISION DU 10/09/2026 (vague finale, constat I5) — CET ÉNONCÉ EST HISTORIQUEMENT EXACT, ET SE
+LIT COMME UN ÉTAT PRÉSENT.** Il décrit la seule version `[41.76]` de la tâche 9 : au moment où elle a
+été écrite, personne ne relisait le fichier. **Ce n'est plus vrai depuis le lendemain** — la
+**tâche 11** (`2fad056` code + tests, `016cca8` et `433cc14` traces) a livré `--structure-fichier`
+et `VeilleurStructureFichier` (`cerveau_3d/serveur.py`), qui relit `<brain>.vis01_structure.json` au
+démarrage puis à chaque changement. Mesuré : `/structure` passe de `{}` à **12 couches**,
+`dim_bus` **16 → 68**, `sequence_structure` **0 → 6**, sans redémarrer le serveur
+(`brains/VIS01_etape2_fichier_10092026/`). ⚠️ La tâche 11 ne touche pas `noyau.py` : elle n'a donc
+**aucune entrée CHANGELOG** propre, et ce renvoi est le seul lien qui la rattache à cette version.
+Lire la phrase ci-dessus comme « à la tâche 9, le fichier était produit sans être lu », jamais comme
+l'état de `master`.
+
 🔴 **RÉTRACTATIONS DU 10/09/2026 (revue indépendante ; ancien énoncé en regard, dogme « rien sans
 écrit ») — DEUX ÉNONCÉS DE CETTE ENTRÉE ÉTAIENT FAUX :**
 
@@ -91,6 +103,56 @@ Le fond de l'avenant **n'est pas touché** : à `dim_bus = 96` la structure mesu
 **152 472 o**, soit 2,3× le plafond dur de 65 507 o — `structure` reste écrite dans un fichier,
 jamais émise par UDP. Seules ces deux phrases changent : aucune mesure, aucun autre chiffre et
 aucune ligne de code de cette version n'est modifié (correction `docs`, même version).
+
+---
+
+### 🛠 VAGUE DE CORRECTION FINALE (10/09/2026) — 7 constats de la revue finale de branche, **même version (fix mineur d'instrument + docs)**
+
+Après la revue finale de branche (SPEC : PASS ; QUALITY : CHANGES_REQUIRED), sept constats ont été
+traités en une seule vague. **Trois étaient bloquants avant fusion.**
+
+| # | Constat | Correction | Fichiers |
+|---|---|---|---|
+| **I1** 🔴 bloquant | `niveau.affiche` **manquait** dans `noyau._meta_telemetrie` alors que `spectateur._meta_etat` la produisait et que `app.js` n'affiche le niveau QUE si elle existe ⇒ **aucun niveau affiché en `--serveur-seul`**, le mode des campagnes de 1500 jours | `"affiche"` ajoutée, **dérivée de `len(PROGRAMME)`** (jamais un `15` en dur), + 1 test comparant **les CLÉS** de `niveau` des **DEUX** producteurs — la couture qui manquait (chaque producteur était testé seul) | `noyau.py`, `tests/test_cerveau_3d.py` |
+| **I2** 🔴 bloquant | `LANCEMENT.md` annonçait **cinq encodages visuels** que la page n'implémente pas du tout (myéline, cristallisation, halo = dopamine, flash de choc, bascule C1/C2 — plus l'épaisseur par arête, livrée à moitié seulement) : `grep -c -i "myeline\|cristall\|halo\|flash\|gaine\|epaisseur" app.js` = **0 pour chacun**, et un seul `LineBasicMaterial` (`opacity: 0.35`) | bloc réécrit en « ce que la page montre AUJOURD'HUI » + tableau des **non-livrés** + **rétractation avec l'ancien énoncé en regard** ; avenant symétrique de la **spec §5** (tableau annoncé / livré / pourquoi) | `docs/fonctionnement/LANCEMENT.md`, `CHANTIER_VIS-01…md` §5 |
+| **I3** 🔴 bloquant | le canal `evenement` n'émet qu'**UN genre sur cinq** (un seul site d'appel : `choc_dopamine`) et **pas** à une cadence « ponctuelle » | **avenant de spec §4** + entrée de registre pour la tâche future. ⚠️ **L'ÉMISSION N'EST PAS MODIFIÉE** (changement de comportement = sa propre mesure) | `CHANTIER_VIS-01…md` §4, `REGISTRE_PROBLEMES_A_CORRIGER.md` |
+| I4 recommandé | un datagramme JSON profond tuait le fil d'écoute **en silence** (`RecursionError`, ni `ValueError` ni `OSError`) | `RecursionError` rattrapé dans `deserialiser` **et** dans les deux ceintures d'émission de `serveur.py` — la seconde moitié a été **mesurée nécessaire** : `assainir_json` est récursif, et à 1 000 niveaux d'imbrication la charge franchit `json.loads` mais le fait lever | `telemetrie.py`, `serveur.py`, tests |
+| I5 recommandé | trois documents périmés qui contredisaient le code | `INDEX.md` l. 158, `JOURNAL_DES_RUNS.md` l. 91-95 et `CHANGELOG.md` l. 79 corrigés **avec rétractation** ; ligne du registre « `INDEX.md` reste à corriger » **retirée** (elle serait devenue fausse à son tour) | `docs/INDEX.md`, `JOURNAL_DES_RUNS.md`, `CHANGELOG.md`, registre |
+| I6 recommandé | `--brain` **ignoré en silence** en mode `factice` (et aussi avec `--serveur-seul`) ; une source factice morte faisait sortir la CLI en **0** | refus explicite avant de lier un port, **nommant la cause exacte** selon la configuration ; `issue["erreur"]` posé par `_cible_factice` ⇒ sortie ≠ 0 | `cerveau_3d/__main__.py`, tests |
+| I7 recommandé | trois nits : docstring de `serveur.py` citant `base64`, `Rapporteur.signal_choc` (code mort + docstring annonçant un appelant inexistant), `bornes_factices` sans témoin | docstring corrigée ; **rétractation** sur `signal_choc` (l'énoncé « le mode sans bus de la tâche 9 l'appelle » était FAUX : `noyau._emettre_evenement` construit sa trame lui-même) ; témoin ajouté comparant `bornes_factices` à `bornes_du_cerveau(agent)` à `dim_bus = 16` **et** `145` | `serveur.py`, `rapporteur.py`, tests |
+
+🔴 **MESURES DE CETTE VAGUE (aucune n'est recopiée d'un rapport — toutes refaites) :**
+
+| Fait mesuré | Valeur |
+|---|---|
+| `niveau` avant / après (clés) | `['env_id','index']` → `['affiche','env_id','index']`, **égal aux clés du spectateur** |
+| Artefact de l'étape 2 | `brains/VIS01_etape2_fichier_10092026/structure_apres_run.json` → `niveau` = `{'index': 2, 'env_id': 'MiniGrid-Empty-8x8-v0'}` (aucun `affiche`) |
+| Occurrences des 5 mots d'encodage dans `app.js` | **0** pour `myeline`, `cristall`, `halo`, `flash`, `gaine`, `epaisseur` |
+| Matériaux d'arêtes dans `app.js` | **un seul** : `LineBasicMaterial({color:0x3a5a8a, transparent:true, opacity:0.35})` |
+| Clés d'une couche dans la trame `structure` réelle (88 488 o) | `['echelle','entree','nom','poids_i8','positions','rang','sortie']` — ni `myeline_M`, ni `cristallisee` |
+| Canal `evenement` — cerveau neuf, `dim_bus = 16`, 2 000 ticks, 3,56 s | **125** événements, **35,1 Hz**, `{choc_dopamine: 125}` |
+| Canal `evenement` — `etape2.brain`, `dim_bus = 68`, 2 000 ticks, 4,92 s | **363** événements, **73,8 Hz**, `{choc_dopamine: 363}` |
+| File de 32 : ticks où elle est PLEINE | neuf : **1 327 / 2 000** (66,4 %) · `etape2.brain` : **1 818 / 2 000** (90,9 %) · témoin 200 ticks : **0 / 200** |
+| `deserialiser(b"[" * n)` **avant** la correction | `n = 1 000` OK · `n = 20 000` **`RecursionError`** · `n = 60 000` **`RecursionError`** |
+| `assainir_json` sur `{"type":"activite","x":[…1000…]}` | `json.loads` **passe**, `assainir_json` **lève `RecursionError`** (à 800 : les deux passent) ⇒ le seul filet de `deserialiser` ne suffisait pas |
+| Trame `structure` à `dim_bus = 145` (agent neuf, re-mesurée) | **305 064 octets** pour **220 255** synapses ; + `myeline_M` + `cristallisee` (`int8`) ⇒ **≈ 892 000 o**, soit **13,6×** le plafond d'un datagramme |
+
+**Tests** : `147` → **`153`** (`NAULTHENE_DEVICE=cpu venv/bin/python -m unittest discover -s tests`,
+**OK**) — **6 tests ajoutés**, aucune modification d'un test existant.
+
+| Fichier modifié | Changement |
+|---|---|
+| `src/naulthene/cerveau/noyau.py` | `_meta_telemetrie` : `niveau["affiche"]` dérivé de `len(PROGRAMME)` + docstring rétractée |
+| `src/naulthene/cerveau/telemetrie.py` | `deserialiser` : `RecursionError` rattrapé (la docstring promettait « jamais une exception ») |
+| `src/naulthene/instruments/cerveau_3d/serveur.py` | docstring sans `base64` ; `RecursionError` ajouté aux deux ceintures `_json` / `_evenement_sse` |
+| `src/naulthene/instruments/cerveau_3d/rapporteur.py` | docstring de `signal_choc` rétractée (code non appelé en production, dit comme tel) |
+| `src/naulthene/instruments/cerveau_3d/__main__.py` | refus `--source factice --brain X` ; `issue["erreur"]` sur source factice morte |
+| `tests/test_cerveau_3d.py` | **6 tests** : I1 (couture des deux producteurs, avec son témoin de non-tautologie *dans* le test) · I4 ×2 (fil d'écoute, flux SSE) · I6 ×2 (refus `--brain`, sortie ≠ 0) · I7 ×1 (témoin des bornes) |
+| `docs/` | `LANCEMENT.md`, `INDEX.md`, `JOURNAL_DES_RUNS.md`, `CHANGELOG.md`, `CHANTIER_VIS-01…md` (§4, §5), `REGISTRE_PROBLEMES_A_CORRIGER.md` |
+
+⚠️ **Aucune mécanique cognitive n'est touchée, et AUCUN comportement d'émission d'événements n'est
+modifié** : I1 est un instrument (la télémétrie), I3 est traitée par **documentation + registre**
+uniquement.
 
 ---
 
