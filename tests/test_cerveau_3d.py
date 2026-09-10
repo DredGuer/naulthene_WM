@@ -9,7 +9,12 @@ instancient un vrai cerveau.
 """
 import contextlib
 import json
+import os
+import shutil
+import subprocess
+import tempfile
 import unittest
+from pathlib import Path
 
 import numpy as np
 
@@ -256,9 +261,8 @@ class TestCompteurDeStructure(unittest.TestCase):
 class TestServeur(unittest.TestCase):
     """Le serveur local : page statique, `/structure`, flux SSE, écoute UDP.
 
-    ⚠️ AUCUN fichier n'est créé sous `src/naulthene/instruments/cerveau_3d/static/` (la page est la
-    tâche 5) : les dossiers statiques de ces tests sont TEMPORAIRES et passés par
-    `dossier_statique=`.
+    ⚠️ Les dossiers statiques de ces tests sont TEMPORAIRES et passés par `dossier_statique=` :
+    la page RÉELLE (tâche 5) est vérifiée dans `TestPageEtVendor`, jamais ici.
     """
 
     @contextlib.contextmanager
@@ -407,6 +411,39 @@ class TestServeur(unittest.TestCase):
                 suivants = self._evenements(lire(3))
                 self.assertEqual([nom for nom, _ in suivants], ["evenement"], suivants)
                 self.assertEqual(suivants[0][1]["genre"], "victoire")
+        finally:
+            serveur.arreter()
+
+    def test_client_neuf_ne_rejoue_pas_les_evenements_passes(self):
+        """Ruling de revue (tâche 5) : le curseur des faits part du total COURANT, jamais de `0`.
+
+        Pourquoi c'est nécessaire : la file d'événements est BORNÉE mais non vide — un
+        rechargement de page (ou un second onglet) recevait donc tout le tampon du passé et
+        racontait à nouveau des faits déjà consommés. Un client NEUF regarde le PRÉSENT.
+
+        Le contrôle est BEHAVIORAL, pas structurel : trois faits sont publiés AVANT la connexion,
+        puis un fait NOUVEAU. Le premier `evenement` reçu doit être le nouveau — sans le ruling,
+        le premier reçu est le plus ancien du tampon.
+        """
+        from naulthene.cerveau.telemetrie import BusTrames, trame_evenement, trame_structure
+        from naulthene.instruments.cerveau_3d.serveur import ServeurCerveau3D
+
+        bus = BusTrames()
+        bus.publier_structure(trame_structure([], [], {"dim_bus": 16}))
+        for tick in (0, 1, 2):                                  # le PASSÉ, déjà consommé
+            bus.publier_evenement(trame_evenement("choc_dopamine", {"tick": tick}))
+        serveur = ServeurCerveau3D(bus, port=0)
+        serveur.demarrer_en_thread()
+        try:
+            with self._flux(serveur.port) as lire:
+                premiers = self._evenements(lire(3))
+                self.assertEqual([nom for nom, _ in premiers], ["structure"], premiers)
+
+                bus.publier_evenement(trame_evenement("victoire", {"tick": 99}))
+                recus = self._evenements(lire(3))
+                self.assertEqual([nom for nom, _ in recus], ["evenement"], recus)
+                self.assertEqual(recus[0][1]["genre"], "victoire", recus)
+                self.assertEqual(recus[0][1]["tick"], 99, recus)
         finally:
             serveur.arreter()
 
@@ -796,3 +833,464 @@ class TestServeur(unittest.TestCase):
             emetteur.close()
         finally:
             ecouteur.arreter()
+
+
+# ---------------------------------------------------------------------------
+# Tâche 5 — la page three.js et le vendor
+# ---------------------------------------------------------------------------
+
+STATIQUE = (Path(__file__).resolve().parent.parent
+            / "src" / "naulthene" / "instruments" / "cerveau_3d" / "static")
+
+# Noms STABLES de `app.js` — CONTRAT DE SONDE, déclaré dans l'en-tête du fichier livré. La sonde
+# les exporte depuis une COPIE temporaire : le fichier livré, lui, n'exporte rien (un navigateur
+# n'en a pas besoin, et `node --check` n'en dépend pas).
+SONDE_EXPORTS = ("construireStructure, appliquerActivite, construireAretes, float16VersFloat32, "
+                 "base64EnOctets, noeuds, aretes")
+
+# Le seul élément qu'un navigateur apporte et que `node` n'a pas : le moteur de rendu WebGL.
+# Tout le reste de la sonde est le VRAI `three.core.min.js` vendorisé.
+SHIM_THREE = """\
+// three.module.js de la SONDE : le vrai three.js vendorisé + un WebGLRenderer sans WebGL.
+export * from './three.core.min.js';
+export class WebGLRenderer {
+  constructor() { this.domElement = { addEventListener() {} }; }
+  setPixelRatio() {} setSize() {} render() {}
+}
+"""
+
+# Valeurs que le float16 représenté sait distinguer : sous-normal, maximum, signe, zéro, arrondi.
+VALEURS_FLOAT16_EXTREMES = (1.0, 0.5, -2.5, 0.0, 65504.0, 5.960464477539063e-08, 1e-05)
+
+SONDE_JS = r"""
+// sonde.mjs — exécute la page LIVRÉE sous `node`, contre le VRAI three.js vendorisé.
+//
+// Ce que la sonde prouve : la LOGIQUE de la page (décodage base64/float16, 12 plaques, colonne
+// du bus, seuil, activation absente → gris) et le fait que le vendor FONCTIONNE (REVISION 180,
+// vraies classes InstancedMesh/Color/BufferGeometry). Ce qu'elle ne prouve pas : le RENDU
+// (aucun WebGL ici) — il est vérifié par l'auteur dans un navigateur.
+import { readFileSync } from 'node:fs';
+
+const trames = JSON.parse(readFileSync(new URL('./trames.json', import.meta.url), 'utf8'));
+const journal = {};
+
+// --- 1. Le DOM minimal : les seules globales que la page reçoit d'un navigateur.
+const elements = new Map();
+function element(id) {
+  if (!elements.has(id)) {
+    elements.set(id, { id, textContent: '', value: '', ecouteurs: {},
+                       addEventListener(nom, f) { this.ecouteurs[nom] = f; } });
+  }
+  return elements.get(id);
+}
+globalThis.document = { body: { appendChild() {} }, getElementById: element };
+globalThis.addEventListener = () => {};
+globalThis.innerWidth = 1200;
+globalThis.innerHeight = 800;
+globalThis.devicePixelRatio = 1;
+globalThis.requestAnimationFrame = () => 0;
+globalThis.EventSource = class {
+  constructor(url) { this.url = url; this.ecouteurs = {}; globalThis.__flux = this; }
+  addEventListener(nom, f) { this.ecouteurs[nom] = f; }
+};
+if (process.env.SANS_GETFLOAT16 === '1') delete DataView.prototype.getFloat16;
+
+// --- 2. La page livrée (le seul ajout de la sonde : la ligne `export`).
+const app = await import('./app.js');
+const three = await import('./three.module.js');
+journal.revision = three.REVISION;
+journal.sse = globalThis.__flux ? globalThis.__flux.url : null;
+journal.sse_evenements = Object.keys(globalThis.__flux ? globalThis.__flux.ecouteurs : {});
+
+// --- 3. La structure : plaques, positions, colonne du bus.
+function couleursLues() {
+  const attribut = app.noeuds.maillage.instanceColor;
+  const sortie = [];
+  if (!attribut) return sortie;
+  for (let i = 0; i < app.noeuds.maillage.count; i++) {
+    sortie.push([attribut.array[i * 3], attribut.array[i * 3 + 1], attribut.array[i * 3 + 2]]);
+  }
+  return sortie;
+}
+app.construireStructure(trames.structure);
+journal.nb_couches = app.noeuds.couches.length;
+journal.nb_instances = app.noeuds.maillage.count;
+journal.debuts = app.noeuds.couches.map(c => c._debut);
+journal.positions = app.noeuds.positions;
+journal.colonne = app.noeuds.colonne;
+journal.texte_structure = element('structure').textContent;
+journal.couleurs_construction = couleursLues();
+
+// --- 4. Le seuil, par l'ÉVÉNEMENT du curseur (jamais un appel interne).
+function reglerSeuil(valeur) {
+  const curseur = element('seuil');
+  curseur.value = String(valeur);
+  curseur.ecouteurs.input();
+  return { paires: app.aretes.paires.length,
+           sommets: app.aretes.lignes.geometry.getAttribute('position').array.length,
+           texte: element('valeur-seuil').textContent };
+}
+journal.seuil_0 = reglerSeuil(0);
+journal.seuil_15 = reglerSeuil(15);
+journal.seuil_60 = reglerSeuil(60);
+journal.seuil_100 = reglerSeuil(100);
+journal.seuil_15_bis = reglerSeuil(15);
+
+const sommets = app.aretes.lignes.geometry.getAttribute('position').array;
+// ⚠️ `Math.fround` : les positions vivent en float64 dans `noeuds.positions` et sont ÉCRITES en
+// float32 dans le tampon de la géométrie. Comparer les deux représentations sans arrondir ferait
+// échouer la sonde sur un artefact de précision, pas sur un défaut de la page.
+const points = new Set();
+for (let k = 0; k < app.noeuds.colonne.taille; k++) {
+  const p = app.noeuds.positions[app.noeuds.colonne.debut + k];
+  points.add(Math.fround(p[0]) + '|' + Math.fround(p[1]) + '|' + Math.fround(p[2]));
+}
+let nulles = 0, horsColonne = 0;
+for (let k = 0; k < app.aretes.paires.length; k++) {
+  const a = [sommets[k * 6], sommets[k * 6 + 1], sommets[k * 6 + 2]];
+  const b = [sommets[k * 6 + 3], sommets[k * 6 + 4], sommets[k * 6 + 5]];
+  if (a[0] === b[0] && a[1] === b[1] && a[2] === b[2]) nulles++;
+  if (!points.has(a[0] + '|' + a[1] + '|' + a[2])) horsColonne++;
+}
+journal.aretes_nulles = nulles;
+journal.aretes_hors_colonne = horsColonne;
+journal.hors_bornes = app.aretes.horsBornes;
+
+// --- 5. Le décodage float16, sur des valeurs extrêmes.
+journal.repli = Array.from(app.float16VersFloat32(app.base64EnOctets(trames.repli)));
+journal.repli_sans_natif = typeof DataView.prototype.getFloat16 === 'function';
+
+// --- 6. L'activité : une couche ABSENTE (`null`), une couche NULLE, le reste allumé.
+app.appliquerActivite(trames.activite);
+journal.couleurs = couleursLues();
+journal.texte_infos = element('infos').textContent;
+
+console.log(JSON.stringify(journal));
+"""
+
+
+def _structure_pour_la_sonde(dim_bus=16, graine=11):
+    """Une trame `structure` RÉELLE (constructeurs de la tâche 2), à `dim_bus = 16`."""
+    from naulthene.cerveau.telemetrie import (DIM_AUDIO_ENTREE, DIM_VECTEUR_BIO, DIM_VISUELLE,
+                                              NUM_ACTIONS, definir_couches, disposition,
+                                              encoder_octets, quantifier_matrice,
+                                              trame_structure)
+    couches = definir_couches(dim_bus)
+    geometrie, rng = disposition(couches), np.random.default_rng(graine)
+    encodees = []
+    for couche in couches:
+        poids = rng.normal(0.0, 0.05,
+                           size=(couche["sortie"], couche["entree"])).astype(np.float32)
+        octets, echelle = quantifier_matrice(poids)
+        encodees.append({**couche, "echelle": echelle, "poids_i8": encoder_octets(octets),
+                         "positions": encoder_octets(
+                             geometrie[couche["nom"]].astype(np.float16).tobytes())})
+    bornes = [
+        {"nom": "vision", "dim": DIM_VISUELLE, "couche": "porte_visuelle",
+         "rang_entree": [0, DIM_VISUELLE]},
+        {"nom": "audio", "dim": DIM_AUDIO_ENTREE, "couche": "porte_auditive",
+         "rang_entree": [0, DIM_AUDIO_ENTREE]},
+        # ⚠️ Le vecteur bio arrive APRÈS le bus (`cat([pensee, vecteur_bio])`, noyau.py)…
+        {"nom": "vecteur_bio", "dim": DIM_VECTEUR_BIO, "couche": "integrateur_bio",
+         "rang_entree": [dim_bus, dim_bus + DIM_VECTEUR_BIO]},
+        # … alors que les actions arrivent AVANT le bus (`cat([actions_onehot, pensee])`).
+        {"nom": "actions", "dim": NUM_ACTIONS, "couche": "generateur_attente",
+         "rang_entree": [0, NUM_ACTIONS]},
+        {"nom": "actions", "dim": NUM_ACTIONS, "couche": "generateur_attente_audio",
+         "rang_entree": [0, NUM_ACTIONS]},
+    ]
+    return trame_structure(encodees, bornes,
+                           {"jour": 4, "tick_absolu": 57, "dim_bus": dim_bus,
+                            "niveau": {"index": 0, "affiche": "1/15",
+                                       "env_id": "MiniGrid-Empty-5x5-v0"}})
+
+
+def _activite_pour_la_sonde(structure, graine=12):
+    """`analyseur` ABSENTE (`null`), `porte_visuelle` NULLE, le reste allumé (`float16`)."""
+    from naulthene.cerveau.telemetrie import encoder_octets, trame_activite
+    rng, neurones = np.random.default_rng(graine), {}
+    for couche in structure["couches"]:
+        if couche["nom"] == "analyseur":
+            neurones[couche["nom"]] = None                        # ABSENTE → neurones GRIS
+        elif couche["nom"] == "porte_visuelle":
+            neurones[couche["nom"]] = encoder_octets(
+                np.zeros(couche["sortie"], dtype=np.float16).tobytes())   # nulle → gris aussi
+        else:
+            neurones[couche["nom"]] = encoder_octets(
+                rng.uniform(0.2, 1.0, size=couche["sortie"]).astype(np.float16).tobytes())
+    return trame_activite(neurones,
+                          {"dopamine": 0.31, "force_planification": None, "action": None},
+                          {"jour": 4, "tick": 57})
+
+
+def _trames_pour_la_sonde():
+    from naulthene.cerveau.telemetrie import encoder_octets
+    structure = _structure_pour_la_sonde()
+    return {"structure": structure,
+            "activite": _activite_pour_la_sonde(structure),
+            "repli": encoder_octets(np.asarray(VALEURS_FLOAT16_EXTREMES,
+                                               dtype=np.float16).tobytes())}
+
+
+_SONDES = {}
+
+
+def _sonde_de_la_page(sans_natif=False):
+    """Exécute la page livrée sous `node` (VRAI three.js vendorisé) et rend son journal.
+
+    `sans_natif=True` retire `DataView.prototype.getFloat16` AVANT l'import de la page : c'est
+    le navigateur ancien — ou Node 22 — et la page doit s'y comporter à l'identique.
+    """
+    if sans_natif in _SONDES:
+        return _SONDES[sans_natif]
+    with tempfile.TemporaryDirectory() as dossier:
+        dossier = Path(dossier)
+        shutil.copyfile(STATIQUE / "three.core.min.js", dossier / "three.core.min.js")
+        (dossier / "three.module.js").write_text(SHIM_THREE, encoding="utf-8")
+        (dossier / "app.js").write_text((STATIQUE / "app.js").read_text(encoding="utf-8")
+                                        + f"\nexport {{ {SONDE_EXPORTS} }};\n", encoding="utf-8")
+        (dossier / "sonde.mjs").write_text(SONDE_JS, encoding="utf-8")
+        (dossier / "trames.json").write_text(json.dumps(_trames_pour_la_sonde()), encoding="utf-8")
+        resultat = subprocess.run([shutil.which("node"), "sonde.mjs"], cwd=str(dossier),
+                                  capture_output=True, text=True, timeout=180,
+                                  env={**os.environ,
+                                       "SANS_GETFLOAT16": "1" if sans_natif else "0"})
+        if resultat.returncode != 0:
+            raise AssertionError(f"la sonde est sortie en {resultat.returncode} :\n"
+                                 f"{resultat.stderr[-4000:]}")
+        journal = json.loads(resultat.stdout.strip().splitlines()[-1])
+    _SONDES[sans_natif] = journal
+    return journal
+
+
+class TestPageEtVendor(unittest.TestCase):
+    """Les fichiers livrés et le vendor de three.js — pinné, complet, servi localement."""
+
+    def test_fichiers_statiques_presents(self):
+        for nom in ("index.html", "app.js", "three.module.js", "LICENSE-three.txt"):
+            self.assertTrue((STATIQUE / nom).is_file(), nom)
+        self.assertEqual((STATIQUE / "three.module.js").stat().st_size, 338908)
+        licence = (STATIQUE / "LICENSE-three.txt").read_text(encoding="utf-8")
+        self.assertIn("MIT", licence)
+        self.assertIn("three.js", licence)
+
+    @unittest.skipUnless(shutil.which("node"), "node absent : la page n'est pas vérifiée")
+    def test_app_js_est_du_javascript_valide(self):
+        resultat = subprocess.run(["node", "--check", str(STATIQUE / "app.js")],
+                                  capture_output=True, text=True)
+        self.assertEqual(resultat.returncode, 0, resultat.stderr)
+
+    def test_index_reference_le_module_et_le_vendor(self):
+        page = (STATIQUE / "index.html").read_text(encoding="utf-8")
+        self.assertIn("./app.js", page)
+        self.assertIn("./three.module.js", page)
+
+    def test_aucun_chargement_reseau_dans_la_page(self):
+        """Contrainte globale VIS-01 : le runtime ne dépend JAMAIS d'un CDN."""
+        for nom in ("index.html", "app.js"):
+            with self.subTest(fichier=nom):
+                texte = (STATIQUE / nom).read_text(encoding="utf-8")
+                for interdit in ("http://", "https://", "//unpkg", "//cdn"):
+                    self.assertNotIn(interdit, texte, f"{nom} charge quelque chose du réseau")
+
+    def test_le_vendor_est_complet_et_servi(self):
+        """Critère n°3, étendu à ce que le vendor IMPORTE — le défaut mesuré le 10/09/2026.
+
+        ⚠️ `build/three.module.min.js` de la v0.180.0 (338 908 octets, le fichier que le plan
+        épingle) n'est **PAS autonome** : sa sixième ligne importe `"./three.core.min.js"`
+        (381 124 octets), qui porte les classes partagées (`InstancedMesh`, `Color`, `Scene`,
+        `SphereGeometry`…). Vendoriser le seul fichier pinné produit donc un 404 sur le core, et
+        la page ne s'affiche jamais — sans qu'aucun test de taille ne s'en aperçoive.
+
+        Ce test exige que CHAQUE import relatif du vendor existe sur le disque ET soit servi en
+        `text/javascript` : c'est le seul contrôle qui relie le contenu du fichier pinné au
+        dossier statique.
+        """
+        import re
+        import urllib.request
+        from naulthene.cerveau.telemetrie import BusTrames
+        from naulthene.instruments.cerveau_3d.serveur import ServeurCerveau3D
+
+        source = (STATIQUE / "three.module.js").read_text(encoding="utf-8")
+        dependances = sorted(set(re.findall(r'from"(\.[^"]+)"', source)))
+        serveur = ServeurCerveau3D(BusTrames(), port=0)
+        serveur.demarrer_en_thread()
+        try:
+            for dependance in dependances:
+                with self.subTest(dependance=dependance):
+                    chemin = "/" + dependance.lstrip("./")
+                    fichier = STATIQUE / chemin.lstrip("/")
+                    self.assertTrue(fichier.is_file(),
+                                    f"le vendor importe {dependance}, qui n'est pas vendorisé")
+                    with urllib.request.urlopen(
+                            f"http://127.0.0.1:{serveur.port}{chemin}") as r:
+                        self.assertEqual(r.status, 200)
+                        self.assertEqual(r.headers["Content-Type"],
+                                         "text/javascript; charset=utf-8")
+                        self.assertEqual(len(r.read()), fichier.stat().st_size)
+        finally:
+            serveur.arreter()
+
+    def test_la_page_reelle_est_servie_avec_son_type(self):
+        """Critère n°2, sur le dossier statique PAR DÉFAUT de `ServeurCerveau3D`."""
+        import urllib.request
+        from naulthene.cerveau.telemetrie import BusTrames
+        from naulthene.instruments.cerveau_3d.serveur import ServeurCerveau3D
+
+        serveur = ServeurCerveau3D(BusTrames(), port=0)
+        serveur.demarrer_en_thread()
+        try:
+            for chemin, type_attendu in (("/", "text/html"),
+                                         ("/app.js", "text/javascript"),
+                                         ("/three.module.js", "text/javascript"),
+                                         ("/three.core.min.js", "text/javascript")):
+                with self.subTest(chemin=chemin):
+                    fichier = STATIQUE / ("index.html" if chemin == "/" else chemin.lstrip("/"))
+                    with urllib.request.urlopen(
+                            f"http://127.0.0.1:{serveur.port}{chemin}") as r:
+                        self.assertEqual(r.status, 200)
+                        self.assertEqual(r.headers["Content-Type"],
+                                         type_attendu + "; charset=utf-8")
+                        self.assertEqual(len(r.read()), fichier.stat().st_size)
+        finally:
+            serveur.arreter()
+
+
+@unittest.skipUnless(shutil.which("node"), "node absent : la logique de la page n'est pas vérifiée")
+class TestLogiqueDeLaPage(unittest.TestCase):
+    """La page exécutée sous `node`, contre le VRAI three.js vendorisé (sonde).
+
+    ⚠️ Ce que cette classe prouve : la LOGIQUE (décodage, 12 plaques, colonne du bus, seuil,
+    activation absente → neurone gris) et que le vendor fonctionne réellement (`REVISION`,
+    `InstancedMesh`, `Color`, `BufferGeometry`). Ce qu'elle ne prouve PAS : le RENDU — aucun
+    WebGL ici. Le rendu est vérifié par l'auteur dans un navigateur (commande dans le rapport).
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.sonde = _sonde_de_la_page()
+        cls.sonde_sans_natif = _sonde_de_la_page(sans_natif=True)
+        cls.structure = _structure_pour_la_sonde()
+        cls.rangs = {couche["nom"]: i for i, couche in enumerate(cls.structure["couches"])}
+
+    def _debut_de(self, nom):
+        return self.sonde["debuts"][self.rangs[nom]]
+
+    def _sortie_de(self, nom):
+        return self.structure["couches"][self.rangs[nom]]["sortie"]
+
+    def test_le_vendor_est_bien_three_js_0_180_0(self):
+        self.assertEqual(self.sonde["revision"], "180")
+
+    def test_douze_plaques_et_la_colonne_du_bus(self):
+        sorties = [couche["sortie"] for couche in self.structure["couches"]]
+        attendus, curseur = [], 0
+        for sortie in sorties:
+            attendus.append(curseur)
+            curseur += sortie
+        self.assertEqual(self.sonde["nb_couches"], 12)
+        self.assertEqual(self.sonde["debuts"], attendus)
+        self.assertEqual(self.sonde["colonne"]["debut"], sum(sorties))
+        self.assertEqual(self.sonde["colonne"]["taille"], 16)
+        self.assertEqual(self.sonde["nb_instances"], sum(sorties) + 16)
+        self.assertIn("12 couches", self.sonde["texte_structure"])
+        # La colonne est bien une colonne : au centre, répartie sur la profondeur des plaques.
+        colonne = [self.sonde["positions"][self.sonde["colonne"]["debut"] + k]
+                   for k in range(self.sonde["colonne"]["taille"])]
+        self.assertTrue(all(p[0] == 0.0 and p[1] == 0.0 for p in colonne))
+        self.assertEqual(len({p[2] for p in colonne}), 16)
+
+    def test_les_positions_decodees_sont_celles_du_serveur(self):
+        """Le décodage base64/float16 doit rendre EXACTEMENT la géométrie calculée en Python."""
+        from naulthene.cerveau.telemetrie import definir_couches, disposition
+        geometrie = disposition(definir_couches(16))
+        for couche in definir_couches(16):
+            debut = self._debut_de(couche["nom"])
+            attendu = geometrie[couche["nom"]].astype(np.float16).astype(np.float64)
+            for i in range(couche["sortie"]):
+                for axe in range(3):
+                    self.assertAlmostEqual(self.sonde["positions"][debut + i][axe],
+                                           float(attendu[i, axe]), places=6,
+                                           msg=f"{couche['nom']} neurone {i} axe {axe}")
+
+    def test_le_decodeur_float16_est_exact_sans_getfloat16(self):
+        """Ruling : `DataView.getFloat16` peut manquer (Node 22, navigateur ancien) — et il lit
+        en GROS-boutiste par défaut, alors que numpy écrit en PETIT-boutiste. La page ne doit
+        donc pas en dépendre : le décodage est identique avec et sans."""
+        attendu = [float(np.float16(v)) for v in VALEURS_FLOAT16_EXTREMES]
+        self.assertEqual(self.sonde_sans_natif["repli_sans_natif"], False)
+        for journal in (self.sonde, self.sonde_sans_natif):
+            with self.subTest(natif=journal["repli_sans_natif"]):
+                self.assertEqual(len(journal["repli"]), len(attendu))
+                for obtenu, valeur in zip(journal["repli"], attendu):
+                    self.assertAlmostEqual(obtenu, valeur, places=12)
+        self.assertEqual(self.sonde["repli"], self.sonde_sans_natif["repli"])
+
+    def test_le_seuil_change_le_nombre_d_aretes(self):
+        """Critère de la tâche : le curseur doit changer VISIBLEMENT le nombre d'arêtes."""
+        sonde = self.sonde
+        for nom in ("seuil_0", "seuil_15", "seuil_60", "seuil_100", "seuil_15_bis"):
+            self.assertEqual(sonde[nom]["sommets"], sonde[nom]["paires"] * 6, nom)
+        self.assertGreater(sonde["seuil_0"]["paires"], sonde["seuil_15"]["paires"])
+        self.assertGreater(sonde["seuil_15"]["paires"], sonde["seuil_60"]["paires"])
+        self.assertGreater(sonde["seuil_60"]["paires"], sonde["seuil_100"]["paires"])
+        self.assertEqual(sonde["seuil_15"]["texte"], "0.15")
+        self.assertEqual(sonde["seuil_15_bis"]["paires"], sonde["seuil_15"]["paires"])
+        self.assertIn("arêtes", sonde["texte_structure"])
+
+    def test_les_aretes_relient_deux_neurones_distincts_de_la_colonne(self):
+        """`rafraichirAretes` doit écrire deux EXTRÉMITÉS DISTINCTES, dont le neurone d'entrée.
+
+        ⚠️ La version du plan reliait un neurone à lui-même (`const b = a`) : toutes les arêtes
+        avaient une longueur NULLE, donc invisibles à l'écran alors que le compte affiché, lui,
+        était juste — le seuil semblait « ne rien changer ». Le contrôle n'est pas un compte mais
+        une GÉOMÉTRIE : chaque arête part d'un neurone de la colonne du bus (§5) et arrive
+        ailleurs."""
+        paires = self.sonde["seuil_15"]["paires"]
+        self.assertGreater(paires, 0)
+        self.assertEqual(self.sonde["aretes_hors_colonne"], 0,
+                         "des arêtes ne partent pas d'un neurone de la colonne du bus")
+        self.assertLess(self.sonde["aretes_nulles"], 0.01 * paires,
+                        "des arêtes relient un neurone à lui-même (invisibles)")
+        self.assertGreater(self.sonde["hors_bornes"], 0,
+                           "les entrées non neuronales (bornes §5) ne sont pas comptées à part")
+
+    def test_activation_absente_ou_nulle_donne_un_neurone_gris(self):
+        """Ruling : `null` (ou une valeur absente) = activation ABSENTE → neurone GRIS.
+
+        Le gris est celui de l'activation NULLE (`t = 0`) : la page ne distingue pas un `null`
+        d'un zéro, mais ne l'INVENTE jamais non plus (spec §9)."""
+        gris = [0.12, 0.12, 0.16]
+        for nom in ("analyseur", "porte_visuelle"):
+            debut = self._debut_de(nom)
+            for i in range(self._sortie_de(nom)):
+                for axe in range(3):
+                    self.assertAlmostEqual(self.sonde["couleurs"][debut + i][axe], gris[axe],
+                                           places=5, msg=f"{nom} neurone {i}")
+        # Une plaque nourrie s'allume : sans quoi le test précédent serait vrai d'une page morte.
+        debut = self._debut_de("tete_motrice")
+        lumineux = [c[0] for c in self.sonde["couleurs"][debut:debut + self._sortie_de(
+            "tete_motrice")]]
+        self.assertGreater(max(lumineux), 0.5, lumineux)
+        # La colonne du bus n'est ni allumée ni inventée : elle n'est pas dans la trame d'activité.
+        base = self.sonde["colonne"]["debut"]
+        self.assertLess(max(c[0] for c in self.sonde["couleurs"][base:base + 16]), 0.5)
+
+    def test_les_scalaires_nuls_ne_cassent_pas_la_ligne_d_infos(self):
+        """`force_planification`/`action` à `null` : la ligne s'écrit quand même (spec §9)."""
+        infos = self.sonde["texte_infos"]
+        self.assertIn("tick 57", infos)
+        self.assertIn("dopamine 0.310", infos)
+        self.assertIn("planification 0.00", infos)
+        self.assertIn("action —", infos)
+
+    def test_la_page_se_connecte_au_flux_et_ecoute_les_trois_canaux(self):
+        self.assertEqual(self.sonde["sse"], "/flux")
+        self.assertEqual(sorted(self.sonde["sse_evenements"]),
+                         ["activite", "evenement", "structure"])
+
+    def test_toutes_les_instances_sont_colorees_des_la_construction(self):
+        """`InstancedMesh` alloue ses couleurs à BLANC : un neurone oublié serait éclatant."""
+        for i, couleur in enumerate(self.sonde["couleurs_construction"]):
+            # 0,21 et non 0,20 : la couleur transite par un `Float32Array` (0,20 → 0,200000003).
+            self.assertLessEqual(max(couleur), 0.21, f"instance {i} non colorée : {couleur}")

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Naulthène — le cerveau 3D (VIS-01)</title>
+  <!-- ⚠️ Le vendor est PRÉCHARGÉ, jamais chargé depuis un CDN (contrainte VIS-01 : aucune
+       dépendance réseau au runtime). `three.module.js` (v0.180.0, épinglé) importe son core
+       `three.core.min.js` : précharger les deux fait arriver la première image plus tôt. -->
+  <link rel="modulepreload" href="./three.module.js">
+  <link rel="modulepreload" href="./three.core.min.js">
+  <style>
+    html, body { margin: 0; height: 100%; background: #0b0b12; color: #e6e6eb;
+                 font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; overflow: hidden; }
+    #panneau { position: fixed; top: 10px; left: 10px; background: #14141ecc; padding: 10px 12px;
+               border: 1px solid #2a2a3a; border-radius: 8px; max-width: 330px; }
+    #panneau b { color: #ffc83c; }
+    #seuil { width: 100%; }
+    #infos { margin-top: 6px; color: #9a9aa8; }
+    #etat { position: fixed; bottom: 10px; left: 10px; color: #9a9aa8; }
+  </style>
+</head>
+<body>
+  <div id="panneau">
+    <div>🧠 <b>Naulthène</b> — IRM 3D <span id="source"></span></div>
+    <div id="structure">en attente de la structure…</div>
+    <hr>
+    <label>Seuil d'affichage des synapses : <span id="valeur-seuil">0.15</span></label>
+    <input id="seuil" type="range" min="0" max="100" value="15">
+    <div style="color:#7a7a88">fraction du poids le plus fort de la couche — une commodité de
+      lecture, jamais une mesure (§5).</div>
+    <div id="infos">…</div>
+  </div>
+  <div id="etat">connexion…</div>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

@@ -89,7 +89,12 @@ class ServeurCerveau3D:
                 chemin = urlsplit(self.path).path
                 if chemin == "/":
                     return self._fichier("index.html", "text/html; charset=utf-8")
-                if chemin in ("/app.js", "/three.module.js"):
+                # ⚠️ `/three.core.min.js` (tâche 5) : le vendor de three.js v0.180.0 n'est PAS un
+                # fichier unique — `three.module.min.js` (338 908 octets, le fichier épinglé par le
+                # plan) importe statiquement son core (381 124 octets : `Color`, `InstancedMesh`,
+                # `Scene`…). Servir le seul fichier pinné fait répondre 404 sur le core, et la page
+                # ne s'affiche jamais — défaut mesuré le 10/09/2026, cf. rapport de la tâche 5.
+                if chemin in ("/app.js", "/three.module.js", "/three.core.min.js"):
                     return self._fichier(chemin.lstrip("/"), "text/javascript; charset=utf-8")
                 if chemin == "/structure":
                     return self._json(serveur.bus.structure() or {})
@@ -155,6 +160,14 @@ class ServeurCerveau3D:
                     self.send_header("Cache-Control", "no-cache")
                     self.end_headers()
 
+                    # Le curseur des FAITS part du total COURANT, jamais de `0` (ruling de la
+                    # tâche 5) : la file d'événements est bornée mais non vide, si bien qu'un
+                    # client NEUF — un rechargement de page, un second onglet — recevait tout le
+                    # tampon du passé et racontait à nouveau des faits déjà consommés. Un client
+                    # neuf regarde le PRÉSENT ; ce qui est publié après sa connexion, en revanche,
+                    # lui appartient (d'où la lecture ICI, avant l'attente de la structure).
+                    dernier_evenement = serveur.bus.compteurs()["evenements_total"]
+
                     # 1. La structure AVANT toute activité : on ne dessine rien avant de savoir
                     #    combien de neurones il y a. On attend qu'il en existe une.
                     sequence_structure = -1
@@ -168,7 +181,6 @@ class ServeurCerveau3D:
                     #    que d'accumuler du passé), les événements, et CHAQUE changement de
                     #    structure (neurogenèse).
                     derniere_sequence = -1
-                    dernier_evenement = 0
                     while not serveur._arret.is_set():
                         sequence_structure = self._pousser_structure(sequence_structure)
                         if serveur.bus.sequence != derniere_sequence:
