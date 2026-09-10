@@ -1937,3 +1937,160 @@ class TestRapporteur(unittest.TestCase):
         self.assertIsNotNone(sans_bus.publier_activite(agent, {"tick": 0}))
         self.assertEqual(sans_bus.signal_choc(0.5, {"tick": 0})["intensite"], 0.5)
         self.assertEqual(sans_bus.compteurs()["publications"], 1)
+
+    # --- La neurogenèse pendant l'observation (constat I-1) --------------------------------
+
+    def _grandir(self, agent) -> int:
+        """Fait GRANDIR le cerveau sous les hooks, comme `executer_nuit` (noyau l.11260).
+
+        ⚠️ `declencher_neurogenese` n'est jamais appelée DANS un tick (elle vit dans
+        `executer_nuit`) : c'est cette séparation qui rend le cas « capture d'avant la nuit »
+        rare — mais le rapporteur, lui, ne peut pas s'y fier.
+        """
+        agent.declencher_neurogenese(ajout_dim=8)
+        return int(agent.dim_bus)
+
+    def test_une_neurogenese_pendant_l_observation_ne_fait_pas_lever(self):
+        """🔴 CONSTAT I-1 — le cerveau GRANDIT pendant qu'on l'observe (la neurogenèse de la nuit).
+
+        `dim_bus` passe de 16 à 24 : les 12 formes relevées à l'attachement deviennent fausses et
+        les captures arrivent à la NOUVELLE longueur. En étape 2 (tâche 9) cet appel vit DANS la
+        boucle d'un run de 1500 jours — une `ValueError` ici remonterait dans le tick et tuerait
+        l'entraînement, ce qui contredit la garantie du chantier (« un run n'est jamais ralenti »
+        et « `dim_bus` change (neurogenèse) → nouvelle trame `structure` »).
+
+        Exigences mesurées ici : ne pas lever, COMPTER l'événement, REPUBLIER la structure (la
+        page reconstruit sa scène sur `sequence_structure`, spec §9) et publier les 12 couches aux
+        NOUVELLES longueurs. Ces longueurs sont croisées avec `definir_couches(24)` — la table
+        INDÉPENDANTE — jamais avec ce que le rapporteur vient de relire (sinon le test se
+        validerait lui-même).
+        """
+        import torch
+        from naulthene.cerveau.telemetrie import BusTrames, definir_couches
+        from naulthene.instruments.cerveau_3d.rapporteur import Rapporteur
+
+        agent = self._agent()
+        bus = BusTrames()
+        rapporteur = Rapporteur(bus, hz=1000.0)
+        rapporteur.attacher(agent)
+        try:
+            rapporteur.nouveau_tick()
+            with torch.no_grad():
+                agent.penser(*self._entrees(agent))
+            rapporteur.publier_structure(agent, {"jour": 0})
+            avant = rapporteur.publier_activite(agent, {"jour": 0, "tick": 0})
+            self.assertEqual(len(self._decode(avant, "porte_visuelle")), self.DIM_BUS)
+            self.assertEqual(bus.sequence_structure, 1)
+
+            # --- la nuit : le cerveau GRANDIT sous les hooks ----------------------------------
+            nouveau = self._grandir(agent)
+            self.assertEqual(nouveau, self.DIM_BUS + 8)
+
+            # L'observation REPREND, sans que l'appelant ait republié quoi que ce soit : c'est
+            # exactement la boucle de l'étape 2 (`nouveau_tick` → `traiter_tick` → publication).
+            rapporteur.nouveau_tick()
+            with torch.no_grad():
+                agent.penser(*self._entrees(agent))
+            trame = rapporteur.publier_activite(agent, {"jour": 0, "tick": 1})
+        finally:
+            rapporteur.detacher()
+
+        self.assertIsNotNone(trame)
+        self.assertEqual(rapporteur.compteurs()["neurogeneses"], 1)
+        self.assertEqual(bus.sequence_structure, 2)               # la structure est REPARTIE
+        structure = bus.structure()
+        self.assertEqual(structure["dim_bus"], nouveau)
+        self.assertEqual(len(structure["couches"]), 12)
+        self.assertEqual(len(trame["neurones"]), 12)
+        attendues = {c["nom"]: c["sortie"] for c in definir_couches(nouveau)}
+        self.assertEqual(set(trame["neurones"]), set(attendues))
+        self.assertEqual({c["nom"]: c["sortie"] for c in structure["couches"]}, attendues)
+        for nom, taille in attendues.items():
+            self.assertEqual(len(self._decode(trame, nom)), taille, nom)
+        # Témoin de croissance : une couche dont la sortie EST le bus a bien changé de longueur
+        # (sans lui, un test qui ne vérifierait que « 12 couches » passerait sur des longueurs
+        # inchangées) — et une tête garde la sienne (sa sortie ne dépend pas du bus).
+        self.assertEqual(attendues["porte_visuelle"], self.DIM_BUS + 8)
+        self.assertEqual(attendues["tete_motrice"], 8)            # tête : sortie fixe (actions)
+
+    def test_une_capture_d_avant_la_neurogenese_est_retiree_et_comptee(self):
+        """Une trame qui mêlerait DEUX architectures ne lève pas non plus : la capture périmée
+        part en silence DÉCLARÉ.
+
+        Séquence : un tick complet (captures de 16 valeurs) → la nuit fait grandir le cerveau
+        (`dim_bus` = 24) → on publie SANS avoir rouvert de fenêtre de capture. Ces 16 valeurs ne
+        peuvent pas être publiées sur 24 neurones (la page découpe chaque couche par
+        `couche.sortie` : elle désalignerait tout). ⚠️ Avant la correction, ce cas ne levait même
+        pas : `_formes` était périmé comme la capture (16 = 16), donc 16 valeurs partaient sous
+        une couche qui en compte 24 — le mensonge était SILENCIEUX. Le rapporteur retire donc la
+        capture périmée, l'INSCRIT dans `couches_non_ecrites`, republie la structure et continue.
+
+        ⚠️ Ce cas ne se produit pas dans la boucle prévue (l'étape 2 appelle `nouveau_tick()`
+        avant chaque tick, et la neurogenèse n'a lieu que la nuit, jamais dans un tick) : ce test
+        fige le repli au lieu de le laisser au hasard d'un ordre d'appel.
+
+        Aucune publication n'a eu lieu avant : cet appel n'est donc pas soumis au throttle, et le
+        test ne dépend d'aucune horloge.
+        """
+        import torch
+        from naulthene.cerveau.telemetrie import BusTrames, definir_couches
+        from naulthene.instruments.cerveau_3d.rapporteur import Rapporteur
+
+        agent = self._agent()
+        bus = BusTrames()
+        rapporteur = Rapporteur(bus, hz=1000.0)
+        rapporteur.attacher(agent)
+        try:
+            rapporteur.nouveau_tick()
+            with torch.no_grad():
+                agent.penser(*self._entrees(agent))
+            nouveau = self._grandir(agent)
+            # AUCUN `nouveau_tick()` : la capture reste celle du tick d'avant la nuit.
+            trame = rapporteur.publier_activite(agent, {"jour": 0, "tick": 1})
+        finally:
+            rapporteur.detacher()
+
+        self.assertIsNotNone(trame)
+        attendues = {c["nom"]: c["sortie"] for c in definir_couches(nouveau)}
+        for nom, taille in attendues.items():
+            self.assertEqual(len(self._decode(trame, nom)), taille, nom)
+        self.assertEqual(bus.sequence_structure, 1)               # la structure est REPARTIE
+        self.assertEqual(bus.structure()["dim_bus"], nouveau)
+        # Les 6 couches dont la sortie EST le bus (leur capture appartient à l'architecture
+        # d'avant) + les 2 têtes JEPA (jamais appelées dans un `penser` seul) : toutes DÉCLARÉES
+        # non écrites — jamais un zéro muet, jamais une longueur fausse.
+        self.assertEqual(
+            sorted(rapporteur.compteurs()["couches_non_ecrites"]),
+            ["analyseur", "fusion_memoire", "generateur_attente", "generateur_attente_audio",
+             "hippocampe", "integrateur_bio", "porte_auditive", "porte_visuelle"])
+
+    def test_un_desaccord_de_forme_non_explique_leve_toujours(self):
+        """Le garde-fou de forme reste ARMÉ : il ne crie plus sur une neurogenèse, mais il crie
+        sur tout désaccord que le changement de `dim_bus` n'explique pas.
+
+        Ici le rapporteur n'a AUCUN agent sous la main (`agent=None`, un cas accepté du contrat) :
+        le cerveau a grandi, les captures sont à la nouvelle longueur, mais rien ne peut être
+        relu — publier une trame de 24 valeurs annoncées sur 16 neurones remettrait la page de
+        travers en silence. Le module crie donc, exactement comme avant ce tour.
+
+        ⚠️ Conséquence pour l'étape 2 : le drapeau `--telemetrie-3d` (tâche 9) doit passer
+        l'agent — c'est le contrat de `publier_activite(agent, meta)`.
+        """
+        import torch
+        from naulthene.cerveau.telemetrie import BusTrames
+        from naulthene.instruments.cerveau_3d.rapporteur import Rapporteur
+
+        agent = self._agent()
+        rapporteur = Rapporteur(BusTrames(), hz=1000.0)
+        rapporteur.attacher(agent)
+        try:
+            self._grandir(agent)
+            rapporteur.nouveau_tick()
+            with torch.no_grad():
+                agent.penser(*self._entrees(agent))
+            with self.assertRaises(ValueError) as capture:
+                rapporteur.publier_activite(None, {"tick": 0})
+        finally:
+            rapporteur.detacher()
+        self.assertIn("valeurs", str(capture.exception))
+        self.assertIn(f"{self.DIM_BUS} attendues", str(capture.exception))

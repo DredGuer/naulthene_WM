@@ -82,6 +82,22 @@ mêmes couches) seraient prises pour celles du dernier tick. `publier_activite` 
 du DERNIER tick capté, au plus une fois par période — un cerveau qui vit à 400 ticks/s et un
 écran à 15 Hz ne sont pas la même horloge.
 
+**Neurogenèse sous l'observation (constat I-1).** En étape 2 (tâche 9), `publier_activite` vit
+DANS la boucle d'un run de 1500 jours, et le cerveau y dort — donc il GRANDIT :
+`executer_nuit` appelle `declencher_neurogenese` (`noyau.py` l.11260 ; l.2327 pour la mécanique),
+`dim_bus` passe de 16 à 24 puis 32, et les 12 formes relevées à l'attachement deviennent fausses.
+Le désaccord de longueur qui en résulte n'est PAS une anomalie, c'est la croissance — et une
+exception ici remonterait dans le tick et tuerait l'entraînement, ce que le chantier interdit
+(« un run n'est jamais ralenti », « le run continue normalement »). Le rapporteur le reconnaît
+donc LUI-MÊME (`agent.dim_bus` comparé à celui du dernier relevé), relit les 12 formes sur
+l'agent, compte l'événement (`compteurs()["neurogeneses"]`), REPUBLIE la structure — la page doit
+reconstruire sa scène, c'est `sequence_structure` qui le lui dit (spec §9) — et CONTINUE. Une
+capture prise AVANT la nuit (16 valeurs) ne peut pas être publiée sur 24 neurones : elle est
+retirée et DÉCLARÉE dans `couches_non_ecrites`, jamais publiée de travers ni transformée en zéro
+muet. Le garde-fou de forme reste armé pour tout désaccord que le changement de `dim_bus`
+n'explique pas (par exemple `agent=None`, où le rapporteur n'a rien à relire) : il crie alors,
+comme avant.
+
 ⚠️ Ce module est un MIROIR des activations déclarées par `ACTIVATION_PAR_COUCHE` (le hook capture
 la sortie LINÉAIRE ; le ReLU/la sigmoïde sont appliqués après, par `penser`) : si cette table
 s'avère fausse, elle se signale ici — `TestRapporteur::test_l_activation_declaree_par_la_table_
@@ -230,6 +246,11 @@ class Rapporteur:
 
     `bus=None` est permis (ruling du plan) : les trames sont alors PRODUITES et renvoyées, sans
     être publiées — c'est le cas du drapeau `--telemetrie-3d` du noyau, qui relaie lui-même.
+
+    ⚠️ `publier_structure(agent, meta)` « après chaque neurogenèse » n'est PAS une obligation pour
+    l'appelant : `publier_activite` reconnaît LUI-MÊME la croissance (`dim_bus` changé), relit les
+    formes et republie la structure. La ligne ci-dessus reste la bonne pratique (la page doit
+    connaître la scène avant la première trame d'activité), mais un oubli ne tue pas le run.
     """
 
     def __init__(self, bus, hz: float = 15.0):
@@ -238,6 +259,7 @@ class Rapporteur:
         self.bus = bus
         self.periode = 1.0 / float(hz)
         self._formes = {}          # nom -> nombre de neurones de sortie (lu à l'attachement)
+        self._dim_bus = None       # `agent.dim_bus` au dernier relevé (None = jamais relevé)
         self._sorties = {}         # nom -> np.ndarray : LA capture du tick courant
         self._ecritures = {}       # nom -> écritures candidates vues depuis `nouveau_tick()`
         self._hooks = []
@@ -250,6 +272,7 @@ class Rapporteur:
         self._publications = 0
         self._structures = 0
         self._chocs = 0
+        self._neurogeneses = 0     # croissances reconnues pendant l'observation (constat I-1)
         self._non_ecrites = []     # couches sans écriture de tick, à la dernière trame publiée
 
     # --- attachement ---
@@ -262,13 +285,38 @@ class Rapporteur:
         serait écrite 2×, 3×… et une politique de capture deviendrait un compteur de hooks).
         Les formes sont lues ICI, sur l'agent (`couches_du_cerveau`) : c'est ce qui permet à
         `publier_activite(None, meta)` — le cas du throttle — de connaître les 12 longueurs.
+
+        ⚠️ Les hooks survivent à une neurogenèse : `agrandir()` remplace les POIDS d'un module,
+        jamais le module lui-même — le hook suit donc la couche qui grandit. Seules les formes
+        relevées ici deviennent fausses : c'est ce que `publier_activite` rattrape.
         """
         self.detacher()
         couches = couches_du_cerveau(agent)
         self._formes = {couche["nom"]: int(couche["sortie"]) for couche in couches}
+        self._dim_bus = int(agent.dim_bus)
         for couche in couches:
             module = getattr(agent, couche["nom"])
             self._hooks.append(module.register_forward_hook(self._fabriquer_hook(couche["nom"])))
+
+    @staticmethod
+    def _lire_formes(agent) -> dict:
+        """Les 12 longueurs de sortie, lues SUR l'agent — jamais une table supposée.
+
+        `couches_du_cerveau` crie si le cerveau n'a plus ses 12 couches : une couche disparue est
+        une anomalie d'architecture, pas une croissance.
+        """
+        return {couche["nom"]: int(couche["sortie"]) for couche in couches_du_cerveau(agent)}
+
+    def _le_bus_a_grandi(self, agent) -> bool:
+        """`True` si `agent.dim_bus` a changé depuis le dernier relevé des formes (neurogenèse).
+
+        Le rapporteur ne DEVINE pas la croissance : il compare un nombre que l'agent porte
+        (`dim_bus`, incrémenté par `declencher_neurogenese`) à celui qu'il a lu la dernière fois.
+        `agent=None` (contrat accepté de `publier_activite`) ne peut rien expliquer : c'est le cas
+        où le garde-fou de forme crie encore.
+        """
+        return (agent is not None and self._dim_bus is not None
+                and int(agent.dim_bus) != self._dim_bus)
 
     def _fabriquer_hook(self, nom):
         """Le hook d'une couche : il CAPTURE et retourne `None` (jamais la sortie).
@@ -350,31 +398,60 @@ class Rapporteur:
 
         Renvoie la trame publiée, ou `None` si la période n'est pas écoulée (c'est ce retour que
         relaie le drapeau `--telemetrie-3d` du noyau, tâche 9). `agent=None` est accepté : le
-        throttle et la forme des 12 couches viennent de l'attachement, pas de cet appel.
+        throttle et la forme des 12 couches viennent de l'attachement, pas de cet appel — mais
+        c'est aussi ce qui empêche de RECONNAÎTRE une neurogenèse (cf. ci-dessous).
 
-        Les couches sans écriture de tick (cf. docstring du module) partent à ZÉRO et sont
-        listées dans `compteurs()["couches_non_ecrites"]` — un silence déclaré.
+        ⚠️ NEUROGENÈSE SOUS L'OBSERVATION (constat I-1). En étape 2, cet appel vit DANS la boucle
+        d'un run de 1500 jours, et `executer_nuit` fait GRANDIR le cerveau
+        (`declencher_neurogenese`, `noyau.py` l.11260) : `dim_bus` change, les formes relevées à
+        l'attachement deviennent fausses et les captures arrivent à la nouvelle longueur. Une
+        exception ici remonterait dans le tick et tuerait l'entraînement, ce que le chantier
+        interdit. Le rapporteur le reconnaît donc par lui-même, RELIT les 12 formes sur l'agent,
+        compte l'événement (`compteurs()["neurogeneses"]`), REPUBLIE la structure (la page
+        reconstruit sa scène sur `sequence_structure`, spec §9) et continue.
+
+        Le garde-fou de forme reste armé pour tout désaccord que le changement de `dim_bus`
+        n'explique PAS : une trame de la mauvaise longueur ferait désaligner la page en silence
+        (elle découpe par `couche.sortie`). Les couches sans écriture de tick (cf. docstring du
+        module) partent à ZÉRO et sont listées dans `compteurs()["couches_non_ecrites"]` — un
+        silence déclaré.
         """
         maintenant = time.monotonic()
         if (self._derniere_publication is not None
                 and maintenant - self._derniere_publication < self.periode):
             return None
         self._derniere_publication = maintenant
+        grandi = False
         if not self._formes and agent is not None:
-            self._formes = {couche["nom"]: int(couche["sortie"])
-                            for couche in couches_du_cerveau(agent)}
+            self._formes = self._lire_formes(agent)
+            self._dim_bus = int(agent.dim_bus)
+        elif self._le_bus_a_grandi(agent):
+            # La croissance est un ÉVÉNEMENT de la trame de structure (spec §9 : « dim_bus change
+            # (neurogenèse) → nouvelle trame structure ») : on la compte, on relit les formes, et
+            # on republie AVANT d'encoder l'activité — la page doit tenir la nouvelle scène.
+            grandi = True
+            self._formes = self._lire_formes(agent)
+            self._dim_bus = int(agent.dim_bus)
+            self._neurogeneses += 1
+            self.publier_structure(agent, meta)
         neurones = {}
         self._non_ecrites = []
         for nom, taille in self._formes.items():
             valeurs = self._sorties.get(nom)
+            if valeurs is not None and valeurs.size != int(taille):
+                if not grandi:
+                    # Garde-fou de forme qui CRIE : RIEN n'explique ce désaccord (pas de
+                    # neurogenèse reconnue, ou pas d'agent à relire) — publier une longueur
+                    # fausse serait un mensonge silencieux.
+                    raise ValueError(f"capture de {nom!r} : {valeurs.size} valeurs, "
+                                     f"{taille} attendues")
+                # Le cerveau a grandi : cette capture vient de l'architecture d'AVANT la nuit.
+                # Elle est retirée et COMPTÉE comme non écrite — ni publiée sur le mauvais nombre
+                # de neurones, ni transformée en zéro muet, ni en exception qui tue le run.
+                valeurs = None
             if valeurs is None:
                 self._non_ecrites.append(nom)
                 valeurs = np.zeros(int(taille), dtype=np.float32)
-            elif valeurs.size != int(taille):
-                # Garde-fou de forme qui CRIE : une trame de la mauvaise longueur ferait
-                # désaligner la page en silence (elle découpe par `couche.sortie`).
-                raise ValueError(f"capture de {nom!r} : {valeurs.size} valeurs, "
-                                 f"{taille} attendues")
             neurones[nom] = encoder_octets(
                 appliquer_activation(nom, valeurs).astype(np.float16).tobytes())
         trame = trame_activite(neurones, self._scalaires(agent, meta), dict(meta or {}))
@@ -426,11 +503,14 @@ class Rapporteur:
         appelant de voir qu'une couche a bien été écrite (ou pas) sur le dernier tick, au lieu de
         le déduire d'une couleur à l'écran. `ecritures_par_lot` compte les écritures écartées
         parce que par LOT (rollout mental, rejeu nocturne) — depuis `nouveau_tick()`, et en cumul.
+        `neurogeneses` compte les croissances RECONNUES pendant l'observation (constat I-1) : c'est
+        le témoin qu'une republication de structure n'est pas un doublon accidentel.
         """
         return {
             "publications": self._publications,
             "structures": self._structures,
             "chocs": self._chocs,
+            "neurogeneses": self._neurogeneses,
             "couches": len(self._formes),
             "ecritures_par_couche": dict(self._ecritures),
             "couches_non_ecrites": list(self._non_ecrites),
