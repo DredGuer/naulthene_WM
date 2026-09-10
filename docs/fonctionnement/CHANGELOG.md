@@ -4,6 +4,78 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.76] - 2026-09-10 — VIS-01 tâche 9 : la passerelle `--telemetrie-3d` — n'importe quel run alimente le cerveau 3D
+
+| Type | Details |
+|------|---------|
+| **Catégorie** | feat — **instrument** (1 drapeau CLI, 4 points d'appel gardés, 0 mécanique) |
+| **Impact** | Un run vivant peut être REGARDÉ sans être modifié : sans le drapeau, le run reste **bit-identique** (mesuré en conditions réelles, A/A ci-dessous) |
+| **Registre** | [CHANTIER VIS-01](../ameliorations/CHANTIER_VIS-01_cerveau_3d_irm_vivante.md) · [PLAN VIS-01](../ameliorations/PLAN_VIS-01_cerveau_3d.md) tâche 9 |
+
+`noyau.py` reçoit `--telemetrie-3d udp:HOTE:PORT` : un rapporteur est branché sur l'agent
+(lecture par `register_forward_hook`, chantier VIS-01) et ses trames sont relayées. **Aucun
+drapeau de module, aucune assertion runtime** : la télémétrie n'est pas une mécanique du
+cerveau, elle ne change ni la décision, ni le gradient, ni la dopamine — il n'y a rien à
+« mordre ». Chaque point d'appel commence par `if … is None: return` ; sans le drapeau, aucun
+objet de télémétrie n'est construit et le tick ne gagne qu'un `getattr` et une comparaison.
+
+**🔴 AVENANT DE PROTOCOLE (mesuré le 10/09/2026, il prime sur l'esquisse du plan) — la trame
+`structure` ne peut PAS passer par UDP :**
+
+| Fait mesuré (reproduit dans ce commit) | Valeur |
+|---|---|
+| Trame `structure` à `dim_bus = 145` | **305 053 octets** (avenant : 305 086) |
+| Trame `structure` à `dim_bus = 96` (= `DIM_BUS_MAX` sur cette machine) | **152 472 octets** |
+| Trame `structure` à `dim_bus = 16` | 13 488 octets (avenant : 13 517) |
+| Plafond **dur** d'un datagramme UDP | **65 507 octets** |
+| Trame `activite` mesurée à `dim_bus = 409` | **9 252 octets** |
+| `SO_SNDBUF` UDP par défaut (macOS) | **9 216 octets** ⇒ `Errno 40` dès 9 230, en SILENCE |
+| Avec `SO_SNDBUF = 1 Mio` (le correctif) | 9 230 o **OK**, 65 507 o **OK**, 65 508 o `Errno 40` |
+
+1. **`structure` → FICHIER** (`<brain>.vis01_structure.json`, écriture ATOMIQUE : temporaire
+   dans le dossier + `os.replace`), écrit au montage et **après chaque neurogenèse** (point
+   d'appel à côté de `declencher_neurogenese` ; plus un rattrapage dans le tick si le rapporteur
+   reconnaît lui-même la croissance). Un dossier non inscriptible **ne tue pas le run** :
+   l'échec est compté (`etat.telemetrie_ratees` / `telemetrie_erreurs`), signalé une fois, et le
+   run continue.
+2. **`activite` et `evenement` → UDP**, comme prévu (throttle 15 Hz du rapporteur ; `evenement`
+   émis à côté de `fortifier_synapses`, dans le même `if poids_evenement > 0:`).
+3. **`EmetteurUDP` relève `SO_SNDBUF`** (`TAMPON_ENVOI_UDP = 1 Mio`, `telemetrie.py`) : sans
+   cela les trames d'activité disparaissaient **en silence** dès `dim_bus ≈ 409` (2ᵉ fichier
+   touché par la tâche, explicitement autorisé par le brief). La valeur EFFECTIVEMENT accordée
+   par le noyau est exposée (`emetteur.tampon_envoi`) et vérifiée par `getsockopt`.
+4. **Quatre points d'appel** dans `noyau.py`, tous gardés : `_ouvrir_tick_telemetrie` en TÊTE de
+   `traiter_tick` (la fenêtre de capture, sans quoi la première trame du matin montrerait des
+   couches écrites pendant la nuit), `_emettre_tick` en QUEUE du même tick (toutes les écritures
+   ont eu lieu, têtes JEPA comprises), `_emettre_evenement` à côté de la LTP, `_emettre_structure`
+   à la neurogenèse. `dopamine`, `faim`, `force_planification` et l'action jouée passent par
+   `meta` ; `niveau` porte toujours son `env_id`.
+
+**Preuves (toutes fraîches, dans ce commit) :**
+
+- **A/A en conditions réelles (spec §10)** — deux runs `--graine 11 --jours 5`
+  (`brains/VIS01_preuve/`), l'un avec `--telemetrie-3d udp:127.0.0.1:9998`, l'autre sans :
+  `diff` des niveaux promus **VIDE** (5 lignes « Niveau 1 » de chaque côté — le témoin est
+  ATTEINT, ce n'est pas une comparaison vide) ; les journaux console sont identiques hors bruit
+  `wandb` et nom de fichier ; les deux `.brain` sont **identiques au contenu** (97 tenseurs
+  `torch.equal`, `optimizer_state_dict` identique, 130 entrées d'archive au même sha256 — seule
+  la compression zlib du `data.pkl` diffère de 520 octets, à contenu décompressé égal).
+- Bout en bout : un listener UDP réel reçoit **11 `activite` + 16 `evenement`** sur un run d'un
+  jour, et le fichier de structure apparaît (13 603 octets, `dim_bus = 16`).
+- **126 → 136 tests** (`NAULTHENE_DEVICE=cpu venv/bin/python -m unittest discover -s tests`,
+  **OK**) — 10 tests ajoutés, dont les deux bit-identiques de `traiter_tick`.
+
+| Fichier modifié | Changement |
+|---|---|
+| `src/naulthene/cerveau/noyau.py` | Drapeau `--telemetrie-3d`, section « LA PASSERELLE » (7 helpers), 4 points d'appel gardés, 8 champs `EtatCognitif`, en-tête `41.76` |
+| `src/naulthene/cerveau/telemetrie.py` | `TAMPON_ENVOI_UDP = 1 Mio` + `SO_SNDBUF` relevé dans `EmetteurUDP`, exposé en `tampon_envoi` |
+| `tests/test_cerveau_3d.py` | `TestTelemetrieDuNoyau` (10 tests) |
+
+⚠️ **Le spectateur n'est PAS branché sur le fichier de structure** (tâche ultérieure, hors
+périmètre) : cette version PRODUIT le fichier, elle ne le lit pas.
+
+---
+
 ## [v41.75] - 2026-09-09 — REP-01 : script de validation d'environnement vierge prêt (exécution différée)
 
 | Type | Details |

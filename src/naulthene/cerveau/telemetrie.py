@@ -288,6 +288,19 @@ def analyser_cible_udp(cible: str) -> tuple:
     return morceaux[1], int(morceaux[2])
 
 
+# 🔴 MESURÉ le 10/09/2026, et c'est la raison d'être de cette constante : le `SO_SNDBUF` par
+# défaut de macOS vaut **9 216 octets**, et le noyau refuse alors en `OSError [Errno 40]
+# « Message too long »` tout datagramme plus gros — SANS que l'appelant puisse distinguer cette
+# perte d'un cerveau lent. Or la trame d'activité grossit avec le bus (`≈ (8·dim_bus + 22) × 2,67`
+# octets) : mesuré, 9 198 octets passent à `dim_bus = 408` et 9 230 ÉCHOUENT à `dim_bus = 409`.
+# Les trames d'activité disparaissaient donc EN SILENCE dès que le cerveau grandissait.
+#
+# 1 Mio couvre le plafond DUR d'un datagramme UDP (65 507 octets) avec une marge confortable, pour
+# une mémoire négligeable (un tampon par socket). Au-delà de 65 507, aucune valeur de `SO_SNDBUF`
+# ne sauve la trame : c'est le protocole qui l'interdit, et `envoyer` la compte alors comme perdue.
+TAMPON_ENVOI_UDP = 1 << 20
+
+
 class EmetteurUDP:
     """Envoie une trame sans jamais attendre. Toute erreur ⇒ trame PERDUE, comptée, jamais une
     exception qui remonterait dans la boucle du cerveau."""
@@ -295,6 +308,13 @@ class EmetteurUDP:
     def __init__(self, cible: str):
         self._adresse = analyser_cible_udp(cible)
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        # ⚠️ RELEVER `SO_SNDBUF` AVANT `setblocking(False)` : sans cela, les trames d'activité
+        # meurent en silence dès `dim_bus ≈ 409` (cf. `TAMPON_ENVOI_UDP`). `tampon_envoi` retient
+        # la valeur EFFECTIVEMENT accordée par le noyau — qui peut être plus basse que celle
+        # demandée (plafond système) ; c'est elle qui est vérifiée par `getsockopt` dans les tests,
+        # et c'est elle qui décide si une trame passe.
+        self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, TAMPON_ENVOI_UDP)
+        self.tampon_envoi = int(self._socket.getsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF))
         self._socket.setblocking(False)
         self._envoyees, self._perdues = 0, 0
 

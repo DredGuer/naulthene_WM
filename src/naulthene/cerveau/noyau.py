@@ -1,11 +1,12 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (C) 2026 Adrien Nault — Naulthène AGI
-#Version actuelle 41.75 — SOURCE DE VÉRITÉ OPÉRATIONNELLE UNIQUE du projet (décision ARC-01,
+#Version actuelle 41.76 — SOURCE DE VÉRITÉ OPÉRATIONNELLE UNIQUE du projet (décision ARC-01,
 # 08/09/2026, v41.72). `colab.py` (v17) est une archive historique figée — aucune mécanique n'y
 # est plus portée. Le marqueur ci-dessus suit le CHANGELOG (une entrée par version) — il
 # indiquait « 29 » jusqu'au 02/09/2026, périmé de 20 versions, puis « 41.68 » jusqu'au
-# 10/09/2026, périmé de 7 versions (dernière entrée : v41.75 ; décision de l'auteur du
-# 10/09/2026 : « l'en-tête est en retard, le CHANGELOG fait foi » — registre DOC-03).
+# 10/09/2026, périmé de 7 versions (décision de l'auteur du 10/09/2026 : « l'en-tête est en
+# retard, le CHANGELOG fait foi » — registre DOC-03). Il vaut 41.76 : VIS-01 tâche 9, la
+# passerelle `--telemetrie-3d` (instrument — sans le drapeau, le run reste identique).
 # Différences historiques avec colab.py : détection du device MPS (Apple Silicon) et
 # jours_totaux réglé pour des runs locaux plus courts que les 400 jours de Colab.
 
@@ -629,6 +630,251 @@ DIM_EMBED_SEMANTIQUE = 32      # embedding sémantique du mot (Ollama all-minilm
 DIM_AUDIO_ENTREE = DIM_MFCC    # entrée de porte_auditive (l'OREILLE) — MFCC seul depuis v22.1
 DIM_VOCALE = 8                 # sortie de tete_vocale (la BOUCHE) : f0, F1, F2, F3, F1_bw, F2_bw,
                                 # duree, amplitude — paramètres physiques du synthétiseur de formants
+
+
+# --- VIS-01 (v41.76) : LA TÉLÉMÉTRIE 3D — LA PASSERELLE (instrument, AUCUN effet sur le cerveau) ---
+#
+# `--telemetrie-3d udp:hote:port` permet à N'IMPORTE QUEL run d'être regardé pendant qu'il vit :
+# un rapporteur est branché sur l'agent (lecture par `register_forward_hook`, chantier VIS-01) et
+# ses trames sont relayées. Il n'existe AUCUN drapeau de module : la télémétrie n'est pas une
+# mécanique du cerveau, elle ne change ni la décision, ni le gradient, ni la dopamine. Le motif
+# « constante de module + assertion runtime » du dépôt sert à vérifier qu'un drapeau a bien mordu
+# sur le COMPORTEMENT ; ici il n'y a rien à mordre.
+#
+# 🔴 CE QUI EST MESURÉ, ET QUI DICTE LE TRANSPORT (avenant de protocole du 10/09/2026) :
+#
+#     trame `structure` à `dim_bus = 145` ......... 305 086 octets
+#     plafond DUR d'un datagramme UDP ............. 65 507 octets (insensible à SO_SNDBUF)
+#     ⇒ LA TRAME `structure` NE PEUT PAS PASSER PAR UDP.
+#
+# Elle est donc écrite dans un FICHIER JSON à côté du `.brain` (`<brain>.vis01_structure.json`,
+# écriture ATOMIQUE), au démarrage et après CHAQUE neurogenèse. Seules `activite` (~3 600 o) et
+# `evenement` (~90 o) prennent l'UDP.
+#
+# ⚠️ LA PROPRIÉTÉ QUI COMMANDE TOUT LE RESTE : SANS le drapeau, LE RUN EST BIT-IDENTIQUE. Chaque
+# point d'appel commence donc par `if … is None: return` : le chemin chaud du tick ne gagne qu'un
+# `getattr` et une comparaison à `None`, et aucun objet de télémétrie n'est même construit. C'est
+# ce que vérifient les tests bit-identiques de `tests/test_cerveau_3d.py` (TestTelemetrieDuNoyau),
+# et ce que la preuve A/A de la spec §10 re-mesure en conditions réelles (deux runs de 5 jours).
+#
+# ⚠️ LA TÉLÉMÉTRIE N'A PAS LE DROIT DE TUER UN RUN : tout échec (fichier non inscriptible, cerveau
+# qui ne répond pas à la lecture) est COMPTÉ et signalé UNE fois, jamais propagé — même discipline
+# que `PortC3.canal_emission` (v30.0) et que `EmetteurUDP.envoyer`.
+
+TELEMETRIE_3D_HZ = 15.0                    # cadence des trames d'activité (throttle du rapporteur)
+SUFFIXE_STRUCTURE_VIS01 = ".vis01_structure.json"
+
+
+def _meta_telemetrie(etat) -> dict:
+    """Les métadonnées communes aux trois trames.
+
+    `niveau` porte TOUJOURS l'`env_id` : un niveau sans son `env_id` est ambigu (règle du
+    07/09/2026 — l'index seul ne dit pas de quel monde on parle, et deux cursus peuvent
+    partager un index).
+
+    `dopamine`, `faim` et `force_planification` vivent dans `etat`, pas sur l'agent : ils
+    arrivent par ici, jamais inventés par l'instrument (le rapporteur les range ensuite dans
+    `scalaires`, voir `rapporteur.SCALAIRES_DU_CALLER`). L'action JOUÉE n'est connue qu'en queue
+    de tick : elle s'ajoute au même dictionnaire dans `_emettre_tick`.
+    """
+    return {
+        "tick": int(getattr(etat, "tick_absolu", 0)),
+        "jour": int(getattr(etat, "jour", 0)),
+        "dim_bus": int(etat.agent.dim_bus),
+        "niveau": {"index": int(getattr(etat, "niveau_actuel", 0)),
+                   "env_id": getattr(etat, "env_id", "?")},
+        "dopamine": float(getattr(etat, "teneur_dopamine", 0.0)),
+        "faim": float(etat.moteur_bio.faim()),
+        "force_planification": float(getattr(etat, "force_planification_jour", 0.0)),
+    }
+
+
+def _echec_telemetrie(etat, erreur) -> None:
+    """Compte un échec de télémétrie et le SIGNALE une fois — jamais une exception.
+
+    Un dossier de sortie en lecture seule ne doit pas tuer un entraînement de 1500 jours : la
+    télémétrie est un instrument, pas une mécanique. Mais un instrument muet serait pire
+    qu'inutile (spec §9 : « un silence qui a l'air d'un cerveau lent ») : le PREMIER échec est
+    imprimé, les suivants ne sont que comptés — un run de 2000 ticks n'a pas à remplir la
+    console pour un dossier non inscriptible.
+    """
+    etat.telemetrie_erreurs = getattr(etat, "telemetrie_erreurs", 0) + 1
+    if etat.telemetrie_erreurs == 1:
+        print(f"⚠️  [TÉLÉMÉTRIE 3D] {type(erreur).__name__} : {erreur} — le run continue "
+              f"sans télémétrie (compteur `etat.telemetrie_erreurs`).")
+
+
+def _poser_telemetrie(etat, cible):
+    """Crée l'émetteur depuis la cible `udp:hote:port`.
+
+    Une cible mal formée lève ICI, au démarrage — jamais au milieu d'un run : une faute de
+    frappe sur `--telemetrie-3d` est une erreur de configuration, et la découvrir au jour 400
+    serait la découvrir trop tard. C'est le SEUL endroit de la passerelle qui a le droit de
+    lever (voulu, et au seul moment où ça ne coûte rien).
+    """
+    from naulthene.cerveau.telemetrie import EmetteurUDP
+    etat.telemetrie = None if not cible else EmetteurUDP(cible)
+    if etat.telemetrie is not None:
+        print(f"📡 [TÉLÉMÉTRIE 3D] active → udp {etat.telemetrie.compteurs()['cible']} "
+              f"(tampon d'envoi {etat.telemetrie.tampon_envoi:,} o) — aucun effet sur "
+              f"l'apprentissage ni sur la décision.")
+    return etat.telemetrie
+
+
+def _monter_telemetrie(etat, cible, chemin_brain=None) -> None:
+    """Branche la passerelle complète — appelée UNE fois, au démarrage, si le drapeau est là.
+
+    Ordre imposé par la mesure et par le rapporteur lui-même :
+      1. l'ÉMETTEUR d'abord, pour qu'une cible mal formée plante au démarrage ;
+      2. le RAPPORTEUR ensuite, attaché AVANT `demarrer_journee` — sans quoi la première trame
+         d'activité n'arriverait qu'après une journée entière ;
+      3. la trame `structure` enfin, écrite dans son FICHIER (elle ne passe jamais par UDP).
+
+    ⚠️ Sans `chemin_brain`, il n'y a aucun chemin dont déduire le fichier de structure : c'est le
+    cas d'un run né en mémoire (`--brain` absent). La télémétrie est alors PARTIELLE et le DIT —
+    un fichier silencieusement absent ferait croire à un spectateur que ce cerveau n'a pas de
+    forme.
+    """
+    from naulthene.cerveau.telemetrie import BusTrames
+    from naulthene.instruments.cerveau_3d.rapporteur import Rapporteur
+
+    _poser_telemetrie(etat, cible)
+    etat.telemetrie_bus = BusTrames()
+    etat.telemetrie_rapporteur = Rapporteur(etat.telemetrie_bus, hz=TELEMETRIE_3D_HZ)
+    etat.telemetrie_rapporteur.attacher(etat.agent)
+    etat.telemetrie_fichier = (f"{chemin_brain}{SUFFIXE_STRUCTURE_VIS01}"
+                               if chemin_brain else None)
+    if etat.telemetrie_fichier is None:
+        print("📡 [TÉLÉMÉTRIE 3D] aucun chemin de `.brain` : la trame `structure` ne sera pas "
+              "écrite (activité et événements partent quand même par UDP).")
+    _emettre_structure(etat)
+
+
+def _ecrire_structure(etat) -> bool:
+    """Écrit la trame `structure` publiée dans son fichier JSON — ATOMIQUEMENT.
+
+    🔴 Pourquoi un FICHIER et pas un datagramme : 305 086 octets à `dim_bus = 145` pour un
+    plafond dur de 65 507 octets par datagramme UDP. Ce n'est pas un réglage à trouver, c'est
+    une propriété du protocole — le fichier est la seule voie.
+
+    ⚠️ ATOMIQUE (fichier temporaire DANS le dossier de destination, puis `os.replace`) : un
+    spectateur qui lit pendant l'écriture verrait sinon une trame TRONQUÉE, c'est-à-dire un
+    JSON invalide — l'équivalent d'un écran noir au moment précis où le cerveau grandit.
+    `os.replace` est atomique sur un même système de fichiers, d'où le temporaire local.
+
+    ⚠️ Aucun échec ne remonte (un dossier en lecture seule doit laisser le run vivre — exigence
+    n°4 de l'avenant) : le temporaire est nettoyé, l'échec compté, et le run continue.
+    """
+    bus = getattr(etat, "telemetrie_bus", None)
+    fichier = getattr(etat, "telemetrie_fichier", None)
+    if bus is None or not fichier:
+        return False
+    trame = bus.structure()
+    if trame is None:
+        return False
+    from naulthene.cerveau.telemetrie import serialiser
+    temporaire = f"{fichier}.{os.getpid()}.tmp"
+    try:
+        with open(temporaire, "wb") as sortie:
+            sortie.write(serialiser(trame))
+        os.replace(temporaire, fichier)
+    except Exception as erreur:
+        try:
+            os.remove(temporaire)
+        except OSError:
+            pass
+        etat.telemetrie_ratees = getattr(etat, "telemetrie_ratees", 0) + 1
+        _echec_telemetrie(etat, erreur)
+        return False
+    etat.telemetrie_ecrites = getattr(etat, "telemetrie_ecrites", 0) + 1
+    etat.telemetrie_sequence = bus.sequence_structure
+    return True
+
+
+def _emettre_structure(etat) -> None:
+    """(Re)publie la trame `structure` et l'écrit dans son fichier.
+
+    Appelée au montage, à chaque NEUROGENÈSE (`executer_nuit`, à côté de
+    `declencher_neurogenese`) et après toute croissance que le rapporteur reconnaît lui-même
+    dans le tick. Le rapporteur relit les 12 formes SUR L'AGENT : une couche qui vient de
+    grandir est décrite à sa NOUVELLE taille, jamais à celle d'avant la nuit (`constat I-1`).
+    """
+    rapporteur = getattr(etat, "telemetrie_rapporteur", None)
+    if rapporteur is None:
+        return
+    try:
+        rapporteur.publier_structure(etat.agent, _meta_telemetrie(etat))
+        _ecrire_structure(etat)
+    except Exception as erreur:
+        _echec_telemetrie(etat, erreur)
+
+
+def _ouvrir_tick_telemetrie(etat) -> None:
+    """Ouvre la fenêtre de capture d'un tick — À APPELER AVANT CHAQUE TICK OBSERVÉ.
+
+    ⚠️ Contrepartie obligée de `_emettre_tick`, et c'est l'ordre qui fait la propriété : la
+    fenêtre s'ouvre en TÊTE de `traiter_tick` et se referme en QUEUE. Le rapporteur capture
+    toutes les écritures à une ligne, y compris celles qui n'appartiennent à aucun tick
+    (`rever()`, rejeu nocturne de `_epoques_supplementaires`) : sans réouverture, la première
+    trame du matin montrerait des couches écrites... la nuit — une capture périmée publiée
+    comme si elle était le présent, exactement ce que le rapporteur refuse par ailleurs.
+    """
+    rapporteur = getattr(etat, "telemetrie_rapporteur", None)
+    if rapporteur is None:
+        return
+    try:
+        rapporteur.nouveau_tick()
+    except Exception as erreur:
+        _echec_telemetrie(etat, erreur)
+
+
+def _emettre_tick(etat, action=None) -> None:
+    """Publie la trame d'activité du tick qui vient de se terminer, et la relaie en UDP.
+
+    Appelée en QUEUE de `traiter_tick`, quand TOUTES les écritures du tick ont eu lieu
+    (`penser()`, puis `generer_attente_reelle` et `perte_jepa` après le pas d'environnement) :
+    publier plus tôt — juste après l'arbitrage C1/C2 — perdrait les deux têtes JEPA du tick,
+    qui ne seraient plus qu'un silence déclaré.
+
+    `publier_activite` renvoie `None` quand la période du throttle n'est pas écoulée (le
+    cerveau vit à ~200 ticks/s, l'écran à 15 Hz) : c'est le SEUL cas où rien ne part, et il
+    n'est pas compté comme une perte — une trame non produite n'est pas une trame perdue.
+    """
+    rapporteur = getattr(etat, "telemetrie_rapporteur", None)
+    if rapporteur is None:
+        return
+    bus = getattr(etat, "telemetrie_bus", None)
+    try:
+        meta = _meta_telemetrie(etat)
+        if action is not None:
+            meta["action"] = int(action)
+        trame = rapporteur.publier_activite(etat.agent, meta)
+        if trame is not None:
+            etat.telemetrie.envoyer(trame)
+        # Le rapporteur reconnaît LUI-MÊME une neurogenèse et republie alors la structure : le
+        # fichier doit suivre, même si le point d'appel de la nuit n'a pas été traversé (une
+        # croissance reconnue au tick, un `.brain` repris déjà gros).
+        if (bus is not None and bus.sequence_structure != getattr(etat, "telemetrie_sequence", 0)):
+            _ecrire_structure(etat)
+    except Exception as erreur:
+        _echec_telemetrie(etat, erreur)
+
+
+def _emettre_evenement(etat, genre, **champs) -> None:
+    """Un fait daté, émis LÀ OÙ le cerveau le vit — à côté de la LTP (`fortifier_synapses`).
+
+    Ce que le cerveau grave, on le montre : la trame porte l'intensité RÉELLE de l'événement
+    (`poids_evenement`), jamais un dosage recalculé par l'instrument, qui ne saurait pas le
+    faire.
+    """
+    emetteur = getattr(etat, "telemetrie", None)
+    if emetteur is None:
+        return
+    try:
+        from naulthene.cerveau.telemetrie import trame_evenement
+        emetteur.envoyer(trame_evenement(genre, _meta_telemetrie(etat), **champs))
+    except Exception as erreur:
+        _echec_telemetrie(etat, erreur)
 
 
 # --- 2. LE CERVEAU C1 (RÉFLEXE) & C2 (NÉO-CORTEX) ---
@@ -7387,6 +7633,21 @@ class EtatCognitif:
             capacite_max=CAPACITE_MEMOIRE_EPISODIQUE, fenetre_fraicheur=FENETRE_FRAICHEUR_SOUVENIR,
         )  # générique, actif partout — persiste entre épisodes, vidée au changement de niveau
 
+        # v41.76 (VIS-01) — LA PASSERELLE DE TÉLÉMÉTRIE 3D : un INSTRUMENT, pas une mécanique.
+        # Tous à `None`/0 quand le drapeau `--telemetrie-3d` est absent : c'est ce que lisent les
+        # gardes `if … is None: return` des points d'appel, et c'est ce qui rend le run
+        # bit-identique (l'instrument n'exécute alors AUCUNE ligne dans le tick).
+        # ⚠️ Aucun de ces champs n'est sérialisé : `persistance.sauvegarder` construit son
+        # `checkpoint` clé par clé, donc la télémétrie reste propre au RUN — un `.brain` ne
+        # transporte ni un émetteur, ni un fichier de sortie, ni un rapporteur branché.
+        self.telemetrie = None             # l'émetteur UDP (activité + événements)
+        self.telemetrie_rapporteur = None  # le lecteur branché sur l'agent (hooks)
+        self.telemetrie_bus = None         # la dernière trame publiée, par canal
+        self.telemetrie_fichier = None     # le fichier JSON de la trame `structure`
+        self.telemetrie_erreurs = 0        # échecs de télémétrie (jamais fatals)
+        self.telemetrie_ecrites = 0        # écritures RÉUSSIES du fichier de structure
+        self.telemetrie_ratees = 0         # écritures tentées et ratées
+        self.telemetrie_sequence = 0       # `bus.sequence_structure` à la dernière écriture
         # --- Détecteurs ---
         self.detecteur = None            # spécifique DoorKey, créé à la volée
         self.palier_cible = 1
@@ -9388,6 +9649,11 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
                                           parent_actif=parent_actif,
                                           mfcc_references=mfcc_references)
 
+    # v41.76 (VIS-01) — la fenêtre de capture du tick s'ouvre ICI et se referme en QUEUE de
+    # fonction (`_emettre_tick`) : les écritures de la nuit ne comptent pas pour ce tick.
+    # Sans drapeau, `etat.telemetrie_rapporteur` est `None` : la garde retourne immédiatement.
+    _ouvrir_tick_telemetrie(etat)
+
     memoire_avant = etat.memoire_tampon
     etat.ticks_episode_courant += 1
     etat.tick_absolu += 1
@@ -10434,6 +10700,9 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
         micro_boost_ancrage = 1.0 + (BOOST_ANCRAGE_MAX - 1.0) * poids_evenement
         # LTP par pic de dopamine (v20.0)
         etat.agent.fortifier_synapses(poids_evenement)
+        # v41.76 (VIS-01) — ce que le cerveau GRAVE, on le montre : l'intensité transmise est
+        # celle qui vient d'être appliquée à la LTP, jamais un dosage recalculé par l'instrument.
+        _emettre_evenement(etat, "choc_dopamine", intensite=float(poids_evenement))
         if recompense_env > 0:
             etat.victoire_aujourdhui = True
     elif abandon_par_patience:
@@ -10578,6 +10847,11 @@ def traiter_tick(etat, obs_auditive=None, formants_cibles=None, mode_perception=
         etat.ressources_vues_jour += _compter_ressources_grille(etat)
     else:
         etat.etat_courant = etat_suivant
+
+    # v41.76 (VIS-01) — la trame d'activité du tick, EN QUEUE : toutes les écritures du tick ont
+    # eu lieu (les deux têtes JEPA comprises, après le pas d'environnement). Sans drapeau, la
+    # garde de `_emettre_tick` retourne immédiatement — c'est la preuve centrale de la tâche.
+    _emettre_tick(etat, action=action_item)
 
     return {
         'action': action_item,
@@ -11258,6 +11532,10 @@ def executer_nuit(etat, plafond_reve=None):
 
             if _ajout > 0:
                 etat.agent.declencher_neurogenese(ajout_dim=_ajout)
+                # v41.76 (VIS-01) — le cerveau a changé de FORME : la trame `structure` est
+                # réécrite immédiatement (fichier), pas à la prochaine trame d'activité — un
+                # spectateur qui se branche pendant la nuit doit voir la NOUVELLE scène.
+                _emettre_structure(etat)
                 etat.jours_depuis_mutation = 0
                 ratio_gravite = erreur_moyenne / max(etat.seuil_base, 1e-9)
                 etat.cooldown_jours = min(5, max(1, int(ratio_gravite * 0.1)))
@@ -12572,6 +12850,14 @@ if __name__ == "__main__":
     # 0,001, 1 tick sur 400). Ce flag force l'environnement où le signal existe.
     _p.add_argument("--env-force", type=str, default=None,
                     help="MESURE : force un env_id MiniGrid unique (ex. MiniGrid-LavaGapS6-v0)")
+    # v41.76 (VIS-01) — LA PASSERELLE. Ce n'est pas une ablation (rien n'est coupé) mais un
+    # INSTRUMENT : il branche un rapporteur sur le cerveau vivant et relaie ses trames vers un
+    # serveur 3D. Absent = aucune télémétrie construite, et le run est alors STRICTEMENT
+    # inchangé (aucune ligne de télémétrie exécutée dans le tick).
+    _p.add_argument("--telemetrie-3d", type=str, default=None, metavar="udp:HOTE:PORT",
+                    help="VIS-01 — émet la télémétrie du cerveau 3D vers un serveur "
+                         "(ex. udp:127.0.0.1:9998). Défaut : aucune télémétrie, et le run "
+                         "est alors strictement inchangé.")
     _args = _p.parse_args()
 
     # Drapeau global lu par `facteur_guidage` — un seul point de lecture, pas de
@@ -13004,6 +13290,18 @@ if __name__ == "__main__":
         _total = sum(p.numel() for p in etat.agent.parameters())
         print(f"🔬 [ABLATION] {_gelees:,} paramètres audio gelés "
               f"({100 * _gelees / _total:.2f} % du réseau) — 0 restant entraînable")
+
+    # v41.76 (VIS-01) — LA PASSERELLE, montée ICI : juste avant la première journée, donc AVANT
+    # `demarrer_journee` (sans quoi la première trame d'activité n'arriverait qu'après une
+    # journée entière), et seulement si le drapeau est là.
+    # ⚠️ APRÈS les `manual_seed` ci-dessus, et c'est délibéré : la télémétrie ne consomme AUCUN
+    # hasard (elle ne fait que LIRE le cerveau), mais l'ordre est ce qui le garantit à l'avenir —
+    # un instrument qui tirerait un nombre décalerait tous les tirages du cerveau, donc la
+    # trajectoire entière, et la preuve A/A le verrait comme un effet du drapeau.
+    # ⚠️ SANS le drapeau, cette ligne n'est pas exécutée : aucun objet de télémétrie n'est
+    # construit, et `etat.telemetrie` reste `None` (le défaut posé par `EtatCognitif`).
+    if _args.telemetrie_3d:
+        _monter_telemetrie(etat, _args.telemetrie_3d, _args.brain)
 
     for _ in range(1, _args.jours + 1):
         demarrer_journee(etat)

@@ -2538,3 +2538,446 @@ class TestCliModeCerveau(unittest.TestCase):
         self.assertEqual(resultat.stdout.strip(), "",
                          f"la CLI a chargé un cerveau sans qu'on le lui demande : "
                          f"{resultat.stdout.strip()}")
+
+
+# --- La PASSERELLE (tâche 9) : le drapeau `--telemetrie-3d` du noyau ---------------------------
+#
+# 🔴 AVENANT DE PROTOCOLE (mesuré le 10/09/2026), qui prime sur l'esquisse du plan : la trame
+# `structure` fait 305 086 octets à `dim_bus = 145`, pour un plafond DUR de 65 507 octets par
+# datagramme UDP — elle ne peut donc PAS passer par UDP. Le run l'écrit dans un FICHIER JSON à
+# côté du `.brain` (écriture atomique), au démarrage et après chaque neurogenèse ; seules
+# `activite` et `evenement` partent par UDP. Et `EmetteurUDP` relève `SO_SNDBUF`, sans quoi les
+# trames d'activité disparaissent EN SILENCE dès `dim_bus ≈ 409` (défaut macOS : 9 216 octets).
+
+FICHIER_STRUCTURE_SUFFIXE = ".vis01_structure.json"
+
+
+class _EmetteurEnMemoire:
+    """Émetteur de test : il RETIENT les trames au lieu de les jeter sur le réseau.
+
+    Double volontairement mince — le transport réel est déjà couvert par `TestBusEtEmetteur` ;
+    ce qui est mesuré ici est l'APPEL (« cette trame est-elle bien partie ? »).
+    """
+
+    def __init__(self, bus=None):
+        self.bus = bus
+        self.trames = []
+        self.ferme = False
+
+    def envoyer(self, trame):
+        self.trames.append(trame)
+        return True
+
+    def fermer(self):
+        self.ferme = True
+
+    def compteurs(self):
+        return {"envoyees": len(self.trames), "perdues": 0, "cible": "memoire"}
+
+
+def _faux_emetteur(bus):
+    return _EmetteurEnMemoire(bus)
+
+
+class TestTelemetrieDuNoyau(unittest.TestCase):
+    """Tâche 9 — LA PASSERELLE : n'importe quel run peut émettre sa télémétrie.
+
+    ⚠️ La propriété centrale n'est pas « ça émet » mais « SANS le drapeau, rien ne change » :
+    chaque point d'appel commence par `if … is None: return`, et le tick sans drapeau ne gagne
+    qu'un `getattr` et une comparaison à `None`. Les tests qui comparent deux ticks identiques
+    avec et sans émetteur sont la preuve de cette neutralité (`torch.equal` sur les sorties, non
+    contents d'un « aucune exception »).
+    """
+
+    GRAINE = 11
+
+    @classmethod
+    def _etat(cls, dossier, nom="vis01.brain"):
+        """Un état RÉEL, reproductible : même graine, même monde, même cerveau.
+
+        ⚠️ `charger_ou_naitre()` fait naître l'agent EN MÉMOIRE et n'écrit RIEN sur le disque
+        (c'est `sauvegarder` qui cristallise) — un test qui attendrait un `.brain` sur le disque
+        après cet appel échouerait pour une mauvaise raison.
+        """
+        import torch
+        from naulthene.cerveau.persistance import PersistanceAnatomique
+        torch.manual_seed(cls.GRAINE)
+        np.random.seed(cls.GRAINE)
+        return PersistanceAnatomique(os.path.join(str(dossier), nom)).charger_ou_naitre()
+
+    @staticmethod
+    def _lire_structure(chemin):
+        """La trame de structure telle qu'un spectateur la lira : JSON STRICT, sur le disque."""
+        with open(chemin, "rb") as fichier:
+            return json_strict(fichier.read())
+
+    # --- 1. Sans le drapeau ------------------------------------------------------------------
+
+    def test_sans_le_drapeau_aucun_objet_de_telemetrie_n_existe(self):
+        """Le défaut du projet : `etat.telemetrie is None`, et aucun drapeau au niveau module.
+
+        ⚠️ `TELEMETRIE_3D_ACTIVE` ne doit PAS exister : la télémétrie n'est pas une mécanique du
+        cerveau mais un INSTRUMENT, et le motif « constante de module + assertion runtime » du
+        dépôt sert à vérifier qu'un drapeau a mordu sur le comportement — pas à instrumenter.
+        """
+        import naulthene.cerveau.noyau as N
+        self.assertFalse(getattr(N, "TELEMETRIE_3D_ACTIVE", False))
+        with tempfile.TemporaryDirectory() as dossier:
+            etat = self._etat(dossier)
+            try:
+                self.assertIsNone(etat.telemetrie)
+                self.assertIsNone(etat.telemetrie_rapporteur)
+                self.assertIsNone(etat.telemetrie_fichier)
+            finally:
+                etat.env.close()
+
+    def test_run_identique_avec_et_sans_emetteur(self):
+        """🔴 LE test central (exigence n°1 de la tâche) : `traiter_tick` rend EXACTEMENT la même
+        action et les mêmes `infos_internes`, émetteur branché ou non.
+
+        ⚠️ Ici l'émetteur est posé SANS rapporteur (`etat.telemetrie_rapporteur` reste `None`) :
+        c'est exactement le cas que la garde doit couvrir — l'émetteur existe, mais le canal qui
+        passe par les hooks doit rester muet. « Aucune trame d'ACTIVITÉ » est la preuve que la
+        garde a mordu, là où « aucune exception » ne prouverait rien (un chemin exécuté sans effet
+        passerait aussi ce test). Le canal `evenement`, lui, ne dépend QUE de l'émetteur : un choc
+        dopaminergique est un fait daté, et le premier tick d'un cerveau neuf en produit un.
+        """
+        from naulthene.cerveau.noyau import demarrer_journee, traiter_tick
+
+        resultats, vu = {}, {}
+        for bras in ("sans", "avec"):
+            with tempfile.TemporaryDirectory() as dossier:
+                etat = self._etat(dossier)
+                demarrer_journee(etat)      # le premier tick l'exige : il part de `memoire_tampon`
+                emetteur = _faux_emetteur(None)
+                if bras == "avec":
+                    etat.telemetrie = emetteur
+                try:
+                    infos = traiter_tick(etat)
+                finally:
+                    etat.env.close()
+                resultats[bras] = (infos["action"], infos["infos_internes"])
+                vu[bras] = emetteur
+
+        self.assertEqual(resultats["sans"], resultats["avec"])
+        # ⚠️ Le témoin porte sur l'ACTIVITÉ, pas sur « aucune trame » : le canal `evenement` ne
+        # dépend que de l'émetteur (un choc dopaminergique est un fait daté, il n'a pas besoin
+        # d'un rapporteur branché), et le premier tick d'un cerveau neuf en émet un — légitimement.
+        # Ce qui doit être muet ici, c'est le canal qui passe par les hooks.
+        self.assertEqual([t for t in vu["avec"].trames if t["type"] == "activite"], [],
+                         "une trame d'activité est partie sans rapporteur branché : "
+                         "la garde n'a pas mordu")
+
+    def test_run_identique_avec_le_rapporteur_reellement_branche(self):
+        """Le même test, mais avec TOUT le chemin réel : hooks posés, captures, encodage, envoi.
+
+        ⚠️ C'est le test qui compte vraiment : le précédent ne parcourt aucune ligne de télémétrie
+        (la garde l'arrête). Ici `_monter_telemetrie` attache le rapporteur sur le VRAI agent
+        (12 `register_forward_hook`) et le tick passe par `nouveau_tick` → captures → `publier_activite`
+        → encodage float16/base64 → `envoyer`. Si un hook modifiait la sortie observée, ou si la
+        télémétrie consommait du hasard (l'action est ÉCHANTILLONNÉE), ce test le verrait.
+
+        Le témoin « au moins une trame est partie » est dans le même test : sans lui, un montage
+        vide (rapporteur jamais attaché) rendrait les deux bras identiques et le test passerait au
+        vert sans rien prouver.
+        """
+        from naulthene.cerveau.noyau import demarrer_journee, traiter_tick, _monter_telemetrie
+
+        resultats, vu = {}, {}
+        for bras in ("sans", "avec"):
+            with tempfile.TemporaryDirectory() as dossier:
+                etat = self._etat(dossier)
+                emetteur = _faux_emetteur(None)
+                if bras == "avec":
+                    # Le montage AVANT `demarrer_journee`, comme dans `main` : la première trame
+                    # ne doit pas attendre une journée entière.
+                    _monter_telemetrie(etat, "udp:127.0.0.1:1",
+                                       os.path.join(dossier, "vis01.brain"))
+                    etat.telemetrie = emetteur
+                demarrer_journee(etat)
+                try:
+                    infos = traiter_tick(etat)
+                finally:
+                    etat.env.close()
+                resultats[bras] = (infos["action"], infos["infos_internes"])
+                vu[bras] = emetteur
+
+        self.assertEqual(resultats["sans"], resultats["avec"])
+        activites = [t for t in vu["avec"].trames if t["type"] == "activite"]
+        self.assertTrue(activites, "aucune trame d'activité n'est partie : montage vide")
+        self.assertEqual(len(activites[0]["neurones"]), 12)
+        self.assertIn("dopamine", activites[0]["scalaires"])
+        self.assertIn("action", activites[0]["scalaires"])
+
+    # --- 2. Le fichier de structure (l'avenant) ----------------------------------------------
+
+    def test_le_fichier_de_structure_est_ecrit_au_montage(self):
+        """La trame `structure` va dans un FICHIER, à côté du `.brain`, avant la première journée.
+
+        Ce qui est vérifié n'est pas « un fichier existe » (il pourrait contenir n'importe quoi)
+        mais ce qu'un spectateur y lira : les 12 couches, `dim_bus` ÉGAL à celui de l'agent, des
+        poids quantifiés exploitables, et des positions `float16` de la bonne longueur. Les formes
+        sont croisées avec `disposition`/`definir_couches` — la table INDÉPENDANTE.
+        """
+        from naulthene.cerveau.noyau import _monter_telemetrie
+        from naulthene.cerveau.telemetrie import decoder_octets, definir_couches
+
+        with tempfile.TemporaryDirectory() as dossier:
+            chemin = os.path.join(dossier, "vis01.brain")
+            etat = self._etat(dossier)
+            try:
+                _monter_telemetrie(etat, "udp:127.0.0.1:1", chemin)
+                fichier = chemin + FICHIER_STRUCTURE_SUFFIXE
+                self.assertTrue(os.path.exists(fichier))
+                # Écriture ATOMIQUE : aucun fichier temporaire ne survit à la publication.
+                self.assertEqual([n for n in os.listdir(dossier) if n.endswith(".tmp")], [])
+                self.assertIsNotNone(etat.telemetrie)
+                self.assertIsNotNone(etat.telemetrie_rapporteur)
+                self.assertEqual(etat.telemetrie_ecrites, 1)
+
+                trame = self._lire_structure(fichier)
+                self.assertEqual(trame["type"], "structure")
+                self.assertEqual(trame["dim_bus"], int(etat.agent.dim_bus))
+                self.assertEqual(len(trame["couches"]), 12)
+                attendues = {c["nom"]: c["sortie"]
+                             for c in definir_couches(int(etat.agent.dim_bus))}
+                self.assertEqual({c["nom"]: c["sortie"] for c in trame["couches"]}, attendues)
+                for couche in trame["couches"]:
+                    self.assertGreater(couche["echelle"], 0.0, couche["nom"])
+                    poids = decoder_octets(couche["poids_i8"])
+                    positions = decoder_octets(couche["positions"])
+                    self.assertEqual(len(poids), couche["entree"] * couche["sortie"])
+                    self.assertEqual(len(positions), 3 * 2 * couche["sortie"])
+                    self.assertEqual(len(np.frombuffer(positions, dtype=np.float16)),
+                                     3 * couche["sortie"])
+                # Les bornes sensorielles partent aussi : sans elles, la page ne sait pas où
+                # branchér l'entrée du monde sur la première plaque.
+                self.assertTrue(trame["bornes"])
+            finally:
+                etat.env.close()
+
+    def test_le_fichier_de_structure_est_reecrit_apres_une_neurogenese(self):
+        """Le cerveau GRANDIT la nuit : le fichier doit dire la NOUVELLE forme, pas l'ancienne.
+
+        Deux chemins sont exercés, parce que deux existent dans `noyau.py` :
+        (1) le tick suivant la croissance, où le rapporteur la reconnaît LUI-MÊME (`constat I-1`)
+            et republie la structure — le fichier est alors réécrit sans que personne l'ait
+            demandé ;
+        (2) l'appel explicite de la nuit, juste après `declencher_neurogenese` (`executer_nuit`).
+        Le premier compte autant que le second : un cerveau repris déjà gros, ou toute croissance
+        qui ne passe pas par `executer_nuit`, ne repasserait jamais par le point d'appel de la nuit.
+
+        ⚠️ Le témoin est `dim_bus` : 16 → 24 → 32. Un test qui se contenterait de « le fichier
+        existe toujours » passerait sur un fichier jamais réécrit.
+        """
+        from naulthene.cerveau.noyau import (_emettre_structure, _monter_telemetrie,
+                                             demarrer_journee, traiter_tick)
+
+        with tempfile.TemporaryDirectory() as dossier:
+            chemin = os.path.join(dossier, "vis01.brain")
+            etat = self._etat(dossier)
+            try:
+                _monter_telemetrie(etat, "udp:127.0.0.1:1", chemin)
+                demarrer_journee(etat)
+                etat.telemetrie = _faux_emetteur(None)
+                fichier = chemin + FICHIER_STRUCTURE_SUFFIXE
+                self.assertEqual(self._lire_structure(fichier)["dim_bus"], 16)
+
+                # (1) la croissance que le RAPPORTEUR reconnaît tout seul, dans le tick : c'est
+                # le chemin qui compte pour un cerveau repris, ou pour toute croissance qui ne
+                # passe pas par `executer_nuit`.
+                # ⚠️ `demarrer_journee` EST la transition nuit → matin : c'est elle qui reconstruit
+                # les buffers à la NOUVELLE largeur (`memoire_tampon`, `etat_courant`). Sans elle,
+                # le tick lèverait sur une multiplication de formes — propriété du tick, pas de la
+                # télémétrie : dans un vrai run, la croissance a lieu la nuit, et le premier tick
+                # du lendemain passe par cette fonction.
+                etat.agent.declencher_neurogenese(ajout_dim=8)
+                demarrer_journee(etat)
+                traiter_tick(etat)
+                self.assertEqual(self._lire_structure(fichier)["dim_bus"], 24)
+                self.assertEqual(etat.telemetrie_ecrites, 2)
+
+                # (2) la croissance de la nuit, annoncée par son point d'appel (`executer_nuit`).
+                # ⚠️ On ne rejoue PAS de tick après cette seconde croissance : `traiter_tick`
+                # porterait encore les buffers de la largeur précédente (`memoire_tampon`,
+                # `etat_courant`) et lèverait sur une multiplication de formes — c'est une
+                # propriété du tick, pas de la télémétrie, et la nuit qui grandit le cerveau
+                # reconstruit ces buffers avant le tick suivant.
+                etat.agent.declencher_neurogenese(ajout_dim=8)
+                _emettre_structure(etat)
+                self.assertEqual(self._lire_structure(fichier)["dim_bus"], 32)
+                self.assertEqual(etat.telemetrie_ecrites, 3)
+            finally:
+                etat.env.close()
+
+    def test_un_dossier_non_inscriptible_compte_l_echec_sans_tuer_le_run(self):
+        """Exigence n°4 de l'avenant : si le fichier ne peut pas être écrit, le run CONTINUE.
+
+        La télémétrie est un instrument : elle n'a pas le droit de tuer un entraînement de
+        1500 jours parce qu'un dossier est en lecture seule. L'échec est COMPTÉ (et signalé une
+        fois), jamais avalé en silence ni propagé.
+        """
+        from naulthene.cerveau.noyau import (_emettre_structure, _monter_telemetrie,
+                                             demarrer_journee, traiter_tick)
+
+        if hasattr(os, "geteuid") and os.geteuid() == 0:
+            self.skipTest("root ignore les permissions de dossier : le cas n'est pas mesurable")
+        with tempfile.TemporaryDirectory() as dossier:
+            chemin = os.path.join(dossier, "vis01.brain")
+            etat = self._etat(dossier)
+            try:
+                _monter_telemetrie(etat, "udp:127.0.0.1:1", chemin)
+                etat.telemetrie = _faux_emetteur(None)
+                demarrer_journee(etat)
+                self.assertEqual(etat.telemetrie_ecrites, 1)
+                self.assertEqual(etat.telemetrie_ratees, 0)
+
+                os.chmod(dossier, 0o500)
+                try:
+                    _emettre_structure(etat)           # ne lève pas
+                    self.assertEqual(etat.telemetrie_ratees, 1)
+                    self.assertEqual(etat.telemetrie_ecrites, 1)
+                    infos = traiter_tick(etat)         # le run vit toujours
+                    self.assertIn("action", infos)
+                finally:
+                    os.chmod(dossier, 0o700)
+            finally:
+                etat.env.close()
+
+    # --- 3. Le transport (l'avenant : SO_SNDBUF) ---------------------------------------------
+
+    def test_l_emetteur_releve_so_sndbuf(self):
+        """Sans `SO_SNDBUF` relevé, les trames d'activité meurent EN SILENCE dès `dim_bus ≈ 409`.
+
+        Mesuré sur cette machine (défaut macOS `SO_SNDBUF = 9 216`) : 9 198 octets passent,
+        9 230 échouent en `OSError [Errno 40]`, sans que l'appelant puisse le distinguer d'un
+        cerveau lent. La valeur demandée doit couvrir le plafond DUR d'un datagramme (65 507),
+        et la valeur EFFECTIVEMENT accordée par le noyau doit être très au-dessus du défaut.
+        """
+        import socket
+        from naulthene.cerveau.telemetrie import TAMPON_ENVOI_UDP, EmetteurUDP
+
+        self.assertGreaterEqual(TAMPON_ENVOI_UDP, 65507)
+        temoin = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            defaut = temoin.getsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF)
+        finally:
+            temoin.close()
+        emetteur = EmetteurUDP("udp:127.0.0.1:1")
+        try:
+            effectif = emetteur._socket.getsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF)
+            self.assertEqual(emetteur.tampon_envoi, effectif)
+            self.assertGreaterEqual(effectif, 2 * defaut)
+        finally:
+            emetteur.fermer()
+
+    def test_une_trame_de_9230_octets_traverse_udp(self):
+        """La mesure qui prouve que le seuil RECULE : une trame de `dim_bus ≈ 409` (9 230 octets).
+
+        ⚠️ Le témoin est le DÉFAUT de la plateforme, mesuré à l'exécution (pas une constante
+        supposée) : là où il est inférieur à la trame (macOS : 9 216), l'émetteur du projet doit
+        la faire passer quand même — c'est tout l'objet de l'avenant. Sur une plateforme dont le
+        défaut est déjà large (Linux : 212 992), le témoin n'a rien à démontrer et le test se
+        contente de vérifier que la trame ARRIVE.
+        """
+        import socket as sock
+        from naulthene.cerveau.telemetrie import EmetteurUDP, serialiser, trame_activite
+
+        # ⚠️ La trame est calée EXACTEMENT sur la taille MESURÉE du seuil de mort silencieuse
+        # (9 230 octets, soit `dim_bus ≈ 409`) : un bourrage « à peu près » retomberait sous les
+        # 9 216 du défaut et le test passerait sans rien prouver — c'est précisément ce qui s'est
+        # produit à la première écriture de ce test (9 110 octets, témoin vert par accident).
+        taille = 9230
+        bourrage = ""
+        for _ in range(4):
+            trame = trame_activite({}, {}, {"bourrage": bourrage})
+            manque = taille - len(serialiser(trame))
+            if manque <= 0:
+                break
+            bourrage += "x" * manque
+        octets = serialiser(trame)
+        self.assertEqual(len(octets), taille)
+
+        ecoute = sock.socket(sock.AF_INET, sock.SOCK_DGRAM)
+        ecoute.bind(("127.0.0.1", 0))
+        ecoute.settimeout(2.0)
+        port = ecoute.getsockname()[1]
+        temoin = sock.socket(sock.AF_INET, sock.SOCK_DGRAM)
+        try:
+            defaut = temoin.getsockopt(sock.SOL_SOCKET, sock.SO_SNDBUF)
+            if defaut < len(octets):
+                with self.assertRaises(OSError):
+                    temoin.sendto(octets, ("127.0.0.1", port))
+            emetteur = EmetteurUDP(f"udp:127.0.0.1:{port}")
+            try:
+                self.assertTrue(emetteur.envoyer(trame))
+                recu, _ = ecoute.recvfrom(70000)
+            finally:
+                emetteur.fermer()
+        finally:
+            temoin.close()
+            ecoute.close()
+        self.assertEqual(recu, octets)
+
+    # --- 4. Les événements et le câblage ------------------------------------------------------
+
+    def test_un_evenement_est_emis_la_ou_le_cerveau_grave(self):
+        """Un choc dopaminergique est un FAIT daté : il part sur le canal `evenement`.
+
+        L'intensité est celle que le cerveau vient d'appliquer (`poids_evenement`) — elle n'est ni
+        recalculée ni dosée par la télémétrie. Le `niveau` porte TOUJOURS `env_id` : un niveau sans
+        son `env_id` est ambigu (règle du 07/09).
+        """
+        from naulthene.cerveau.noyau import _emettre_evenement
+
+        with tempfile.TemporaryDirectory() as dossier:
+            etat = self._etat(dossier)
+            emetteur = _faux_emetteur(None)
+            try:
+                _emettre_evenement(etat, "choc_dopamine", intensite=0.75)   # sans émetteur : rien
+                self.assertEqual(emetteur.trames, [])
+                etat.telemetrie = emetteur
+                _emettre_evenement(etat, "choc_dopamine", intensite=0.75)
+                self.assertEqual(len(emetteur.trames), 1)
+                trame = emetteur.trames[0]
+                self.assertEqual(trame["type"], "evenement")
+                self.assertEqual(trame["genre"], "choc_dopamine")
+                self.assertEqual(trame["intensite"], 0.75)
+                self.assertEqual(trame["niveau"]["env_id"], etat.env_id)
+                self.assertEqual(trame["tick"], int(etat.tick_absolu))
+            finally:
+                etat.env.close()
+
+    def test_les_points_d_appel_sont_branches_dans_le_tick_et_dans_la_nuit(self):
+        """Le CÂBLAGE des points d'appel — un test de forme, et ses limites sont dites.
+
+        Une garde juste et un montage juste ne servent à rien si personne ne les appelle. Ces
+        points d'appel sont dans le corps de fonctions de 1 000 lignes qu'aucun test unitaire ne
+        peut traverser entièrement (le tick est mesuré ci-dessus, la NUIT ne l'est pas : elle
+        coûte 400 ticks + un cycle de sommeil). On vérifie donc la seule chose vérifiable à ce
+        prix : que l'appel existe LÀ OÙ le cerveau vit, et à côté de quoi il est posé —
+        `nouveau_tick` AVANT le tick (sinon la capture retiendrait les écritures de la nuit),
+        l'événement à côté de `fortifier_synapses` (ce que le cerveau grave, on le montre),
+        la structure juste après la neurogenèse (la forme du cerveau a changé).
+        """
+        import inspect
+        import naulthene.cerveau.noyau as N
+
+        source_tick = inspect.getsource(N.traiter_tick)
+        self.assertIn("_ouvrir_tick_telemetrie(etat)", source_tick)
+        self.assertIn("_emettre_tick(etat", source_tick)
+        self.assertIn("_emettre_evenement(etat", source_tick)
+        # L'ouverture de la fenêtre de capture précède le premier pas du tick : l'ordre est la
+        # propriété, pas la présence.
+        self.assertLess(source_tick.index("_ouvrir_tick_telemetrie(etat)"),
+                        source_tick.index("memoire_avant = etat.memoire_tampon"))
+        # L'événement est posé À CÔTÉ de la LTP, dans le même `if poids_evenement > 0:`.
+        i_fort = source_tick.index("fortifier_synapses(poids_evenement)")
+        i_evt = source_tick.index("_emettre_evenement(etat")
+        self.assertLess(abs(i_evt - i_fort), 400)
+
+        source_nuit = inspect.getsource(N.executer_nuit)
+        i_neuro = source_nuit.index("declencher_neurogenese(ajout_dim=_ajout)")
+        i_struct = source_nuit.index("_emettre_structure(etat)")
+        self.assertLess(i_neuro, i_struct)
+        self.assertLess(i_struct - i_neuro, 1500)
