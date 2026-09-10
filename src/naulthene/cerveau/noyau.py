@@ -1,9 +1,11 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (C) 2026 Adrien Nault — Naulthène AGI
-#Version actuelle 41.68 — SOURCE DE VÉRITÉ OPÉRATIONNELLE UNIQUE du projet (décision ARC-01,
+#Version actuelle 41.75 — SOURCE DE VÉRITÉ OPÉRATIONNELLE UNIQUE du projet (décision ARC-01,
 # 08/09/2026, v41.72). `colab.py` (v17) est une archive historique figée — aucune mécanique n'y
 # est plus portée. Le marqueur ci-dessus suit le CHANGELOG (une entrée par version) — il
-# indiquait « 29 » jusqu'au 02/09/2026, périmé de 20 versions.
+# indiquait « 29 » jusqu'au 02/09/2026, périmé de 20 versions, puis « 41.68 » jusqu'au
+# 10/09/2026, périmé de 7 versions (dernière entrée : v41.75 ; décision de l'auteur du
+# 10/09/2026 : « l'en-tête est en retard, le CHANGELOG fait foi » — registre DOC-03).
 # Différences historiques avec colab.py : détection du device MPS (Apple Silicon) et
 # jours_totaux réglé pour des runs locaux plus courts que les 400 jours de Colab.
 

@@ -4,45 +4,6 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
-## [v41.71] - 2026-09-08 — DOC-01 : `ETAT_COURANT.md` créé, INDEX nettoyé, DOC-01 clos
-
-| Type | Details |
-|------|---------|
-| **Catégorie** | docs (aucune ligne de `noyau.py` — pure documentation) |
-| **Impact** | Moyen — il existe désormais **un seul instantané factuel de l'état** (`docs/ETAT_COURANT.md`), et l'INDEX mène à lui en premier |
-| **Registre** | [REGISTRE_PROBLEMES_A_CORRIGER](../ameliorations/REGISTRE_PROBLEMES_A_CORRIGER.md) DOC-01 → ✅ **Clos** (dernier exemple traité) |
-
-1. **`docs/ETAT_COURANT.md` créé** — l'instantané unique, court, réécrit (jamais accumulé)
-   après chaque résultat majeur : le mur réel (`niveau N/15` + `env_id`, mur =
-   `SimpleCrossingS9N1` affiché 4/15, franchi par 5/20 sous K8), la croissance **×28,2**
-   mesurée (46 840 → 1 321 618, n=44, 07/09), les leviers mesurés de l'apprenant
-   (detach-c2, époques K8 avec sa réserve APP-01, voix libre), l'état du registre
-   (verrous clos/ouverts), SCI-01 Wave 1 **en cours** et les liens normatifs.
-2. **`docs/INDEX.md` nettoyé** — le bloc « À lire en premier » datait du 02/09 (21
-   réfutations, directivité « piste en cours ») et **contredisait** l'état réel : remplacé
-   par un point d'entrée vers `ETAT_COURANT.md` puis les carnets 07/09 ; lignes de la table
-   des questions rafraîchies (CURSUS 23ᵉ réfutation, PLATITUDE/PAS_GRADIENT) ; deux carnets
-   07/09 manquants ajoutés au tableau des campagnes (BRANCHES_PERSISTANTES, PPO_AU_SEUIL) ;
-   comptage de la série des pistes closes corrigé (16 carnets, 23/08 → 04/09) ; la ligne
-   PPO_LAVAGAP porte désormais sa rétractation (07/09) au lieu de la conclusion retirée.
-3. **Liens corrigés dans ce fichier** — les 7 références au registre pointaient vers
-   `../../ameliorations/` (chemin inexistant depuis `docs/fonctionnement/`) : corrigées en
-   `../ameliorations/` ; toutes les références relatives du CHANGELOG résolvent (vérifié).
-4. **Miroir EN/FR vérifié** — les faits de l'en-tête sont identiques dans `readme.md` et
-   `readme_fr.md` (28,2×/~28,2, 1,01/18,76/0,0073 requalifiés, `(env_id)` sur les niveaux) ;
-   les résidus « ~24 » et « 2,86 » ne subsistent que dans les blocs historiques datés,
-   conformément à la règle de trace.
-5. **CLAUDE.md** (déjà dans `6d9ae57`, rappelé ici) — la ligne « protocole A préparé, non
-   lancé » (fausse depuis le 07/09) est remplacée par le fait dépouillé (2/5 graines ≥ 12/20
-   → la porte 60 % n'est pas le mur).
-
-**Clôture DOC-01 (critères)** : état courant unique ✅ · miroir EN/FR strict ✅ · corrections
-annotées, aucune archive effacée ✅ · CHANGELOG et registre à jour ✅. Restent hors périmètre
-DOC-01 : `ARC-01` (décision `noyau.py`/`colab.py` — proposée séparément) et la réduction de
-CLAUDE.md aux règles + liens (dette documentaire, point général 07/09).
-
----
-
 ## [v41.75] - 2026-09-09 — REP-01 : script de validation d'environnement vierge prêt (exécution différée)
 
 | Type | Details |
@@ -155,6 +116,45 @@ exécuter après la fin de SCI-01 Wave 1, sans concurrencer les runs.
    maintenance. Le récit des campagnes (23 réfutations, murs, leviers) passe aux carnets et à
    `ETAT_COURANT.md` ; la « Variante Locale (Mac) » (noyau = essai / colab = référence) a
    disparu au profit de la section 1 « Source de vérité ».
+
+---
+
+## [v41.71] - 2026-09-08 — DOC-01 : `ETAT_COURANT.md` créé, INDEX nettoyé, DOC-01 clos
+
+| Type | Details |
+|------|---------|
+| **Catégorie** | docs (aucune ligne de `noyau.py` — pure documentation) |
+| **Impact** | Moyen — il existe désormais **un seul instantané factuel de l'état** (`docs/ETAT_COURANT.md`), et l'INDEX mène à lui en premier |
+| **Registre** | [REGISTRE_PROBLEMES_A_CORRIGER](../ameliorations/REGISTRE_PROBLEMES_A_CORRIGER.md) DOC-01 → ✅ **Clos** (dernier exemple traité) |
+
+1. **`docs/ETAT_COURANT.md` créé** — l'instantané unique, court, réécrit (jamais accumulé)
+   après chaque résultat majeur : le mur réel (`niveau N/15` + `env_id`, mur =
+   `SimpleCrossingS9N1` affiché 4/15, franchi par 5/20 sous K8), la croissance **×28,2**
+   mesurée (46 840 → 1 321 618, n=44, 07/09), les leviers mesurés de l'apprenant
+   (detach-c2, époques K8 avec sa réserve APP-01, voix libre), l'état du registre
+   (verrous clos/ouverts), SCI-01 Wave 1 **en cours** et les liens normatifs.
+2. **`docs/INDEX.md` nettoyé** — le bloc « À lire en premier » datait du 02/09 (21
+   réfutations, directivité « piste en cours ») et **contredisait** l'état réel : remplacé
+   par un point d'entrée vers `ETAT_COURANT.md` puis les carnets 07/09 ; lignes de la table
+   des questions rafraîchies (CURSUS 23ᵉ réfutation, PLATITUDE/PAS_GRADIENT) ; deux carnets
+   07/09 manquants ajoutés au tableau des campagnes (BRANCHES_PERSISTANTES, PPO_AU_SEUIL) ;
+   comptage de la série des pistes closes corrigé (16 carnets, 23/08 → 04/09) ; la ligne
+   PPO_LAVAGAP porte désormais sa rétractation (07/09) au lieu de la conclusion retirée.
+3. **Liens corrigés dans ce fichier** — les 7 références au registre pointaient vers
+   `../../ameliorations/` (chemin inexistant depuis `docs/fonctionnement/`) : corrigées en
+   `../ameliorations/` ; toutes les références relatives du CHANGELOG résolvent (vérifié).
+4. **Miroir EN/FR vérifié** — les faits de l'en-tête sont identiques dans `readme.md` et
+   `readme_fr.md` (28,2×/~28,2, 1,01/18,76/0,0073 requalifiés, `(env_id)` sur les niveaux) ;
+   les résidus « ~24 » et « 2,86 » ne subsistent que dans les blocs historiques datés,
+   conformément à la règle de trace.
+5. **CLAUDE.md** (déjà dans `6d9ae57`, rappelé ici) — la ligne « protocole A préparé, non
+   lancé » (fausse depuis le 07/09) est remplacée par le fait dépouillé (2/5 graines ≥ 12/20
+   → la porte 60 % n'est pas le mur).
+
+**Clôture DOC-01 (critères)** : état courant unique ✅ · miroir EN/FR strict ✅ · corrections
+annotées, aucune archive effacée ✅ · CHANGELOG et registre à jour ✅. Restent hors périmètre
+DOC-01 : `ARC-01` (décision `noyau.py`/`colab.py` — proposée séparément) et la réduction de
+CLAUDE.md aux règles + liens (dette documentaire, point général 07/09).
 
 ---
 

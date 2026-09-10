@@ -92,3 +92,9 @@ brains/**/*.log
 # Les fichiers RESTENT sur le disque local ; cette règle empêche seulement qu'ils y reviennent.
 docs/naulthene_cosmologie/
 .taches
+
+# VIS-01 (10/09/2026) — journal d'exécution du flux « développement piloté par sous-agents » :
+# briefs, rapports, paquets de revue et journal de progression d'un plan en cours. Ce sont des
+# artefacts de travail d'une exécution locale (comme les .log de campagne), régénérables et
+# sans intérêt pour un lecteur du dépôt : le plan et la spec, eux, SONT versionnés.
+.superpowers/

@@ -34,9 +34,27 @@ réellement dans MiniGrid :
 
 ⚠️ Garantie explicite (même contrat que `lancer_arene.py`) : ce scanner n'entraîne
 JAMAIS le cerveau qu'il observe. `etat.agent.eval()` est appelé après le chargement,
-`executer_nuit`/`apprendre_journee` ne sont jamais invoqués — seul `traiter_tick`
-tourne (pense/agit, ne modifie aucun poids hors d'un `backward()` explicite, jamais
-appelé ici). Lancer ce scanner autant de fois que voulu ne modifie jamais le `.brain`.
+`executer_nuit`/`apprendre_journee` ne sont jamais invoqués — seuls `traiter_tick`
+(pense/agit) et la LTP qu'il déclenche sur un pic dopaminergique tournent.
+Lancer ce scanner autant de fois que voulu ne modifie jamais le `.brain`.
+
+⚠️ **Formulation corrigée le 10/09/2026** (registre DOC-02). La version précédente disait
+« ne modifie aucun poids hors d'un `backward()` explicite » : c'est **inexact**. Sur un pic
+dopaminergique, `traiter_tick` appelle `fortifier_synapses`, qui écrit **en place, sous
+`no_grad`, dans `base_weight` ET `myeline_M`** (noyau.py, section 1) — **sans aucun
+`backward()`, et sans que `eval()` l'arrête** (`fortification_dopaminergique` n'est pas
+conditionnée par `self.training`).
+
+En pratique — et c'est mesuré — l'écriture est **numériquement nulle** en observation :
+la fonction grave `trace_activation × pic`, or `cycle_sommeil` remet cette trace à zéro,
+donc tout `.brain` sauvegardé après une nuit porte `|trace_activation|max = 0,000e+00`
+(relevé sur les 12 couches de `brains/08092026_sci01_balayage_K/K4_NU/K4_NU_g11.brain`),
+et `ancrage = 0` n'ajoute rien. ⚠️ Elle ne l'est **pas** pour un `.brain` sauvegardé en
+pleine journée — cas réel : la **micro-sieste de la Cuve** (`daemon_cerveau.py`,
+`_processus_nocturne`, qui sauvegarde sans nuit) : le premier pic y écrirait alors de
+vraies valeurs, **en mémoire seulement**. Ce qui reste vrai dans tous les cas, et qui est
+la garantie qui compte : **le fichier `.brain` n'est jamais touché**, aucune sauvegarde
+n'étant appelée ici.
 
 Usage :
     python irm_cerveau.py                                # naulthene_bb.brain par défaut

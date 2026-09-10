@@ -71,6 +71,9 @@ Un problème ne passe à `✅ Clos` que si les quatre éléments suivants sont c
 | SCI-04 | P2 | 🔵 À mesurer | Le ratio Bio/Env est non tranché et mal nommé « gradient » | Mesure causale avec échelle dérivée |
 | SCI-05 | P3 | 🟡 À décider | La tête d'intention C2 serait construite avant validation complète de ses entrées | Reporter après fidélité du rollout et ablations |
 | ARC-01 | P2 | ✅ Clos | `colab.py` reste nommé référence alors que le développement réel vit dans `noyau.py` | Décidé 08/09 (v41.72) : `noyau.py` source de vérité unique, `colab.py` = archive v17 |
+| VIS-01 | P3 | 🟡 À décider | Le cerveau n'est observable qu'à plat (courbes, barres, heatmap) : sa structure spatiale, sa croissance et ses neurones morts ne se voient pas | Chantier d'instrument — spec **validée le 10/09** (`ameliorations/CHANTIER_VIS-01_cerveau_3d_irm_vivante.md`) ; étapes 0/1 sans impact sur `noyau.py`, étape 2 = drapeau additif + test bit-identique |
+| DOC-02 | P2 | 🟠 Corrigé (clôture suspendue) | La garantie « ne modifie aucun poids » de `irm_cerveau.py` et `lancer_arene.py` est **inexacte** : `fortifier_synapses` écrit sous `no_grad`, sans `backward()` | Docstrings corrigées 10/09 (mesure : trace nulle ⇒ écriture nulle) ; **entrée CHANGELOG en attente** de la décision de version (voir la section DOC-02) |
+| DOC-03 | P2 | 🟠 Corrigé en partie | L'en-tête de version de `noyau.py` retardait de 7 versions, la tête du CHANGELOG n'était pas dans l'ordre décroissant, et **deux entrées distinctes portent le même numéro v41.71** (v41.70 manquant) | Décision de l'auteur (10/09) : **le CHANGELOG fait foi** → en-tête porté à **41.75**, tête du CHANGELOG remise en ordre décroissant ; reste à trancher le titre de l'entrée QUA-01 (voir la section DOC-03) |
 
 ---
 
@@ -437,6 +440,59 @@ Une promotion change aussi la carte finale sur laquelle la maîtrise est lue.
 
 ---
 
+## VIS-01 — Le cerveau n'est observable qu'à plat (chantier d'instrument)
+
+- **Priorité / statut** : **P3 — 🟡 À décider** (spec validée le 10/09/2026, aucune ligne écrite)
+- **Nature** : capacité manquante, pas un défaut. Enregistré ici parce que la spec porte **deux
+  découvertes** qui, elles, sont des défauts (voir « Découvertes » ci-dessous).
+
+### Constat
+
+Le cerveau dispose de deux instruments de rendu, tous deux **à plat** : `arene_visuelle.py`
+(image MiniGrid + jauges + bande d'activations) et `irm_cerveau.py` (activations, myéline,
+variance du bus). Aucun ne montre la **structure** : 12 couches, 220 255 synapses, croissance par
+neurogenèse, neurones fonctionnellement morts (**56 %** de `pensee_bio`, mesuré sur 40/40
+cerveaux). Aucun ne peut être branché sur un **run en cours** : la télémétrie par tick ne contient
+que `dopamine`, `faim` et `parametres_vocaux`.
+
+### Amélioration proposée
+
+Chantier **VIS-01** ([`CHANTIER_VIS-01_cerveau_3d_irm_vivante.md`](CHANTIER_VIS-01_cerveau_3d_irm_vivante.md)) : IRM 3D vivante
+rendue en **three.js vendorisé**, alimentée par un **rapporteur par forward hooks** en lecture
+seule (discipline MES-02), servie par un **serveur stdlib** (aucune dépendance ajoutée).
+
+| Étape | Contenu | Impact sur `noyau.py` |
+|---|---|---|
+| 0 | démonstration, source factice | aucun |
+| 1 | spectateur-pilote sur un vrai `.brain`, lecture seule | aucun |
+| 2 | passerelle UDP + drapeau `--telemetrie-3d` | **oui** — additif, éteint par défaut, test bit-identique exigé |
+
+### Découvertes faites au cadrage (hors périmètre VIS-01, à trancher)
+
+1. 🔴 **La garantie « ne modifie aucun poids » est inexacte** dans les docstrings
+   d'`irm_cerveau.py` (l. 35-38) et de `lancer_arene.py` (l. 39-42). `traiter_tick` →
+   `fortifier_synapses` (~10430) → `fortification_dopaminergique` (~176-189) **écrit en place,
+   sous `no_grad`, dans `base_weight` et `myeline_M` — sans aucun `backward()`**. Mesuré sur
+   `K4_NU_g11.brain` : `|trace_activation|max = 0,000e+00` sur les 12 couches, donc l'écriture est
+   **numériquement nulle** pour tout `.brain` sauvegardé après une nuit (`cycle_sommeil` remet la
+   trace à zéro, ~364). ⚠️ Elle **ne l'est pas** pour un `.brain` sauvegardé en pleine journée —
+   cas réel : la **micro-sieste de la Cuve**. Le **fichier** n'est jamais modifié dans les deux cas.
+   → à formuler comme `DOC-02` (correction de deux docstrings + entrée CHANGELOG).
+2. 🟡 **Écart de version** : `noyau.py` déclare `#Version actuelle 41.68` quand le CHANGELOG porte
+   **v41.75** et `ETAT_COURANT.md` **v41.72** ; et dans le CHANGELOG, `[v41.71]` est en tête
+   (ligne 7) alors que `[v41.75]` est en ligne 46. Deux lectures possibles (docs = même version,
+   ou en-tête en retard) → décision de l'auteur requise **avant** l'étape 2, qui ajoutera une
+   entrée de CHANGELOG.
+
+### Critères de clôture
+
+- Étapes 0 et 1 livrées, empreinte du `.brain` observé **identique** avant/après, surcoût du
+  rapporteur **mesuré et reporté**.
+- Étape 2 : run **bit-identique sans le drapeau** (deux runs même graine, `diff` des promotions).
+- Tests ajoutés et verts avec la commande unique existante ; `LANCEMENT.md` documente l'instrument.
+
+---
+
 # 5. API, tests et persistance
 
 ## API-01 — Le contrat positionnel de `penser()` est fragile — ✅ CLOS (08/09/2026)
@@ -724,6 +780,124 @@ versions d'écart). Une référence très en retard n'est plus une référence r
    de code modifiée) ; commandes de lancement des runs actuels (SCI-01) toutes sur
    `noyau.py` — déjà le cas.
 4. **Entrée CHANGELOG** : [v41.72].
+
+---
+
+## DOC-02 — La garantie « ne modifie aucun poids » de deux instruments est inexacte — 🟠 CORRIGÉ (10/09/2026), clôture suspendue
+
+- **Priorité / statut** : **P2 — 🟠 Corrigé, `✅ Clos` en attente** (critère 4 de la règle de
+  clôture : l'entrée CHANGELOG dépend de la décision de version, voir D2 ci-dessous).
+- **Nature** : garantie fausse dans sa **mécanique**, vraie dans sa **portée pratique** — la
+  distinction compte, donc elle est écrite plutôt que corrigée en silence.
+- **Depuis quand** : depuis la rédaction des deux fichiers (en-têtes `irm_cerveau.py` **V25.x**,
+  `lancer_arene.py` **V24.0**) ; dernier commit les touchant : `bd2af14`, **27/08/2026** (v41.33).
+  ⚠️ `git blame -S` est inexploitable dans cet environnement (« échec de mmap »), la date exacte
+  d'introduction de la phrase n'a donc **pas** été établie.
+
+### Preuves (lecture du code + une mesure)
+
+Ce qu'affirmaient les docstrings (l. 35-38 d'`irm_cerveau.py`, l. 39-42 de `lancer_arene.py`) :
+`traiter_tick` « ne modifie aucun poids hors d'un `backward()` explicite ». **Faux** :
+
+1. `traiter_tick` appelle `fortifier_synapses` sur tout événement marquant
+   (`noyau.py` ~10430-10434) ;
+2. `fortifier_synapses` (~2284-2298) appelle `fortification_dopaminergique` sur **les 12 couches** ;
+3. celle-ci écrit **en place**, sous `no_grad`, dans `base_weight` **et** `myeline_M`
+   (~176-189) — **sans `backward()`**, et **sans être arrêtée par `eval()`**
+   (`fortification_dopaminergique` n'est pas conditionnée par `self.training`).
+
+**Mesure** (10/09/2026, lecture seule de `brains/08092026_sci01_balayage_K/K4_NU/K4_NU_g11.brain`) :
+`|trace_activation|max = 0,000e+00` sur **les 12 couches**. La fonction grave
+`ancrage = trace_activation × pic` : trace nulle ⇒ **écriture numériquement nulle**. Ce n'est pas
+un hasard, `cycle_sommeil` remet la trace à zéro (`noyau.py` ~364), donc **tout `.brain`
+sauvegardé après une nuit** porte une trace nulle.
+
+⚠️ **Le cas qui n'est pas couvert** : un `.brain` sauvegardé **en pleine journée** — cas réel, la
+**micro-sieste de la Cuve** (`daemon_cerveau.py`, `_processus_nocturne`, qui sauvegarde sans nuit)
+— conserve une trace non nulle, et le premier pic dopaminergique d'une session d'observation y
+écrirait de **vraies** valeurs. **En mémoire uniquement** : ni l'IRM ni l'Arène n'appellent
+`persistance.sauvegarder`, donc **le fichier `.brain` n'est jamais modifié** — c'est la garantie
+qui compte pour l'utilisateur, et elle est intacte.
+
+### Correction livrée (10/09/2026)
+
+- `irm_cerveau.py` : la garantie est réécrite, avec la mécanique exacte, le cas de la
+  micro-sieste et la portée mesurée (bloc « Formulation corrigée le 10/09/2026 »).
+- `lancer_arene.py` : même correctif, renvoyant à `irm_cerveau.py` pour le détail.
+- **Zéro ligne de code exécutable modifiée** (docstrings seulement).
+
+### Vérifications passées
+
+- Les deux modules **compilent** (`py_compile`) et leur docstring de module reste bien formée
+  (vérifié par `ast.get_docstring`) ;
+- suite de contrats **44 tests CPU : `OK` (1,66 s)** — aucune régression.
+
+### Reste à faire pour clore
+
+- **Entrée CHANGELOG** — la décision D2 est **prise** (10/09 : « le CHANGELOG fait foi »,
+  en-tête `noyau.py` porté à **41.75**, voir DOC-03) : la référence de version n'est donc plus un
+  obstacle. Le précédent du dépôt (ARC-01, v41.72 : commentaires seuls ⇒ **entrée CHANGELOG quand
+  même**) plaide pour une entrée, à écrire dans le même passage que la clôture de DOC-03.
+
+---
+
+## DOC-03 — L'en-tête de version, l'ordre du CHANGELOG et une collision de numéro — 🟠 CORRIGÉ EN PARTIE (10/09/2026)
+
+- **Priorité / statut** : **P2 — 🟠 Corrigé en partie** (le titre de l'entrée QUA-01 reste à
+  trancher par l'auteur).
+- **Décision de l'auteur (10/09/2026)** : *« l'en-tête est en retard — le CHANGELOG fait foi »*.
+
+### Les trois faits, mesurés
+
+1. **L'en-tête de `noyau.py` retardait de 7 versions** : il portait `#Version actuelle 41.68`
+   alors que la dernière entrée du CHANGELOG est **v41.75** (`docs/ETAT_COURANT.md` parle de
+   v41.72/ARC-01). C'est exactement le piège que CLAUDE.md signale (« l'en-tête est resté périmé
+   de 20 versions une fois »).
+2. **La tête du CHANGELOG n'était pas dans l'ordre décroissant** : `## [v41.71]` était en ligne 7,
+   et les entrées **plus récentes** `v41.75`, `v41.74-mesure`, `v41.73`, `v41.72` se trouvaient
+   **plus bas** (lignes 46 à 160), contrairement à CLAUDE.md §13 (« entrée la plus récente en
+   haut »).
+3. 🔴 **Deux entrées distinctes portent le même numéro `v41.71`**, et **`v41.70` est absent de la
+   série** :
+
+   | Position | Titre | Corps réel |
+   |---|---|---|
+   | ligne 7 (avant correction) | `v41.71 — DOC-01 : ETAT_COURANT.md créé…` | DOC-01 (`Catégorie : docs`, registre DOC-01) |
+   | ligne 161 | `v41.71 — DOC-01 : ETAT_COURANT.md créé…` | **QUA-01** (`Catégorie : tests`, registre QUA-01, `tests/test_contrats_cognitifs.py`, 44 tests) |
+
+   Le **titre** de la seconde entrée contredit son **corps**, cinq lignes plus bas. Un
+   copier-coller du titre DOC-01 lors de l'ajout de l'entrée v41.71 est l'explication la plus
+   simple ; la série des versions montre d'ailleurs que **v41.70 manque** à l'appel, et que
+   l'entrée QUA-01 est précisément placée entre v41.71 et v41.69.
+
+### Corrections livrées (10/09/2026)
+
+- `noyau.py` : `#Version actuelle` porté de **41.68** à **41.75**, avec la raison écrite dans
+  l'en-tête (et le rappel que ce marqueur a déjà dérivé une fois) ;
+- `CHANGELOG.md` : les **115 lignes** des entrées v41.75 → v41.72 remontées **au-dessus** de
+  l'entrée v41.71, sans qu'**aucune ligne ne soit ajoutée, supprimée ou réécrite** — vérifié en
+  comparant la **liste triée des lignes** avant/après (`sorted()` identique) ;
+- l'entrée la plus récente est désormais en tête, comme §13 l'exige.
+
+### Ce qui reste à trancher (par l'auteur)
+
+🔴 **Le titre de l'entrée QUA-01 n'a PAS été réécrit** : le faire suppose de choisir son numéro
+(`v41.70`, qui comblerait le trou de la série, ou `v41.71` partagé), et ce choix touche
+l'histoire du projet. Deux options, à décider :
+
+1. **Retitrer en QUA-01 avec le numéro `v41.70`** — comble le trou de la série et rend chaque
+   entrée unique (hypothèse la plus probable, mais c'est une **reconstruction**, pas une preuve) ;
+2. **Retitrer en QUA-01 en gardant `v41.71`** — ne suppose rien sur le numéro, au prix d'un
+   numéro partagé par deux entrées.
+
+Dans les deux cas, la règle de trace demande de **garder l'ancien titre en regard** (un chiffre
+publié corrigé se consigne avec l'ancien, jamais en silence).
+
+### Critères de clôture
+
+- Le titre de l'entrée QUA-01 correspond à son corps, avec l'ancien titre en regard.
+- Une entrée CHANGELOG consigne la correction (elle sera prise dans le même passage que DOC-02,
+  quand le numéro de version sera fixé).
 
 ---
 

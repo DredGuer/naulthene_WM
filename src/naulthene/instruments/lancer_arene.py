@@ -38,10 +38,21 @@ déjà affiché dans le panneau.
 
 ⚠️ Garantie explicite : cette Arène n'entraîne JAMAIS le cerveau qu'elle observe.
 `etat.agent.eval()` est appelé après le chargement, et `executer_nuit`/
-`apprendre_journee` ne sont jamais invoqués dans la boucle — seul `traiter_tick`
-tourne, qui pense/agit mais ne modifie aucun poids en dehors d'un `backward()` explicite
-(jamais appelé ici). Observer l'agent ne l'altère jamais, tu peux lancer l'Arène autant
-de fois que tu veux sans risque pour le `.brain`.
+`apprendre_journee` ne sont jamais invoqués dans la boucle — seuls `traiter_tick`
+(qui pense/agit) et la LTP qu'il déclenche sur un pic dopaminergique tournent.
+Observer l'agent ne l'altère jamais, tu peux lancer l'Arène autant de fois que tu veux
+sans risque pour le `.brain`.
+
+⚠️ **Formulation corrigée le 10/09/2026** (registre DOC-02) — même correctif que
+`irm_cerveau.py`, dont le contrat est identique. La version précédente disait « ne modifie
+aucun poids en dehors d'un `backward()` explicite » : sur un pic dopaminergique,
+`traiter_tick` → `fortifier_synapses` écrit **en place, sous `no_grad`, dans `base_weight`
+ET `myeline_M`** (noyau.py, section 1), **sans `backward()` et sans que `eval()` l'arrête**.
+L'écriture est **numériquement nulle** en observation (la trace d'éligibilité gravée est
+remise à zéro par `cycle_sommeil`) pour tout `.brain` sauvegardé après une nuit, mais pas
+pour un `.brain` sauvegardé en pleine journée (micro-sieste de la Cuve) — en mémoire
+seulement : **le fichier `.brain` n'est jamais modifié**, aucune sauvegarde n'étant appelée
+ici. Détail complet et mesure dans `irm_cerveau.py`.
 
 Usage :
     python lancer_arene.py                              # naulthene_cursus.brain par défaut
