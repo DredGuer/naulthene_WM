@@ -183,3 +183,33 @@ class TestBusEtEmetteur(unittest.TestCase):
             emetteur.envoyer(trame_evenement("choc_dopamine", {"tick": 1}))
         self.assertGreaterEqual(emetteur.compteurs()["envoyees"] + emetteur.compteurs()["perdues"], 3)
         emetteur.fermer()
+
+    def test_envoi_apres_fermeture_est_perdu_et_compte(self):
+        """Témoin déterministe, hors réseau, que `perdues` s'incrémente vraiment.
+
+        Un envoi vers un port fermé RÉUSSIT sur cette machine (le noyau accepte le datagramme),
+        donc le test précédent passe avec `perdues == 0` : il ne prouve rien sur le compteur.
+        Une socket fermée échoue à coup sûr (OSError), sans dépendre du réseau.
+        """
+        from naulthene.cerveau.telemetrie import EmetteurUDP, trame_evenement
+        emetteur = EmetteurUDP("udp:127.0.0.1:1")
+        emetteur.fermer()
+        self.assertFalse(emetteur.envoyer(trame_evenement("choc_dopamine", {"tick": 1})))
+        self.assertEqual(emetteur.compteurs()["perdues"], 1)
+        self.assertEqual(emetteur.compteurs()["envoyees"], 0)
+
+    def test_scalaire_numpy_non_serialisable_est_perdu_et_compte(self):
+        """Cas RÉEL (spec §4) : `variance du bus` et `logits` sont des scalaires numpy.
+
+        `json.dumps` lève `TypeError` sur `np.float32` / `np.int64` — une exception qui
+        remonterait dans la boucle chaude du run (tâche 9) et tuerait l'entraînement. Elle doit
+        être COMPTÉE comme une perte, jamais avalée ni propagée.
+        """
+        import numpy as np
+        from naulthene.cerveau.telemetrie import EmetteurUDP, trame_activite
+        emetteur = EmetteurUDP("udp:127.0.0.1:1")
+        trame = trame_activite({}, {"variance_bus": np.float32(0.31), "logits": np.int64(3)}, {"tick": 1})
+        self.assertFalse(emetteur.envoyer(trame))
+        self.assertEqual(emetteur.compteurs()["perdues"], 1)
+        self.assertEqual(emetteur.compteurs()["envoyees"], 0)
+        emetteur.fermer()

@@ -284,7 +284,9 @@ class EmetteurUDP:
     def envoyer(self, trame: dict) -> bool:
         try:
             self._socket.sendto(serialiser(trame), self._adresse)
-        except (OSError, ValueError):
+        except (OSError, ValueError, TypeError):
+            # TypeError : un scalaire numpy (`variance du bus`, `logits C1/C2` — spec §4) n'est
+            # pas sérialisable JSON. Sans lui, l'exception remonterait dans la boucle du cerveau.
             self._perdues += 1
             return False
         self._envoyees += 1
