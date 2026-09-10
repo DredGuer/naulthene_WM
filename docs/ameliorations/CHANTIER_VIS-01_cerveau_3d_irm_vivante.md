@@ -231,6 +231,70 @@ d'avance) et dans le rapport de la tâche 11 (§6).
 { "type": "evenement", "genre": "choc_dopamine", "tick": 12345, "intensite": 1.0 }
 ```
 
+### 🔴 Avenant du 10/09/2026 (vague finale, constat I3) — le canal `evenement` n'émet QU'UN genre sur cinq, et pas à une cadence « ponctuelle »
+
+Le tableau du contrat ci-dessus annonce cinq faits sur ce canal : « choc dopaminergique (LTP),
+**victoire, promotion de niveau, neurogenèse, fin d'épisode** ». **Quatre de ces cinq genres ne sont
+jamais émis.** Un `grep` sur la source de vérité le montre en une ligne :
+
+```
+$ grep -rn "_emettre_evenement(" src/naulthene/cerveau/noyau.py
+src/naulthene/cerveau/noyau.py:882:def _emettre_evenement(etat, genre, **champs) -> None:
+src/naulthene/cerveau/noyau.py:10724:        _emettre_evenement(etat, "choc_dopamine", intensite=float(poids_evenement))
+```
+
+**Un seul site d'appel** dans tout `noyau.py`, et il porte `choc_dopamine`. La colonne « Cadence »
+annonce « ponctuel » : c'est faux aussi, et de deux ordres de grandeur.
+
+**Mesure refaite pour cet avenant** (10/09/2026, CPU, `traiter_tick` appelé en boucle sur un cerveau
+chargé **en mémoire** — aucun `.brain` écrit, aucun run long lancé ; le site d'émission est le même
+que sous `--telemetrie-3d`, `noyau._emettre_evenement`) :
+
+| Cerveau | Ticks | Durée murale | Ticks/s | `evenement` émis | Cadence | Genres observés |
+|---|---|---|---|---|---|---|
+| Neuf, `dim_bus = 16` (graine 11) | 2 000 | **3,56 s** | 561,1 | **125** | **35,1 Hz** | `{choc_dopamine: 125}` |
+| `VIS01_etape2_fichier_10092026/etape2.brain`, `dim_bus = 68` | 2 000 | **4,92 s** | 406,8 | **363** | **73,8 Hz** | `{choc_dopamine: 363}` |
+
+**100 % `choc_dopamine` sur les 488 événements mesurés**, aucun autre genre. La cadence dépend du
+cerveau (35 à 74 Hz ici) parce qu'un choc est émis dès que `poids_evenement > 0`, c'est-à-dire dès
+qu'un pic dopaminergique est appliqué à la LTP — ce qui, sur un cerveau de campagne, est le cas
+courant plutôt que l'exception. La mesure de la revue finale (`1 404` événements pendant une session
+SSE de ~30 s d'un run de 60 jours, consignée dans le tableau de la tâche 11 ci-dessus) tombe dans la
+même plage : **≈ 47 Hz**.
+
+**Conséquence, et elle est visible à l'écran** : la file d'événements est bornée à
+`TAILLE_FILE_EVENEMENTS = 32` (`telemetrie.py`) — à 35-74 Hz elle est donc en **dépassement
+permanent**, et ce n'est pas une déduction mais un compteur. Même protocole, `BusTrames` réellement
+alimenté (un émetteur de laboratoire qui PUBLIE au lieu d'envoyer), lecture de
+`compteurs()["evenements_en_file"]` à **chaque** tick :
+
+| Cerveau | Ticks | Ticks où la file est PLEINE (32/32) | Part | Événements au total |
+|---|---|---|---|---|
+| Neuf, `dim_bus = 16` | 2 000 | **1 327** | **66,4 %** | 125 |
+| `etape2.brain`, `dim_bus = 68` | 2 000 | **1 818** | **90,9 %** | 363 |
+| Neuf, `dim_bus = 16` | 200 | **0** | 0 % | 9 |
+
+⚠️ La troisième ligne est le **témoin** : sur une fenêtre courte la file n'est jamais pleine (9
+événements émis, 9 en file) — le dépassement n'est donc pas vrai par construction, il s'installe avec
+la durée. Le flux SSE, lui, pousse chaque fait à la page : la ligne d'état est réécrite 35 à 74 fois
+par seconde, si bien que le « flux connecté » ou tout autre message transitoire disparaît aussitôt.
+**Le canal qui devait porter des FAITS DATÉS RARES porte en réalité le train continu du choc
+dopaminergique** — et les quatre faits que l'auteur attendait (victoire, promotion, neurogenèse, fin
+d'épisode) n'y sont pas.
+
+**⚠️ CET AVENANT NE CORRIGE PAS L'ÉMISSION, ET C'EST DÉLIBÉRÉ.** Émettre les quatre genres manquants
+et étrangler le choc (agrégation, ou seuil d'intensité) est un **changement de comportement** du
+canal : il mérite sa propre mesure (le taux de choc est-il un signal utile ? à quelle fenêtre
+d'agrégation la page reste-t-elle lisible ?), et la vague finale a pour règle de ne toucher à aucune
+mécanique. La tâche future est donc **inscrite au registre**
+(`docs/ameliorations/REGISTRE_PROBLEMES_A_CORRIGER.md`, VIS-01 « émettre les quatre genres et
+étrangler le choc ») ; d'ici là, ce document dit ce qui est vrai : **un seul genre émis, à 35-74 Hz,
+file en dépassement permanent**.
+
+⚠️ Ce qui RESTE vrai du contrat : le transport (UDP, ~90 o par trame), et la structure de la trame
+(`type`, `genre`, `tick`, `intensite`) — c'est elle qui est vérifiée par les tests et par
+`trame_evenement`.
+
 ## 5. La disposition spatiale — et ce qu'elle affirme exactement
 
 ⚠️ **La disposition est une CONVENTION DE LECTURE, pas une affirmation anatomique.** Naulthène
@@ -293,6 +357,67 @@ ReLU est appliqué **après**, par l'appelant (`_tronc_cerebral`, `penser`). Le 
 donc le ReLU **là où le cerveau l'applique**, et nulle part ailleurs — un miroir, pas une
 convention : là où le cerveau n'applique pas de ReLU (les têtes), la valeur affichée est la valeur
 linéaire.
+
+### 🔴 Avenant du 10/09/2026 (vague finale, constat I2) — cinq encodages ANNONCÉS ci-dessus ne sont PAS livrés
+
+Le tableau ci-dessus est un tableau d'**intentions**. Il a été lu comme un tableau d'états, jusque
+dans `LANCEMENT.md` (qui l'a recopié, et a dû être réécrit au même titre — voir le bloc de
+rétractation de `docs/fonctionnement/LANCEMENT.md` §7bis). Vérification faite sur le code livré
+(`static/app.js`, 337 lignes) :
+
+```
+$ grep -c -i "myeline\|cristall\|halo\|flash\|gaine\|epaisseur" static/app.js
+0   (pour CHACUN de ces six mots)
+$ grep -n "Material" static/app.js
+153:  const materiau = new THREE.MeshLambertMaterial({ vertexColors: false });   ← les NEURONES
+242:    new THREE.LineBasicMaterial({ color: 0x3a5a8a, transparent: true, opacity: 0.35 }));  ← les ARÊTES
+```
+
+**Un seul matériau pour toutes les arêtes**, à `opacity: 0.35` fixe : ni épaisseur, ni gaine, ni
+couleur par arête. Et la cause n'est pas un oubli de rendu, elle est en amont — **la trame
+`structure` ne TRANSPORTE pas ces grandeurs**. Clés réellement présentes par couche (mesuré sur
+`brains/VIS01_etape2_fichier_10092026/etape2.brain.vis01_structure.json`, 88 488 o) :
+
+```
+['echelle', 'entree', 'nom', 'poids_i8', 'positions', 'rang', 'sortie']
+```
+
+Ni `myeline_M`, ni `cristallisee`. Le rendu ne peut donc pas les dessiner, quelle que soit la
+volonté de la page.
+
+**Tableau d'écart — annoncé / livré / pourquoi :**
+
+| Encodage annoncé ci-dessus | Livré ? | Pourquoi (mesuré) |
+|---|---|---|
+| Activation d'un neurone → intensité émissive | ✅ **livré** | `couleurActivation(valeur, maximum)`, `app.js:102-105` ; échelle auto-calibrée sur le maximum de la trame |
+| Poids d'une synapse → seuil d'affichage | ✅ **livré, mais SEUIL SEUL** | `if (!(valeur >= seuil)) continue;` (`app.js:229`), seuil relatif au poids le plus fort de la COUCHE (`|i8| / 127 × echelle`) ; le curseur change bien le nombre d'arêtes. **L'épaisseur et l'opacité par arête, annoncées, ne sont PAS livrées** : un seul `LineBasicMaterial` à `opacity: 0.35` (`app.js:242`) |
+| Myéline (`myeline_M`) → gaine claire | ❌ **NON livré** | `myeline_M` n'est **pas dans la trame** `structure` (clés ci-dessus) : rien à dessiner. Aucune occurrence de « myeline » dans `app.js` |
+| Cristallisation (`cristallisee`) → arête blanche figée | ❌ **NON livré** | même raison : `cristallisee` n'est pas dans la trame, et `rapporteur.py` ne lit même pas ce drapeau |
+| Neurone mort (activation nulle) → gris sourd | ✅ **livré, en partie** | `couleurActivation(0, 1)` = `(0.12, 0.12, 0.16)`, et un `null`/absent donne le MÊME gris (`app.js:171`, `app.js:296`) — jamais une couleur inventée. ⚠️ C'est un gris **par trame** (activation nulle à cet instant), pas un gris « en permanence » : aucune persistance n'est calculée, donc le « 56 % de `pensee_bio` » reste invisible en tant que tel |
+| Dopamine → halo global | ❌ **NON livré** | aucune occurrence de « halo » dans `app.js` ; la dopamine est **affichée en TEXTE** dans la ligne d'information (`dopamine 0.310`), ce qui est exact mais n'est pas un halo |
+| Choc dopaminergique → flash puis gravure | ❌ **NON livré** | aucune occurrence de « flash » dans `app.js`, et les arêtes ne s'épaississent pas (matériau unique). Le fait EST reçu (canal `evenement`, tâche 9) mais **n'est pas rendu** |
+| `force_planification` → bascule C1/C2 sur la plaque motrice | ❌ **NON livré** | `force_planification` arrive bien dans `scalaires` et s'affiche en texte (`planification 0.00`) ; aucune bascule visuelle n'existe dans `app.js` |
+
+**Ce que la page montre RÉELLEMENT aujourd'hui**, en une phrase : *l'activation par la couleur, le
+poids par un seuil d'affichage, le gris pour une activation nulle, et le compte des entrées non
+neuronales (bornes) — plus une ligne de texte pour les scalaires.* C'est tout.
+
+**Pourquoi l'écart est consigné plutôt que comblé** : les cinq encodages manquants exigent d'abord
+d'**élargir la trame `structure`** (transporter `myeline_M` et `cristallisee` par synapse, soit deux
+matrices de plus par couche). Re-mesuré ici sur un agent neuf à `dim_bus = 145` : la trame actuelle
+fait **305 064 octets** pour **220 255** synapses (`sum(entree × sortie)` sur les 12 couches), et
+deux matrices `int8` de même forme la porteraient à **≈ 892 000 octets** — estimation
+`305 064 + 2 × ⌈220 255 × 4/3⌉`, la base64 gonflant de 4/3. On serait alors **13,6×** au-dessus du
+plafond dur d'un datagramme : le fichier reste la seule voie, mais le coût de relecture et de
+décodage côté navigateur change d'ordre de grandeur — ce n'est pas une décision de fin de vague. Il
+reste ensuite à décider ce que « halo » et « flash » veulent dire sans mentir sur ce qui est mesuré.
+C'est un chantier de rendu à part entière, pas une correction de vague finale : il est **inscrit au
+registre** (`REGISTRE_PROBLEMES_A_CORRIGER.md`, VIS-01 « les cinq encodages visuels non livrés »).
+
+⚠️ Les deux avenants « bornes » et « encodages » disent la même chose de deux façons : ce document
+décrit une **cible**, et chaque fois qu'une ligne de sa cible n'est pas livrée, elle doit être
+**marquée comme telle ici** — sinon elle est recopiée dans un mode d'emploi, puis lue comme un
+constat. C'est exactement ce qui s'est produit pour les cinq lignes ci-dessus.
 
 ## 6. Les trois étapes livrables
 

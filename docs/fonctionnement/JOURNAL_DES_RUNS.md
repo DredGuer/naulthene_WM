@@ -88,11 +88,31 @@ Protocole complet et chiffres bruts : [`brains/VIS01_surcout_10092026/LISEZ_MOI.
 écrasé : chaque run part d'une **copie fraîche** du même cerveau (celle de
 `brains/VIS01_preuve/`), sous un nom propre.
 
-**Découverte annexe (mesurée pendant la clôture, et écrite ici parce qu'elle a coûté un run)** : en
-`--serveur-seul`, la **structure n'arrive pas** — le run écrit bien
-`<brain>.vis01_structure.json`, mais **aucun code ne relit ce fichier** (l'étape 2 est donc livrée
-**en partie** ; les trames d'activité et d'événement, elles, arrivent : 13 + 68 pour le run `e2e`).
-Détail et preuves : section 8 du `LISEZ_MOI` de la campagne.
+🔴 **RÉTRACTATION DU 10/09/2026 (vague finale, constat I5) — CE QUE DISAIT CE PARAGRAPHE (ancien
+énoncé en regard, dogme « rien sans écrit ») :**
+
+> « **Découverte annexe (mesurée pendant la clôture, et écrite ici parce qu'elle a coûté un run)** :
+> en `--serveur-seul`, la **structure n'arrive pas** — le run écrit bien
+> `<brain>.vis01_structure.json`, mais **aucun code ne relit ce fichier** (l'étape 2 est donc livrée
+> **en partie** ; les trames d'activité et d'événement, elles, arrivent : 13 + 68 pour le run `e2e`). »
+
+**Deux choses y étaient fausses, et la seconde contredisait une entrée située soixante lignes plus
+haut dans CE MÊME fichier :**
+
+1. « en `--serveur-seul`, la structure n'arrive pas » — **vrai seulement SANS `--structure-fichier`**.
+   Avec l'option (tâche 11), la structure arrive : l'entrée `VIS01_etape2_fichier_10092026` de ce
+   fichier a mesuré `/structure` passant de `{}` à **12 couches**, `dim_bus` **16 → 68**,
+   `sequence_structure` **0 → 6**.
+2. « **aucun code ne relit ce fichier** » — **faux depuis la tâche 11** (`2fad056`) :
+   `VeilleurStructureFichier` (`cerveau_3d/serveur.py`) le relit au démarrage puis à chaque
+   changement, et `__main__.py` l'expose par `--structure-fichier`. C'est l'énoncé du BAS qui était
+   périmé, pas celui du haut.
+
+**Ce qui reste vrai, et qui a bien coûté un run** : la découverte de clôture n'était pas fausse sur
+le FOND — le run écrivait un fichier que personne ne lisait —, elle l'est devenue le lendemain. Le
+run `e2e` reste donc la mesure de référence pour la version d'AVANT la tâche 11 (13 trames
+d'activité + 68 événements, **aucune** structure reçue) : **datée, elle ne périme pas**. Détail et
+preuves : section 8 du `LISEZ_MOI` de la campagne `VIS01_surcout_10092026`.
 
 ---
 

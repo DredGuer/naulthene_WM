@@ -487,10 +487,14 @@ Commandes d'usage : [`LANCEMENT.md` §7bis](../fonctionnement/LANCEMENT.md).
    documentaire ; **tâche 11 (`2fad056` code + tests, `433cc14` traces)** : le serveur **relit**
    `<brain>.vis01_structure.json` (`--structure-fichier`, veilleur dédié) ; spec à jour avec ses
    **avenants** (transport de `structure`, relecture livrée, bornes comptées) ; usage documenté dans
-   `LANCEMENT.md` §7bis. ⚠️ **`INDEX.md` n'est PAS à jour** : sa ligne VIS-01 (l. 158) affirme
-   encore « un fichier que **le serveur ne relit pas encore** (étape 2 partielle) » — **hors des
-   trois fichiers autorisés** de ce tour de correction documentaire, donc **signalé ici plutôt que
-   corrigé en silence** (à reprendre au prochain passage sur `INDEX.md`).
+   `LANCEMENT.md` §7bis. ⚠️ **Cette ligne disait : « `INDEX.md` n'est PAS à jour : sa ligne VIS-01
+   (l. 158) affirme encore “un fichier que **le serveur ne relit pas encore** (étape 2 partielle)”
+   — hors des trois fichiers autorisés de ce tour, donc signalé ici plutôt que corrigé en
+   silence (à reprendre au prochain passage sur `INDEX.md`) ».** → **CORRIGÉ le 10/09/2026 (vague
+   finale, constat I5)** : `docs/INDEX.md` l. 158 dit désormais que le serveur **RELIT** le fichier
+   depuis la tâche 11, avec l'ancien énoncé en regard dans la même ligne. Le renvoi « à reprendre au
+   prochain passage » est donc **retiré** de cette section **et** de la ligne de suivi VIS-01 du
+   bas de ce fichier : le laisser serait devenu faux à son tour.
 3. **Vérification fraîche (reproduite le 10/09/2026)** :
    - **Le drapeau ne change rien au run** : `diff` des niveaux promus **vide** sur l'A/A (5 jours,
      `brains/VIS01_preuve/LISEZ_MOI.md`), **re-mesuré par la clôture sur 3 paires de 50 jours**
@@ -553,6 +557,17 @@ vraies.
 - **Quatre écarts de revue (M-1 à M-6 de la tâche 9)** restent ouverts : canal `evenement` absent
   du chemin `vocal_isole`, clé `action` ajoutée au fichier de structure selon le chemin d'écriture,
   etc. — ils n'ont pas été traités par la clôture (liste de fichiers close).
+- 🔴 **DEUX CONSTATS DE LA VAGUE FINALE (10/09/2026) SONT OUVERTS, ET VOLONTAIREMENT NON CORRIGÉS
+  ICI** — chacun a sa ligne dans le tableau de suivi du bas de ce fichier :
+  1. **Le canal `evenement` n'émet qu'un genre sur cinq** (constat I3) : un seul site d'appel,
+     `choc_dopamine`, à **35-74 Hz** mesurés — la tâche future est « émettre les quatre genres
+     (victoire, promotion, neurogenèse, fin d'épisode) **et** étrangler le choc ». La vague finale
+     **n'a pas touché l'émission** : c'est un changement de comportement, qui mérite sa propre
+     mesure. Tracé dans l'**avenant de spec §4**.
+  2. **Cinq encodages visuels annoncés ne sont pas livrés** (constat I2) : myéline, cristallisation,
+     halo, flash de choc, épaisseur/opacité par arête — la trame `structure` ne transporte ni
+     `myeline_M` ni `cristallisee`. Tracé dans l'**avenant de spec §5**, et `LANCEMENT.md` §7bis a
+     été **réécrit** pour dire l'état réel (c'est cette réécriture qui était bloquante).
 
 ### Découvertes faites au cadrage (hors périmètre VIS-01) — traitées
 
@@ -1142,7 +1157,9 @@ La tête d'intention reste cohérente avec la thèse du projet, mais elle dépen
 | 2026-09-08 | REP-01 | 🔴 Ouvert (livraison à froid) | v41.73 · CHANGELOG [v41.73] | zéro run — inventaire du venv mesuré (Python 3.12.12, 66 paquets, torch MPS) ; syntaxe/liens vérifiés | `pyproject.toml` (planchers + extras) · `constraints-lock.txt` (lock mesuré) · spec `ENVIRONNEMENT.md` ; clôture = env vierge + 44 tests, différée après SCI-01 |
 | 2026-09-09 | SCI-01 | 🔵 À mesurer (Wave 1 faite) | v41.74-mesure · CHANGELOG [v41.74-mesure] | Dépouillement strict : 60/60 couverts, gardes gain_c1 = 1,0000, aucun `t` ne passe Bonferroni (n=10) | Wave 1 : cloche 0/0/8/10/3 (optimum K=8), clip inerte (fraction ~8 %) ; carnet `SCI01_WAVE1_09092026` ; Wave 2 (n=20) pour le verdict |
 | 2026-09-09 | REP-01 | 🔴 Ouvert (script prêt) | v41.75 · CHANGELOG [v41.75] | zéro run — syntaxe bash OK ; garde anti-contention testée (refuse si noyau.py actif) | `scripts/verifier_environnement.sh` créé (venv vierge /tmp + import + 44 tests + rapport versions) ; exécution différée après SCI-01 Wave 2 |
-| 2026-09-10 | VIS-01 | 🟠 Livré en partie → **✅ Clos** | `2fad056` + `433cc14` · **aucune entrée CHANGELOG** (tâche 11 : pas de `noyau.py`) ; carnet `VIS01_etape2_fichier_10092026/LISEZ_MOI.md` | e2e serveur+run réels : `/structure` `{}` → **12 couches**, `dim_bus` **16 → 68**, `sequence_structure` **0 → 6** (`poll_structure.txt`, 111 lignes à 1 Hz) ; **147 tests OK** (138 + 9, `+429 / −0`) ; empreinte `.brain` bit-identique ; A/A `diff` vide ; surcoût **+7,87 %** | Étape 2 complète : `--structure-fichier` (serveur `--serveur-seul`) relit `<brain>.vis01_structure.json` ; rétractation en §VIS-01 (ancien énoncé « aucun code ne le relit ») ; limites restantes : dernier état publié, coût de veille non chiffré, rendu navigateur non prouvé ; ⚠️ **`INDEX.md` l. 158 reste à corriger** (« le serveur ne relit pas encore ») — hors des trois fichiers autorisés de ce tour |
+| 2026-09-10 | VIS-01 | 🟠 Livré en partie → **✅ Clos** | `2fad056` + `433cc14` · **aucune entrée CHANGELOG** (tâche 11 : pas de `noyau.py`) ; carnet `VIS01_etape2_fichier_10092026/LISEZ_MOI.md` | e2e serveur+run réels : `/structure` `{}` → **12 couches**, `dim_bus` **16 → 68**, `sequence_structure` **0 → 6** (`poll_structure.txt`, 111 lignes à 1 Hz) ; **147 tests OK** (138 + 9, `+429 / −0`) ; empreinte `.brain` bit-identique ; A/A `diff` vide ; surcoût **+7,87 %** | Étape 2 complète : `--structure-fichier` (serveur `--serveur-seul`) relit `<brain>.vis01_structure.json` ; rétractation en §VIS-01 (ancien énoncé « aucun code ne le relit ») ; limites restantes : dernier état publié, coût de veille non chiffré, rendu navigateur non prouvé. ⚠️ Cette ligne disait « **`INDEX.md` l. 158 reste à corriger** (“le serveur ne relit pas encore”) — hors des trois fichiers autorisés de ce tour » : **corrigé le 10/09/2026 en vague finale (constat I5)**, le renvoi est retiré d'ici **et** de la section VIS-01 |
+| 2026-09-10 | VIS-01 | 🔴 **Ouvert — tâche future** | vague finale (constat I3) · avenant de spec §4 | canal `evenement` mesuré : **125 événements en 3,56 s** (cerveau neuf, `dim_bus = 16` ⇒ **35,1 Hz**) et **363 en 4,92 s** (`etape2.brain`, `dim_bus = 68` ⇒ **73,8 Hz**), **100 % `choc_dopamine`** sur 488 événements ; file de 32 pleine sur **1 327 / 2 000** puis **1 818 / 2 000** ticks (témoin 200 ticks : **0 / 200**) | **Émettre les quatre genres manquants et étrangler le choc.** Le canal n'émet qu'**UN genre sur cinq** (un seul site d'appel : `noyau.py:10724`, `choc_dopamine`) et pas à une cadence « ponctuelle ». À FAIRE : (1) émettre **victoire, promotion de niveau, neurogenèse, fin d'épisode** aux points où le cerveau les vit ; (2) **étrangler le choc** (agrégation ou seuil d'intensité) pour que la file de 32 cesse d'être en dépassement permanent et que la ligne d'état de la page redevienne lisible. ⚠️ **C'est un changement de COMPORTEMENT ⇒ sa propre mesure** (chercher la fenêtre d'agrégation qui garde le signal utile). ⚠️ **L'émission n'a délibérément PAS été modifiée par la vague finale** |
+| 2026-09-10 | VIS-01 | 🔴 **Ouvert — chantier de rendu** | vague finale (constat I2) · avenant de spec §5 | `grep -c -i "myeline\|cristall\|halo\|flash\|gaine\|epaisseur" static/app.js` = **0 pour chacun** ; **un seul** `LineBasicMaterial({opacity: 0.35})` pour toutes les arêtes ; clés d'une couche dans la trame `structure` = `['echelle','entree','nom','poids_i8','positions','rang','sortie']` | **Les encodages visuels annoncés mais NON livrés.** Cinq lignes du tableau de la spec §5 ne sont pas livrées DU TOUT : myéline, cristallisation, halo = dopamine, flash de choc, bascule C1/C2 (`force_planification`) ; une sixième — le poids par **épaisseur/opacité par arête** — ne l'est qu'à moitié (le **seuil** d'affichage existe, l'épaisseur non). **Cause en amont** : la trame `structure` ne TRANSPORTE ni `myeline_M` ni `cristallisee`. À FAIRE : élargir la trame (2 matrices `int8` de plus par couche ⇒ **≈ 892 000 o** au lieu de **305 064 o** à `dim_bus = 145`, soit **13,6×** le plafond d'un datagramme), puis décider ce que « halo » et « flash » signifient **sans mentir sur ce qui est mesuré**. `LANCEMENT.md` §7bis a été réécrit pour dire l'état RÉEL en attendant |
 
 ---
 

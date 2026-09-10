@@ -568,15 +568,61 @@ disque — l'instrument n'appelle aucune sauvegarde. Le mode `--source factice` 
 | `--structure-fichier CHEMIN` | le fichier où un run écrit sa trame `structure` (`<brain>.vis01_structure.json`) : **relu au démarrage puis à chaque changement** et publié dans le bus, sans redémarrer le serveur — c'est ce qui rend l'étape 2 complète. **Exige `--serveur-seul`** (une source locale publie déjà sa propre structure ; deux publieurs feraient clignoter la scène sans rien dire — le refus tombe avant de lier un port). Un chemin **absent**, non ordinaire, illisible, trop gros (> 64 Mio) ou au JSON invalide n'est jamais fatal : la dernière structure valide reste publiée, l'incident est **compté** et visible (`/sante` → `structure_fichier`, bannière, bilan imprimé à l'arrêt) |
 | `--duree SECONDES` | s'arrête tout seul après ce délai (défaut : jusqu'à `Ctrl-C`) |
 
-### Ce que la page montre, et ce qu'elle ne dit pas
+### Ce que la page montre AUJOURD'HUI — et les cinq encodages qui ne sont PAS livrés
 
-Chaque encodage est **déclaré** (spec §5) : intensité émissive = activation du neurone,
-épaisseur/opacité = poids de la synapse (sous un **seuil d'affichage** réglable côté navigateur),
-gaine claire = myéline, arête blanche = synapse cristallisée, gris sourd = neurone dont
-l'activation est nulle, halo = dopamine, flash puis gravure = choc dopaminergique (le moment où le
-cerveau écrit). ⚠️ La disposition est une **convention de lecture** (l'ordre du flux de données),
-**pas une affirmation anatomique** : Naulthène n'a ni cortex ni lobe. Le seuil d'affichage est une
-**commodité de lecture**, jamais une mesure.
+🔴 **RÉTRACTATION DU 10/09/2026 (vague finale, constat I2) — CE QUE DISAIT CE BLOC (ancien énoncé
+en regard, dogme « rien sans écrit ») :**
+
+> « Chaque encodage est **déclaré** (spec §5) : intensité émissive = activation du neurone,
+> épaisseur/opacité = poids de la synapse (sous un **seuil d'affichage** réglable côté navigateur),
+> gaine claire = myéline, arête blanche = synapse cristallisée, gris sourd = neurone dont
+> l'activation est nulle, halo = dopamine, flash puis gravure = choc dopaminergique (le moment où le
+> cerveau écrit). »
+
+**Cet énoncé était faux, et de la pire façon : il recopiait la CIBLE de la spec §5 comme si c'était
+l'état livré.** Sur les huit lignes du tableau de la spec §5, **cinq ne sont pas livrées du tout**, et
+une sixième ne l'est qu'à moitié (le seuil de poids, oui ; l'épaisseur/opacité **par arête**, non).
+La vérification tient en deux commandes, sur `src/naulthene/instruments/cerveau_3d/static/app.js` :
+
+```
+$ grep -c -i "myeline\|cristall\|halo\|flash\|gaine\|epaisseur" static/app.js
+0   (pour CHACUN de ces six mots)
+$ grep -n "Material" static/app.js
+242:    new THREE.LineBasicMaterial({ color: 0x3a5a8a, transparent: true, opacity: 0.35 }));
+```
+
+**Toutes les arêtes partagent UN SEUL matériau**, à `opacity: 0.35` fixe. La cause n'est pas un
+oubli de rendu : **la trame `structure` ne transporte pas ces grandeurs**. Clés réellement présentes
+par couche (mesuré sur `brains/VIS01_etape2_fichier_10092026/etape2.brain.vis01_structure.json`,
+88 488 o) : `['echelle', 'entree', 'nom', 'poids_i8', 'positions', 'rang', 'sortie']` — ni
+`myeline_M`, ni `cristallisee`. Le rendu ne peut pas dessiner ce qui n'arrive pas.
+
+**Ce que la page montre, exactement, aujourd'hui :**
+
+| Encodage | État | Où c'est vérifiable |
+|---|---|---|
+| **Activation d'un neurone → couleur** (du gris sourd au jaune vif, échelle auto-calibrée sur la trame) | ✅ livré | `couleurActivation()`, `app.js:102-105` |
+| **Poids d'une synapse → seuil d'affichage** sous le curseur, RELATIF au poids le plus fort de la couche | ✅ livré | `if (!(valeur >= seuil)) continue;`, `app.js:229` ; le curseur change le nombre d'arêtes (testé) |
+| **Activation nulle (ou absente) → gris sourd**, jamais une couleur inventée | ✅ livré | `app.js:171`, `app.js:296` — un `null` donne le MÊME gris qu'un zéro |
+| **Bornes sensorielles → comptées** (`· N entrées non neuronales (bornes)`), jamais dessinées et jamais reliées | ✅ livré | `horsBornes`, `app.js:231` et `app.js:267` (avenant « bornes » de la spec §5) |
+| **Scalaires** (dopamine, faim, planification, action) → **en TEXTE** dans la ligne d'information | ✅ livré | `app.js`, ligne `texte_infos` |
+| Épaisseur / opacité **par arête** = poids | 🟡 **livré à MOITIÉ** (le seuil, oui ; l'épaisseur, non) | un seul `LineBasicMaterial`, `app.js:242` |
+| Gaine claire = **myéline** | ❌ **NON livré** | `myeline_M` absent de la trame `structure` |
+| Arête blanche = **synapse cristallisée** | ❌ **NON livré** | `cristallisee` absent de la trame, et non lu par `rapporteur.py` |
+| **Halo** = dopamine | ❌ **NON livré** | aucune occurrence de « halo » ; la dopamine s'affiche en texte |
+| **Flash puis gravure** = choc dopaminergique | ❌ **NON livré** | aucune occurrence de « flash » ; le fait est bien REÇU (canal `evenement`, tâche 9), il n'est pas RENDU |
+| Bascule visuelle C1/C2 (`force_planification`) sur la plaque motrice | ❌ **NON livré** | la valeur s'affiche en texte ; aucune bascule n'existe |
+
+⚠️ Ce qui reste vrai de l'ancien bloc, et n'est pas touché : la disposition est une **convention de
+lecture** (l'ordre du flux de données), **pas une affirmation anatomique** — Naulthène n'a ni cortex
+ni lobe. Le seuil d'affichage est une **commodité de lecture**, jamais une mesure.
+
+**Pourquoi les encodages manquants ne sont pas comblés ici** : les livrer exige d'élargir d'abord la
+trame `structure` (deux matrices `int8` de plus par couche, soit ≈ 892 000 o au lieu de 305 064 o à
+`dim_bus = 145` — 13,6× le plafond dur d'un datagramme), puis de décider ce que « halo » et
+« flash » veulent dire sans mentir sur ce qui est mesuré. C'est un chantier de rendu, inscrit au
+registre (VIS-01) et tracé dans l'avenant correspondant de la spec §5. **Ici, on dit ce qui est vrai
+aujourd'hui — c'est le seul rôle de ce mode d'emploi.**
 
 ### ✅ L'étape 2 fonctionne de bout en bout — et les deux limites qui restent
 
