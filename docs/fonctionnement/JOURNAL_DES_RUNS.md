@@ -29,6 +29,35 @@
 
 ## Runs
 
+### ✅ `VIS01_etape2_fichier_10092026` — la structure relue par le serveur (tâche 11)
+
+| | |
+|---|---|
+| **Début** | 2026-09-10 19:29 *(entrée écrite à 19:28, AVANT le premier lancement ; `date "+%Y-%m-%d %H:%M"`)* |
+| **Fin estimée** | **~19:32** (≈ 3 min) — dérivée du rythme **MESURÉ** par `VIS01_surcout_10092026` (50 jours ≈ 58 s de temps mural, démarrage ≈ 3,4 s inclus ⇒ ≈ 3,6 j/s, soit ~0,3 s/jour) : 1 à 2 runs de 60 jours (≈ 20 s chacun) + les observations HTTP/SSE, qui ne coûtent rien au run |
+| **Fin réelle** | **2026-09-10 19:31** — **écart ≈ −1 min sur l'estimation (~2 min au lieu de ~3 min)** : le run a tenu 60 jours en **75 s** (1,25 s/jour — le rythme de `VIS01_surcout` est confirmé), et **un seul run a suffi** (la neurogenèse a eu lieu : `dim_bus` 16 → 68) |
+| **Coût** | 1 run de 60 jours sur un cerveau **NEUF** (`etape2.brain`, naissance, `dim_bus = 16`), graine 11, `NAULTHENE_DEVICE=cpu`, `--no-wandb`, `--telemetrie-3d udp:127.0.0.1:9998`, observé par un serveur `--serveur-seul --structure-fichier` **lancé avant le run** (fichier absent au démarrage) |
+| **Statut** | ✅ terminée — **`/structure` rend 12 couches, `sequence_structure` passe de 0 à 6 PENDANT le run** |
+
+**Pourquoi** : la tâche 11 répare la moitié « lue par le serveur » de l'avenant de protocole du
+10/09 (la trame `structure` voyage par FICHIER, trop grosse pour un datagramme UDP). L'e2e de la
+tâche 10 avait mesuré l'état d'avant, serveur vivant et run vivant : `/structure` = `{}` et
+`sequence_structure = 0` pendant que 81 trames d'activité/événements arrivaient par UDP. Question
+posée : *un serveur `--serveur-seul --structure-fichier` voit-il enfin la structure d'un run en
+cours, et la voit-il CHANGER (neurogenèse) sans redémarrer ?*
+
+**Résultat** : oui, et sans redémarrage. Au démarrage (fichier absent) `/structure` rend `{}` et la
+veille compte ses absences ; **4 s après le lancement du run** la page a **12 couches à
+`dim_bus = 16`**, puis le serveur republie **5 fois pendant le run** (32 → 48 → 51 → 67 → 68) à
+mesure des neurogenèses. Un client SSE connecté pendant le run a reçu **4 trames `structure`**
+(`dim_bus` 16, 32, 48, 51) **+ 252 `activite` + 1 404 `evenement`**, la structure toujours en tête
+de flux. La trame finale pèse **88 488 o**, au-dessus du plafond dur de 65 507 o d'un datagramme :
+le fichier était bien la seule voie. Le run, lui, n'a pas été ralenti (60 jours en 75 s).
+
+Protocole complet et chiffres bruts : [`brains/VIS01_etape2_fichier_10092026/LISEZ_MOI.md`](../../brains/VIS01_etape2_fichier_10092026/LISEZ_MOI.md).
+⚠️ Aucun fichier de `brains/08092026_sci01_balayage_K/` (campagne historique) n'est lu ni écrit ;
+aucun `.brain` préexistant n'est écrasé — le cerveau de cette campagne **naît** dans son dossier.
+
 ### 🟡 `VIS01_surcout_10092026` — le surcoût du rapporteur (spec VIS-01 §10)
 
 | | |

@@ -1,0 +1,27 @@
+# Chronologie de VIS01_etape2_fichier_10092026 — horodatages locaux, mesurés
+# (date "+%H:%M:%S" au lancement de chaque commande, et mtimes des fichiers produits)
+#
+# 19:28:38  serveur lancé : `--serveur-seul --udp 9998 --port 8771 --structure-fichier
+#           brains/VIS01_etape2_fichier_10092026/etape2.brain.vis01_structure.json`
+#           (bannière : « AUCUNE structure lue (1 absence(s)…) » — le fichier n'existe pas
+#           encore : c'est l'ordre réel de l'étape 2, le serveur AVANT le run)
+# 19:28:47  /structure = {} et /sante = {sequence_structure: 0} — l'état mesuré par la tâche 10
+# 19:28:51  sonde démarrée : 1 interrogation de /structure + /sante par seconde
+# 19:28:53  RUN lancé (noyau, graine 11, --jours 60, --telemetrie-3d udp:127.0.0.1:9998)
+# 19:28:57  PREMIÈRE STRUCTURE VUE : 12 couches, dim_bus = 16, sequence_structure = 1
+# 19:29:00  dim_bus = 32 (neurogenèse)      — sequence_structure 2
+# 19:29:04  dim_bus = 48                    — sequence_structure 3
+# 19:29:10  dim_bus = 51                    — sequence_structure 4
+# 19:29:31  dim_bus = 67                    — sequence_structure 5
+# 19:29:44  dernière écriture du fichier par le run (mtime de la trame `structure`)
+# 19:29:45  dim_bus = 68                    — sequence_structure 6
+# 19:30:08  RUN terminé (exit 0). Bilan : « 11 structure(s) écrite(s), 0 ratée(s), 0 erreur(s)
+#           de télémétrie — 4 463 datagramme(s) envoyé(s) à 127.0.0.1:9998, 0 perdu(s) »
+# 19:30:15  /structure après le run : dim_bus = 68, 12 couches ; /sante : sequence 969,
+#           sequence_structure 6, publications 6, absences 17, illisibles 0, invalides 0
+# 19:30:50  serveur arrêté ; 19:30:54 CLI `--duree 4` sur le fichier laissé par le run :
+#           « structure chargée : 12 couche(s), dim_bus = 68 … 1 publication(s) »
+# 19:31:12  sonde arrêtée (ses dernières lignes sont vides : le serveur était déjà fermé)
+#
+# Durée mesurée : run de 60 jours en 75 s (19:28:53 → 19:30:08) = 1,25 s/jour.
+# Campagne entière (serveur → dernières observations) : 2 min 34 s.
