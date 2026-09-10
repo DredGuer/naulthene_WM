@@ -206,6 +206,14 @@ def _afficher_empreinte(issue) -> None:
     `K4_NU_g11.brain`). Les confondre a produit un premier verdict qui annonçait « 538 834 ticks
     observés » après quatre secondes — mesuré, corrigé, et figé par le test de la tâche 8. Le
     compteur de vie reste affiché, mais nommé pour ce qu'il est.
+
+    ⚠️ La SECONDE preuve (§10, « le cerveau observé ne dérive pas ») est imprimée ici aussi : les
+    deux empreintes prouvent le FICHIER, elles ne disent RIEN de la mémoire où `traiter_tick` grave
+    la LTP. Les normes de `base_weight` et de `myeline_M`, elles, la disent. Un écart y est
+    **signalé sans changer le code de sortie** : sur un `.brain` sauvegardé en pleine journée
+    (micro-sieste de la Cuve) la dérive est ATTENDUE — `trace_activation` y est non nulle — et
+    déclarer en échec l'observation d'un cerveau vivant serait un mensonge de plus. Le verdict dit
+    donc ce qu'il voit et à quoi s'attendre, il ne juge pas.
     """
     resultat = issue.get("resultat")
     if not isinstance(resultat, dict):
@@ -220,6 +228,26 @@ def _afficher_empreinte(issue) -> None:
         print(f"⚠️  LE FICHIER `.brain` A CHANGÉ : sha256 {avant} → {apres}. C'est un défaut du "
               f"spectateur (une sauvegarde a été ajoutée ?), pas une observation — le rapport est "
               f"invalide.", file=sys.stderr, flush=True)
+
+    # `:.17g` et non `:.15e` : 17 chiffres significatifs sont ce qu'il faut pour qu'un `float64`
+    # fasse l'aller-retour. À 15, deux normes séparées par un écart au 17ᵉ chiffre s'afficheraient
+    # ÉGALES alors que le verdict, lui, les dit différentes — un affichage qui contredit le verdict
+    # est pire qu'un affichage illisible.
+    poids = " · ".join(f"{nom} {resultat[f'{nom}_norme_avant']:.17g} → "
+                       f"{resultat[f'{nom}_norme_apres']:.17g}"
+                       for nom in ("base_weight", "myeline_M"))
+    if (resultat["base_weight_norme_avant"] == resultat["base_weight_norme_apres"]
+            and resultat["myeline_M_norme_avant"] == resultat["myeline_M_norme_apres"]):
+        print(f"🔒 normes des poids (mémoire) : {poids} — ÉGALES AU BIT après "
+              f"{resultat['ticks_observes']} ticks : le cerveau observé n'a pas dérivé.",
+              flush=True)
+    else:
+        print(f"⚠️  LES NORMES DE POIDS ONT CHANGÉ (mémoire) : {poids}. C'est la LTP d'un pic de "
+              f"dopamine (`fortifier_synapses`, en place) : ATTENDUE sur un `.brain` sauvegardé en "
+              f"pleine journée (trace d'éligibilité non nulle), INATTENDUE sur un `.brain` "
+              f"sauvegardé après une nuit (`cycle_sommeil` remet `annexe_weight` ET "
+              f"`trace_activation` à zéro). Le FICHIER, lui, est intact : rien n'est reparti sur le "
+              f"disque.", file=sys.stderr, flush=True)
 
 
 def main(argv=None) -> int:

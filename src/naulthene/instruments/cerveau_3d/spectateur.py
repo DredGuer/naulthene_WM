@@ -41,6 +41,36 @@ se termine par `etat.agent.train()` (`noyau.py` l.8951). L'ordre inverse laisser
 mode entraînement, où `NaultheneLinearSynaptique.forward` remet à jour `myeline_M` et
 `trace_activation` à chaque passage (`lancer_arene.py` porte le même commentaire).
 
+═══ LA SECONDE PREUVE §10 : « LE CERVEAU OBSERVÉ NE DÉRIVE PAS » ═══
+
+L'empreinte SHA-256 prouve le **FICHIER** ; elle ne dit **rien** de la mémoire, où `traiter_tick`
+grave la LTP. La spec §10 exige donc une seconde preuve, et ce module la REND : les normes L2 de
+`base_weight` et de `myeline_M`, relevées avant la première trame et après le dernier tick
+(clés `*_norme_avant` / `*_norme_apres` du dictionnaire de retour).
+
+**Pourquoi les deux sont EXACTEMENT égales sur un `.brain` sauvegardé après une nuit** — et non
+« à peu près » : la LTP par pic vaut
+
+    myeline_M += trace_activation × pic          (Étape 1 de `fortification_dopaminergique`)
+    base_weight += annexe_weight × clamp(trace_activation × pic, 0, 1)
+
+et `cycle_sommeil` remet à zéro **les deux** facteurs, `annexe_weight.zero_()` **et**
+`trace_activation.zero_()` (`noyau.py` l.365-366, en fin de nuit, après consolidation). Un produit
+dont un facteur est nul vaut zéro **au bit** : `myeline_M += 0` et `base_weight += 0` sont des
+non-opérations exactes, pas des non-opérations approchées. **Mesuré** sur
+`brains/08092026_sci01_balayage_K/K4_NU/K4_NU_g11.brain` (bus 145, jour 1500) : `base_weight`
+16,750667240914318 et `myeline_M` 1,6425963671801869 — **identiques au bit** avant/après 300 ticks,
+pour une `trace_activation` mesurée à `0,0` exactement.
+
+⚠️ **Ce ne serait PAS nul sur un `.brain` sauvegardé en pleine journée** (micro-sieste de la
+Cuve) : `trace_activation` y est non nulle et `annexe_weight` porte le gradient du jour — la même
+boucle de ticks graverait alors une dérive RÉELLE. Elle resterait **en mémoire** (aucune sauvegarde
+n'étant appelée : c'est ce que l'empreinte atteste), mais l'égalité exacte des normes, elle,
+tomberait. Une dérive affichée par ce module n'est donc pas un défaut du spectateur : elle dit
+l'état du `.brain` qu'on lui a donné à observer. C'est pour cette raison que la CLI **affiche** les
+normes sans en faire un critère de sortie — un `.brain` de pleine journée doit pouvoir être observé
+sans être déclaré en échec.
+
 ═══ POURQUOI `demarrer_journee` EST RAPPELÉ TOUS LES `ticks_par_jour` TICKS ═══
 
 Mesuré, deux fois 2400 ticks sur un cerveau neuf (`bus = 16`, `NAULTHENE_DEVICE=cpu`), pic RSS
@@ -97,6 +127,7 @@ Voir `docs/ameliorations/PLAN_VIS-01_cerveau_3d.md` (tâche 8) et
 from __future__ import annotations
 
 import hashlib
+import math
 import os
 import time
 
@@ -116,6 +147,39 @@ def _sha256(chemin) -> str:
         for bloc in iter(lambda: fichier.read(1024 * 1024), b""):
             empreinte.update(bloc)
     return empreinte.hexdigest()
+
+
+def _normes_poids(agent) -> dict:
+    """Les normes L2 de `base_weight` et de `myeline_M` de TOUTES les couches plastiques.
+
+    C'est la preuve §10 « le cerveau observé ne dérive pas », en MÉMOIRE — l'empreinte SHA-256,
+    elle, ne parle que du FICHIER. Les deux sont nécessaires et aucune ne remplace l'autre :
+    `traiter_tick` → `fortifier_synapses` écrit **en place** (`noyau.py`, section 1) sans jamais
+    toucher le disque, donc un spectateur qui dériverait passerait le test d'empreinte les doigts
+    dans le nez. Voir la docstring du module pour la raison EXACTE pour laquelle ces normes sont
+    égales **au bit** sur un `.brain` sauvegardé après une nuit, et ne le seraient pas sur un
+    `.brain` sauvegardé en pleine journée.
+
+    UNE norme par grandeur, sur l'ENSEMBLE des couches (racine de la somme des carrés) : douze
+    valeurs séparées seraient douze assertions à maintenir, et un maximum élément par élément
+    devrait être comparé à une tolérance — or c'est précisément la tolérance qu'on ne veut pas ici.
+
+    Lecture seule, sous `detach()`, sans aucun `forward` : mesurer ne modifie rien.
+
+    Sélection des couches : celles qui portent `base_weight` ET `myeline_M` (les
+    `NaultheneLinearSynaptique`), comme `rapporteur.py` l.174 sélectionne les couches
+    instrumentées. Un module qui ne porterait qu'un des deux est ignoré — mesurer la moitié d'un
+    couple ne prouve rien sur le couple.
+    """
+    carres = {"base_weight": 0.0, "myeline_M": 0.0}
+    for _, module in agent.named_modules():
+        base = getattr(module, "base_weight", None)
+        myeline = getattr(module, "myeline_M", None)
+        if base is None or myeline is None:
+            continue
+        carres["base_weight"] += float(base.detach().float().pow(2).sum())
+        carres["myeline_M"] += float(myeline.detach().float().pow(2).sum())
+    return {nom: math.sqrt(total) for nom, total in carres.items()}
 
 
 def _meta_etat(etat) -> dict:
@@ -187,10 +251,22 @@ def jouer_cerveau(bus, fichier_brain, arret=None, duree=None, hz=15.0) -> dict:
     - `hz` : cadence de PUBLICATION (le tick, lui, n'est jamais ralenti — voir la docstring du
       module).
 
-    Renvoie un dictionnaire qui porte la preuve de lecture seule. Le contrat minimal est
-    `{"tick_absolu", "jour", "brain_sha256_avant", "brain_sha256_apres"}` (plus
-    `ticks_observes`, les ticks joués par CETTE session, et `menages`, les ménages de journée
-    effectués — ce que le test de fuite mémoire observe).
+    Renvoie un dictionnaire qui porte les DEUX preuves de lecture seule de la spec §10 :
+
+    - le FICHIER — contrat minimal `{"tick_absolu", "jour", "brain_sha256_avant",
+      "brain_sha256_apres"}`, plus `ticks_observes` (les ticks joués par CETTE session) et
+      `menages` (les ménages de journée effectués — ce que le test de fuite mémoire observe) ;
+    - la MÉMOIRE — `base_weight_norme_avant/apres` et `myeline_M_norme_avant/apres` : les normes L2
+      relevées au DÉBUT de l'observation (cerveau chargé, `demarrer_journee` appelé et `eval()`
+      posé — l'instant exact où la session prend la main) et à la FIN du dernier tick observé.
+      « Le cerveau observé ne dérive pas » se lit LÀ, jamais dans l'empreinte : `fortifier_synapses`
+      écrit en mémoire sans salir le disque.
+
+    ⚠️ Ces normes sont égales **au bit** sur un `.brain` sauvegardé après une nuit (mesuré :
+    16,750667240914318 et 1,6425963671801869 sur `K4_NU_g11.brain`, inchangées sur 300 ticks) et
+    peuvent ne PAS l'être sur un `.brain` sauvegardé en pleine journée — la docstring du module en
+    donne la raison exacte. Un écart n'est donc pas un défaut du spectateur : il dit l'état du
+    `.brain` qu'on lui a donné à observer.
 
     ⚠️ `tick_absolu` est le compteur de vie du CERVEAU (restauré du `.brain`, il survit aux
     résurrections : 537 329 au chargement de `K4_NU_g11.brain`) ; `ticks_observes` est celui de la
@@ -216,6 +292,10 @@ def jouer_cerveau(bus, fichier_brain, arret=None, duree=None, hz=15.0) -> dict:
     etat = PersistanceAnatomique(chemin).charger_ou_naitre()
     noyau.demarrer_journee(etat)          # ⚠️ AVANT `eval()` : il finit par `agent.train()`
     etat.agent.eval()
+    # Le point de DÉPART de la preuve §10 : l'état exact où l'observation commence. Relevé ici, et
+    # pas juste après le chargement, parce que c'est ici que la session prend la main — mesurer plus
+    # tôt attribuerait à l'observation ce que la mise en route aurait fait.
+    normes_avant = _normes_poids(etat.agent)
 
     rapporteur = Rapporteur(bus, hz=hz)
     rapporteur.attacher(etat.agent)
@@ -243,6 +323,9 @@ def jouer_cerveau(bus, fichier_brain, arret=None, duree=None, hz=15.0) -> dict:
                 noyau.demarrer_journee(etat)
                 etat.agent.eval()          # `demarrer_journee` vient de rappeler `train()`
                 ticks, menages = 0, menages + 1
+        # Le point d'ARRIVÉE, relevé AVANT le démontage : `detacher()` et `env.close()` ne touchent
+        # aucun poids, mais la mesure doit porter sur le dernier tick OBSERVÉ, pas sur une sortie.
+        normes_apres = _normes_poids(etat.agent)
     finally:
         rapporteur.detacher()
         etat.env.close()
@@ -252,4 +335,9 @@ def jouer_cerveau(bus, fichier_brain, arret=None, duree=None, hz=15.0) -> dict:
             "jour": int(etat.jour),
             "brain_sha256_avant": sha_avant,
             "brain_sha256_apres": _sha256(chemin),
-            "menages": menages}
+            "menages": menages,
+            # §10 — « le cerveau observé ne dérive pas » : mêmes bornes temporelles que l'empreinte.
+            "base_weight_norme_avant": normes_avant["base_weight"],
+            "base_weight_norme_apres": normes_apres["base_weight"],
+            "myeline_M_norme_avant": normes_avant["myeline_M"],
+            "myeline_M_norme_apres": normes_apres["myeline_M"]}

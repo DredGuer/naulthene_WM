@@ -2155,6 +2155,11 @@ class TestSpectateurLectureSeule(unittest.TestCase):
         Le dossier du `.brain` est aussi comparé AVANT/APRÈS : c'est ce qui attrape une écriture
         qui ne viserait pas le fichier lui-même — un `.tmp` de `sauvegarder` (il en crée un avant
         `os.replace`, `persistance.py`), un log, une empreinte de W&B hors ligne.
+
+        ⚠️ L'empreinte prouve le FICHIER, et RIEN de la MÉMOIRE : `traiter_tick` →
+        `fortifier_synapses` écrit EN PLACE (`base_weight` ET `myeline_M`, sous `no_grad`) sans
+        jamais salir le disque. C'est pourquoi la spec §10 exige une SECONDE preuve — « le cerveau
+        observé ne dérive pas » — et elle est assertée ici, sur les normes rendues par le module.
         """
         from naulthene.cerveau.telemetrie import BusTrames
         from naulthene.instruments.cerveau_3d.spectateur import jouer_cerveau
@@ -2176,6 +2181,48 @@ class TestSpectateurLectureSeule(unittest.TestCase):
             # valeur mémorisée avant une écriture qui aurait eu lieu entre-temps.
             self.assertEqual(resultat["brain_sha256_avant"], avant)
             self.assertEqual(resultat["brain_sha256_apres"], apres)
+            # 🔴 §10 — LA SECONDE PREUVE : « LE CERVEAU OBSERVÉ NE DÉRIVE PAS », en MÉMOIRE.
+            #
+            # C'est ici que se joue la garantie réelle du spectateur : l'empreinte ci-dessus
+            # resterait identique même si TOUTES les synapses dérivaient, puisque
+            # `fortifier_synapses` écrit en place sans qu'aucune sauvegarde soit appelée.
+            #
+            # ÉGALITÉ EXACTE, jamais une tolérance : la LTP par pic vaut `trace_activation × pic`
+            # pour `myeline_M` et `annexe_weight × clamp(trace_activation × pic, 0, 1)` pour
+            # `base_weight`. Sur un `.brain` sauvegardé APRÈS UNE NUIT, `cycle_sommeil` remet à
+            # zéro LES DEUX facteurs (`annexe_weight.zero_()` **et** `trace_activation.zero_()`,
+            # `noyau.py` l.365-366, après la consolidation) : un produit dont un facteur est nul
+            # vaut zéro AU BIT, donc `myeline_M += 0` et `base_weight += 0` sont des
+            # non-opérations EXACTES, pas des non-opérations approchées. MESURÉ sur un cerveau de
+            # campagne (`brains/…/K4_NU_g11.brain`, après une nuit, `bus = 145`) :
+            # `base_weight` 16,750667240914318 et `myeline_M` 1,6425963671801869 — identiques au
+            # bit avant/après 300 ticks, pour une `trace_activation` mesurée à 0,0 exactement.
+            #
+            # ⚠️ Ce ne serait PAS nul sur un `.brain` sauvegardé EN PLEINE JOURNÉE (micro-sieste
+            # de la Cuve) : `trace_activation` y est non nulle et `annexe_weight` porte le gradient
+            # du jour — la même boucle graverait alors une dérive RÉELLE, en mémoire seulement.
+            # Une tolérance masquerait exactement ce qu'on veut voir ; l'égalité exacte, elle,
+            # tombe. C'est le but de cette assertion, et non un risque de test instable.
+            self.assertEqual(resultat["base_weight_norme_avant"], resultat["base_weight_norme_apres"],
+                             "`base_weight` a dérivé pendant l'observation (LTP en mémoire)")
+            self.assertEqual(resultat["myeline_M_norme_avant"], resultat["myeline_M_norme_apres"],
+                             "`myeline_M` a dérivé pendant l'observation (LTP en mémoire)")
+            # Témoin de VIVACITÉ de l'instrument : une sonde qui rendrait `0.0` partout passerait
+            # l'égalité ci-dessus sans rien mesurer. `base_weight` naît en xavier (norme mesurée
+            # ≈ 14,50 sur une naissance `bus = 16`), donc un zéro ici serait un défaut de la sonde.
+            self.assertGreater(resultat["base_weight_norme_avant"], 0.0)
+            self.assertGreater(resultat["base_weight_norme_apres"], 0.0)
+            # ⚠️ `myeline_M`, en revanche, vaut EXACTEMENT 0 sur ce cerveau-ci, et c'est MESURÉ :
+            # `annexe_weight` naît à zéro (aucun `backward` n'a tourné — `apprendre_journee` est
+            # une porte d'écriture que le spectateur ne franchit jamais) et `trace_activation`
+            # n'accumule que `0,1 × |annexe_weight|`. L'égalité de `myeline_M` y est donc vraie PAR
+            # CONSTRUCTION : elle ne discrimine pas ce `.brain`-ci, et le test le DIT au lieu de
+            # laisser croire à une mesure (voir la docstring de `_brain_neuf`). Ce qui discrimine
+            # ici, c'est la norme non nulle de `base_weight` ; et sur un cerveau d'après-nuit réel,
+            # `myeline_M` vaut 1,6425963671801869 — l'égalité y est alors une vraie mesure (tour de
+            # correction 1, rapport de la tâche 8 : la dérive forcée en mémoire fait tomber ces
+            # deux assertions).
+            self.assertEqual(resultat["myeline_M_norme_avant"], 0.0)
             # Témoin : le cerveau a VRAIMENT vécu (sans lui, un spectateur inerte passerait
             # le test d'empreinte — l'absence totale d'écriture n'est pas une preuve d'usage).
             self.assertGreater(resultat["ticks_observes"], 0)
@@ -2436,6 +2483,12 @@ class TestCliModeCerveau(unittest.TestCase):
         C'est le seul test qui traverse le VRAI point d'entrée (import paresseux de `spectateur`,
         fil source, fil serveur, arrêt sur `--duree`) : les tests unitaires ci-dessus ne
         prouveraient pas que le mode est branché dans la CLI.
+
+        ⚠️ Les DEUX preuves §10 sont cherchées dans la sortie : l'empreinte (le FICHIER) **et** les
+        normes de poids (la MÉMOIRE). Un verdict qui ne vivrait que dans le dictionnaire de retour
+        ne serait lu par personne — l'auteur, lui, regarde la console. La ligne des normes est
+        assertée sur ses deux grandeurs ET sur son verdict, sans épingler de valeur : le cerveau
+        joué ici est une naissance, ses nombres n'ont pas à être figés dans un test.
         """
         with tempfile.TemporaryDirectory() as dossier:
             chemin = _brain_neuf(dossier)
@@ -2450,6 +2503,11 @@ class TestCliModeCerveau(unittest.TestCase):
             # Le VERDICT est cherché sans tenir compte de la casse : c'est le MOT qui compte, pas
             # la typographie de l'écran (le verdict s'affiche en capitales).
             self.assertIn("bit-identique", sortie.lower())
+            # §10, seconde preuve : les normes des DEUX grandeurs sont à l'écran, avec leur verdict.
+            self.assertIn("normes des poids", sortie)
+            self.assertIn("base_weight", sortie)
+            self.assertIn("myeline_M", sortie)
+            self.assertIn("ÉGALES AU BIT", sortie)
             # ⚠️ Le NOMBRE de ticks annoncé doit être celui de la SESSION, et le verdict doit le
             # nommer comme tel : sur un cerveau de campagne, `tick_absolu` vaut 537 329 — écrire
             # « 537 329 ticks observés » après quatre secondes serait un mensonge d'étiquette.
