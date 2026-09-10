@@ -837,6 +837,435 @@ class TestServeur(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
+# Tâche 11 — le veilleur du FICHIER de structure (la seconde moitié de l'avenant)
+# ---------------------------------------------------------------------------
+
+def _ecrire_structure(chemin, dim_bus: int) -> None:
+    """Écrit une trame `structure` dans `chemin` — ATOMIQUEMENT, comme le fait le run.
+
+    ⚠️ Le PRODUCTEUR réel est déjà couvert par `TestTelemetrieDuNoyau` (fichier temporaire puis
+    `os.replace`, après chaque neurogenèse) ; ce qui compte ICI est la forme de ce que le veilleur
+    lit et le MODE d'écriture : une écriture non atomique laisserait le lecteur voir des trames
+    tronquées, et des tests du veilleur verts ne le diraient pas.
+    """
+    from naulthene.cerveau.telemetrie import definir_couches, trame_structure
+    trame = trame_structure(definir_couches(dim_bus), [],
+                            {"dim_bus": dim_bus, "tick": 0, "jour": 0})
+    temporaire = f"{chemin}.{os.getpid()}.tmp"
+    with open(temporaire, "wb") as fichier:
+        fichier.write(serialiser(trame))
+    os.replace(temporaire, chemin)
+
+
+class TestVeilleurStructureFichier(unittest.TestCase):
+    """Tâche 11 — le serveur LIT le fichier qu'un run écrit (`<brain>.vis01_structure.json`).
+
+    ⚠️ Ce qui est mesuré n'est pas « un fichier est lu » mais la chaîne de l'étape 2 : le run
+    écrit (prouvé par `TestTelemetrieDuNoyau`), le serveur relit, publie dans son bus, et ce que le
+    navigateur interroge — `GET /structure` — rend les 12 couches au lieu de `{}`. Avant cette
+    tâche, le fichier existait et PERSONNE ne le lisait : la page 3D restait indéfiniment sur
+    « en attente de la structure… » alors que l'activité, elle, arrivait par UDP.
+    """
+
+    @staticmethod
+    def _rend_la_main(appel, delai=3.0):
+        """`True` si `appel()` rend la main avant `delai`.
+
+        ⚠️ Réutilise la garde de `TestServeur` (une `@staticmethod` sans état : la recopier
+        créerait deux vérités pour une seule règle) — un veilleur qui se bloque sur un tube nommé
+        doit faire ÉCHOUER le test, jamais pendre la suite entière.
+        """
+        return TestServeur._rend_la_main(appel, delai)
+
+    def test_un_fichier_valide_est_publie_au_demarrage_et_structure_rend_les_douze_couches(self):
+        """Critère n°1 : un fichier de structure valide ⇒ `GET /structure` rend les 12 couches.
+
+        ⚠️ La publication est vérifiée SANS ATTENTE, juste après `demarrer_en_thread()` : le
+        premier tour de veille est synchrone (`relire(force=True)`), donc un serveur qui vient de
+        s'ouvrir connaît déjà la forme du cerveau qu'il va dessiner. Un premier tour fait dans le
+        fil de veille aurait laissé une fenêtre où la page affiche « en attente » alors que le
+        fichier était là depuis longtemps — et c'est la première connexion du navigateur, celle
+        qui compte.
+        """
+        import urllib.request
+        from naulthene.cerveau.telemetrie import BusTrames, definir_couches
+        from naulthene.instruments.cerveau_3d.serveur import (ServeurCerveau3D,
+                                                              VeilleurStructureFichier)
+
+        with tempfile.TemporaryDirectory() as dossier:
+            chemin = os.path.join(dossier, "run.brain" + FICHIER_STRUCTURE_SUFFIXE)
+            _ecrire_structure(chemin, 16)
+            bus = BusTrames()
+            veilleur = VeilleurStructureFichier(bus, chemin)
+            veilleur.demarrer_en_thread()
+            serveur = ServeurCerveau3D(bus, port=0, veilleur_structure=veilleur)
+            serveur.demarrer_en_thread()
+            try:
+                self.assertEqual(bus.sequence_structure, 1)      # publiée AVANT tout client
+                with urllib.request.urlopen(f"http://127.0.0.1:{serveur.port}/structure",
+                                            timeout=2.0) as reponse:
+                    structure = json_strict(reponse.read())
+                self.assertEqual(len(structure["couches"]), 12)
+                self.assertEqual(structure["dim_bus"], 16)
+                self.assertEqual([c["nom"] for c in structure["couches"]],
+                                 [c["nom"] for c in definir_couches(16)])
+                self.assertEqual(veilleur.compteurs()["publications"], 1)
+                self.assertEqual(veilleur.compteurs()["absences"], 0)
+            finally:
+                veilleur.arreter()
+                serveur.arreter()
+
+    def test_une_reecriture_est_republiee_sans_redemarrer(self):
+        """Critère n°2 : le fichier RÉÉCRIT (neurogenèse, `dim_bus` 16 → 32) est republié.
+
+        ⚠️ Trois témoins, et aucun ne suffit seul : le compteur du bus (la page a de quoi
+        reconstruire sa scène), le CORPS de `GET /structure` (c'est la nouvelle forme qui part,
+        pas un compteur qui bouge), et l'ABSENCE de republication gratuite — un veilleur qui
+        republierait à chaque tour ferait reconstruire la scène 1 fois par seconde pour rien.
+        Les compteurs de `/sante` sont lus au passage : « compté » doit se voir, pas se croire.
+        """
+        import time
+        import urllib.request
+        from naulthene.cerveau.telemetrie import BusTrames
+        from naulthene.instruments.cerveau_3d.serveur import (ServeurCerveau3D,
+                                                              VeilleurStructureFichier)
+
+        with tempfile.TemporaryDirectory() as dossier:
+            chemin = os.path.join(dossier, "run.brain" + FICHIER_STRUCTURE_SUFFIXE)
+            _ecrire_structure(chemin, 16)
+            bus = BusTrames()
+            veilleur = VeilleurStructureFichier(bus, chemin, periode=0.05)
+            veilleur.demarrer_en_thread()
+            serveur = ServeurCerveau3D(bus, port=0, veilleur_structure=veilleur)
+            serveur.demarrer_en_thread()
+            try:
+                with urllib.request.urlopen(f"http://127.0.0.1:{serveur.port}/structure",
+                                            timeout=2.0) as reponse:
+                    self.assertEqual(json.loads(reponse.read())["dim_bus"], 16)
+
+                _ecrire_structure(chemin, 32)
+                limite = time.time() + 5.0
+                while bus.sequence_structure < 2 and time.time() < limite:
+                    time.sleep(0.02)
+                self.assertEqual(bus.sequence_structure, 2, "la réécriture n'a jamais été relue")
+                with urllib.request.urlopen(f"http://127.0.0.1:{serveur.port}/structure",
+                                            timeout=2.0) as reponse:
+                    self.assertEqual(json.loads(reponse.read())["dim_bus"], 32)
+
+                with urllib.request.urlopen(f"http://127.0.0.1:{serveur.port}/sante",
+                                            timeout=2.0) as reponse:
+                    compteurs = json.loads(reponse.read())["structure_fichier"]
+                self.assertEqual(compteurs["chemin"], chemin)
+                self.assertEqual(compteurs["publications"], 2)
+                self.assertEqual(compteurs["invalides"], 0)
+
+                # ⚠️ Le fichier ne bouge plus : plusieurs tours de veille ne doivent RIEN publier.
+                time.sleep(0.3)
+                self.assertEqual(bus.sequence_structure, 2,
+                                 "le veilleur republie sans que le fichier ait changé")
+            finally:
+                veilleur.arreter()
+                serveur.arreter()
+
+    def test_la_structure_relue_est_poussee_sur_le_flux_sse(self):
+        """La relecture doit atteindre le NAVIGATEUR, pas seulement le bus.
+
+        C'est le contrat de la page (spec §9) : quand le cerveau grandit, la scène se reconstruit.
+        Un client SSE déjà connecté — donc le cas réel, onglet ouvert pendant le run — doit
+        recevoir une SECONDE trame `structure`. Un test qui se contenterait de `GET /structure`
+        passerait même si le flux ne poussait plus rien après la connexion.
+        """
+        import socket
+        import time
+        import urllib.request
+        from naulthene.cerveau.telemetrie import BusTrames
+        from naulthene.instruments.cerveau_3d.serveur import (ServeurCerveau3D,
+                                                              VeilleurStructureFichier)
+
+        with tempfile.TemporaryDirectory() as dossier:
+            chemin = os.path.join(dossier, "run.brain" + FICHIER_STRUCTURE_SUFFIXE)
+            _ecrire_structure(chemin, 16)
+            bus = BusTrames()
+            veilleur = VeilleurStructureFichier(bus, chemin, periode=0.05)
+            veilleur.demarrer_en_thread()
+            serveur = ServeurCerveau3D(bus, port=0, veilleur_structure=veilleur)
+            serveur.demarrer_en_thread()
+            try:
+                with urllib.request.urlopen(f"http://127.0.0.1:{serveur.port}/flux",
+                                            timeout=5.0) as flux:
+                    def prochaine_structure(delai):
+                        """Lit le flux (borné par le délai) jusqu'à la prochaine trame `structure`."""
+                        fin, nom = time.time() + delai, None
+                        while time.time() < fin:
+                            try:
+                                ligne = flux.readline().decode("utf-8").rstrip()
+                            except (socket.timeout, TimeoutError):
+                                return None
+                            if ligne.startswith("event: "):
+                                nom = ligne[len("event: "):]
+                            elif ligne.startswith("data: ") and nom == "structure":
+                                return json.loads(ligne[len("data: "):])
+                        return None
+
+                    self.assertEqual(prochaine_structure(5.0)["dim_bus"], 16)
+                    _ecrire_structure(chemin, 32)
+                    seconde = prochaine_structure(5.0)
+                    self.assertIsNotNone(seconde, "la structure relue n'est pas poussée sur le flux")
+                    self.assertEqual(seconde["dim_bus"], 32)
+            finally:
+                veilleur.arreter()
+                serveur.arreter()
+
+    def test_un_fichier_absent_laisse_le_serveur_debout_puis_est_pris_quand_il_apparait(self):
+        """Critère n°3, et l'ORDRE RÉEL du lancement : le serveur démarre AVANT le run.
+
+        Le fichier n'existe pas encore — c'est le cas normal de l'étape 2 (on ouvre le serveur,
+        puis on lance le run). Le serveur doit répondre quand même (`/structure` rend `{}`, `/sante`
+        compte l'absence), et publier dès que le run écrit le fichier, sans redémarrage.
+        """
+        import time
+        import urllib.request
+        from naulthene.cerveau.telemetrie import BusTrames
+        from naulthene.instruments.cerveau_3d.serveur import (ServeurCerveau3D,
+                                                              VeilleurStructureFichier)
+
+        with tempfile.TemporaryDirectory() as dossier:
+            chemin = os.path.join(dossier, "pas_encore" + FICHIER_STRUCTURE_SUFFIXE)
+            bus = BusTrames()
+            veilleur = VeilleurStructureFichier(bus, chemin, periode=0.05)
+            veilleur.demarrer_en_thread()
+            serveur = ServeurCerveau3D(bus, port=0, veilleur_structure=veilleur)
+            serveur.demarrer_en_thread()
+            try:
+                self.assertIsNone(bus.structure())
+                with urllib.request.urlopen(f"http://127.0.0.1:{serveur.port}/structure",
+                                            timeout=2.0) as reponse:
+                    self.assertEqual(json.loads(reponse.read()), {})   # « en attente », pas une erreur
+
+                _ecrire_structure(chemin, 16)                # le run démarre MAINTENANT
+                limite = time.time() + 5.0
+                while bus.sequence_structure < 1 and time.time() < limite:
+                    time.sleep(0.02)
+                self.assertEqual(bus.sequence_structure, 1)
+                with urllib.request.urlopen(f"http://127.0.0.1:{serveur.port}/structure",
+                                            timeout=2.0) as reponse:
+                    self.assertEqual(len(json.loads(reponse.read())["couches"]), 12)
+                compteurs = veilleur.compteurs()
+                self.assertGreaterEqual(compteurs["absences"], 1)    # l'attente est COMPTÉE
+                self.assertEqual(compteurs["publications"], 1)
+                self.assertEqual(compteurs["invalides"], 0)
+            finally:
+                veilleur.arreter()
+                serveur.arreter()
+
+    def test_un_fichier_malforme_est_compte_et_ignore_puis_relu_quand_il_devient_valide(self):
+        """Critère n°3 : JSON cassé ⇒ aucune exception, aucune publication, et le serveur répond.
+
+        ⚠️ Le second temps du test est aussi important que le premier : un fichier malformé est
+        relu dès qu'il CHANGE (le run en cours d'écriture, un premier essai raté puis corrigé).
+        Un veilleur qui marquerait « déjà vu » sans jamais revenir dessus laisserait la page en
+        attente pour toujours, et aucune exception ne le dirait.
+        """
+        import time
+        import urllib.request
+        from naulthene.cerveau.telemetrie import BusTrames
+        from naulthene.instruments.cerveau_3d.serveur import (ServeurCerveau3D,
+                                                              VeilleurStructureFichier)
+
+        with tempfile.TemporaryDirectory() as dossier:
+            chemin = os.path.join(dossier, "casse" + FICHIER_STRUCTURE_SUFFIXE)
+            with open(chemin, "w", encoding="utf-8") as fichier:
+                fichier.write('{"type": "structure", "couches": [')   # tronqué, comme une écriture
+                                                                     # non atomique interrompue
+            bus = BusTrames()
+            veilleur = VeilleurStructureFichier(bus, chemin, periode=0.05)
+            veilleur.demarrer_en_thread()
+            serveur = ServeurCerveau3D(bus, port=0, veilleur_structure=veilleur)
+            serveur.demarrer_en_thread()
+            try:
+                self.assertIsNone(bus.structure())
+                self.assertGreaterEqual(veilleur.compteurs()["invalides"], 1)
+                self.assertEqual(veilleur.compteurs()["publications"], 0)
+                with urllib.request.urlopen(f"http://127.0.0.1:{serveur.port}/structure",
+                                            timeout=2.0) as reponse:
+                    self.assertEqual(json.loads(reponse.read()), {})
+
+                _ecrire_structure(chemin, 24)                # le run réécrit proprement
+                limite = time.time() + 5.0
+                while bus.sequence_structure < 1 and time.time() < limite:
+                    time.sleep(0.02)
+                self.assertEqual(bus.sequence_structure, 1)
+                with urllib.request.urlopen(f"http://127.0.0.1:{serveur.port}/sante",
+                                            timeout=2.0) as reponse:
+                    compteurs = json.loads(reponse.read())["structure_fichier"]
+                self.assertEqual(compteurs["publications"], 1)
+                self.assertGreaterEqual(compteurs["invalides"], 1)
+                self.assertIn("structure", compteurs["derniere_erreur"])
+            finally:
+                veilleur.arreter()
+                serveur.arreter()
+
+    def test_un_chemin_qui_n_est_pas_un_fichier_ordinaire_est_compte_sans_bloquer(self):
+        """Critère n°3, seconde face : un chemin ILLISIBLE ne fait ni tomber ni pendre la veille.
+
+        ⚠️ Deux chemins, et le second est la raison d'être de la garde `S_ISREG` :
+        (1) un DOSSIER — `stat` réussit, la lecture échouerait, on ne la tente pas ;
+        (2) un TUBE NOMMÉ — `open()` y BLOQUE indéfiniment (il attend un écrivain) : sans la garde,
+        le fil de veille resterait pendu, et toute surveillance avec lui. C'est un cas qu'un
+        `--structure-fichier` tapé sur un chemin exotique produit pour de vrai.
+        """
+        import urllib.request
+        from naulthene.cerveau.telemetrie import BusTrames
+        from naulthene.instruments.cerveau_3d.serveur import (ServeurCerveau3D,
+                                                              VeilleurStructureFichier)
+
+        with tempfile.TemporaryDirectory() as dossier:
+            bus = BusTrames()
+
+            dossier_comme_fichier = os.path.join(dossier, "un_dossier")
+            os.mkdir(dossier_comme_fichier)
+            veilleur = VeilleurStructureFichier(bus, dossier_comme_fichier, periode=0.05)
+            veilleur.demarrer_en_thread()
+            serveur = ServeurCerveau3D(bus, port=0, veilleur_structure=veilleur)
+            serveur.demarrer_en_thread()
+            try:
+                self.assertIsNone(bus.structure())
+                self.assertGreaterEqual(veilleur.compteurs()["illisibles"], 1)
+                self.assertEqual(veilleur.compteurs()["publications"], 0)
+                with urllib.request.urlopen(f"http://127.0.0.1:{serveur.port}/sante",
+                                            timeout=2.0) as reponse:
+                    self.assertEqual(reponse.status, 200)      # le serveur répond, il ne tombe pas
+            finally:
+                veilleur.arreter()
+                serveur.arreter()
+
+            tube = os.path.join(dossier, "un_tube")
+            os.mkfifo(tube)
+            veilleur = VeilleurStructureFichier(bus, tube, periode=0.05)
+            self.assertTrue(self._rend_la_main(lambda: veilleur.relire(force=True)),
+                            "la veille est restée BLOQUÉE sur un tube nommé")
+            self.assertEqual(veilleur.compteurs()["publications"], 0)
+            self.assertGreaterEqual(veilleur.compteurs()["illisibles"], 1)
+            self.assertIsNone(bus.structure())
+
+    def test_un_fichier_trop_gros_n_est_pas_lu_et_reste_compte_invalide(self):
+        """Garde de TAILLE : `--structure-fichier` pointé sur un `.brain` ne remplit pas la RAM.
+
+        Un `.brain` réel pèse des centaines de Mio : le lire en entier pour découvrir que ce n'est
+        pas du JSON serait un mauvais service rendu à l'auteur qui s'est trompé de chemin. La
+        borne est comptée comme un fichier INVALIDE (pas une absence : le fichier est bien là), et
+        la page garde son message d'attente.
+        """
+        import urllib.request
+        from naulthene.cerveau.telemetrie import BusTrames
+        from naulthene.instruments.cerveau_3d.serveur import (ServeurCerveau3D,
+                                                              VeilleurStructureFichier)
+
+        with tempfile.TemporaryDirectory() as dossier:
+            chemin = os.path.join(dossier, "un_brain_par_erreur.brain")
+            with open(chemin, "wb") as fichier:
+                fichier.write(b"\x00" * 4096)          # opaque, gros : jamais lu
+            bus = BusTrames()
+            veilleur = VeilleurStructureFichier(bus, chemin, periode=60.0, taille_max=1024)
+            serveur = ServeurCerveau3D(bus, port=0, veilleur_structure=veilleur)
+            serveur.demarrer_en_thread()
+            try:
+                self.assertFalse(veilleur.relire(force=True))
+                self.assertEqual(bus.sequence_structure, 0)
+                self.assertGreaterEqual(veilleur.compteurs()["invalides"], 1)
+                self.assertIn("plafond", veilleur.compteurs()["derniere_erreur"])
+                with urllib.request.urlopen(f"http://127.0.0.1:{serveur.port}/structure",
+                                            timeout=2.0) as reponse:
+                    self.assertEqual(json.loads(reponse.read()), {})
+            finally:
+                serveur.arreter()
+
+    def test_la_cli_serveur_seul_sert_la_structure_du_fichier_et_la_relit(self):
+        """Critère n°1 par le VRAI point d'entrée : `--serveur-seul --structure-fichier`.
+
+        Le test lance la CLI comme un utilisateur (`python -m …`), lit la bannière, interroge
+        `GET /structure` sur le port annoncé, réécrit le fichier, et vérifie que la NOUVELLE forme
+        arrive sans redémarrer. C'est la preuve que l'option est BRANCHÉE dans `main` — un
+        `VeilleurStructureFichier` parfait mais jamais monté laisserait ce test au rouge.
+        """
+        import time
+        import urllib.request
+
+        with tempfile.TemporaryDirectory() as dossier:
+            chemin = os.path.join(dossier, "run.brain" + FICHIER_STRUCTURE_SUFFIXE)
+            _ecrire_structure(chemin, 16)
+            processus = subprocess.Popen(
+                ["venv/bin/python3", "-m", "naulthene.instruments.cerveau_3d",
+                 "--serveur-seul", "--port", "0", "--duree", "300",
+                 "--structure-fichier", chemin],
+                cwd=str(RACINE_DEPOT), env={"PYTHONPATH": "src", "PATH": "/usr/bin:/bin"},
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+            try:
+                lignes, port = [], None
+                limite = time.time() + 60.0
+                # On lit la bannière ENTIÈRE (sa dernière ligne est celle qui ouvre la page) : la
+                # ligne `structure` est écrite APRÈS celle du serveur, et s'arrêter à l'URL la
+                # laisserait dans le tube — un test qui ne lirait que le port ne prouverait rien
+                # de ce que la bannière dit du fichier.
+                while time.time() < limite:
+                    ligne = processus.stdout.readline()
+                    if not ligne:
+                        break
+                    lignes.append(ligne)
+                    if "http://127.0.0.1:" in ligne:      # la bannière, `flush=True` côté CLI
+                        port = int(ligne.split("http://127.0.0.1:", 1)[1].split()[0])
+                    if ligne.startswith("   → ouvrez"):
+                        break
+                banniere = "".join(lignes)
+                self.assertIsNotNone(port, f"la bannière n'annonce aucun port : {banniere!r}")
+                self.assertIn("structure chargée : 12 couche(s)", banniere)
+
+                with urllib.request.urlopen(f"http://127.0.0.1:{port}/structure",
+                                            timeout=5.0) as reponse:
+                    self.assertEqual(len(json.loads(reponse.read())["couches"]), 12)
+
+                _ecrire_structure(chemin, 32)              # la « neurogenèse » du run
+                limite, dim_bus = time.time() + 15.0, None
+                while time.time() < limite:
+                    with urllib.request.urlopen(f"http://127.0.0.1:{port}/structure",
+                                                timeout=5.0) as reponse:
+                        dim_bus = json.loads(reponse.read()).get("dim_bus")
+                    if dim_bus == 32:
+                        break
+                    time.sleep(0.2)
+                self.assertEqual(dim_bus, 32, "la CLI n'a pas republié la structure réécrite")
+            finally:
+                processus.terminate()
+                try:
+                    processus.wait(timeout=30)
+                finally:
+                    processus.stdout.close()
+
+    def test_la_cli_refuse_structure_fichier_sans_serveur_seul(self):
+        """Deux publieurs pour un seul bus : on refuse, AVANT de lier un port.
+
+        `--source factice` (ou `cerveau`) publie DÉJÀ une structure ; un fichier relu en parallèle
+        ferait clignoter la scène d'une forme à l'autre sans que rien à l'écran ne l'explique.
+        Le refus doit être aussi précoce que les autres (`aucune` ligne `http://` dans la sortie).
+        """
+        with tempfile.TemporaryDirectory() as dossier:
+            chemin = os.path.join(dossier, "run.brain" + FICHIER_STRUCTURE_SUFFIXE)
+            _ecrire_structure(chemin, 16)
+            resultat = subprocess.run(
+                ["venv/bin/python3", "-m", "naulthene.instruments.cerveau_3d",
+                 "--source", "factice", "--port", "0", "--duree", "1",
+                 "--structure-fichier", chemin],
+                cwd=str(RACINE_DEPOT),
+                env={"PYTHONPATH": "src", "PATH": "/usr/bin:/bin"},
+                capture_output=True, text=True, timeout=90)
+            sortie = resultat.stdout + resultat.stderr
+            self.assertNotEqual(resultat.returncode, 0)
+            self.assertIn("--serveur-seul", sortie)
+            self.assertIn(chemin, sortie)
+            self.assertNotIn("http://", sortie, "le serveur a été monté avant le refus")
+
+
+# ---------------------------------------------------------------------------
 # Tâche 5 — la page three.js et le vendor
 # ---------------------------------------------------------------------------
 

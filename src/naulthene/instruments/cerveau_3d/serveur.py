@@ -14,6 +14,12 @@ termine à la fermeture de la connexion — exactement ce qu'est un flux continu
 ⚠️ Le serveur est en LECTURE SEULE sur le bus : il ne publie rien, ne bloque rien, et un
 navigateur qui disparaît (onglet fermé) ne remonte jamais dans le cerveau.
 
+⚠️ Les deux SOURCES de l'étape 2 vivent ici, et aucune n'appartient au serveur HTTP : `EcouteurUDP`
+reçoit `activite` et `evenement` (datagrammes), `VeilleurStructureFichier` relit la trame
+`structure` dans son FICHIER — elle ne peut pas passer par UDP (305 086 octets mesurés contre un
+plafond dur de 65 507), et personne ne lisait ce fichier avant la tâche 11 : la page restait sur
+« en attente de la structure… ».
+
 ⚠️ Invariant d'ÉMISSION (ruling de revue — I1) : AUCUN corps JSON servi (`/structure`,
 `/sante`, `/flux`) ne peut contenir un littéral `NaN`/`Infinity`, que `JSON.parse` rejette.
 Tout passe par `assainir_json` (une valeur non finie devient `null`), et `allow_nan=False`
@@ -24,7 +30,9 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import socket
+import stat
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -66,10 +74,12 @@ def assainir_json(charge):
 class ServeurCerveau3D:
     """Sert la page 3D et pousse les trames en SSE."""
 
-    def __init__(self, bus, port=8770, hote="127.0.0.1", dossier_statique=None):
+    def __init__(self, bus, port=8770, hote="127.0.0.1", dossier_statique=None,
+                 veilleur_structure=None):
         self.bus = bus
         self.hote = hote
         self.dossier_statique = Path(dossier_statique or (Path(__file__).parent / "static"))
+        self._veilleur_structure = veilleur_structure   # purement OBSERVÉ (`/sante`), jamais piloté
         self._serveur = ThreadingHTTPServer((hote, int(port)), self._fabriquer_gestionnaire())
         self._serveur.daemon_threads = True
         self.port = self._serveur.server_address[1]   # port RÉEL : `port=0` en choisit un libre
@@ -99,8 +109,7 @@ class ServeurCerveau3D:
                 if chemin == "/structure":
                     return self._json(serveur.bus.structure() or {})
                 if chemin == "/sante":
-                    return self._json({"bus": serveur.bus.compteurs(),
-                                       "emissions_refusees": serveur._emissions_refusees})
+                    return self._json(serveur._sante())
                 if chemin == "/flux":
                     return self._flux()
                 self.send_error(404)
@@ -219,6 +228,21 @@ class ServeurCerveau3D:
 
         return Gestionnaire
 
+    def _sante(self) -> dict:
+        """Les compteurs de santé — le bus, les émissions refusées, et l'état du fichier.
+
+        ⚠️ Le bloc `structure_fichier` n'apparaît QUE si un veilleur a été fourni : une clé
+        toujours présente et toujours `null` ferait croire à un fichier surveillé qui ne
+        répond pas. Quand il est là, il dit le chemin, les publications et les ÉCHECS
+        (absences, lectures impossibles, JSON invalide) — c'est ce qui distingue « la page
+        attend un run » de « la page attend un fichier qu'on ne sait pas lire ».
+        """
+        charge = {"bus": self.bus.compteurs(),
+                  "emissions_refusees": self._emissions_refusees}
+        if self._veilleur_structure is not None:
+            charge["structure_fichier"] = self._veilleur_structure.compteurs()
+        return charge
+
     def demarrer_en_thread(self):
         self._fil = threading.Thread(target=self._serveur.serve_forever,
                                      name="serveur-cerveau-3d", daemon=True)
@@ -299,3 +323,153 @@ class EcouteurUDP:
 
     def compteurs(self):
         return {"recues": self._recues, "ignorees": self._ignorees, "port": self.port}
+
+
+# --- Le veilleur du FICHIER de structure (tâche 11 — la seconde moitié de l'avenant) ---------
+
+CADENCE_VEILLE_STRUCTURE = 1.0     # une relecture par seconde : la neurogenèse est rare
+TAILLE_MAX_STRUCTURE = 64 << 20    # 64 Mio — très au-dessus d'une trame (305 Ko), très en
+                                   # dessous d'un `.brain` (qu'on ne doit pas lire par erreur)
+
+
+class VeilleurStructureFichier:
+    """Publie dans le bus la trame `structure` qu'un run écrit dans un FICHIER.
+
+    🔴 POURQUOI CE FICHIER, ET POURQUOI CE LECTEUR. La trame `structure` mesure 305 086 octets à
+    `dim_bus = 145` pour un plafond DUR de 65 507 octets par datagramme UDP : elle ne peut pas
+    passer par le réseau (avenant de protocole du 10/09/2026). Le run l'écrit donc à côté du
+    `.brain` (`<brain>.vis01_structure.json`, écriture ATOMIQUE — fichier temporaire puis
+    `os.replace`) au montage et après CHAQUE neurogenèse. L'ÉMETTEUR était fait ; PERSONNE ne
+    lisait le fichier : `GET /structure` rendait `{}` et la page restait indéfiniment sur « en
+    attente de la structure… ». C'est la moitié manquante de l'étape 2 que ce lecteur ferme.
+
+    ⚠️ IL VIT DANS SON PROPRE FIL DE VEILLE (`daemon`), à BASSE FRÉQUENCE (1 Hz par défaut) : le
+    serveur ne fait AUCUN accès disque sur sa voie chaude (la boucle SSE, le fil de gestion), donc
+    un fichier lent, énorme ou inaccessible ne ralentit ni le flux ni les requêtes HTTP. La
+    relecture est déclenchée par la SIGNATURE du fichier — `(mtime en nanosecondes, taille)`, lue
+    par `stat()`, jamais par une lecture périodique : l'écriture étant atomique, `mtime_ns` change
+    à chaque publication de l'émetteur, et une signature identique veut dire « rien de neuf », pas
+    « peut-être ». (Un fichier recopié en conservant `mtime` serait donc manqué : c'est un cas
+    qu'aucun émetteur réel ne produit, et le prix d'une relecture systématique — 305 Ko par
+    seconde — ne vaut pas d'être payé pour lui.)
+
+    ⚠️ AUCUNE EXCEPTION NE REMONTE, JAMAIS (exigence n°4 du brief) : fichier ABSENT, ILLISIBLE
+    (permissions, chemin qui n'est pas un fichier ordinaire) ou MALFORMÉ (JSON cassé, JSON valide
+    qui n'est pas une trame `structure`), l'anomalie est COMPTÉE, la dernière structure valide
+    RESTE publiée, et la page garde son message d'attente. Même discipline que
+    `EcouteurUDP._boucle` (un datagramme illisible ne tue pas la boucle) et que
+    `EmetteurUDP.envoyer` (une trame perdue est comptée, pas propagée) : un instrument ne tue pas
+    ce qu'il observe, et un silence inexpliqué est pire qu'un échec dit.
+    """
+
+    def __init__(self, bus, chemin, periode=CADENCE_VEILLE_STRUCTURE,
+                 taille_max=TAILLE_MAX_STRUCTURE):
+        if not chemin:
+            raise ValueError(
+                "un veilleur de structure exige un CHEMIN : un chemin vide serait un silence qui "
+                "a l'air d'un run qui n'écrit pas encore.")
+        self.bus = bus
+        self.chemin = Path(chemin)
+        self.periode = float(periode)
+        self.taille_max = int(taille_max)
+        self._signature = None          # `(mtime_ns, taille)` de la dernière version EXAMINÉE
+        self._publications = 0
+        self._absences = 0
+        self._illisibles = 0
+        self._invalides = 0
+        self._derniere_erreur = None
+        self._arret = threading.Event()
+        self._fil = None
+
+    def relire(self, force=False) -> bool:
+        """Un tour de veille : publie la structure si le fichier a changé ; rend `True` alors.
+
+        `force=True` ignore la signature (premier tour, ou relecture demandée à la main) ;
+        `force=False` — le tour ordinaire — ne touche pas au disque quand la signature n'a pas
+        bougé.
+
+        ⚠️ La signature est mémorisée AVANT la lecture, et pour TOUS les cas : un fichier malformé
+        qui ne change pas n'est pas relu en boucle (sinon la veille deviendrait un martèlement
+        disque), et il est relu dès qu'il change — ce qui est exactement ce qui se passe quand le
+        run le réécrit.
+        """
+        try:
+            information = os.stat(self.chemin)
+        except OSError as erreur:
+            self._absences += 1
+            self._derniere_erreur = f"{type(erreur).__name__}: {erreur}"
+            self._signature = None      # une réapparition sera relue, fût-ce à `mtime` identique
+            return False
+        if not stat.S_ISREG(information.st_mode):
+            # ⚠️ On ne tente même pas `open()` : sur un FIFO ou un périphérique, l'ouverture peut
+            # BLOQUER indéfiniment (un tube nommé attend un écrivain) — le fil de veille resterait
+            # pendu, et avec lui toute surveillance ultérieure. Seul un fichier ORDINAIRE peut
+            # porter une trame écrite par `os.replace`.
+            self._illisibles += 1
+            self._derniere_erreur = "ce chemin n'est pas un fichier ordinaire"
+            self._signature = None
+            return False
+        signature = (information.st_mtime_ns, information.st_size)
+        if not force and signature == self._signature:
+            return False
+        self._signature = signature
+        if information.st_size > self.taille_max:
+            # Garde de TAILLE : `--structure-fichier` pointé par erreur sur un `.brain` (des
+            # centaines de Mio de tenseurs) ne doit pas remplir la mémoire du serveur pour être
+            # rejeté ensuite. La borne est très au-dessus d'une trame réelle (305 Ko à
+            # `dim_bus = 145`) : elle ne refuse rien de légitime.
+            self._invalides += 1
+            self._derniere_erreur = (f"{information.st_size} octets : au-delà du plafond de "
+                                     f"{self.taille_max} octets, ce n'est pas une trame "
+                                     f"`structure`")
+            return False
+        try:
+            with open(self.chemin, "rb") as fichier:
+                octets = fichier.read()
+        except OSError as erreur:       # permissions, fichier disparu entre `stat` et `open`…
+            self._illisibles += 1
+            self._derniere_erreur = f"{type(erreur).__name__}: {erreur}"
+            return False
+        trame = deserialiser(octets)    # `None` sur JSON cassé ou sur un objet sans `type`
+        if not isinstance(trame, dict) or trame.get("type") != "structure" \
+                or not isinstance(trame.get("couches"), list):
+            # JSON valide mais mauvaise trame : la publier ferait dessiner au navigateur une scène
+            # sans plaques, c'est-à-dire un écran noir qui a l'air d'un cerveau vide — exactement
+            # ce que la page dit « en attente » plutôt que de mentir (spec §9).
+            self._invalides += 1
+            self._derniere_erreur = "JSON lu, mais ce n'est pas une trame `structure`"
+            return False
+        self.bus.publier_structure(trame)
+        self._publications += 1
+        return True
+
+    def demarrer_en_thread(self):
+        """Premier tour SYNCHRONE (la structure est publiée quand cette méthode rend la main),
+        puis un fil de veille démon qui repasse toutes les `periode` secondes."""
+        self.relire(force=True)
+        self._fil = threading.Thread(target=self._boucle, name="veilleur-structure", daemon=True)
+        self._fil.start()
+        return self._fil
+
+    def _boucle(self):
+        # `Event.wait` et non `time.sleep` : l'arrêt est IMMÉDIAT (un `join` de 2 s qui devrait
+        # attendre la fin du sommeil laisserait un fil vivant derrière un serveur déjà fermé).
+        while not self._arret.wait(self.periode):
+            self.relire()
+
+    def arreter(self):
+        self._arret.set()
+        if self._fil is not None:
+            self._fil.join(timeout=2.0)
+
+    def compteurs(self):
+        """Les compteurs de la veille. `absences` compte un tour de veille, pas une transition :
+        un fichier absent pendant 10 s à 1 Hz compte 10 absences (le chiffre dit la DURÉE de
+        l'attente autant que son existence). `derniere_erreur` n'est jamais effacée : elle dit ce
+        qui a raté, même si tout va bien maintenant."""
+        return {"chemin": str(self.chemin),
+                "publications": self._publications,
+                "absences": self._absences,
+                "illisibles": self._illisibles,
+                "invalides": self._invalides,
+                "derniere_erreur": self._derniere_erreur}

@@ -25,6 +25,13 @@ l'écran. En mode `cerveau`, la garantie est plus étroite et se dit autrement (
 **le FICHIER `.brain` n'est jamais ouvert en écriture**, mais le cerveau vit (`traiter_tick` grave
 la LTP d'un pic de dopamine en mémoire) — voir la docstring de `spectateur.py`, et l'empreinte
 SHA-256 imprimée à l'arrêt. Une garantie qu'il faut lire dans le code n'est pas une garantie.
+
+⚠️ ÉTAPE 2 COMPLÈTE (tâche 11) : la trame `structure` (305 Ko) ne peut pas passer par UDP (plafond
+dur de 65 507 octets), le run l'écrit donc dans `<brain>.vis01_structure.json`. `--structure-fichier
+CHEMIN` fait relire ce fichier au serveur — au démarrage, puis à chaque changement — et le publie
+dans le bus, sans quoi la page restait sur « en attente de la structure… » pendant qu'`activite` et
+`evenement`, eux, arrivaient bien par UDP. L'option exige `--serveur-seul` : une source locale
+publie déjà sa propre structure, et deux publieurs feraient clignoter la scène sans rien dire.
 """
 from __future__ import annotations
 
@@ -36,7 +43,8 @@ import time
 
 from naulthene.cerveau.telemetrie import BusTrames
 from naulthene.instruments.cerveau_3d.factice import DIM_BUS_FICTIF, boucle_factice
-from naulthene.instruments.cerveau_3d.serveur import EcouteurUDP, ServeurCerveau3D
+from naulthene.instruments.cerveau_3d.serveur import (EcouteurUDP, ServeurCerveau3D,
+                                                      VeilleurStructureFichier)
 
 PORT_DEFAUT = 8770
 HZ_DEFAUT = 15.0
@@ -66,8 +74,10 @@ def construire_analyseur() -> argparse.ArgumentParser:
         description="VIS-01 — le cerveau 3D : une IRM vivante, en LECTURE SEULE.",
         epilog=("Étape 0 (démonstration) : --source factice, aucun cerveau chargé.\n"
                 "Étape 1 (spectateur)    : --source cerveau --brain <chemin>, un VRAI .brain qui vit.\n"
-                "Étape 2 (passerelle)    : --serveur-seul --udp 9998, puis un run qui émet\n"
-                "                          vers udp:127.0.0.1:9998."),
+                "Étape 2 (passerelle)    : --serveur-seul --udp 9998 --structure-fichier\n"
+                "                          <brain>.vis01_structure.json, puis un run qui émet vers\n"
+                "                          udp:127.0.0.1:9998 (l'activité par UDP, la structure par\n"
+                "                          le fichier : 305 Ko ne passent pas dans un datagramme)."),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         add_help=False)
     analyseur.add_argument("-h", "--aide", "--help", action="help",
@@ -86,6 +96,11 @@ def construire_analyseur() -> argparse.ArgumentParser:
                            help="écoute aussi les trames émises en UDP sur ce port (étape 2)")
     analyseur.add_argument("--serveur-seul", action="store_true",
                            help="ne produit AUCUNE trame locale : sert la page et reçoit l'UDP")
+    analyseur.add_argument("--structure-fichier", default=None, metavar="CHEMIN",
+                           help="le fichier où un run écrit sa trame `structure` "
+                                "(<brain>.vis01_structure.json) : relu et publié au démarrage puis à "
+                                "chaque changement — exigé par l'étape 2, la trame étant trop "
+                                "grosse pour un datagramme UDP (à utiliser avec --serveur-seul)")
     analyseur.add_argument("--duree", type=float, default=None, metavar="SECONDES",
                            help="s'arrête tout seul après ce délai (défaut : jusqu'à Ctrl-C)")
     return analyseur
@@ -168,7 +183,30 @@ def _cible_cerveau(jouer_cerveau, bus, options, arret, issue):
     return cible
 
 
-def _afficher_banniere(options, port, hote, ecouteur) -> None:
+def _etat_structure_fichier(veilleur, bus) -> str:
+    """Ce que la veille du fichier de structure peut dire MAINTENANT — une ligne, deux cas.
+
+    ⚠️ Elle est écrite pour le cas PÉNIBLE, pas pour le cas nominal : un fichier absent, un chemin
+    qui n'est pas un fichier, un JSON qui n'est pas une trame — la page, elle, restera sur « en
+    attente de la structure… », et sans cette ligne ce silence serait indiscernable d'un run lent
+    (spec §9 : un état inattendu est MONTRÉ). Le compteur d'absences est celui de la veille : il
+    compte les TOURS, donc la durée de l'attente autant que son existence.
+    """
+    compteurs = veilleur.compteurs()
+    trame = bus.structure()
+    if trame is not None:
+        return (f"{compteurs['chemin']} — structure chargée : "
+                f"{len(trame.get('couches', []))} couche(s), dim_bus = {trame.get('dim_bus', '?')} "
+                f"(relue à chaque changement, {compteurs['publications']} publication(s))")
+    detail = (f"{compteurs['absences']} absence(s), {compteurs['illisibles']} illisible(s), "
+              f"{compteurs['invalides']} invalide(s)")
+    if compteurs["derniere_erreur"]:
+        detail = f"{detail} — {compteurs['derniere_erreur']}"
+    return (f"⚠️  {compteurs['chemin']} — AUCUNE structure lue ({detail}) : la page restera sur "
+            f"« en attente de la structure… » jusqu'à ce qu'un run écrive ce fichier.")
+
+
+def _afficher_banniere(options, port, hote, ecouteur, veilleur=None, bus=None) -> None:
     """Ce qu'on regarde, où, et la garantie de lecture seule (ruling : lisible au lancement)."""
     if options.serveur_seul:
         source = "serveur seul — aucune trame produite ici"
@@ -184,11 +222,27 @@ def _afficher_banniere(options, port, hote, ecouteur) -> None:
     print("🧠 Cerveau 3D — VIS-01", flush=True)
     print(f"   source     : {source}", flush=True)
     print(f"   serveur    : http://{hote}:{port}", flush=True)
+    if veilleur is not None:
+        print(f"   structure  : {_etat_structure_fichier(veilleur, bus)}", flush=True)
     if options.source == "cerveau" and not options.serveur_seul:
         print(f"   cadence    : publication à {options.hz:g} Hz (le tick du cerveau, lui, n'est "
               f"jamais ralenti)", flush=True)
     print(f"   {garantie}", flush=True)
     print(f"   → ouvrez http://{hote}:{port} dans un navigateur (Ctrl-C pour arrêter).",
+          flush=True)
+
+
+def _afficher_bilan_structure(veilleur) -> None:
+    """Le bilan de la veille, À L'ARRÊT — « ignoré, compté » doit se lire, pas se croire.
+
+    Trois compteurs d'échec, et le compte des publications est le seul témoin que la page a VU
+    quelque chose : `0 publication` sur un serveur qu'on croyait branché est le diagnostic, pas le
+    détail.
+    """
+    compteurs = veilleur.compteurs()
+    print(f"📡 structure : {compteurs['publications']} publication(s) depuis "
+          f"{compteurs['chemin']} — {compteurs['absences']} absence(s), "
+          f"{compteurs['illisibles']} illisible(s), {compteurs['invalides']} invalide(s).",
           flush=True)
 
 
@@ -266,21 +320,40 @@ def main(argv=None) -> int:
                              f"{erreur!r}")
     if options.hz <= 0.0:
         raise SystemExit(f"--hz invalide : {options.hz!r} (attendu > 0)")
+    if options.structure_fichier and not options.serveur_seul:
+        # Le refus est ici, AVANT de lier un port : une source locale publie DÉJÀ sa propre
+        # structure, et deux publieurs feraient clignoter la scène (une relecture du fichier
+        # écraserait la structure locale, et réciproquement) sans que rien à l'écran ne le dise.
+        # Le fichier de structure est la moitié « étape 2 » de l'avenant : il vient d'un run
+        # EXTÉRIEUR, donc d'un serveur qui n'en produit aucune.
+        raise SystemExit(
+            f"--structure-fichier {options.structure_fichier} exige --serveur-seul : ce fichier "
+            f"est écrit par un run EXTERNE, et la source locale choisie ici publie déjà sa propre "
+            f"structure — deux publieurs feraient clignoter la scène à chaque relecture. Pour "
+            f"observer un run qui tourne ailleurs : « --serveur-seul --udp 9998 "
+            f"--structure-fichier {options.structure_fichier} ».")
 
     bus = BusTrames()
     arret = threading.Event()
-    serveur, ecouteur, fil_source = None, None, None
+    serveur, ecouteur, veilleur, fil_source = None, None, None, None
     issue = {}                       # {"resultat": …} ou {"erreur": …} — le tableau de bord
     try:
+        if options.structure_fichier:
+            # Construit AVANT le serveur (qui n'en fait que l'OBSERVER pour `/sante`) et démarré
+            # juste après lui : au retour de `demarrer_en_thread`, la structure déjà présente sur
+            # le disque est publiée, donc la bannière et la première connexion la voient.
+            veilleur = VeilleurStructureFichier(bus, options.structure_fichier)
         # Le serveur est monté en premier (`port=0` ⇒ le port réel est connu avant d'annoncer
         # l'URL) : la bannière ne doit jamais afficher un port qu'on n'écoute pas.
-        serveur = ServeurCerveau3D(bus, port=options.port)
+        serveur = ServeurCerveau3D(bus, port=options.port, veilleur_structure=veilleur)
         if options.udp is not None:
             # L'écouteur est un CHOIX explicite (`--udp`) : un port occupé lève ici, au
             # démarrage, jamais en silence au milieu d'un run.
             ecouteur = EcouteurUDP(bus, port=options.udp)
             ecouteur.demarrer_en_thread()
         serveur.demarrer_en_thread()
+        if veilleur is not None:
+            veilleur.demarrer_en_thread()
 
         if not options.serveur_seul:
             if options.source == "cerveau":
@@ -291,7 +364,7 @@ def main(argv=None) -> int:
             fil_source = threading.Thread(target=cible, name=nom_du_fil, daemon=True)
             fil_source.start()
 
-        _afficher_banniere(options, serveur.port, serveur.hote, ecouteur)
+        _afficher_banniere(options, serveur.port, serveur.hote, ecouteur, veilleur, bus)
 
         if options.duree is not None:
             # Borné : on attend la fin de la source (ou le délai, s'il n'y en a pas), puis on
@@ -314,9 +387,15 @@ def main(argv=None) -> int:
             fil_source.join(timeout=2.0)
         if ecouteur is not None:
             ecouteur.arreter()
+        if veilleur is not None:
+            # Arrêté AVANT le serveur : plus personne ne publie dans le bus pendant que le
+            # serveur ferme (le dernier tour de veille ne doit pas allonger l'arrêt).
+            veilleur.arreter()
         if serveur is not None:
             serveur.arreter()
         _afficher_empreinte(issue)
+        if veilleur is not None:
+            _afficher_bilan_structure(veilleur)
 
 
 if __name__ == "__main__":
