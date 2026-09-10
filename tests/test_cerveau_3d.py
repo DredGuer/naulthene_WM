@@ -2981,3 +2981,71 @@ class TestTelemetrieDuNoyau(unittest.TestCase):
         i_struct = source_nuit.index("_emettre_structure(etat)")
         self.assertLess(i_neuro, i_struct)
         self.assertLess(i_struct - i_neuro, 1500)
+
+    # --- 5. Le bilan de fin de run (tâche 10) -------------------------------------------------
+
+    @staticmethod
+    def _source_du_fichier():
+        """Le TEXTE de `noyau.py` — le bilan de fin de run vit sous `if __name__ == "__main__":`,
+        donc aucun objet importable ne le porte : le lire est la seule façon de le vérifier sans
+        lancer un run. ⚠️ Le vrai témoin, lui, est un run RÉEL : voir la ligne de bilan consignée
+        dans les journaux de `brains/VIS01_surcout_10092026/` (tâche 10).
+        """
+        import naulthene.cerveau.noyau as N
+        with open(N.__file__, encoding="utf-8") as fichier:
+            return fichier.read()
+
+    def test_le_bilan_de_telemetrie_est_imprime_en_fin_de_run(self):
+        """Les compteurs de télémétrie SONT imprimés, à la fin, et SEULEMENT sous le drapeau.
+
+        Sans cette ligne, une télémétrie morte au tick 3 d'un run de 1500 jours se terminait sans
+        une seule trame et sans un seul message : `_echec_telemetrie` n'imprime que le PREMIER
+        échec, et rien n'imprimait les compteurs. Ce test vérifie la seule chose vérifiable sans
+        lancer 50 jours : la ligne existe, elle est gardée par le drapeau, et elle est posée APRÈS
+        la boucle des journées (posée avant, elle compterait zéro).
+        """
+        source = self._source_du_fichier()
+        marqueur = "[TÉLÉMÉTRIE 3D] bilan de fin de run"
+        self.assertIn(marqueur, source, "le bilan de fin de run a disparu de `noyau.py`")
+        i_bilan = source.index(marqueur)
+
+        # 1. Gardée par le drapeau : sans lui, le run témoin doit rester celui d'avant VIS-01.
+        i_garde = source.rindex("if _args.telemetrie_3d:", 0, i_bilan)
+        self.assertLess(i_bilan - i_garde, 400,
+                        "la ligne de bilan n'est plus dans le bloc du drapeau")
+
+        # 2. APRÈS la boucle des journées, AVANT la fermeture de l'environnement.
+        i_boucle = source.index("for _ in range(1, _args.jours + 1):")
+        i_close = source.index("etat.env.close()", i_boucle)
+        self.assertLess(i_boucle, i_bilan)
+        self.assertLess(i_bilan, i_close)
+
+        # 3. Les TROIS compteurs de la tâche 10 sont dans la ligne (`telemetrie_ecrites`,
+        #    `telemetrie_ratees`, `telemetrie_erreurs`) — plus ceux de l'émetteur, qui répondent à
+        #    « le canal tient-il la cadence ? » (spec §10).
+        bloc = source[i_garde:i_close]
+        for compteur in ("telemetrie_ecrites", "telemetrie_ratees", "telemetrie_erreurs",
+                         "envoyees", "perdues"):
+            self.assertIn(compteur, bloc, f"{compteur} absent du bilan de fin de run")
+
+        # 4. La ligne ne contient pas le mot « Niveau » : le `diff` des niveaux promus de la preuve
+        #    A/A (tâche 9) doit rester exploitable tel quel.
+        self.assertNotIn("Niveau", source[i_bilan:i_bilan + 700])
+
+    def test_les_compteurs_de_telemetrie_sont_des_compteurs_de_vie(self):
+        """Les trois compteurs ne sont PAS réarmés par journée — décision figée, pas un oubli.
+
+        ⚠️ C'est le point qui rend la ligne de bilan utile : elle porte le CUMUL du run, donc une
+        télémétrie morte au tick 3 d'un run de 1500 jours se voit à la fin. Les réarmer dans
+        `_reinitialiser_buffers_journee` ferait de la ligne le bilan de la DERNIÈRE journée —
+        l'exact inverse de ce qu'elle doit montrer. Le piège du compteur journalier non réarmé
+        (v27.0) a ici son symétrique, et ce test l'empêche d'être « rangé » en silence.
+        """
+        import inspect
+        from naulthene.cerveau.noyau import EtatCognitif
+        source = inspect.getsource(EtatCognitif._reinitialiser_buffers_journee)
+        for champ in ("self.telemetrie_ecrites", "self.telemetrie_ratees",
+                      "self.telemetrie_erreurs"):
+            self.assertNotIn(champ, source,
+                             f"{champ} est réarmé par journée : le bilan de fin de run ne "
+                             "porterait plus que la dernière journée")

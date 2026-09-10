@@ -13320,4 +13320,35 @@ if __name__ == "__main__":
         if _persist is not None:
             _persist.sauvegarder(etat)
 
+    # --- VIS-01 (v41.76) : LE BILAN DE TÉLÉMÉTRIE, EN FIN DE RUN — UNE LIGNE, AUCUNE MÉCANIQUE ---
+    #
+    # 🔴 POURQUOI ELLE EXISTE : `_echec_telemetrie` n'imprime que le PREMIER échec (un dossier non
+    # inscriptible ne doit pas noyer 2 000 ticks de console), et rien n'imprimait jamais les
+    # compteurs. Un run de 1500 jours dont la télémétrie meurt au tick 3 — cible UDP injoignable,
+    # dossier de sortie non inscriptible, garde-fou de forme qui rejette toutes les captures —
+    # pouvait donc se terminer SANS UNE SEULE TRAME sans que personne ne le sache : c'est le mode
+    # d'échec que la spec §9 appelle « un silence qui a l'air d'un cerveau lent ». Le bilan le rend
+    # lisible en une ligne, à la fin, quand on regarde un run long.
+    #
+    # ⚠️ CES COMPTEURS SONT DES COMPTEURS DE VIE, ET C'EST VOULU : aucun des trois n'est remis à
+    # zéro dans `_reinitialiser_buffers_journee` (même raisonnement que la chronologie des
+    # victoires, v33.0). Les réarmer chaque journée ferait de cette ligne le bilan de la DERNIÈRE
+    # journée seulement — l'exact inverse de ce qu'elle doit montrer, puisque c'est la mort
+    # silencieuse SURVENUE EN COURS DE RUN qu'on veut voir. Ne pas les y ajouter.
+    #
+    # ⚠️ IMPRIMÉE SEULEMENT SI LE DRAPEAU EST LÀ : sans lui il n'y a rien à compter, et le run
+    # témoin doit rester, ligne pour ligne, celui d'avant VIS-01 (c'est la preuve A/A de la tâche 9
+    # qui le garantit). Aucune ligne ne contient le mot « Niveau » : le `diff` des niveaux promus
+    # de cette preuve reste donc exploitable tel quel.
+    if _args.telemetrie_3d:
+        _emetteur = getattr(etat, "telemetrie", None)
+        _reseau = (_emetteur.compteurs() if _emetteur is not None
+                   else {"envoyees": 0, "perdues": 0, "cible": "?"})
+        print(f"📡 [TÉLÉMÉTRIE 3D] bilan de fin de run : "
+              f"{getattr(etat, 'telemetrie_ecrites', 0)} structure(s) écrite(s), "
+              f"{getattr(etat, 'telemetrie_ratees', 0)} ratée(s), "
+              f"{getattr(etat, 'telemetrie_erreurs', 0)} erreur(s) de télémétrie — "
+              f"{_reseau['envoyees']} datagramme(s) envoyé(s) à {_reseau['cible']}, "
+              f"{_reseau['perdues']} perdu(s).")
+
     etat.env.close()
