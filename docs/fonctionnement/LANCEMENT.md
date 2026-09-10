@@ -526,7 +526,8 @@ PYTHONPATH=src venv/bin/python3 -m naulthene.instruments.cerveau_3d \
 # ── ÉTAPE 2 — PASSERELLE : un run EN COURS alimente la page, depuis un autre terminal ───────
 # Terminal 1 (le spectateur) — à lancer EN PREMIER. ⚠️ --structure-fichier n'est pas un confort :
 # la trame `structure` (305 Ko) ne passe pas dans un datagramme UDP, le run l'écrit à côté du
-# `.brain` et le serveur la relit (au démarrage, puis à chaque neurogenèse, sans redémarrer).
+# `.brain` et le serveur la relit (au démarrage, puis à chaque CHANGEMENT du fichier — le run le
+# réécrit après chaque neurogenèse — sans redémarrer le serveur).
 PYTHONPATH=src venv/bin/python3 -m naulthene.instruments.cerveau_3d --serveur-seul --udp 9998 \
     --port 8770 --structure-fichier "brains/<campagne>/run.brain.vis01_structure.json"
 # (fichier absent au démarrage = normal : la bannière affiche « AUCUNE structure lue », puis la
