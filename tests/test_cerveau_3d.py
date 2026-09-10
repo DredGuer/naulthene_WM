@@ -59,16 +59,42 @@ class TestCodecMatrices(unittest.TestCase):
 
 class TestTramesEtDisposition(unittest.TestCase):
     def test_forme_du_cerveau_a_dim_bus_145(self):
+        """Critère n°1 : `definir_couches(145)` reproduit EXACTEMENT les 12 formes mesurées.
+
+        ⚠️ La table est comparée **en bloc** (`nom → (entree, sortie)`), jamais couche par
+        couche : c'est le seul contrôle qui discrimine une permutation de deux `entree` entre
+        deux couches de même produit/somme. Contre-exemple MESURÉ (revue de la tâche 2) :
+        permuter `analyseur` `db`→`2*db` et `fusion_memoire` `2*db`→`db` laisse Σ sorties =
+        1 182 et Σ synapses = 220 255 **inchangées**, et une comparaison sur 7 couches sur 12
+        passe au vert. Les deux totaux dérivés du plan sont donc assertés EN PLUS de la table,
+        jamais à sa place — ils ne suffisent pas seuls.
+
+        Les 12 formes sont celles du tableau « Faits mesurés » du plan
+        (`docs/ameliorations/PLAN_VIS-01_cerveau_3d.md`), relevées sur `K4_NU_g11.brain`.
+        """
         from naulthene.cerveau.telemetrie import definir_couches
-        couches = {c["nom"]: (c["entree"], c["sortie"]) for c in definir_couches(145)}
-        self.assertEqual(len(couches), 12)
-        self.assertEqual(couches["porte_visuelle"], (147, 145))
-        self.assertEqual(couches["hippocampe"], (290, 145))
-        self.assertEqual(couches["integrateur_bio"], (189, 145))   # 145 + 44 dims bio
-        self.assertEqual(couches["tete_motrice"], (145, 8))
-        self.assertEqual(couches["cortex_prefrontal"], (145, 1))
-        self.assertEqual(couches["generateur_attente"], (153, 145))
-        self.assertEqual(couches["tete_requete"], (145, 5))
+        liste = definir_couches(145)
+        couches = {c["nom"]: (c["entree"], c["sortie"]) for c in liste}
+        attendu = {
+            "porte_visuelle": (147, 145),
+            "porte_auditive": (130, 145),
+            "hippocampe": (290, 145),
+            "analyseur": (145, 145),
+            "fusion_memoire": (290, 145),
+            "integrateur_bio": (189, 145),   # 145 + 44 dims bio
+            "tete_motrice": (145, 8),
+            "cortex_prefrontal": (145, 1),
+            "tete_vocale": (145, 8),
+            "tete_requete": (145, 5),
+            "generateur_attente": (153, 145),
+            "generateur_attente_audio": (153, 145),
+        }
+        self.assertEqual(len(liste), 12)     # 12 ENTRÉES — un doublon de nom passerait sinon
+        self.assertEqual(couches, attendu)   # les 12 formes, en bloc (noms ET valeurs)
+        # Totaux dérivés du plan, calculés sur la table RENDUE par le module (pas sur le
+        # littéral ci-dessus) : second témoin, plus faible, conservé explicitement.
+        self.assertEqual(sum(sortie for _, sortie in couches.values()), 1182)
+        self.assertEqual(sum(entree * sortie for entree, sortie in couches.values()), 220255)
 
     def test_disposition_deterministe(self):
         from naulthene.cerveau.telemetrie import definir_couches, disposition
