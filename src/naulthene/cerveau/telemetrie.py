@@ -216,11 +216,13 @@ class BusTrames:
         self._activite = None
         self._evenements = deque(maxlen=int(taille_evenements))
         self._sequence = 0
+        self._sequence_structure = 0
         self._evenements_total = 0
 
     def publier_structure(self, trame: dict) -> None:
         with self._verrou:
             self._structure = trame
+            self._sequence_structure += 1
 
     def publier_activite(self, trame: dict) -> None:
         with self._verrou:
@@ -236,6 +238,20 @@ class BusTrames:
     def sequence(self) -> int:
         with self._verrou:
             return self._sequence
+
+    @property
+    def sequence_structure(self) -> int:
+        """Nombre de structures publiées depuis la naissance du bus.
+
+        ⚠️ Ruling de revue (tâche 4 — extension MINIMALE, la seule autorisée à ce module) :
+        `structure()` rend la même chose avant et après une neurogenèse. Sans ce compteur, un
+        abonné (le flux SSE) ne peut pas savoir que le cerveau a GRANDI, alors que la spec §9
+        exige que le client reconstruise alors la scène. Comparer `sequence_structure` d'un tour
+        à l'autre est la seule façon de détecter le CHANGEMENT, puisque les trames de structure
+        ne portent ni compteur ni horodatage.
+        """
+        with self._verrou:
+            return self._sequence_structure
 
     def structure(self):
         with self._verrou:
@@ -257,6 +273,7 @@ class BusTrames:
     def compteurs(self) -> dict:
         with self._verrou:
             return {"sequence": self._sequence,
+                    "sequence_structure": self._sequence_structure,
                     "evenements_total": self._evenements_total,
                     "evenements_en_file": len(self._evenements)}
 

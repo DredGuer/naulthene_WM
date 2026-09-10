@@ -7,9 +7,13 @@ instancient un vrai cerveau.
 
     NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python3 -m unittest discover -s tests
 """
+import contextlib
+import json
 import unittest
 
 import numpy as np
+
+from naulthene.cerveau.telemetrie import serialiser   # tâche 4 : l'écouteur UDP reçoit des OCTETS
 
 
 class TestCodecMatrices(unittest.TestCase):
@@ -213,3 +217,361 @@ class TestBusEtEmetteur(unittest.TestCase):
         self.assertEqual(emetteur.compteurs()["perdues"], 1)
         self.assertEqual(emetteur.compteurs()["envoyees"], 0)
         emetteur.fermer()
+
+
+class TestCompteurDeStructure(unittest.TestCase):
+    def test_seconde_publication_de_structure_est_detectee(self):
+        """Ruling (hérité d'une revue) : le bus doit rendre un CHANGEMENT de structure visible.
+
+        `structure()` seule rend la même chose avant et après : un abonné (le flux SSE) ne peut
+        donc pas savoir qu'une neurogenèse a changé `dim_bus`, et la spec §9 exige pourtant que le
+        client RECONSTRUISE alors la scène. Un compteur de publications est l'extension minimale
+        qui rend ce changement observable — il est asserté ici, dans le bus, parce que c'est le bus
+        qui porte l'information.
+        """
+        from naulthene.cerveau.telemetrie import BusTrames, trame_structure
+        bus = BusTrames()
+        self.assertEqual(bus.sequence_structure, 0)          # rien de publié : aucun changement
+        bus.publier_structure(trame_structure([], [], {"dim_bus": 16}))
+        self.assertEqual(bus.sequence_structure, 1)          # 1re structure : à pousser
+        bus.publier_structure(trame_structure([], [], {"dim_bus": 32}))   # neurogenèse
+        self.assertEqual(bus.sequence_structure, 2)          # 2e structure : changement DÉTECTÉ
+        self.assertEqual(bus.compteurs()["sequence_structure"], 2)
+        self.assertEqual(bus.structure()["dim_bus"], 32)
+
+
+class TestServeur(unittest.TestCase):
+    """Le serveur local : page statique, `/structure`, flux SSE, écoute UDP.
+
+    ⚠️ AUCUN fichier n'est créé sous `src/naulthene/instruments/cerveau_3d/static/` (la page est la
+    tâche 5) : les dossiers statiques de ces tests sont TEMPORAIRES et passés par
+    `dossier_statique=`.
+    """
+
+    @contextlib.contextmanager
+    def _flux(self, port, delai=5.0):
+        """Ouvre `/flux` et rend un lecteur BORNÉ des prochaines lignes.
+
+        ⚠️ Un flux SSE ne se TERMINE jamais : le lire « jusqu'à la fin » revient à attendre un
+        `socket.timeout`. On lit donc un NOMBRE de lignes, avec une échéance de secours — un
+        dépassement n'est pas un échec, c'est un serveur qui n'a plus rien de neuf à dire.
+        """
+        import socket
+        import time
+        import urllib.request
+
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/flux", timeout=delai) as reponse:
+            def lire(nb_lignes, delai_local=delai):
+                lignes, fin = [], time.time() + delai_local
+                while len(lignes) < nb_lignes and time.time() < fin:
+                    try:
+                        brut = reponse.readline()
+                    except (socket.timeout, TimeoutError):
+                        break
+                    if not brut:
+                        break
+                    lignes.append(brut.decode("utf-8").rstrip())
+                return lignes
+            yield lire
+
+    def _client_sse(self, port, nb_lignes=6, delai=5.0):
+        """Les `nb_lignes` premières lignes de `/flux`.
+
+        Le plan proposait 12 : comme le flux n'a pas de fin, les 6 lignes suivantes ne viendront
+        jamais et le test paierait le délai entier. Six lignes = les DEUX événements complets
+        (structure puis activité) qui arrivent réellement.
+        """
+        with self._flux(port, delai) as lire:
+            return lire(nb_lignes, delai)
+
+    @staticmethod
+    def _evenements(lignes):
+        """`[(nom, charge)]` — les lignes brutes d'un flux SSE, décodées."""
+        trouves, nom = [], None
+        for ligne in lignes:
+            if ligne.startswith("event: "):
+                nom = ligne[len("event: "):]
+            elif ligne.startswith("data: ") and nom is not None:
+                trouves.append((nom, json.loads(ligne[len("data: "):])))
+            elif not ligne:
+                nom = None
+        return trouves
+
+    def test_structure_et_flux_sse(self):
+        import urllib.request
+        from naulthene.cerveau.telemetrie import (BusTrames, trame_structure, trame_activite)
+        from naulthene.instruments.cerveau_3d.serveur import ServeurCerveau3D
+
+        bus = BusTrames()
+        bus.publier_structure(trame_structure([], [], {"dim_bus": 16}))
+        serveur = ServeurCerveau3D(bus, port=0)
+        serveur.demarrer_en_thread()
+        try:
+            with urllib.request.urlopen(f"http://127.0.0.1:{serveur.port}/structure") as r:
+                self.assertEqual(json.loads(r.read())["dim_bus"], 16)
+            bus.publier_activite(trame_activite({}, {"tick": 1}, {"tick": 1}))
+            lignes = self._client_sse(serveur.port)
+            self.assertIn("event: structure", lignes)
+            self.assertTrue(any(l.startswith("event: activite") for l in lignes))
+            self.assertTrue(lignes[0].startswith("event: structure"), lignes)  # la structure D'ABORD
+        finally:
+            serveur.arreter()
+
+    def test_seconde_structure_est_repoussee_sur_le_flux(self):
+        """Le flux doit re-signaler une structure CHANGÉE, pas seulement celle de la connexion.
+
+        La neurogenèse change `dim_bus` : sans ce second envoi, le navigateur garde une scène
+        périmée (spec §9) alors que le cerveau, lui, a grandi.
+        """
+        from naulthene.cerveau.telemetrie import BusTrames, trame_structure
+        from naulthene.instruments.cerveau_3d.serveur import ServeurCerveau3D
+
+        bus = BusTrames()
+        bus.publier_structure(trame_structure([], [], {"dim_bus": 16}))
+        serveur = ServeurCerveau3D(bus, port=0)
+        serveur.demarrer_en_thread()
+        try:
+            with self._flux(serveur.port) as lire:
+                premiers = self._evenements(lire(3))
+                self.assertEqual([nom for nom, _ in premiers], ["structure"], premiers)
+                self.assertEqual(premiers[0][1]["dim_bus"], 16)
+
+                bus.publier_structure(trame_structure([], [], {"dim_bus": 32}))
+                seconds = self._evenements(lire(3))
+                self.assertEqual([nom for nom, _ in seconds], ["structure"], seconds)
+                self.assertEqual(seconds[0][1]["dim_bus"], 32)
+        finally:
+            serveur.arreter()
+
+    def test_evenement_publie_est_pousse_sur_le_flux(self):
+        """Le troisième canal : un fait daté (choc dopaminergique, victoire, neurogenèse) part
+        aussi vers le navigateur, et une seule fois — sinon la frise se remplit de doublons."""
+        from naulthene.cerveau.telemetrie import BusTrames, trame_structure, trame_evenement
+        from naulthene.instruments.cerveau_3d.serveur import ServeurCerveau3D
+
+        bus = BusTrames()
+        bus.publier_structure(trame_structure([], [], {"dim_bus": 16}))
+        serveur = ServeurCerveau3D(bus, port=0)
+        serveur.demarrer_en_thread()
+        try:
+            with self._flux(serveur.port) as lire:
+                self.assertEqual([nom for nom, _ in self._evenements(lire(3))], ["structure"])
+                bus.publier_evenement(trame_evenement("choc_dopamine", {"tick": 12}, intensite=0.8))
+                evenements = self._evenements(lire(3))
+                self.assertEqual([nom for nom, _ in evenements], ["evenement"], evenements)
+                self.assertEqual(evenements[0][1]["genre"], "choc_dopamine")
+                self.assertEqual(evenements[0][1]["tick"], 12)
+                # Un second fait : le curseur du flux doit repartir de LÀ où il en était (sinon
+                # le premier événement serait renvoyé une seconde fois, et la frise doublerait).
+                bus.publier_evenement(trame_evenement("victoire", {"tick": 13}))
+                suivants = self._evenements(lire(3))
+                self.assertEqual([nom for nom, _ in suivants], ["evenement"], suivants)
+                self.assertEqual(suivants[0][1]["genre"], "victoire")
+        finally:
+            serveur.arreter()
+
+    def test_flux_reste_en_http_1_0(self):
+        """Ruling : le flux SSE n'a ni `Content-Length` ni `chunked`.
+
+        En HTTP/1.1, un client attendrait une fin de corps qui n'arrive jamais — le corps se
+        termine ici à la FERMETURE de la connexion, ce qui est exactement un flux continu.
+        """
+        import urllib.request
+        from naulthene.cerveau.telemetrie import BusTrames
+        from naulthene.instruments.cerveau_3d.serveur import ServeurCerveau3D
+
+        serveur = ServeurCerveau3D(BusTrames(), port=0)
+        serveur.demarrer_en_thread()
+        try:
+            with urllib.request.urlopen(f"http://127.0.0.1:{serveur.port}/flux", timeout=2.0) as r:
+                self.assertEqual(r.version, 10)          # 10 = HTTP/1.0 (jamais 11)
+                self.assertIsNone(r.headers["Content-Length"])
+        finally:
+            serveur.arreter()
+
+    def test_page_et_ressources_servies_avec_leur_type(self):
+        """`/` → `index.html` en `text/html`, `app.js`/`three.module.js` en `text/javascript`."""
+        import tempfile
+        import urllib.request
+        from pathlib import Path
+        from naulthene.cerveau.telemetrie import BusTrames
+        from naulthene.instruments.cerveau_3d.serveur import ServeurCerveau3D
+
+        with tempfile.TemporaryDirectory() as dossier:
+            Path(dossier, "index.html").write_text("<!doctype html><title>cerveau</title>",
+                                                   encoding="utf-8")
+            Path(dossier, "app.js").write_text("export const app = 1;\n", encoding="utf-8")
+            Path(dossier, "three.module.js").write_text("export const three = 1;\n", encoding="utf-8")
+            serveur = ServeurCerveau3D(BusTrames(), port=0, dossier_statique=dossier)
+            serveur.demarrer_en_thread()
+            try:
+                for chemin, type_attendu in (("/", "text/html"),
+                                             ("/app.js", "text/javascript"),
+                                             ("/three.module.js", "text/javascript")):
+                    with self.subTest(chemin=chemin):
+                        with urllib.request.urlopen(
+                                f"http://127.0.0.1:{serveur.port}{chemin}") as r:
+                            self.assertEqual(r.status, 200)
+                            self.assertEqual(r.headers["Content-Type"],
+                                             type_attendu + "; charset=utf-8")
+                            self.assertTrue(r.read())
+            finally:
+                serveur.arreter()
+
+    def test_fichier_statique_absent_repond_404(self):
+        """Le dossier statique est vide (page = tâche 5) : la route répond 404, elle ne plante pas."""
+        import tempfile
+        import urllib.error
+        import urllib.request
+        from naulthene.cerveau.telemetrie import BusTrames
+        from naulthene.instruments.cerveau_3d.serveur import ServeurCerveau3D
+
+        with tempfile.TemporaryDirectory() as dossier:
+            serveur = ServeurCerveau3D(BusTrames(), port=0, dossier_statique=dossier)
+            serveur.demarrer_en_thread()
+            try:
+                for chemin in ("/", "/app.js", "/inconnu"):
+                    with self.subTest(chemin=chemin):
+                        with self.assertRaises(urllib.error.HTTPError) as capture:
+                            urllib.request.urlopen(f"http://127.0.0.1:{serveur.port}{chemin}")
+                        self.assertEqual(capture.exception.code, 404)
+            finally:
+                serveur.arreter()
+
+    def test_sante_renvoie_les_compteurs_du_bus(self):
+        import urllib.request
+        from naulthene.cerveau.telemetrie import BusTrames, trame_activite, trame_structure
+        from naulthene.instruments.cerveau_3d.serveur import ServeurCerveau3D
+
+        bus = BusTrames()
+        bus.publier_structure(trame_structure([], [], {"dim_bus": 16}))
+        bus.publier_activite(trame_activite({}, {"tick": 1}, {"tick": 1}))
+        bus.publier_activite(trame_activite({}, {"tick": 2}, {"tick": 2}))
+        serveur = ServeurCerveau3D(bus, port=0)
+        serveur.demarrer_en_thread()
+        try:
+            with urllib.request.urlopen(f"http://127.0.0.1:{serveur.port}/sante") as r:
+                compteurs = json.loads(r.read())["bus"]
+            self.assertEqual(compteurs["sequence"], 2)
+            self.assertEqual(compteurs["sequence_structure"], 1)
+        finally:
+            serveur.arreter()
+
+    def test_port_nul_expose_le_port_reellement_lie(self):
+        """Critère n°4 : `port=0` lie un port LIBRE et `.port` dit lequel — sans quoi les tests se
+        marcheraient dessus au hasard."""
+        import urllib.request
+        from naulthene.cerveau.telemetrie import BusTrames
+        from naulthene.instruments.cerveau_3d.serveur import ServeurCerveau3D
+
+        serveur = ServeurCerveau3D(BusTrames(), port=0)
+        serveur.demarrer_en_thread()
+        try:
+            self.assertGreater(serveur.port, 0)
+            with urllib.request.urlopen(f"http://127.0.0.1:{serveur.port}/sante", timeout=2.0) as r:
+                self.assertEqual(r.status, 200)   # c'est bien CE port qui répond
+        finally:
+            serveur.arreter()
+
+    def test_arreter_rend_la_main_et_libere_le_port(self):
+        """Critère n°4 : `arreter()` rend la main ET ne laisse ni fil ni socket derrière lui."""
+        import urllib.request
+        from naulthene.cerveau.telemetrie import BusTrames
+        from naulthene.instruments.cerveau_3d.serveur import ServeurCerveau3D
+
+        serveur = ServeurCerveau3D(BusTrames(), port=0)
+        serveur.demarrer_en_thread()
+        port = serveur.port
+        serveur.arreter()
+        with self.assertRaises(OSError):        # plus personne n'écoute (URLError ⊂ OSError)
+            urllib.request.urlopen(f"http://127.0.0.1:{port}/sante", timeout=1.0)
+        second = ServeurCerveau3D(BusTrames(), port=port)   # le port est bien RENDU
+        try:
+            second.demarrer_en_thread()
+            with urllib.request.urlopen(f"http://127.0.0.1:{port}/sante", timeout=2.0) as r:
+                self.assertEqual(r.status, 200)
+        finally:
+            second.arreter()
+
+    def test_flux_ouvert_ne_bloque_pas_les_autres_requetes(self):
+        """Critère n°2 : un client qui lit le flux n'empêche personne d'autre d'être servi.
+
+        Un serveur mono-fil laisserait la seconde requête attendre la FIN du flux — c'est-à-dire
+        toujours. On lit d'abord un événement (le flux est donc bien ouvert), puis on interroge
+        `/sante` : il doit répondre sans attendre.
+        """
+        import urllib.request
+        from naulthene.cerveau.telemetrie import BusTrames, trame_structure
+        from naulthene.instruments.cerveau_3d.serveur import ServeurCerveau3D
+
+        bus = BusTrames()
+        bus.publier_structure(trame_structure([], [], {"dim_bus": 16}))
+        serveur = ServeurCerveau3D(bus, port=0)
+        serveur.demarrer_en_thread()
+        try:
+            with self._flux(serveur.port) as lire:
+                self.assertEqual([nom for nom, _ in self._evenements(lire(3))], ["structure"])
+                with urllib.request.urlopen(
+                        f"http://127.0.0.1:{serveur.port}/sante", timeout=2.0) as r:
+                    self.assertEqual(r.status, 200)
+        finally:
+            serveur.arreter()
+
+    def test_datagramme_malforme_ignore_puis_trame_valide_acceptee(self):
+        import socket as sock
+        import time
+        from naulthene.cerveau.telemetrie import BusTrames, trame_activite
+        from naulthene.instruments.cerveau_3d.serveur import EcouteurUDP
+
+        bus = BusTrames()
+        ecouteur = EcouteurUDP(bus, port=0)
+        ecouteur.demarrer_en_thread()
+        try:
+            emetteur = sock.socket(sock.AF_INET, sock.SOCK_DGRAM)
+            emetteur.sendto(b"pas du json", ("127.0.0.1", ecouteur.port))
+            emetteur.sendto(b'{"sans": "type"}', ("127.0.0.1", ecouteur.port))
+            time.sleep(0.4)
+            self.assertIsNone(bus.activite())
+            emetteur.sendto(serialiser(trame_activite({}, {"tick": 9}, {"tick": 9})),
+                            ("127.0.0.1", ecouteur.port))
+            limite = time.time() + 3.0
+            while bus.activite() is None and time.time() < limite:
+                time.sleep(0.05)
+            self.assertEqual(bus.activite()["tick"], 9)
+            self.assertGreaterEqual(ecouteur.compteurs()["ignorees"], 2)
+            emetteur.close()
+        finally:
+            ecouteur.arreter()
+
+    def test_datagramme_de_type_inconnu_est_compte_mais_ne_remplit_aucun_canal(self):
+        """Un `type` que le serveur ne connaît pas ne doit pas se déguiser en trame valide.
+
+        Comportement de la table de routage du plan : la trame est COMPTÉE (`recues`), publiée
+        nulle part — elle ne doit surtout pas finir dans un canal par défaut. Le point laissé
+        ouvert (une trame dont le `type` serait incohérent à cause du `**meta` des constructeurs)
+        est signalé dans le rapport de la tâche.
+        """
+        import socket as sock
+        import time
+        from naulthene.cerveau.telemetrie import BusTrames
+        from naulthene.instruments.cerveau_3d.serveur import EcouteurUDP
+
+        bus = BusTrames()
+        ecouteur = EcouteurUDP(bus, port=0)
+        ecouteur.demarrer_en_thread()
+        try:
+            emetteur = sock.socket(sock.AF_INET, sock.SOCK_DGRAM)
+            emetteur.sendto(serialiser({"type": "type_que_le_serveur_ignore", "version": 1,
+                                        "tick": 5}),
+                            ("127.0.0.1", ecouteur.port))
+            limite = time.time() + 3.0
+            while ecouteur.compteurs()["recues"] < 1 and time.time() < limite:
+                time.sleep(0.05)
+            self.assertEqual(ecouteur.compteurs()["recues"], 1)
+            self.assertEqual(ecouteur.compteurs()["ignorees"], 0)
+            self.assertIsNone(bus.activite())
+            self.assertIsNone(bus.structure())
+            self.assertEqual(bus.evenements_depuis(0)[0], [])
+            emetteur.close()
+        finally:
+            ecouteur.arreter()
