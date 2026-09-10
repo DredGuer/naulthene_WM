@@ -1413,3 +1413,527 @@ class TestSourceFactice(unittest.TestCase):
         self.assertEqual(resultat.returncode, 0, resultat.stderr[-2000:])
         self.assertIn("http://127.0.0.1:", resultat.stdout)
         self.assertIn("lecture seule", resultat.stdout)
+
+
+class TestRapporteur(unittest.TestCase):
+    """Tâche 7 — le RAPPORTEUR : lire un VRAI cerveau par `register_forward_hook`.
+
+    ⚠️ Le point dur de cette tâche n'est pas le hook, c'est le CHOIX DE L'ÉCRITURE. Plusieurs
+    couches sont appelées PLUSIEURS FOIS par tick : `_tronc_cerebral` et C1 les calculent UNE
+    fois pour la décision, puis `simuler_futur_et_planifier` (le rollout mental, 8 branches ×
+    plusieurs horizons, `noyau.py` l.1146-1308) les RAPPELLE sur des branches
+    CONTREFACTUELLES. Un rapporteur « dernière écriture gagne » afficherait donc la dernière
+    hypothèse simulée au lieu du tick réellement vécu.
+
+    Ces tests sont DISCRIMINANTS : ils échouent si le rapporteur capture le rollout (un simple
+    test « la trame existe » passerait au vert sur le défaut même qu'il doit détecter).
+
+    ⚠️ Tous les tests attachent un agent en `eval()` : en mode `train`, `NaultheneLinearSynaptique.
+    forward` met à jour `myeline_M`/`trace_activation` (c'est le cerveau qui apprend, pas le
+    rapporteur). Le rapporteur, lui, ne fait aucun `backward` et aucun pas d'optimiseur.
+    """
+
+    DIM_BUS = 16
+
+    def _agent(self):
+        import torch
+        from naulthene.cerveau.noyau import AGI_Naulthene, DIM_VISUELLE
+        torch.manual_seed(11)
+        return AGI_Naulthene(dim_visuelle=DIM_VISUELLE, dim_bus=self.DIM_BUS).eval()
+
+    @staticmethod
+    def _entrees(agent):
+        """Les 4 entrées d'un tick réel, de la bonne taille (lue sur l'agent, jamais supposée)."""
+        import torch
+        return (torch.rand(1, int(agent.porte_visuelle.in_features)),
+                torch.zeros(1, int(agent.dim_bus)),
+                agent.contexte_vide(),
+                torch.zeros(1, int(agent.integrateur_bio.in_features) - int(agent.dim_bus)))
+
+    @staticmethod
+    def _decode(trame, nom):
+        from naulthene.cerveau.telemetrie import decoder_octets
+        return np.frombuffer(decoder_octets(trame["neurones"][nom]), dtype=np.float16)
+
+    # L'activation RÉELLEMENT appliquée par `penser()` après chaque couche, relevée sur les
+    # sites d'appel de `noyau.py` : `F.relu` sur le tronc et le contexte épisodique (l.1084-1133,
+    # l.1318), `torch.sigmoid` sur la bouche (l.1621), RIEN sur les quatre têtes (l.1353, l.1614,
+    # l.1628) ni sur les deux têtes JEPA (l.1137, l.1143). C'est l'énoncé que la table
+    # `ACTIVATION_PAR_COUCHE` de `telemetrie.py` prétend refléter — le test les compare.
+    MODES_DANS_NOYAU = {
+        "porte_visuelle": "relu", "porte_auditive": "relu", "hippocampe": "relu",
+        "analyseur": "relu", "fusion_memoire": "relu", "integrateur_bio": "relu",
+        "tete_vocale": "sigmoide",
+        "tete_motrice": "aucune", "cortex_prefrontal": "aucune", "tete_requete": "aucune",
+        "generateur_attente": "aucune", "generateur_attente_audio": "aucune",
+    }
+
+    @staticmethod
+    def _bruts_du_chemin_de_decision(agent, obs, mem, ctx, vbio):
+        """Les sorties LINÉAIRES des 10 couches du chemin de décision, recalculées de zéro.
+
+        Le chemin est recopié du corps de `penser()` (tronc → contexte épisodique → intégration
+        viscérale → têtes), SANS les activations : c'est l'appelant du test qui applique ensuite
+        celle que `noyau.py` applique vraiment (`MODES_DANS_NOYAU`), jamais celle que
+        `telemetrie.py` déclare. Le recalcul est donc indépendant de la table : une table fausse
+        ne peut pas se valider elle-même.
+
+        ⚠️ À appeler APRÈS `detacher()` : ce recalcul passe par les mêmes modules et écraserait
+        les captures du tick — c'est le piège que ce commentaire existe pour éviter.
+        """
+        import torch
+        with torch.no_grad():
+            bruts = {
+                "porte_visuelle": agent.porte_visuelle(obs),
+                "porte_auditive": agent.porte_auditive(
+                    torch.zeros(1, int(agent.porte_auditive.in_features))),
+            }
+            bus_latent = torch.relu(bruts["porte_visuelle"]) + torch.relu(bruts["porte_auditive"])
+            bruts["hippocampe"] = agent.hippocampe(torch.cat([bus_latent, mem], dim=-1))
+            bruts["analyseur"] = agent.analyseur(torch.relu(bruts["hippocampe"]))
+            x = torch.relu(bruts["analyseur"])
+            for _ in range(2):
+                bruts["fusion_memoire"] = agent.fusion_memoire(torch.cat([x, ctx], dim=-1))
+                x = torch.relu(bruts["fusion_memoire"])
+            bruts["integrateur_bio"] = agent.integrateur_bio(torch.cat([x, vbio], dim=-1))
+            pensee_bio = torch.relu(bruts["integrateur_bio"])
+            bruts["tete_motrice"] = agent.tete_motrice(pensee_bio)
+            bruts["cortex_prefrontal"] = agent.cortex_prefrontal(pensee_bio)
+            bruts["tete_vocale"] = agent.tete_vocale(pensee_bio)
+            bruts["tete_requete"] = agent.tete_requete(pensee_bio)
+        return bruts
+
+    def test_les_hooks_ne_changent_pas_la_sortie_observee(self):
+        """Critère n°1 — NEUTRALITÉ : `torch.equal`, bit à bit, avec et sans hooks.
+
+        ⚠️ L'assertion finale (`ecritures`) n'est pas décorative : sans elle, un rapporteur qui
+        n'attache RIEN serait « parfaitement neutre » et le test passerait au vert sur une
+        absence totale d'instrument. C'est le témoin qui rend la neutralité mesurable.
+        """
+        import torch
+        from naulthene.cerveau.telemetrie import BusTrames
+        from naulthene.instruments.cerveau_3d.rapporteur import Rapporteur
+
+        agent = self._agent()
+        obs, mem, _, _ = self._entrees(agent)
+        with torch.no_grad():
+            avant = agent._tronc_cerebral(obs, mem)
+        rapporteur = Rapporteur(BusTrames(), hz=1000.0)
+        rapporteur.attacher(agent)
+        try:
+            rapporteur.nouveau_tick()
+            with torch.no_grad():
+                apres = agent._tronc_cerebral(obs, mem)
+        finally:
+            rapporteur.detacher()
+        for a, b in zip(avant, apres):
+            self.assertTrue(torch.equal(a, b))
+        ecritures = rapporteur.compteurs()["ecritures_par_couche"]
+        self.assertEqual(ecritures.get("porte_visuelle"), 1)
+        self.assertEqual(ecritures.get("hippocampe"), 1)
+        self.assertEqual(ecritures.get("analyseur"), 1)
+
+    def test_la_trame_d_activite_porte_les_douze_couches(self):
+        """Critère n°2 — les 12 couches, chacune de la bonne longueur, valeurs FINIES.
+
+        Les longueurs attendues viennent de `definir_couches` (table indépendante du module) :
+        le rapporteur, lui, lit les formes SUR l'agent — c'est ce croisement qui discrimine.
+        """
+        import torch
+        from naulthene.cerveau.telemetrie import BusTrames, definir_couches
+        from naulthene.instruments.cerveau_3d.rapporteur import Rapporteur
+
+        agent = self._agent()
+        bus = BusTrames()
+        rapporteur = Rapporteur(bus, hz=1000.0)
+        rapporteur.attacher(agent)
+        try:
+            rapporteur.nouveau_tick()
+            with torch.no_grad():
+                agent._tronc_cerebral(torch.rand(1, int(agent.porte_visuelle.in_features)),
+                                      torch.zeros(1, self.DIM_BUS))
+            rapporteur.publier_structure(agent, {"jour": 0, "tick_absolu": 0, "niveau": None})
+            trame = rapporteur.publier_activite(agent, {"jour": 0, "tick": 0})
+        finally:
+            rapporteur.detacher()
+        self.assertIsNotNone(trame)
+        self.assertEqual(len(bus.structure()["couches"]), 12)
+        self.assertEqual(len(trame["neurones"]), 12)
+        attendues = {c["nom"]: c["sortie"] for c in definir_couches(self.DIM_BUS)}
+        self.assertEqual(set(trame["neurones"]), set(attendues))
+        for nom, taille in attendues.items():
+            valeurs = self._decode(trame, nom)
+            self.assertEqual(len(valeurs), taille, nom)
+            self.assertTrue(np.all(np.isfinite(valeurs.astype(np.float32))), nom)
+        self.assertEqual(trame["jour"], 0)
+        self.assertEqual(trame["tick"], 0)
+
+    def test_l_activation_declaree_par_la_table_est_appliquee(self):
+        """Critère n°2 — la sortie LINÉAIRE est transformée selon `ACTIVATION_PAR_COUCHE`, et
+        selon elle seule : ReLU sur le tronc, sigmoïde sur la bouche, RIEN sur les têtes.
+
+        Le hook capture la sortie de `NaultheneLinearSynaptique.forward`, AVANT l'activation que
+        l'appelant applique : le rapporteur en est le miroir (spec §4, « là où le cerveau
+        n'applique pas de ReLU, la valeur affichée est la valeur linéaire »).
+
+        Deuxième assertion : la table de `telemetrie.py` est comparée à ce que `noyau.py` fait
+        VRAIMENT (relevé des sites d'appel, gelé ici). Le brief de la tâche interdit de la
+        corriger dans ce module — elle est donc VÉRIFIÉE, et une divergence ferait échouer ce
+        test plutôt que de passer inaperçue.
+        """
+        import torch
+        from naulthene.cerveau.telemetrie import ACTIVATION_PAR_COUCHE, BusTrames
+        from naulthene.instruments.cerveau_3d.rapporteur import Rapporteur
+
+        self.assertEqual(dict(ACTIVATION_PAR_COUCHE), self.MODES_DANS_NOYAU)
+        agent = self._agent()
+        obs, mem, ctx, vbio = self._entrees(agent)
+        rapporteur = Rapporteur(BusTrames(), hz=1000.0)
+        rapporteur.attacher(agent)
+        try:
+            rapporteur.nouveau_tick()
+            with torch.no_grad():
+                agent.penser(obs, mem, ctx, vbio)
+            trame = rapporteur.publier_activite(agent, {"tick": 0})
+        finally:
+            rapporteur.detacher()
+        bruts = self._bruts_du_chemin_de_decision(agent, obs, mem, ctx, vbio)
+
+        # --- Un représentant par mode, chacun avec son TÉMOIN d'observabilité ---------------
+        # « relu » : la sortie brute de `porte_visuelle` est signée (poids `xavier_uniform_`),
+        # donc un miroir absent se verrait — sans témoin, l'assertion serait vide.
+        self.assertTrue(bool((bruts["porte_visuelle"] < 0).any()),
+                        "témoin : sans valeur négative, le ReLU est invisible")
+        np.testing.assert_allclose(
+            self._decode(trame, "porte_visuelle").astype(np.float32),
+            torch.relu(bruts["porte_visuelle"]).reshape(-1).numpy(), rtol=2e-3, atol=1e-4)
+        # « sigmoide » : la bouche est bornée dans [0, 1] (l.1621 de noyau.py).
+        self.assertTrue(float(bruts["tete_vocale"].min()) < 0.0
+                        or float(bruts["tete_vocale"].max()) > 1.0,
+                        "témoin : sans valeur hors [0,1], la sigmoïde est invisible")
+        np.testing.assert_allclose(
+            self._decode(trame, "tete_vocale").astype(np.float32),
+            torch.sigmoid(bruts["tete_vocale"]).reshape(-1).numpy(), rtol=2e-3, atol=1e-4)
+        # « aucune » : `tete_motrice` reste LINÉAIRE — un ReLU indu y serait détectable.
+        self.assertTrue(bool((bruts["tete_motrice"] < 0).any()),
+                        "témoin : sans valeur négative, un ReLU indu serait indétectable")
+        np.testing.assert_allclose(
+            self._decode(trame, "tete_motrice").astype(np.float32),
+            bruts["tete_motrice"].reshape(-1).numpy(), rtol=2e-3, atol=1e-4)
+
+    def test_throttle(self):
+        """Critère n°3 — deux appels immédiats à `hz=1` ⇒ UNE seule publication.
+
+        Et le CONTRAT de retour (ruling du plan) : la trame publiée au premier appel, `None`
+        ensuite — c'est ce retour que relaiera le drapeau `--telemetrie-3d` (tâche 9).
+        """
+        from naulthene.cerveau.telemetrie import BusTrames
+        from naulthene.instruments.cerveau_3d.rapporteur import Rapporteur
+        bus = BusTrames()
+        rapporteur = Rapporteur(bus, hz=1.0)
+        premiere = rapporteur.publier_activite(None, {"tick": 0})
+        seconde = rapporteur.publier_activite(None, {"tick": 1})
+        self.assertIsNotNone(premiere)
+        self.assertIsNone(seconde)
+        self.assertEqual(bus.sequence, 1)
+
+    def test_les_captures_sont_celles_du_chemin_de_decision(self):
+        """🔴 LE TEST DISCRIMINANT — les valeurs publiées sont celles que la DÉCISION a vues.
+
+        Les 10 couches du chemin de décision sont recalculées ici, **indépendamment**, sur les
+        mêmes entrées (l'énoncé du chemin est recopié du corps de `penser()` : tronc → contexte
+        épisodique → intégration viscérale → têtes). Un rapporteur qui retiendrait la DERNIÈRE
+        écriture échoue sur `hippocampe`, `analyseur`, `integrateur_bio` et `tete_motrice` :
+        la dernière écriture de ces couches est une branche du rollout mental, pas leur valeur
+        de décision.
+
+        Les deux têtes JEPA (`generateur_attente`, `generateur_attente_audio`) n'ont AUCUN appel
+        sur le chemin de décision — le cerveau ne s'en sert pas pour décider, elles prédisent le
+        bus (l'une est appelée 2×horizons fois par le rollout, l'autre pas du tout). Le
+        rapporteur doit alors publier des ZÉROS comptés comme non écrites, JAMAIS la dernière
+        branche simulée (ce que ferait « dernière écriture gagne »).
+        """
+        import torch
+        from naulthene.cerveau.telemetrie import BusTrames
+        from naulthene.instruments.cerveau_3d.rapporteur import Rapporteur
+
+        agent = self._agent()
+        obs, mem, ctx, vbio = self._entrees(agent)
+        bus = BusTrames()
+        rapporteur = Rapporteur(bus, hz=1000.0)
+        rapporteur.attacher(agent)
+        try:
+            rapporteur.nouveau_tick()
+            with torch.no_grad():
+                agent.penser(obs, mem, ctx, vbio)
+            trame = rapporteur.publier_activite(agent, {"tick": 0})
+            compteurs = rapporteur.compteurs()
+        finally:
+            rapporteur.detacher()
+
+        # --- Le chemin de décision, recalculé sur les mêmes entrées (après `detacher()`) ---
+        attendues = self._bruts_du_chemin_de_decision(agent, obs, mem, ctx, vbio)
+        for nom, brut in list(attendues.items()):
+            mode = self.MODES_DANS_NOYAU[nom]          # la lecture du test, pas la table
+            attendues[nom] = {"relu": torch.relu, "sigmoide": torch.sigmoid}.get(
+                mode, lambda t: t)(brut)
+        for nom, attendu in attendues.items():
+            with self.subTest(couche=nom):
+                publie = self._decode(trame, nom).astype(np.float32)
+                self.assertEqual(publie.shape, tuple(attendu.reshape(-1).shape))
+                # float16 = 11 bits de mantisse (~5e-4 relatif) : la tolérance est celle de
+                # l'ENCODAGE de la trame, jamais une marge de complaisance.
+                np.testing.assert_allclose(publie, attendu.reshape(-1).numpy(),
+                                           rtol=2e-3, atol=1e-4)
+        # Les deux têtes JEPA : aucun appel de décision ⇒ zéros, et le silence est COMPTÉ.
+        for nom in ("generateur_attente", "generateur_attente_audio"):
+            with self.subTest(couche=nom):
+                self.assertTrue(np.all(self._decode(trame, nom) == 0.0))
+        self.assertEqual(sorted(compteurs["couches_non_ecrites"]),
+                         ["generateur_attente", "generateur_attente_audio"])
+
+    def test_le_rollout_ne_change_aucune_capture(self):
+        """🔴 PREUVE DE FIDÉLITÉ demandée par l'énoncé : horizons `(1,)` vs `(1, 3, 7)`.
+
+        Mêmes entrées, même agent : si le rapporteur retenait une écriture du rollout, changer
+        les horizons changerait les trames publiées (le rollout est parcouru différemment). Ici
+        les 12 couches publiées doivent être IDENTIQUES **octet pour octet** (base64), sans
+        tolérance : la comparaison est exacte, pas approchée.
+        """
+        from naulthene.cerveau.telemetrie import BusTrames
+        from naulthene.instruments.cerveau_3d.rapporteur import Rapporteur
+
+        import torch
+        agent = self._agent()
+        obs, mem, ctx, vbio = self._entrees(agent)
+        trames = []
+        for horizons in ((1,), (1, 3, 7)):
+            rapporteur = Rapporteur(BusTrames(), hz=1000.0)
+            rapporteur.attacher(agent)
+            try:
+                rapporteur.nouveau_tick()
+                with torch.no_grad():
+                    agent.penser(obs, mem, ctx, vbio, horizons_planification=horizons)
+                trames.append(rapporteur.publier_activite(agent, {"tick": 0}))
+            finally:
+                rapporteur.detacher()
+        une_seule, plusieurs = trames
+        self.assertNotEqual(len(une_seule["neurones"]), 0)   # le témoin : 12 couches publiées
+        self.assertEqual(set(une_seule["neurones"]), set(plusieurs["neurones"]))
+        for nom in une_seule["neurones"]:
+            with self.subTest(couche=nom):
+                self.assertEqual(une_seule["neurones"][nom], plusieurs["neurones"][nom])
+
+    def test_une_ecriture_par_lot_n_est_pas_une_ecriture_de_tick(self):
+        """Un tick décide pour UN état : une écriture par LOT (plusieurs lignes) est écartée.
+
+        C'est la règle STRUCTURELLE qui écarte le rollout sans deviner l'ordre des appels : les
+        branchements simulés sont TOUS par lot (`pensee.expand(num_actions, -1)`), jamais par une
+        ligne. Le test l'exerce directement sur `_tronc_cerebral` (4 couches, lot de 2).
+        """
+        import torch
+        from naulthene.cerveau.telemetrie import BusTrames
+        from naulthene.instruments.cerveau_3d.rapporteur import Rapporteur
+
+        agent = self._agent()
+        rapporteur = Rapporteur(BusTrames(), hz=1000.0)
+        rapporteur.attacher(agent)
+        try:
+            rapporteur.nouveau_tick()
+            with torch.no_grad():
+                agent._tronc_cerebral(torch.rand(2, int(agent.porte_visuelle.in_features)),
+                                      torch.zeros(2, self.DIM_BUS))
+            compteurs = rapporteur.compteurs()
+            self.assertEqual(compteurs["ecritures_par_couche"], {})
+            self.assertEqual(compteurs["ecritures_par_lot"], 4)
+            # Le même passage ramené à UNE ligne est, lui, une écriture de tick normale.
+            with torch.no_grad():
+                agent._tronc_cerebral(torch.rand(1, int(agent.porte_visuelle.in_features)),
+                                      torch.zeros(1, self.DIM_BUS))
+            self.assertEqual(rapporteur.compteurs()["ecritures_par_couche"],
+                             {"porte_visuelle": 1, "porte_auditive": 1,
+                              "hippocampe": 1, "analyseur": 1})
+        finally:
+            rapporteur.detacher()
+
+    def test_les_portes_retiennent_l_observation_de_la_decision(self):
+        """🔴 Le piège SYMÉTRIQUE du rollout : la 2ᵉ écriture des portes est le monde d'APRÈS.
+
+        `traiter_tick` appelle `perte_jepa` une fois l'action jouée : celui-ci rappelle
+        `porte_visuelle` sur `obs_suivante` (l.1712) et `porte_auditive` sur le son suivant
+        (l.1752). Un rapporteur « dernière écriture gagne » afficherait donc une observation que
+        la décision n'a PAS vue — un tick d'avance sur le cerveau.
+
+        ⚠️ Ce cas n'est PAS observable dans un tick « `penser` seul » (il n'y a qu'une écriture) :
+        sans ce test, une politique uniforme « dernière » passerait toute la suite au vert (mesuré
+        — c'est ce défaut qui a fait écrire ce test). La séquence réelle est donc rejouée ici,
+        sans MiniGrid : le passage de décision, puis la relecture JEPA.
+        """
+        import torch
+        from naulthene.cerveau.telemetrie import BusTrames
+        from naulthene.instruments.cerveau_3d.rapporteur import Rapporteur
+
+        agent = self._agent()
+        obs, mem, _, _ = self._entrees(agent)
+        obs_suivante = obs + 1.0                                  # le monde d'APRÈS le pas
+        audio = torch.rand(1, int(agent.porte_auditive.in_features))
+        audio_suivant = audio + 1.0
+        rapporteur = Rapporteur(BusTrames(), hz=1000.0)
+        rapporteur.attacher(agent)
+        try:
+            rapporteur.nouveau_tick()
+            with torch.no_grad():
+                agent._tronc_cerebral(obs, mem, obs_auditive=audio)     # le passage de DÉCISION
+                agent.perte_jepa(torch.zeros(1, int(agent.dim_bus)), obs_suivante,
+                                 attente_audio=torch.zeros(1, int(agent.dim_bus)),
+                                 obs_auditive_suivante=audio_suivant,
+                                 coeff_jepa_audio=1.0)                  # la relecture JEPA
+            trame = rapporteur.publier_activite(agent, {"tick": 0})
+            ecritures = rapporteur.compteurs()["ecritures_par_couche"]
+        finally:
+            rapporteur.detacher()
+        # Témoin : les DEUX écritures ont bien eu lieu (sans quoi il n'y a rien à discriminer).
+        self.assertEqual(ecritures["porte_visuelle"], 2)
+        self.assertEqual(ecritures["porte_auditive"], 2)
+        with torch.no_grad():
+            vu = torch.relu(agent.porte_visuelle(obs)).reshape(-1).numpy()
+            apres = torch.relu(agent.porte_visuelle(obs_suivante)).reshape(-1).numpy()
+            entendu = torch.relu(agent.porte_auditive(audio)).reshape(-1).numpy()
+            entendu_apres = torch.relu(agent.porte_auditive(audio_suivant)).reshape(-1).numpy()
+        self.assertFalse(np.allclose(vu, apres), "témoin : les deux observations diffèrent")
+        self.assertFalse(np.allclose(entendu, entendu_apres), "témoin : les deux sons diffèrent")
+        np.testing.assert_allclose(self._decode(trame, "porte_visuelle").astype(np.float32),
+                                   vu, rtol=2e-3, atol=1e-4)
+        np.testing.assert_allclose(self._decode(trame, "porte_auditive").astype(np.float32),
+                                   entendu, rtol=2e-3, atol=1e-4)
+
+    def test_le_generateur_d_attente_montre_l_action_jouee(self):
+        """`generateur_attente` n'est appelé par AUCUN chemin de décision : que montre-t-on ?
+
+        Ruling de cette tâche, et sa preuve. Dans `penser`, les seules écritures de cette tête
+        sont celles du rollout (contrefactuelles, par lot de 8 : écartées). La seule écriture
+        RÉELLE du tick est `generer_attente_reelle`, appelée une fois l'action jouée (`noyau.py`
+        l.10104) : c'est la prédiction du bus pour l'action RÉELLEMENT jouée, et c'est ce que le
+        rapporteur doit afficher — jamais une hypothèse, jamais un zéro mentant sur un calcul
+        qui a bien eu lieu.
+        """
+        import torch
+        from naulthene.cerveau.telemetrie import BusTrames
+        from naulthene.instruments.cerveau_3d.rapporteur import Rapporteur
+
+        agent = self._agent()
+        obs, mem, ctx, vbio = self._entrees(agent)
+        rapporteur = Rapporteur(BusTrames(), hz=1000.0)
+        rapporteur.attacher(agent)
+        try:
+            rapporteur.nouveau_tick()
+            with torch.no_grad():
+                sortie = agent.penser(obs, mem, ctx, vbio)
+                # Le geste de `traiter_tick` APRÈS le pas d'environnement (l.10104).
+                attente = agent.generer_attente_reelle(sortie.pensee_enrichie, 3)
+            trame = rapporteur.publier_activite(agent, {"tick": 0})
+            compteurs = rapporteur.compteurs()
+        finally:
+            rapporteur.detacher()
+        self.assertEqual(compteurs["ecritures_par_couche"]["generateur_attente"], 1)
+        self.assertGreaterEqual(compteurs["ecritures_par_lot"], 7)   # les branches simulées
+        self.assertNotIn("generateur_attente", compteurs["couches_non_ecrites"])
+        np.testing.assert_allclose(
+            self._decode(trame, "generateur_attente").astype(np.float32),
+            attente.reshape(-1).numpy(), rtol=2e-3, atol=1e-4)
+
+    def test_attacher_deux_fois_ne_double_pas_les_hooks(self):
+        """Un second `attacher` REMPLACE le premier : jamais deux hooks sur la même couche.
+
+        Sinon chaque couche serait écrite 2×, 3×… et une politique « première écriture » devient
+        un compteur de hooks déguisé. `detacher()` doit, lui, rendre le cerveau EXACTEMENT comme
+        avant : plus aucune écriture n'est vue après.
+        """
+        import torch
+        from naulthene.cerveau.telemetrie import BusTrames
+        from naulthene.instruments.cerveau_3d.rapporteur import Rapporteur
+
+        agent = self._agent()
+        obs, mem, _, _ = self._entrees(agent)
+        rapporteur = Rapporteur(BusTrames(), hz=1000.0)
+        rapporteur.attacher(agent)
+        rapporteur.attacher(agent)
+        rapporteur.nouveau_tick()
+        with torch.no_grad():
+            agent._tronc_cerebral(obs, mem)
+        self.assertEqual(rapporteur.compteurs()["ecritures_par_couche"]["analyseur"], 1)
+        rapporteur.detacher()
+        rapporteur.detacher()
+        with torch.no_grad():
+            agent._tronc_cerebral(obs, mem)
+        self.assertEqual(rapporteur.compteurs()["ecritures_par_couche"]["analyseur"], 1)
+
+    def test_la_structure_est_lue_sur_l_agent(self):
+        """`publier_structure` lit formes, poids et bornes SUR l'agent — jamais une table.
+
+        `definir_couches` est une FIXTURE (sa docstring le dit) : la seule chose qui l'empêche de
+        dériver est `test_forme_factice_egale_forme_reelle` (tâche 6), cité ici comme garantie.
+        """
+        from naulthene.cerveau.telemetrie import BusTrames, decoder_octets
+        from naulthene.instruments.cerveau_3d.rapporteur import Rapporteur
+
+        agent = self._agent()
+        bus = BusTrames()
+        rapporteur = Rapporteur(bus, hz=1000.0)
+        rapporteur.attacher(agent)
+        try:
+            rapporteur.publier_structure(agent, {"jour": 5, "tick_absolu": 1234, "niveau": None})
+        finally:
+            rapporteur.detacher()
+        structure = bus.structure()
+        self.assertEqual(structure["jour"], 5)
+        self.assertEqual(structure["tick_absolu"], 1234)
+        self.assertEqual(structure["dim_bus"], int(agent.dim_bus))
+        couches = {c["nom"]: c for c in structure["couches"]}
+        self.assertEqual(len(couches), 12)
+        for nom, couche in couches.items():
+            module = getattr(agent, nom)
+            self.assertEqual(couche["entree"], int(module.in_features), nom)
+            self.assertEqual(couche["sortie"], int(module.out_features), nom)
+            self.assertGreater(couche["echelle"], 0.0, nom)
+            self.assertEqual(len(decoder_octets(couche["poids_i8"])),
+                             int(module.in_features) * int(module.out_features), nom)
+            self.assertEqual(len(np.frombuffer(decoder_octets(couche["positions"]),
+                                               dtype=np.float16)),
+                             3 * int(module.out_features), nom)
+        bornes = {b["couche"]: b for b in structure["bornes"]}
+        self.assertEqual(bornes["porte_visuelle"]["dim"], int(agent.porte_visuelle.in_features))
+        self.assertEqual(bornes["porte_auditive"]["dim"], int(agent.porte_auditive.in_features))
+        self.assertEqual(bornes["integrateur_bio"]["dim"],
+                         int(agent.integrateur_bio.in_features) - int(agent.dim_bus))
+        self.assertEqual(bornes["integrateur_bio"]["rang_entree"],
+                         [int(agent.dim_bus), int(agent.integrateur_bio.in_features)])
+        self.assertEqual(bornes["generateur_attente"]["dim"], int(agent.num_actions))
+
+    def test_signal_choc_et_bus_absent(self):
+        """Un choc est un FAIT daté, publié sur le canal `evenement` — et `bus=None` est permis.
+
+        Le ruling du plan autorise `bus=None` (le drapeau du noyau relaie lui-même, tâche 9) :
+        le rapporteur doit alors PRODUIRE les trames sans les publier, jamais lever.
+        """
+        from naulthene.cerveau.telemetrie import BusTrames
+        from naulthene.instruments.cerveau_3d.rapporteur import Rapporteur
+
+        bus = BusTrames()
+        rapporteur = Rapporteur(bus, hz=1000.0)
+        trame = rapporteur.signal_choc(1.0, {"jour": 2, "tick": 9})
+        self.assertEqual(trame["type"], "evenement")
+        self.assertEqual(trame["genre"], "choc_dopamine")
+        self.assertEqual(trame["intensite"], 1.0)
+        evenements, total = bus.evenements_depuis(0)
+        self.assertEqual([e["tick"] for e in evenements], [9])
+        self.assertEqual(total, 1)
+        self.assertEqual(rapporteur.compteurs()["chocs"], 1)
+
+        sans_bus = Rapporteur(None, hz=1.0)
+        agent = self._agent()
+        self.assertIsNone(sans_bus.publier_structure(agent, {"jour": 0}))   # aucun bus
+        self.assertEqual(sans_bus.compteurs()["structures"], 1)             # mais produite
+        self.assertIsNotNone(sans_bus.publier_activite(agent, {"tick": 0}))
+        self.assertEqual(sans_bus.signal_choc(0.5, {"tick": 0})["intensite"], 0.5)
+        self.assertEqual(sans_bus.compteurs()["publications"], 1)
