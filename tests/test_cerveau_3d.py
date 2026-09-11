@@ -1386,7 +1386,7 @@ STATIQUE = (Path(__file__).resolve().parent.parent
 # les exporte depuis une COPIE temporaire : le fichier livré, lui, n'exporte rien (un navigateur
 # n'en a pas besoin, et `node --check` n'en dépend pas).
 SONDE_EXPORTS = ("construireStructure, appliquerActivite, construireAretes, float16VersFloat32, "
-                 "base64EnOctets, noeuds, aretes")
+                 "base64EnOctets, noeuds, aretes, vue, DISTANCE_MIN, DISTANCE_MAX")
 
 # Le seul élément qu'un navigateur apporte et que `node` n'a pas : le moteur de rendu WebGL.
 # Tout le reste de la sonde est le VRAI `three.core.min.js` vendorisé.
@@ -1504,6 +1504,30 @@ journal.repli_sans_natif = typeof DataView.prototype.getFloat16 === 'function';
 app.appliquerActivite(trames.activite);
 journal.couleurs = couleursLues();
 journal.texte_infos = element('infos').textContent;
+
+// --- 7. Les boutons de zoom (demande de l'auteur, 10/09/2026) : le zoom n'existait qu'à la
+// molette, donc invisible. On CLIQUE réellement sur les boutons livrés — `element(id)` rend le
+// stub de DOM sur lequel la page a enregistré ses écouteurs.
+function cliquer(id) {
+  const bouton = element(id);
+  if (!bouton.ecouteurs.click) throw new Error(`le bouton ${id} n'a enregistré aucun écouteur 'click'`);
+  bouton.ecouteurs.click();
+  return app.vue.distance;
+}
+const zoom = { ouverture: app.vue.distance };
+zoom.premier_plus = cliquer('zoom-plus');
+zoom.second_plus = cliquer('zoom-plus');
+zoom.apres_moins = cliquer('zoom-moins');
+app.vue.theta = 2.5; app.vue.phi = 0.3;          // on tourne la scène à la main…
+zoom.apres_recentrer = cliquer('zoom-recentrer'); // …le recentrage doit remettre d'aplomb
+zoom.angles_recentres = [app.vue.theta, app.vue.phi];
+// Les bornes : 40 clics d'un côté puis 80 de l'autre ne doivent JAMAIS les franchir.
+for (let i = 0; i < 40; i++) cliquer('zoom-plus');
+zoom.minimum_atteint = app.vue.distance;
+for (let i = 0; i < 80; i++) cliquer('zoom-moins');
+zoom.maximum_atteint = app.vue.distance;
+zoom.bornes = [app.DISTANCE_MIN, app.DISTANCE_MAX];
+journal.zoom = zoom;
 
 console.log(JSON.stringify(journal));
 """
@@ -1777,6 +1801,26 @@ class TestLogiqueDeLaPage(unittest.TestCase):
         self.assertEqual(sonde["seuil_15"]["texte"], "0.15")
         self.assertEqual(sonde["seuil_15_bis"]["paires"], sonde["seuil_15"]["paires"])
         self.assertIn("arêtes", sonde["texte_structure"])
+
+    def test_les_boutons_de_zoom_agissent_comme_la_molette(self):
+        """Demande de l'auteur (10/09/2026) : le zoom n'existait qu'à la molette, donc invisible.
+
+        La sonde CLIQUE les boutons réellement livrés et vérifie quatre choses : `+` rapproche
+        (la distance diminue), `−` éloigne, `⟳` remet la vue d'ouverture — angles compris — et
+        les bornes ne sont jamais franchies, quel que soit le nombre de clics. Ce dernier point
+        est celui qui compte : sans borne, 40 clics enverraient la caméra à l'intérieur du
+        cerveau (ou à l'infini), et l'écran deviendrait noir sans qu'aucun test ne le voie.
+        """
+        zoom = self.sonde["zoom"]
+        self.assertLess(zoom["premier_plus"], zoom["ouverture"])
+        self.assertLess(zoom["second_plus"], zoom["premier_plus"])
+        self.assertGreater(zoom["apres_moins"], zoom["second_plus"])
+        self.assertAlmostEqual(zoom["apres_recentrer"], zoom["ouverture"])
+        self.assertEqual([round(a, 6) for a in zoom["angles_recentres"]], [0.8, 1.15])
+        self.assertEqual(zoom["minimum_atteint"], zoom["bornes"][0],
+                         "le bouton + a franchi la distance minimale")
+        self.assertEqual(zoom["maximum_atteint"], zoom["bornes"][1],
+                         "le bouton − a franchi la distance maximale")
 
     def test_les_aretes_relient_deux_neurones_distincts_de_la_colonne(self):
         """`rafraichirAretes` doit écrire deux EXTRÉMITÉS DISTINCTES, dont le neurone d'entrée.

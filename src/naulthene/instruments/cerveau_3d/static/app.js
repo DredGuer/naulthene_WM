@@ -26,7 +26,9 @@ lumiere.position.set(6, 9, 8);
 scene.add(lumiere);
 
 // Caméra orbitale minimale (pas d'OrbitControls : trois lignes suffisent et évitent un import).
-const vue = { theta: 0.8, phi: 1.15, distance: 26, cible: new THREE.Vector3(0, 0, 4) };
+const VUE_OUVERTURE = { theta: 0.8, phi: 1.15, distance: 26 };
+const vue = { theta: VUE_OUVERTURE.theta, phi: VUE_OUVERTURE.phi,
+              distance: VUE_OUVERTURE.distance, cible: new THREE.Vector3(0, 0, 4) };
 let souris = null;
 renderer.domElement.addEventListener('pointerdown', e => { souris = { x: e.clientX, y: e.clientY }; });
 addEventListener('pointerup', () => { souris = null; });
@@ -36,8 +38,30 @@ addEventListener('pointermove', e => {
   vue.phi = Math.max(0.15, Math.min(Math.PI - 0.15, vue.phi - (e.clientY - souris.y) * 0.006));
   souris = { x: e.clientX, y: e.clientY };
 });
+
+// ---------------------------------------------------------------------------------------------
+// Le zoom : la MOLETTE et les BOUTONS agissent sur la même grandeur (`vue.distance`) et dans les
+// mêmes bornes. Deux réglages séparés divergeraient à la première modification — ici il n'y a
+// qu'une fonction, donc un seul comportement à tenir.
+//   `+` RAPPROCHE (la distance diminue) · `−` ÉLOIGNE · `⟳` remet la vue d'ouverture.
+// ---------------------------------------------------------------------------------------------
+const DISTANCE_MIN = 3;
+const DISTANCE_MAX = 120;
+const PAS_ZOOM = 1.25;
+
+function zoomer(facteur) {
+  vue.distance = Math.max(DISTANCE_MIN, Math.min(DISTANCE_MAX, vue.distance * facteur));
+}
+
+function recentrer() {
+  vue.theta = VUE_OUVERTURE.theta;
+  vue.phi = VUE_OUVERTURE.phi;
+  vue.distance = VUE_OUVERTURE.distance;
+  vue.cible.set(0, 0, 4);
+}
+
 renderer.domElement.addEventListener('wheel', e => {
-  vue.distance = Math.max(3, Math.min(120, vue.distance * (1 + Math.sign(e.deltaY) * 0.1)));
+  zoomer(1 + Math.sign(e.deltaY) * 0.1);
 }, { passive: true });
 
 function majCamera() {
@@ -323,6 +347,18 @@ curseur.addEventListener('input', () => {
   document.getElementById('valeur-seuil').textContent = seuil.toFixed(2);
   if (noeuds.couches.length) construireAretes();
 });
+
+// Les boutons de zoom (demande de l'auteur, 10/09/2026) : le zoom n'existait qu'à la molette,
+// donc il était invisible pour qui ne l'essaie pas. Les trois boutons passent par les MÊMES
+// fonctions que la molette — `+` rapproche, `−` éloigne, `⟳` recentre.
+// Le garde `if (bouton)` : si la page servie est plus ancienne que `app.js` (cache du
+// navigateur), l'absence d'un bouton ne doit pas casser l'affichage du cerveau.
+for (const [id, action] of [['zoom-plus', () => zoomer(1 / PAS_ZOOM)],
+                            ['zoom-moins', () => zoomer(PAS_ZOOM)],
+                            ['zoom-recentrer', recentrer]]) {
+  const bouton = document.getElementById(id);
+  if (bouton) bouton.addEventListener('click', action);
+}
 
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;

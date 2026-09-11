@@ -17,6 +17,14 @@
     #seuil { width: 100%; }
     #infos { margin-top: 6px; color: #9a9aa8; }
     #etat { position: fixed; bottom: 10px; left: 10px; color: #9a9aa8; }
+    /* Boutons de zoom (molette = même réglage). Grands assez pour être cliqués sans viser. */
+    .rangee { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+    .rangee button { width: 34px; height: 28px; background: #22222f; color: #e6e6eb;
+                     border: 1px solid #3a3a4d; border-radius: 6px; font: inherit;
+                     font-size: 16px; line-height: 1; cursor: pointer; }
+    .rangee button:hover { background: #2e2e42; border-color: #55556e; }
+    .rangee button:active { background: #3d3d55; }
+    .rangee span { color: #7a7a88; }
   </style>
 </head>
 <body>
@@ -29,6 +37,12 @@
     <div style="color:#7a7a88">fraction du poids le plus fort de la couche — une commodité de
       lecture, jamais une mesure (§5).</div>
     <div id="infos">…</div>
+    <div class="rangee">
+      <button id="zoom-plus" title="Zoomer (rapprocher)">+</button>
+      <button id="zoom-moins" title="Dézoomer (éloigner)">−</button>
+      <button id="zoom-recentrer" title="Recentrer la vue">⟳</button>
+      <span>zoom — molette ou boutons</span>
+    </div>
   </div>
   <div id="etat">connexion…</div>
   <script type="module" src="./app.js"></script>
