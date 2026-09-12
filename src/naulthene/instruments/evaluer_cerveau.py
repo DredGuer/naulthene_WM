@@ -5,11 +5,13 @@ Le Contrôle de Connaissances (expérimental) — mesure de rétention par nivea
 
 ⚠️ ARCHIVE HISTORIQUE (chantier EVA-01, 12/09/2026). Remplacé par
 `naulthene.instruments.banc_final`, seul juge standardisé : celui-ci fige les cartes, dédie un
-pool de graines d'évaluation et fixe une graine torch par épisode — donc reproductible, ce que
-cet outil n'était pas (`noyau.py` échantillonne l'action, `Categorical(...).sample()`, et aucune
-graine torch n'était fixée ici : deux évaluations du même `.brain` donnaient des chiffres
-différents). Conservé pour ses rapports déjà publiés dans `docs/recherche/evals/` et pour
-l'exploration ponctuelle. Aucune mécanique nouvelle ne doit y être ajoutée.
+pool de graines d'évaluation et fixe une graine torch par épisode — la reproductibilité y est donc
+garantie par construction. Cet outil-ci ne fixait, lui, aucune graine torch (`noyau.py`
+échantillonne l'action, `Categorical(...).sample()`) : sa reproductibilité ne dépendait que du seed
+global posé à l'import de `noyau.py`, elle n'était donc PAS garantie par l'outil. C'est un FAIT DE
+CODE, pas un écart observé : l'ampleur d'une éventuelle dérive n'est PAS mesurée (spec EVA-01
+§3.1). Conservé pour ses rapports déjà publiés dans `docs/recherche/evals/` et pour l'exploration
+ponctuelle. Aucune mécanique nouvelle ne doit y être ajoutée.
 
 Ce module ne vit que dans l'écosystème local de test (voir CLAUDE.md, section
 "Variante Locale de Test"), pas encore porté sur `agi_google_colab.py`. Répond à un

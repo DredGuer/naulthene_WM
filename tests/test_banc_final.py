@@ -682,21 +682,28 @@ class TestOutilsArchives(unittest.TestCase):
     un outil archivé garde ses défauts corrigés ET son bandeau, sinon la session suivante le
     relit comme un outil vivant et le reprend pour juge.
 
-    `evaluer_cerveau.py` porte DEUX défauts mesurés au cadrage EVA-01, qu'aucun autre test ne
+    `evaluer_cerveau.py` porte DEUX défauts consignés au cadrage EVA-01, qu'aucun autre test ne
     lit (il n'a jamais eu de test) :
 
-    1. il n'est PAS reproductible — il ne fixe aucune graine torch, alors que `noyau.py`
-       échantillonne l'action (`Categorical(...).sample()`) : deux évaluations du même `.brain`
-       donnent des chiffres différents. C'est `banc_final.py` qui ferme ce défaut (cartes
-       figées, pool de graines d'évaluation dédié, graine torch par épisode) ;
+    1. sa reproductibilité n'est PAS garantie par l'outil — il ne fixe aucune graine torch, alors
+       que `noyau.py` échantillonne l'action (`Categorical(...).sample()`) : elle ne dépend que du
+       seed global posé à l'import de `noyau.py`. C'est un FAIT DE CODE, jamais une divergence
+       observée : l'ampleur d'une dérive n'est PAS mesurée (spec EVA-01 §3.1) et ce test n'en
+       affirme aucune. `banc_final.py` ferme le défaut par construction (cartes figées, pool de
+       graines d'évaluation dédié, graine torch par épisode) ;
     2. son dossier de sortie par défaut désignait un dossier FANTÔME — `docs/notes/evals`,
        jamais créé : chaque évaluation écrivait donc ailleurs que dans le dossier réel
        (`docs/recherche/evals/`), et ses rapports n'étaient pas là où on les cherchait.
     """
 
-    def test_le_dossier_de_sortie_de_l_outil_archive_existe_vraiment(self):
+    def test_le_dossier_de_sortie_ne_designe_plus_un_dossier_fantome(self):
         """`docs/notes/evals` n'a jamais existé : chaque évaluation écrivait dans un
-        dossier fantôme (constat EVA-01 §3.3)."""
+        dossier fantôme (constat EVA-01 §3.3).
+
+        Ce test compare DEUX CHAÎNES et n'ouvre jamais le dossier : un
+        `assertTrue(os.path.isdir(...))` serait plus fort mais couplerait le test au répertoire
+        courant — exactement la classe de bug qui a coûté deux tours à la tâche 5. Ce qui est
+        verrouillé est le DÉFAUT de la constante, pas la présence du dossier sur disque."""
         from naulthene.instruments import evaluer_cerveau
 
         chemin = evaluer_cerveau.DOSSIER_EVALS_DEFAUT
@@ -710,11 +717,17 @@ class TestOutilsArchives(unittest.TestCase):
         doit donc dire QU'IL EST ARCHIVÉ, PAR QUI il est remplacé, POURQUOI, et qu'on ne doit
         plus y ajouter de mécanique.
 
-        Le bandeau est cherché sur des formulations PROPRES au bandeau (« archive
-        historique », le successeur `banc_final`, la « graine torch », l'interdiction de
-        mécanique nouvelle) : aucune d'elles n'existe dans le corps de la docstring, donc
-        retirer le bandeau fait tomber ce test au lieu de le laisser vert sur un mot
-        d'emprunt."""
+        Le bandeau est cherché sur des fragments PROPRES au bandeau (« archive historique », le
+        successeur `banc_final`, le « pool de graines d'évaluation » dédié, la « graine torch »,
+        l'interdiction de mécanique nouvelle) : aucun n'existe dans le corps de la docstring, donc
+        retirer le bandeau fait tomber ce test au lieu de le laisser vert sur un mot d'emprunt.
+
+        ⚠️ LIMITE CONNUE ET MESURÉE — ces fragments sont LEXICAUX, pas SÉMANTIQUES. Un bandeau qui
+        conserve les cinq notions en les INVERTISSANT (par exemple « cet outil est reproductible,
+        le pool de graines d'évaluation est superflu ») laisse ce test VERT, et retirer de même la
+        phrase de conservation des rapports publiés ne le fait pas tomber (mesuré en mémoire). Ce
+        test garde la PRÉSENCE des cinq notions, jamais leur sens ni leur direction : une
+        relecture humaine du bandeau reste nécessaire, et c'est elle qui juge la formulation."""
         from naulthene.instruments import evaluer_cerveau
 
         doc = evaluer_cerveau.__doc__ or ""
@@ -725,9 +738,12 @@ class TestOutilsArchives(unittest.TestCase):
              "le lecteur doit savoir qu'il ouvre une pièce ARCHIVÉE, pas un outil vivant"),
             ("banc_final",
              "le bandeau doit NOMMER le successeur (`naulthene.instruments.banc_final`)"),
+            ("pool de graines d'évaluation",
+             "le bandeau doit dire CE QUE le successeur fait de mieux : figer les cartes, dédier "
+             "un pool de graines d'évaluation, fixer une graine torch par épisode"),
             ("graine torch",
-             "le bandeau doit dire POURQUOI l'outil est remplacé : sans graine torch par "
-             "épisode, ses mesures n'étaient pas reproductibles"),
+             "le bandeau doit dire POURQUOI l'outil est remplacé : sa reproductibilité n'était "
+             "pas garantie par l'outil, faute de graine torch"),
             ("aucune mécanique",
              "le bandeau doit interdire d'ajouter une mécanique nouvelle à une archive"),
         ):
