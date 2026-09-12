@@ -267,19 +267,21 @@ le mur **se déplace sans tomber** : 15/20 restent au niveau 4. ⚠️ **Ce poin
 avec le rejeu nocturne faussé (APP-01)** — c'est une *tendance*, pas un témoin valide. Voir
 [EPOQUES_07092026](docs/recherche/campagnes/EPOQUES_07092026_le_mur_du_niveau_4_est_franchi.md).
 
-✅ **09/09/2026 — SCI-01 VAGUE 1, BALAYAGE K/ε SUR L'APPRENANT RÉPARÉ (n=10 par bras × 1500
-j) : LA FORME EST UNE CLOCHE, OPTIMUM À K=8, ET LE CLIP NE NUIT PLUS.** Re-mesuré sur le
-socle sain (voix libre + `--detach-c2`, rejeu nocturne corrigé, code v41.68). Franchissements
-du mur `SimpleCrossingS9N1` → `LavaGapS5` : **0/10 · 0/10 · 8/10 · 10/10 · 3/10** pour
-K = 1, 2, 4, 8, 16 — **une courbe en cloche qui culmine à K=8**, K=16 retombant
-(sur-apprentissage probable). **Le clip PPO (ε=0,2) ne nuit plus** : K8_CLIP_e02 franchit
-**10/10**, comme K8_NU — le « le clip nuit » du 07/09 avait été mesuré sur le rejeu faussé.
-Le juge mécaniste l'explique : ratio ~0,994, p90 ~1,006, **fraction clippée ~8 % seulement**
-— le clip mord à peine car le ratio reste déjà proche de 1. ⚠️ **n=10, aucun `t` ne passe
-Bonferroni** (seuil 3,25) ; les comparaisons de maîtrise sont **confondues par le palier**
-(les franchisseurs sont mesurés sur le `LavaGapS5` plus dur) ; des comptages, pas des tests.
-La vague 2 (graines 122→222) est requise pour le verdict à n=20. Voir
-[SCI01_WAVE1](docs/recherche/campagnes/SCI01_WAVE1_09092026_la_forme_en_cloche.md).
+✅ **12/09/2026 — SCI-01 À n=20 : LA CLOCHE EST CONFIRMÉE (OPTIMUM K=8) ET LE CLIP EST
+INERTE.** Balayage K/ε sur l'apprenant réparé — 20 graines appariées × 6 bras × 1500 jours =
+**120 runs, 0 échec**, socle sain (voix libre + `--detach-c2`, rejeu nocturne corrigé).
+Franchissements du mur `SimpleCrossingS9N1` → `LavaGapS5` : **0 · 1 · 13 · 18 · 4 sur 20**
+pour K = 1, 2, 4, 8, 16 — **une cloche qui culmine à K=8 (90 %)**, K=16 s'effondrant (20 %,
+sur-apprentissage probable : 5 de ses cerveaux finissent à 0 % de maîtrise). **À palier égal**
+(niveau 4 seul), la maîtrise monte avec K jusqu'à 8 — 15 % → 20 % → 25 % → 27,5 % — puis K16
+retombe à 7,5 %. **Le clip PPO (ε=0,2) est INERTE, pas nuisible** : K8_CLIP_e02 franchit
+**20/20**, statistiquement indiscernable de K8_NU (Fisher `p` = 0,49), parce que le ratio
+d'importance reste déjà proche de 1 (~0,993) et que **~8 %** seulement des échantillons
+sortent de la bande de clip. Le « le clip nuit » du 07/09 était un artefact du rejeu nocturne
+faussé (APP-01). ⚠️ **Aucun `t` de maîtrise n'est interprétable** — les franchisseurs sont
+mesurés sur la carte plus dure, donc ce juge est **confondu par le palier** ; la cloche repose
+sur des **comptages, pas des tests**. K=8 reste une **constante de campagne posée**, pas une
+règle dérivée. Voir [SCI01_N20](docs/recherche/campagnes/SCI01_N20_12092026_le_verdict.md).
 
 🟡 **07/09/2026 — BRANCHES PERSISTANTES (v41.63) : LE CANAL EST RÉPARÉ, C2 NE S'EN SERT
 TOUJOURS PAS.** Garder chaque branche du rollout sur **son propre geste** (au lieu de

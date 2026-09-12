@@ -109,3 +109,8 @@ brains/**/*.vis01_structure.json
 # sans intérêt hors de la machine qui les a produites.
 brains/**/verif_*.html
 brains/**/e2e_page.html
+
+# Artefacts de build Python (créés par `pip install -e .` — REP-01) : jamais versionnés.
+*.egg-info/
+build/
+dist/

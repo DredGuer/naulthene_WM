@@ -1,0 +1,86 @@
+📋 Manifeste : manifeste.json — 20 graines × 6 bras = 120 runs attendus
+=== CAMPAGNE 08092026_sci01_balayage_K — mode CONFIRMATOIRE ===
+couverture : 120/120 runs (6 bras × 20 graines)
+exclusions : aucune
+  garde-fou « voix libre — gain_c1 ≡ 1,00 dans tous les bras » K1_TEMOIN  gain = 1.0000 (attendu 1.0000 ± 0.02)  OK
+  garde-fou « voix libre — gain_c1 ≡ 1,00 dans tous les bras » K2_NU      gain = 1.0000 (attendu 1.0000 ± 0.02)  OK
+  garde-fou « voix libre — gain_c1 ≡ 1,00 dans tous les bras » K4_NU      gain = 1.0000 (attendu 1.0000 ± 0.02)  OK
+  garde-fou « voix libre — gain_c1 ≡ 1,00 dans tous les bras » K8_NU      gain = 1.0000 (attendu 1.0000 ± 0.02)  OK
+  garde-fou « voix libre — gain_c1 ≡ 1,00 dans tous les bras » K16_NU     gain = 1.0000 (attendu 1.0000 ± 0.02)  OK
+  garde-fou « voix libre — gain_c1 ≡ 1,00 dans tous les bras » K8_CLIP_e02 gain = 1.0000 (attendu 1.0000 ± 0.02)  OK
+✅ tous les garde-fous passent, couverture conforme
+
+=== JUGE 1 — MAÎTRISE (δ apparié vs K1_TEMOIN ; CLIP vs K8_NU) ===
+  K2_NU - K1_TEMOIN                d =   +6.000  t =  +3.56  SIG (seuil 2.86, n=20)  (14/20)
+    -> sans les 4 extrêmes         d =   +3.750  t =  +2.32  NS  (seuil 2.95, n=16)  (10/16)
+  K4_NU - K1_TEMOIN                d =   +2.050  t =  +0.81  NS  (seuil 2.86, n=20)  (9/20)
+    -> sans les 4 extrêmes         d =   -1.812  t =  -0.81  NS  (seuil 2.95, n=16)  (5/16)
+  K8_NU - K1_TEMOIN                d =   -2.000  t =  -0.80  NS  (seuil 2.86, n=20)  (6/20)
+    -> sans les 4 extrêmes         d =   -4.688  t =  -2.27  NS  (seuil 2.95, n=16)  (3/16)
+  K16_NU - K1_TEMOIN               d =   -4.500  t =  -1.81  NS  (seuil 2.86, n=20)  (6/20)
+    -> sans les 4 extrêmes         d =   -1.562  t =  -0.60  NS  (seuil 2.95, n=16)  (6/16)
+  K8_CLIP_e02 - K8_NU (effet du clip à K=8) d =   +0.500  t =  +0.19  NS  (seuil 2.86, n=20)  (10/20)
+    -> sans les 4 extrêmes         d =   +3.125  t =  +1.67  NS  (seuil 2.95, n=16)  (9/16)
+
+=== JUGE 2 — NIVEAU (franchissement du mur, comptage par bras) ===
+  K1_TEMOIN    niv>=5 :  0/20  | maîtrise 0% :  0  | maîtrise moy 14.00%
+  K2_NU        niv>=5 :  1/20  | maîtrise 0% :  0  | maîtrise moy 20.00%
+  K4_NU        niv>=5 : 13/20  | maîtrise 0% :  1  | maîtrise moy 16.05%
+  K8_NU        niv>=5 : 18/20  | maîtrise 0% :  2  | maîtrise moy 12.00%
+  K16_NU       niv>=5 :  4/20  | maîtrise 0% :  5  | maîtrise moy  9.50%
+  K8_CLIP_e02  niv>=5 : 20/20  | maîtrise 0% :  1  | maîtrise moy 12.50%
+
+=== JUGE 3 — FORME de K (maîtrise par palier de K — lecture, pas de test) ===
+  K1_TEMOIN    maîtrise moy 14.00% · méd  15.0% · min   5 · max  20
+  K2_NU        maîtrise moy 20.00% · méd  20.0% · min  10 · max  25
+  K4_NU        maîtrise moy 16.05% · méd  13.8% · min   0 · max  35
+  K8_NU        maîtrise moy 12.00% · méd  10.0% · min   0 · max  30
+  K16_NU       maîtrise moy  9.50% · méd   5.0% · min   0 · max  28
+  K8_CLIP_e02  maîtrise moy 12.50% · méd  15.0% · min   0 · max  25
+
+  δ maîtrise par palier de K (chaque bras vs K1_TEMOIN, détail du juge 1) :
+  K2_NU        δ moy  +6.00 pt · 14/20 favorables
+  K4_NU        δ moy  +2.05 pt · 9/20 favorables
+  K8_NU        δ moy  -2.00 pt · 6/20 favorables
+  K16_NU       δ moy  -4.50 pt · 6/20 favorables
+  K8_CLIP_e02  δ moy  -1.50 pt · 5/20 favorables
+
+=== JUGE 4 — MÉCANISTE ε (ratio + fraction clippée, télémétrie Rejouer) ===
+  ⚠️ Bras NU (K1→K16) : ratio non logué (hors RATIO_CLIPPE_ACTIF) — télémétrie absente,
+     réserve consignée au journal des runs (09/08). Seul K8_CLIP_e02 est lisible ici.
+  K8_CLIP_e02_g11: ratio moy 0.9956 · p90 1.0063 · fraction clippée 9.1%
+  K8_CLIP_e02_g22: ratio moy 0.9964 · p90 1.0062 · fraction clippée 7.9%
+  K8_CLIP_e02_g33: ratio moy 0.9946 · p90 1.0085 · fraction clippée 8.5%
+  K8_CLIP_e02_g44: ratio moy 0.9915 · p90 1.0050 · fraction clippée 6.3%
+  K8_CLIP_e02_g55: ratio moy 0.9914 · p90 1.0039 · fraction clippée 7.0%
+  K8_CLIP_e02_g66: ratio moy 0.9947 · p90 1.0070 · fraction clippée 8.2%
+  K8_CLIP_e02_g77: ratio moy 0.9937 · p90 1.0084 · fraction clippée 10.8%
+  K8_CLIP_e02_g88: ratio moy 0.9956 · p90 1.0065 · fraction clippée 10.0%
+  K8_CLIP_e02_g99: ratio moy 0.9947 · p90 1.0054 · fraction clippée 6.6%
+  K8_CLIP_e02_g111: ratio moy 0.9933 · p90 1.0032 · fraction clippée 5.3%
+  K8_CLIP_e02_g122: ratio moy 0.9932 · p90 1.0046 · fraction clippée 5.9%
+  K8_CLIP_e02_g133: ratio moy 0.9920 · p90 1.0064 · fraction clippée 9.8%
+  K8_CLIP_e02_g144: ratio moy 0.9911 · p90 1.0055 · fraction clippée 7.4%
+  K8_CLIP_e02_g155: ratio moy 0.9912 · p90 1.0050 · fraction clippée 7.0%
+  K8_CLIP_e02_g166: ratio moy 0.9938 · p90 1.0124 · fraction clippée 12.2%
+  K8_CLIP_e02_g177: ratio moy 0.9938 · p90 1.0066 · fraction clippée 8.7%
+  K8_CLIP_e02_g188: ratio moy 0.9967 · p90 1.0122 · fraction clippée 10.5%
+  K8_CLIP_e02_g199: ratio moy 0.9914 · p90 1.0099 · fraction clippée 11.1%
+  K8_CLIP_e02_g211: ratio moy 0.9959 · p90 1.0089 · fraction clippée 12.6%
+  K8_CLIP_e02_g222: ratio moy 0.9920 · p90 1.0064 · fraction clippée 8.9%
+
+=== TEST DE TAUTOLOGIE (maîtrise conditionnée aux victoires > 0) ===
+  K4_NU maîtrise conditionnée (n=20) d =   +2.050  t =  +0.81  NS  (seuil 2.86, n=20)  (9/20)
+  K8_NU maîtrise conditionnée (n=20) d =   -2.000  t =  -0.80  NS  (seuil 2.86, n=20)  (6/20)
+  K16_NU maîtrise conditionnée (n=20) d =   -4.500  t =  -1.81  NS  (seuil 2.86, n=20)  (6/20)
+  K8_CLIP_e02 maîtrise conditionnée (n=20) d =   -1.500  t =  -0.79  NS  (seuil 2.86, n=20)  (5/20)
+
+=== VÉRIF — maîtrise à PALIER ÉGAL (niveau 4 uniquement, hors franchisseurs) ===
+  K1_TEMOIN    niv4:  15.0% (n=20)
+  K2_NU        niv4:  20.0% (n=19) | niv5:  10.0% (n=1)
+  K4_NU        niv4:  25.0% (n=7) | niv5:  10.0% (n=13)
+  K8_NU        niv4:  27.5% (n=2) | niv5:  10.0% (n=18)
+  K16_NU       niv4:   7.5% (n=16) | niv5:   5.0% (n=4)
+  K8_CLIP_e02  niv5:  15.0% (n=20)
+
+✅ agregat.json écrit (120 runs)

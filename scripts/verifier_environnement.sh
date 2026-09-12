@@ -69,15 +69,17 @@ if ! NAULTHENE_DEVICE=cpu PYTHONPATH="$REPO/src" "$TARGET_VENV/bin/python" \
 fi
 echo "✅ Import minimal OK."
 
-# 4. Vérification 2 — suite de contrats CPU (44 tests).
-echo "--- Vérif 2 : contrats CPU (44 tests attendus) ---"
+# 4. Vérification 2 — suite de contrats CPU (le nombre de tests ÉVOLUE : jamais figé ici).
+echo "--- Vérif 2 : suite de contrats CPU ---"
 if ! NAULTHENE_DEVICE=cpu PYTHONPATH="$REPO/src" "$TARGET_VENV/bin/python" \
         -m unittest discover -s "$REPO/tests" >>"$LOGFILE" 2>&1; then
     echo "⛔ Tests en échec — voir $LOGFILE (dernières lignes) :"
     tail -25 "$LOGFILE"
     exit 6
 fi
-echo "✅ Tests CPU OK (44 attendus — vérifier 'Ran 44 tests' dans le log)."
+# ⚠️ Le nombre de tests n'est PAS figé dans ce script : il a déjà menti une fois (« 44
+# attendus » alors que le dépôt en comptait 156 le 12/09/2026). On lit ce que le log dit.
+echo "✅ Tests CPU OK — $(grep -oE 'Ran [0-9]+ tests' "$LOGFILE" | tail -1)"
 
 # 5. Vérification 3 — rapport de versions vs lock.
 echo "--- Vérif 3 : versions installées vs lock ---"

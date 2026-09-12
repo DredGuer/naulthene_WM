@@ -4,6 +4,82 @@ Historique des évolutions du projet, commit par commit. Voir [readme.md](../../
 
 ---
 
+## [v41.78-mesure] - 2026-09-12 — SCI-01 à n=20 : la cloche est confirmée (optimum K=8), le clip est inerte
+
+| Type | Details |
+|------|---------|
+| **Catégorie** | mesure (0 ligne de code cognitive — 120 runs + dépouillement strict) |
+| **Impact** | Scientifique majeur — la forme de l'effet de K est **tranchée à n=20** ; le « clipping nuit » du 07/09 est **définitivement requalifié** |
+| **Registre** | [REGISTRE_PROBLEMES_A_CORRIGER](../ameliorations/REGISTRE_PROBLEMES_A_CORRIGER.md) SCI-01 → 🔵 à mesurer (n=20 dépouillé) |
+
+**Campagne** : `brains/08092026_sci01_balayage_K`, Wave 1 (10 graines) + Wave 2 (graines
+122→222), **20 graines appariées × 6 bras × 1500 jours = 120 runs, 0 échec**.
+
+**Franchissements du mur `SimpleCrossingS9N1` → `LavaGapS5`** : **0 · 1 · 13 · 18 · 4 sur 20**
+pour K = 1, 2, 4, 8, 16 — **cloche nette, optimum K=8 (90 %)**, K=16 s'effondrant (20 %,
+5 cerveaux à 0 % de maîtrise). **À palier égal** (niveau 4 seul) la maîtrise monte avec K
+jusqu'à 8 — 15 % → 20 % → 25 % → 27,5 % — puis retombe à 7,5 % chez K16.
+
+**Clip ε=0,2 : INERTE.** K8_CLIP_e02 franchit **20/20**, indiscernable de K8_NU (Fisher
+`p` = 0,49) ; ratio ~0,993, p90 ~1,006, **fraction clippée 5–13 %** (médiane ~8 %) — le ratio
+reste déjà proche de 1, donc le clip ne mord presque jamais. Le « clipping de PPO NUIT »
+mesuré le 07/09 (−1,00 pt) était un **artefact du rejeu faussé** (APP-01).
+
+⚠️ **Aucun `t` de maîtrise n'est interprétable** (le seul SIG, K2 vs K1 `t` = +3,56, tombe au
+retrait des extrêmes et n'est qu'un artefact de palier) : **la cloche repose sur des comptages,
+pas sur un test**. K=8 reste une **constante de campagne posée**, pas une règle dérivée.
+
+⚠️ **Hétérogénéité de code pendant la Wave 2, mesurée et requalifiée** : 4 commits VIS-01
+(10/09) ont modifié `noyau.py` pendant que la vague tournait (K1→K8 sous v41.68, K8_CLIP sous
+v41.76). **Vérification A/A du 12/09** (graine 11, 10 jours, sans `--telemetrie-3d`, worktree
+`44a45a7` vs HEAD) : 9 lignes clés **identiques**, logs **identiques** (505 lignes), **payload
+sémantique des `.brain` identique** (47 tenseurs/scalaires) — télémétrie opt-in, **dynamique
+inchangée**. Réserve consignée : « même code » respecté *fonctionnellement*, pas *littéralement*.
+
+Carnet : [SCI01_N20](../recherche/campagnes/SCI01_N20_12092026_le_verdict.md) · dépouillement
+`depouillement_final_n20.txt` · agrégats `agregat.json` (120 runs) et `agregat_wave1.json`.
+
+---
+
+## [v41.77] - 2026-09-12 — MES-01 (complément) : le lecteur ne jette plus les nuits de promotion + REP-01 clos
+
+| Type | Details |
+|------|---------|
+| **Catégorie** | fix instrument + infra (aucune mécanique cognitive) |
+| **Impact** | Corrige un faux refus de couverture MES-01 et un défaut de `pyproject.toml` invisible autrement |
+| **Registre** | MES-01 (complément) · **REP-01 → ✅ Clos** |
+
+**1. `journal_cursus.py` — les nuits de promotion étaient JETÉES.** Le motif
+`Niveau (\d+)/15 — maîtrise (\d+)%` ne matchait pas l'affichage `maîtrise —` qui apparaît
+quand la fenêtre de maîtrise est vide (**promotion du jour : `historique_episodes_niveau` est
+vidé**, règle v35.0). Ces nuits étaient donc écartées du journal — et un cerveau **promu le
+dernier jour** était déclaré **INACHEVÉ** par le dépouillement strict. Cas réel :
+`K8_NU_g144`, promu au jour 1500, refusé à « 1499/1500 » alors qu'il était **complet**
+(1500 bilans, cerveau cristallisé). Correction : le **niveau suffit** à valider une nuit ;
+`mait` n'est posé que si un pourcentage est présent (les médianes ignorent naturellement les
+nuits sans maîtrise, sans les jeter). **2 tests ajoutés** (nuit de promotion conservée ;
+`jours_final` correct quand la promotion tombe le dernier jour).
+
+**Re-dépouillement des 6 campagnes publiées — 0 verdict changé** : EPOQUES, DETACH, ABLATION,
+RENDEMMENT, REJEU strictement identiques ; BP marginalement déplacé (maîtrise −2,100 → −2,250,
+accord −2,695 → −2,692) mais **NS → NS**, mêmes comptages de favorables. Seul le champ `nuits`
+change dans les agrégats (1476 → 1500 : les nuits de promotion sont désormais comptées).
+
+**2. REP-01 CLOS — validation en environnement vierge.** `bash scripts/verifier_environnement.sh`
+→ **exit 0** : venv vierge hors dépôt/hors iCloud, installation `-c constraints-lock.txt -e
+'.[tout]'`, import minimal OK, **156 tests CPU OK** (30,2 s), **5 versions conformes au lock**.
+🔴 **La validation a attrapé deux défauts réels de `pyproject.toml`** (invisibles jusque-là : le
+dépôt n'est jamais buildé) : champ `version` **manquant**, puis classifier `License ::`
+**incompatible avec l'expression SPDX** (PEP 639). Le script ne fige plus de nombre de tests
+(il annonçait « 44 » alors que le dépôt en compte 156).
+
+**3. Correction documentaire** : le commit VIS-01 `49ca162` avait **renommé l'entrée
+`[v41.70]` (QUA-01) en `[v41.71]`**, dupliquant ce numéro et faisant disparaître v41.70 du
+CHANGELOG. Titre restauré.
+
+---
+
+
 ## [v41.76] - 2026-09-10 — VIS-01 tâche 9 : la passerelle `--telemetrie-3d` — n'importe quel run alimente le cerveau 3D
 
 | Type | Details |
@@ -310,7 +386,7 @@ CLAUDE.md aux règles + liens (dette documentaire, point général 07/09).
 
 ---
 
-## [v41.71] - 2026-09-08 — DOC-01 : `ETAT_COURANT.md` créé, INDEX nettoyé, DOC-01 clos
+## [v41.70] - 2026-09-08 — QUA-01 : suite de contrats CPU du noyau (44 tests)
 
 | Type | Details |
 |------|---------|

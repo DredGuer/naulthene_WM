@@ -105,16 +105,38 @@ Code de sortie : `0` = validation OK · `≠0` = échec (log détaillé à
 1. **Installation dans un environnement vierge** (nouveau venv hors dépôt, `pip install -c
    constraints-lock.txt -e '.[tout]'`).
 2. **Import minimal** : `PYTHONPATH=src python -c "import naulthene.cerveau.noyau"` (CPU).
-3. **Tests CPU** : `NAULTHENE_DEVICE=cpu venv/bin/python -m unittest discover -s tests`
-   → 44 tests OK.
+3. **Tests CPU** : `NAULTHENE_DEVICE=cpu venv/bin/python -m unittest discover -s tests`.
+   ⚠️ Le script **ne fige aucun nombre** de tests (il a déjà annoncé « 44 » alors que le dépôt
+   en comptait 156) : il lit ce que le log dit.
 4. **Versions installées vs lock** : le script compare numpy/torch/gymnasium/minigrid/wandb
    au lock et signale tout écart.
 5. Campagne suivante avec le bloc §4 rempli — sert de vérification de bout en bout.
+
+### ✅ Validation exécutée le 12/09/2026 — REP-01 CLOS
+
+`bash scripts/verifier_environnement.sh` → **code de sortie 0**, venv vierge
+`/tmp/venv_rep01_validation` (Python 3.12.12), hors dépôt et hors iCloud :
+
+| Critère | Résultat |
+|---|---|
+| Installation vierge (`-c constraints-lock.txt -e '.[tout]'`) | ✅ `Successfully installed` |
+| Import minimal du cœur (CPU) | ✅ |
+| Suite de tests CPU | ✅ **156 tests OK** (30,2 s) |
+| Versions vs lock | ✅ numpy 2.4.6 · torch 2.13.0 · gymnasium 1.3.0 · minigrid 3.1.0 · wandb 0.28.1 — **toutes identiques au lock** |
+
+🔴 **La validation a attrapé deux défauts réels de `pyproject.toml`** (que rien d'autre
+n'aurait vus, puisque le dépôt se lance par `PYTHONPATH=src` et ne builde jamais) :
+1. `project` sans champ `version` → setuptools refuse le build ;
+2. un classifier `License ::` **incompatible avec l'expression SPDX** `license = "..."` (PEP 639).
+Les deux sont corrigés dans le même commit.
+
+⚠️ Le premier passage avait aussi masqué son code de sortie (pipe vers `tail`) : lancer le
+script **sans pipe**, ou lire le fichier de log, pour voir l'échec.
 
 ⚠️ **Ne jamais exécuter le script pendant qu'une campagne tourne** : l'installation
 télécharge plusieurs Go (torch, scipy, librosa…) — la contention I/O fausserait les mesures
 et risquerait un OOM. Attendre `WAVE X TERMINEE` dans le `campagne.log`.
 
-> État : livraison à froid **faite** (08/09/2026) ; script de clôture **prêt** (09/09) ;
-> exécution **en attente** de la fin de SCI-01 Wave 2 (n=20) pour ne pas concurrencer les
-> runs (garde anti-contention intégrée au script).
+> État : **✅ REP-01 CLOS le 12/09/2026** — livraison à froid (08/09), script de clôture
+> (09/09), validation exécutée sur machine libre après `WAVE 2 TERMINEE` (12/09) : code de
+> sortie **0**, **156 tests OK**, versions conformes au lock.

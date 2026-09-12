@@ -22,7 +22,10 @@ __all__ = ["lire_journal", "resumer_journal", "FENETRE_FINALE"]
 FENETRE_FINALE = 100
 
 _JOUR = re.compile(r"^🌙 Jour (\d+) ")
-_CURSUS = re.compile(r"Niveau (\d+)/15 — maîtrise (\d+)%")
+#: `maîtrise (?:(\d+)%|—)` — le tiret apparaît quand la fenêtre de maîtrise est vide
+#: (promotion du jour : `historique_episodes_niveau` est vidé, règle v35.0). La nuit
+#: reste COMPLÈTE (son niveau est connu) ; seule la maîtrise est indéfinie.
+_CURSUS = re.compile(r"Niveau (\d+)/15 — maîtrise (?:(\d+)%|—)")
 _ARBITRAGE = re.compile(r"C1=([\d.]+) C2=([\d.]+).*?gain C1 ×([\d.]+)")
 _ACCORD = re.compile(r"accord ([\d.]+)%")
 _VICTOIRES = re.compile(r"🏆 (\d+) victoire\(s\)")
@@ -31,6 +34,11 @@ _ENTROPIE_C1 = re.compile(r"entropie des votes — C1 ([\d.]+)")
 
 def lire_journal(chemin: str) -> list[dict[str, Any]]:
     """Transcrit un journal de run en une ligne par nuit **complète**.
+
+    Une nuit est complète dès que sa ligne de cursus porte un **niveau** — y compris
+    quand la maîtrise s'affiche `—` (fenêtre vide : le cerveau vient d'être promu,
+    `historique_episodes_niveau` est vidé, règle v35.0). La nuit porte alors `niv` et
+    `j`, sans clé `mait`.
 
     Une nuit sans ligne de cursus est écartée : c'est une journée tronquée par un
     arrêt brutal, pas une observation.
@@ -62,7 +70,15 @@ def lire_journal(chemin: str) -> list[dict[str, Any]]:
                 courante["hc1"] = float(m.group(1))
             m = _CURSUS.search(ligne)
             if m:
-                courante.update(niv=int(m.group(1)), mait=int(m.group(2)))
+                # Le NIVEAU suffit à valider la nuit. `mait` n'est posé que si un
+                # pourcentage est présent : une nuit de promotion (`maîtrise —`) garde
+                # donc son `niv` et son `j`, mais pas de clé `mait` — `_mediane_finale`
+                # l'ignore naturellement pour la médiane (`if cle in n`), sans la jeter
+                # comme nuit. Corrigé le 10/09/2026 (registre MES-01 : faux refus de
+                # couverture sur K8_NU_g144, promu au jour 1500, déclaré INACHEVÉ).
+                courante["niv"] = int(m.group(1))
+                if m.group(2) is not None:
+                    courante["mait"] = int(m.group(2))
     if courante:
         nuits.append(courante)
     return [n for n in nuits if "niv" in n]

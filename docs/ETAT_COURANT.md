@@ -4,10 +4,8 @@
 > résultat majeur (règle DOC-01, point général du 07/09/2026). Ce fichier porte **l'état** ;
 > l'histoire, les rétractations et les mesures détaillées vivent dans le CHANGELOG et les
 > carnets de campagne. Les README EN/FR restent la vitrine publique (miroir strict).
-> Dernière mise à jour : **08/09/2026 ~08:00** (ARC-01 v41.72 : `noyau.py` source de vérité
-> unique, `colab.py` archive — ce fichier + registre + en-têtes ; le dégraissage de CLAUDE.md
-> fait partie de la même réduction). Historique : v41.71 DOC-01, v41.69 `4e5410a`, miroir
-> `6d9ae57`.
+> Dernière mise à jour : **12/09/2026** (v41.78-mesure) — **SCI-01 terminée et dépouillée à
+> n=20** (120 runs, 0 échec), **REP-01 clos** : la Phase A du registre est entièrement soldée.
 
 ---
 
@@ -58,33 +56,36 @@ La neurogenèse étend `dim_bus` (16 → 145 médian, **×9**) quand l'erreur JE
 | Levier | Mesure (n=20 graines appariées × 1500 j, sauf mention) | Verdict |
 |---|---|---|
 | **`--detach-c2`** (06/09) | maîtrise 8,75 % → 14,00 % (δ **+5,25 pt**, `t` = **+4,97**, 16/20, survit aux extrêmes `t` = +4,57) | ✅ le premier levier réel en cursus complet |
-| **`--epoques-nuit 8`** (07/09) | maîtrise 8,75 % → 19,00 % (δ **+10,25 pt**, `t` = **+4,81**, 15/20, survit à `t` = +3,62) ; 5/20 franchissent le mur | ✅ ⚠️ **mesuré avec le rejeu faussé (APP-01)** — le balayage SCI-01 (en cours) re-mesure la forme proprement |
+| **`--epoques-nuit 8`** (07/09, **confirmé le 12/09 à n=20**) | le point K=8 du 07/09 était mesuré sur le **rejeu faussé** (APP-01). Re-mesuré proprement : franchissements du mur **0 · 1 · 13 · 18 · 4 sur 20** pour K=1/2/4/8/16 — **cloche, optimum K=8 (90 %)**, K=16 s'effondre (20 %) | ✅ **le levier tient**, et K=8 est le meilleur réglage — mais reste une **constante posée** (pas dérivée) |
 | **Voix libre** `--gain-c1-libre` (04/09) | mur tenu (20/20 au niv. 4), effet apparié tombe aux extrêmes | 🟡 ne débloque pas, mais **stoppe l'hémorragie** : 9 témoins/20 à 0 % de maîtrise contre 1/20 en libre |
-| **Clipping PPO nuit** (07/09) | K8_CLIP : **−1,00 pt** vs K8 nu (+11,25 pt, `t` = +4,48, comparaison directe) | ❌ nuit — l'inverse de l'attente théorique |
+| **Clipping PPO (ε=0,2)** (07/09 → **requalifié 12/09**) | au 07/09 : −1,00 pt (« le clip nuit »). À n=20 sur le socle réparé : **K8_CLIP = 20/20 franchissements**, indiscernable de K8_NU (Fisher `p` = 0,49), **fraction clippée ~8 %** | 🟡 **INERTE, pas nuisible** — le « il nuit » du 07/09 était un artefact du rejeu faussé |
 
 ## Registre des problèmes (verrous)
 
-- **✅ Clos (Phase A zéro campagne longue)** : APP-01 · APP-02 · MES-01 · MES-02 · MES-04
-  (décision : famille de 3, α = 0,05 ⇒ `t` = 2,625 n=20 / 2,694 n=16) · API-01 · QUA-01
-  (**44 tests CPU**) · **DOC-01** (ce fichier + INDEX nettoyé + miroir EN/FR vérifié) ·
-  **ARC-01** (08/09, v41.72 : `noyau.py` = source de vérité unique, `colab.py` = archive v17).
-- **🔴 Ouverts (P1/P2)** : APP-03 (deux identités du module) · MES-03 (vocabulaire
-  dispersions) · REP-01 (install non verrouillée) · PER-01/PER-02 (migrations, écriture
-  partagée — à reproduire).
-- **🟡 À mesurer / décider** : EVA-01 (juge bruité) · SCI-01 (balayage K — **en cours**) ·
-  SCI-02 à SCI-05.
+- **✅ Phase A ENTIÈREMENT CLOSE** : APP-01 · APP-02 · MES-01 · MES-02 · MES-04 (famille de 3,
+  α = 0,05 ⇒ `t` = 2,625) · API-01 · QUA-01 · DOC-01 · ARC-01 (v41.72 : `noyau.py` source de
+  vérité unique) · **REP-01** (v41.77 : environnement verrouillé **et validé** en venv vierge —
+  exit 0, 156 tests OK, versions conformes au lock).
+- **🔴 Ouverts (P1/P2)** : APP-03 (deux identités du module) · MES-03 (vocabulaire dispersions) ·
+  PER-01/PER-02 (migrations, écriture partagée — à reproduire).
+- **🟡 À mesurer / décider** : EVA-01 (juge bruité) · **SCI-01 (n=20 dépouillé — cloche
+  confirmée, reste à décider si K=8 devient un socle ou une règle dérivée)** · SCI-02 à SCI-05.
 
-## En cours
+## Dernier résultat consolidé (SCI-01, 12/09/2026)
 
-- **SCI-01 Wave 1 — balayage K/ε** (`brains/08092026_sci01_balayage_K`) : 6 bras
-  (K1_TEMOIN, K2_NU, K4_NU, K8_NU, K16_NU, K8_CLIP_e02) × 10 graines × 1500 jours, socle
-  voix libre + `--detach-c2`, **lancée le 08/09 (v41.68)** — au moment de cet instantané
-  (~08:00) : **K1_TEMOIN 10/10 terminés** (0 échec), **K2_NU 8/10** terminés (2 en cours),
-  K4_NU 4 runs en cours (~640-890/1500), K8_NU/K16_NU/K8_CLIP_e02 pas encore lancés.
-  ⚠️ L'estimation de lancement (~18-22 h) a été dérivée des bras K1/K2 — rythme réel mesuré
-  supérieur sur ces bras, mais K16 (16 époques/nuit) n'est pas encore lancé : l'estimation
-  reste à confirmer sur les bras lourds. Dépouillement strict (MES-01) à la fin. Wave 2
-  (n=20 confirmatoire, ε = 0,5) différée selon la forme de la Wave 1.
+**Balayage K/ε sur l'apprenant réparé** (`brains/08092026_sci01_balayage_K`) : 20 graines
+appariées × 6 bras × 1500 jours = **120 runs, 0 échec**, socle voix libre + `--detach-c2`,
+dépouillement strict MES-01 (couverture 120/120, gardes `gain_c1` = 1,0000).
+
+| K | 1 | 2 | 4 | 8 | 16 | 8 + clip |
+|---|---|---|---|---|---|---|
+| **Franchissements du mur** | 0/20 | 1/20 | 13/20 | **18/20** | 4/20 | **20/20** |
+
+**Cloche confirmée, optimum K=8** ; à palier égal la maîtrise monte jusqu'à K=8
+(15 → 20 → 25 → 27,5 %) puis K16 retombe (7,5 %). Le **clip est inerte** (~8 % de fraction
+clippée). ⚠️ Aucun `t` de maîtrise n'est interprétable (confusion de palier) : **la cloche
+repose sur des comptages, pas sur un test** — et K=8 reste une **constante posée**. Carnet :
+[SCI01_N20](recherche/campagnes/SCI01_N20_12092026_le_verdict.md).
 
 ## Règles en vigueur
 

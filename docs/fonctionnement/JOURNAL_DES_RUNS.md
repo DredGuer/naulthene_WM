@@ -183,27 +183,59 @@ palier — le niveau porte la réponse. Wave 2 (graines 122→222) requise pour 
 [Protocole](../../brains/08092026_sci01_balayage_K/LISEZ_MOI.md) ·
 [Dépouillement Wave 1](../../brains/08092026_sci01_balayage_K/depouillement_wave1.txt)
 
-### 🟡 `08092026_sci01_balayage_K` — Wave 2 : n=20 ciblé (graines 122→222)
+### ✅ `08092026_sci01_balayage_K` — Wave 2 : n=20 ciblé (graines 122→222)
 
 | | |
 |---|---|
-| **Début** | 2026-09-09 (v41.68 — même code que la Wave 1, aucun changement de logique depuis) |
+| **Début** | 2026-09-09 23:11 |
 | **Fin estimée** | ~40-45 h *(dérivée du rythme mesuré Wave 1 : ~43 h pour 60 runs, bras lourds dominants)* |
-| **Fin réelle** | — |
+| **Fin réelle** | **2026-09-11 23:15** — **60/60 runs, 0 échec** · écart ≈ **−2 h sur l'estimation haute** (~48 h réelles) |
 | **Coût** | 6 bras × 10 graines (122, 133, 144, 155, 166, 177, 188, 199, 211, 222) × 1500 jours |
-| **Statut** | 🟡 en cours |
+| **Statut** | ✅ terminée et **dépouillée à n=20** (12/09) |
 
 **Pourquoi** : compléter la cohorte à **n=20 par bras** (règle cardinale : aucun test formel
 sous 20 graines). La Wave 1 (n=10) a montré une **cloche 0/0/8/10/3** (optimum K=8) et un
-**clip inerte** (~8 % de fraction clippée) — la Wave 2 absorbera la variance inter-individuelle
-et tranchera si K=8 est le socle moteur, au dépouillement final sur `manifeste.json` (20
-graines).
+**clip inerte** (~8 % de fraction clippée) — la Wave 2 absorbe la variance inter-individuelle
+et tranche si K=8 est le socle moteur, au dépouillement final sur `manifeste.json` (20 graines).
 
-**Pré-vol** : aucun nouveau nécessaire — code identique à la Wave 1 (le seul commit sur
-`noyau.py` depuis, ARC-01 `7849f4d`, ne touche que des commentaires d'en-tête) ; pré-vol Wave 1
-(manifeste validé, 2 nuits K8_NU exit 0, garde de parité 0 violation) déjà couvert.
+**Pré-vol** : aucun nouveau nécessaire — pré-vol Wave 1 (manifeste validé, 2 nuits K8_NU
+exit 0, garde de parité 0 violation) couvrait la vague.
 
-[Protocole](../../brains/08092026_sci01_balayage_K/LISEZ_MOI.md)
+⚠️ **Hétérogénéité de code pendant la vague — mesurée et requalifiée.** 4 commits **VIS-01**
+(10/09 16:03 → 20:12) ont modifié `noyau.py` (+352 lignes, en-tête → v41.75/41.76) alors que la
+vague tournait : K1→K8 sous **v41.68**, K16 à cheval, K8_CLIP sous **v41.76**. **Vérification
+A/A du 12/09** (graine 11, 10 jours, 8 époques/nuit, sans `--telemetrie-3d`, worktree `44a45a7`
+vs HEAD) : 9 lignes clés **identiques**, logs complets **identiques** (505 lignes), séquence de
+jours identique, **payload sémantique des `.brain` identique** (47 tenseurs/scalaires, aucune
+différence). Les changements sont de la **télémétrie opt-in** : la cohorte est
+**fonctionnellement homogène**. Réserve consignée : la règle « même code » n'est pas respectée
+*littéralement*, elle l'est *sur preuve mesurée*.
+
+**Résultat n=20 (dépouillement strict, seuil Bonferroni 2,86)** :
+
+| Bras | Franchissements | Maîtrise moy. |
+|---|---|---|
+| K1_TEMOIN | 0/20 | 14,0 % |
+| K2_NU | 1/20 | 20,0 % |
+| K4_NU | **13/20** | 16,1 % |
+| K8_NU | **18/20** | 12,0 % |
+| K16_NU | 4/20 | 9,5 % |
+| **K8_CLIP_e02** | **20/20** | 12,5 % |
+
+**Cloche confirmée** (0 · 1 · 13 · **18** · 4) avec **optimum à K=8** ; à palier égal, la
+maîtrise monte avec K jusqu'à 8 (15 → 20 → 25 → 27,5 %) puis K16 s'effondre (7,5 %). **Le clip
+ε=0,2 est INERTE** (fraction clippée ~8 %, K8_CLIP vs K8_NU `p` = 0,49) — le « clipping nuit »
+du 07/09 est **requalifié** (artefact du rejeu faussé APP-01). ⚠️ Aucun `t` de maîtrise n'est
+interprétable (confusion de palier) : **la cloche repose sur des comptages, pas sur un test**.
+
+⚠️ **Faux refus MES-01 corrigé au passage** : `K8_NU_g144` (promu au jour 1500) était déclaré
+« INACHEVÉ 1499/1500 » parce que le motif du lecteur exigeait `maîtrise <nombre>%` et **jetait
+les nuits de promotion** (`maîtrise —`). `journal_cursus.py` corrigé (le niveau suffit à valider
+une nuit) ; re-dépouillement des **6 campagnes publiées : 0 verdict changé** (5 strictement
+identiques, BP marginalement déplacé mais NS→NS).
+
+[Protocole](../../brains/08092026_sci01_balayage_K/LISEZ_MOI.md) ·
+[Verdict n=20](../recherche/campagnes/SCI01_N20_12092026_le_verdict.md)
 
 #### 🗒️ Point d'étape — 08/09/2026 09:37 (24 runs terminés / 60)
 

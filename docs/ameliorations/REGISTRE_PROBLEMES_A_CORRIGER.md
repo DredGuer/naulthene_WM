@@ -63,7 +63,7 @@ Un problème ne passe à `✅ Clos` que si les quatre éléments suivants sont c
 | EVA-01 | P1 | 🔵 À mesurer | Le juge principal est bruité et dépend du palier atteint | Banc final standard sur cartes fixes |
 | DOC-01 | P1 | ✅ Clos | L'état courant et l'historique se contredisent dans la documentation | Clos v41.71 — `ETAT_COURANT.md` unique + INDEX nettoyé + miroir EN/FR vérifié |
 | PER-01 | P1 | 🟠 À reproduire | Le chargement permissif peut masquer une anomalie comme migration | Migrations explicites, strictes hors cas connus |
-| REP-01 | P2 | 🔴 Ouvert | Installation et versions non verrouillées | v41.73 + v41.75 — pyproject + lock + spec + script `verifier_environnement.sh` prêts ; clôture = exécution env vierge (après SCI-01 Wave 2) |
+| REP-01 | P2 | ✅ Clos | Installation et versions non verrouillées | Clos v41.77 — env vierge validé (`verifier_environnement.sh`, exit 0) : 156 tests OK, versions conformes au lock |
 | PER-02 | P2 | 🟠 À reproduire | Deux écrivains peuvent partager le même fichier temporaire de checkpoint | Temporaire unique, verrou, test d'incident |
 | SCI-01 | P2 | 🔵 À mesurer | K=8 est un point favorable, pas un optimum ni une valeur dérivée | Wave 1 dépouillée (09/09) : cloche 0/0/8/10/3, optimum K=8, clip inerte ; Wave 2 (n=20) pour le verdict |
 | SCI-02 | P2 | 🔵 À mesurer | Le benchmark PPO n'est pas égalisé selon tous les budgets | Comparaisons séparées interactions/calcul/mémoire |
@@ -801,11 +801,9 @@ Aucun incident de concurrence ou de coupure n'est établi.
 
 ---
 
-## REP-01 — Environnement d'installation insuffisamment verrouillé
+## REP-01 — Environnement d'installation insuffisamment verrouillé — ✅ CLOS (12/09/2026)
 
-- **Priorité / statut** : **P2 — 🔴 Ouvert** (livraison à froid faite le 08/09/2026 — clôture
-  en attente de la vérification en environnement vierge, différée pour ne pas concurrencer
-  SCI-01 Wave 1)
+- **Priorité / statut** : **P2 — ✅ Clos** (v41.77 — validation en environnement vierge réussie)
 
 ### Constat
 
@@ -841,7 +839,27 @@ n'a toutefois été reproduit.
 - Import minimal et test CPU réussis.
 - Manifeste d'environnement joint aux nouvelles campagnes.
 
-*(À exécuter après la fin de SCI-01 Wave 1 : §6 d'ENVIRONNEMENT.md.)*
+### Clôture (12/09/2026, v41.77)
+
+1. **Cause** : aucune spécification d'environnement n'existait — le dépôt se lance par
+   `PYTHONPATH=src` et **n'est jamais buildé**, donc une configuration de packaging invalide
+   pouvait y dormir indéfiniment (c'est exactement ce qui s'est produit : deux défauts).
+2. **Correction documentaire et outillage** : `pyproject.toml` (planchers + 9 extras, v41.73) ·
+   `constraints-lock.txt` (lock mesuré, 66 paquets, v41.73) · `docs/fonctionnement/
+   ENVIRONNEMENT.md` (spec normative, v41.73) · `scripts/verifier_environnement.sh`
+   (presse-bouton + garde anti-contention, v41.75, corrigé le 12/09 : le nombre de tests n'y
+   est plus figé).
+3. **Vérification fraîche (12/09/2026, machine libre après `WAVE 2 TERMINEE`)** :
+   `bash scripts/verifier_environnement.sh` → **code de sortie 0** · venv vierge
+   `/tmp/venv_rep01_validation` (hors dépôt, hors iCloud) · installation
+   `-c constraints-lock.txt -e '.[tout]'` OK · import minimal du cœur OK · **156 tests CPU OK**
+   (30,2 s) · versions conformes au lock (numpy 2.4.6 · torch 2.13.0 · gymnasium 1.3.0 ·
+   minigrid 3.1.0 · wandb 0.28.1).
+   🔴 **Deux défauts réels de `pyproject.toml` attrapés par cette validation** (invisibles
+   jusque-là, le dépôt n'étant jamais buildé) : champ `version` manquant, puis classifier
+   `License ::` incompatible avec l'expression SPDX (PEP 639). Corrigés dans le même commit.
+4. **Entrée CHANGELOG** : [v41.77]. ⚠️ Point d'infrastructure hors périmètre : la CI
+   (hébergeur) reste absente — la commande locale unique tient lieu de suite.
 
 ---
 
@@ -1157,6 +1175,8 @@ La tête d'intention reste cohérente avec la thèse du projet, mais elle dépen
 | 2026-09-08 | REP-01 | 🔴 Ouvert (livraison à froid) | v41.73 · CHANGELOG [v41.73] | zéro run — inventaire du venv mesuré (Python 3.12.12, 66 paquets, torch MPS) ; syntaxe/liens vérifiés | `pyproject.toml` (planchers + extras) · `constraints-lock.txt` (lock mesuré) · spec `ENVIRONNEMENT.md` ; clôture = env vierge + 44 tests, différée après SCI-01 |
 | 2026-09-09 | SCI-01 | 🔵 À mesurer (Wave 1 faite) | v41.74-mesure · CHANGELOG [v41.74-mesure] | Dépouillement strict : 60/60 couverts, gardes gain_c1 = 1,0000, aucun `t` ne passe Bonferroni (n=10) | Wave 1 : cloche 0/0/8/10/3 (optimum K=8), clip inerte (fraction ~8 %) ; carnet `SCI01_WAVE1_09092026` ; Wave 2 (n=20) pour le verdict |
 | 2026-09-09 | REP-01 | 🔴 Ouvert (script prêt) | v41.75 · CHANGELOG [v41.75] | zéro run — syntaxe bash OK ; garde anti-contention testée (refuse si noyau.py actif) | `scripts/verifier_environnement.sh` créé (venv vierge /tmp + import + 44 tests + rapport versions) ; exécution différée après SCI-01 Wave 2 |
+| 2026-09-12 | REP-01 | ✅ Clos | v41.77 · CHANGELOG [v41.77] | env vierge (`/tmp/venv_rep01_validation`) : exit 0 · import OK · **156 tests OK** · numpy/torch/gymnasium/minigrid/wandb == lock | 2 défauts pyproject attrapés et corrigés (champ `version` manquant, classifier `License ::` vs SPDX PEP 639) — invisibles autrement, le dépôt n'étant jamais buildé ; **Phase A close** |
+| 2026-09-12 | SCI-01 | 🔵 À mesurer (n=20 dépouillé) | v41.78-mesure · CHANGELOG [v41.78-mesure] | Couverture 120/120, gardes gain_c1 = 1,0000 ; re-dépouillement des 6 campagnes publiées avec le lecteur corrigé : **0 verdict changé** | Cloche confirmée 0·1·13·**18**·4 /20 (optimum K=8) ; clip inerte (Fisher p=0,49) ; hétérogénéité de code VIS-01 requalifiée (A/A : payload identique) ; K=8 reste une constante posée |
 | 2026-09-10 | VIS-01 | 🟠 Livré en partie → **✅ Clos** | `2fad056` + `433cc14` · **aucune entrée CHANGELOG** (tâche 11 : pas de `noyau.py`) ; carnet `VIS01_etape2_fichier_10092026/LISEZ_MOI.md` | e2e serveur+run réels : `/structure` `{}` → **12 couches**, `dim_bus` **16 → 68**, `sequence_structure` **0 → 6** (`poll_structure.txt`, 111 lignes à 1 Hz) ; **147 tests OK** (138 + 9, `+429 / −0`) ; empreinte `.brain` bit-identique ; A/A `diff` vide ; surcoût **+7,87 %** | Étape 2 complète : `--structure-fichier` (serveur `--serveur-seul`) relit `<brain>.vis01_structure.json` ; rétractation en §VIS-01 (ancien énoncé « aucun code ne le relit ») ; limites restantes : dernier état publié, coût de veille non chiffré, rendu navigateur non prouvé. ⚠️ Cette ligne disait « **`INDEX.md` l. 158 reste à corriger** (“le serveur ne relit pas encore”) — hors des trois fichiers autorisés de ce tour » : **corrigé le 10/09/2026 en vague finale (constat I5)**, le renvoi est retiré d'ici **et** de la section VIS-01 |
 | 2026-09-10 | VIS-01 | 🔴 **Ouvert — tâche future** | vague finale (constat I3) · avenant de spec §4 | canal `evenement` mesuré : **125 événements en 3,56 s** (cerveau neuf, `dim_bus = 16` ⇒ **35,1 Hz**) et **363 en 4,92 s** (`etape2.brain`, `dim_bus = 68` ⇒ **73,8 Hz**), **100 % `choc_dopamine`** sur 488 événements ; file de 32 pleine sur **1 327 / 2 000** puis **1 818 / 2 000** ticks (témoin 200 ticks : **0 / 200**) | **Émettre les quatre genres manquants et étrangler le choc.** Le canal n'émet qu'**UN genre sur cinq** (un seul site d'appel : `noyau.py:10724`, `choc_dopamine`) et pas à une cadence « ponctuelle ». À FAIRE : (1) émettre **victoire, promotion de niveau, neurogenèse, fin d'épisode** aux points où le cerveau les vit ; (2) **étrangler le choc** (agrégation ou seuil d'intensité) pour que la file de 32 cesse d'être en dépassement permanent et que la ligne d'état de la page redevienne lisible. ⚠️ **C'est un changement de COMPORTEMENT ⇒ sa propre mesure** (chercher la fenêtre d'agrégation qui garde le signal utile). ⚠️ **L'émission n'a délibérément PAS été modifiée par la vague finale** |
 | 2026-09-10 | VIS-01 | 🔴 **Ouvert — chantier de rendu** | vague finale (constat I2) · avenant de spec §5 | `grep -c -i "myeline\|cristall\|halo\|flash\|gaine\|epaisseur" static/app.js` = **0 pour chacun** ; **un seul** `LineBasicMaterial({opacity: 0.35})` pour toutes les arêtes ; clés d'une couche dans la trame `structure` = `['echelle','entree','nom','poids_i8','positions','rang','sortie']` | **Les encodages visuels annoncés mais NON livrés.** Cinq lignes du tableau de la spec §5 ne sont pas livrées DU TOUT : myéline, cristallisation, halo = dopamine, flash de choc, bascule C1/C2 (`force_planification`) ; une sixième — le poids par **épaisseur/opacité par arête** — ne l'est qu'à moitié (le **seuil** d'affichage existe, l'épaisseur non). **Cause en amont** : la trame `structure` ne TRANSPORTE ni `myeline_M` ni `cristallisee`. À FAIRE : élargir la trame (2 matrices `int8` de plus par couche ⇒ **≈ 892 000 o** au lieu de **305 064 o** à `dim_bus = 145`, soit **13,6×** le plafond d'un datagramme), puis décider ce que « halo » et « flash » signifient **sans mentir sur ce qui est mesuré**. `LANCEMENT.md` §7bis a été réécrit pour dire l'état RÉEL en attendant |

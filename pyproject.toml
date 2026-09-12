@@ -21,6 +21,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "naulthene-agi"
+# ⚠️ Version de PACKAGING, volontairement stable — ce n'est PAS la version cognitive du
+# projet (elle vit dans l'en-tête de `noyau.py`, `#Version actuelle`, et suit le CHANGELOG).
+# Ne jamais la dupliquer ici : c'est exactement le défaut qui a laissé l'en-tête de
+# `noyau.py` périmé de 20 versions avant le 02/09/2026. Découvert manquant par la
+# validation REP-01 du 12/09/2026 (setuptools exige `version`).
+version = "0.1.0"
 description = "Naulthène AGI — agent cognitif autonome hybride (RL + JEPA + mémoire épisodique + homéostasie neuro-mimétique)."
 readme = "readme_fr.md"
 requires-python = ">=3.12"
@@ -30,7 +36,10 @@ keywords = ["agi", "cognitive", "jepa", "reinforcement-learning", "minigrid"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    # ⚠️ Aucun classifier `License ::` ici : depuis PEP 639, une expression SPDX
+    # (`license = "AGPL-3.0-or-later"` ci-dessus) rend les classifiers de licence
+    # INVALIDES — setuptools refuse alors le build (« License classifiers have been
+    # superseded by license expressions »). Découvert par la validation REP-01 du 12/09/2026.
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",

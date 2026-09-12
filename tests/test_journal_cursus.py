@@ -74,6 +74,35 @@ class TestLectureJournal(SocleJournal):
             fh.write("traceback: le run a planté au démarrage\n")
         self.assertEqual(lire_journal(self.chemin), [])
 
+    def test_garde_une_nuit_de_promotion_sans_maitrise(self):
+        """`maîtrise —` (fenêtre vide après promotion, règle v35.0) reste une nuit
+        COMPLÈTE : le niveau est connu. Avant la correction du 10/09/2026, le motif
+        exigeait un pourcentage et JETAIT la nuit — un run promu le dernier jour était
+        déclaré INACHEVÉ par MES-01 (faux refus sur K8_NU_g144, SCI-01)."""
+        GABARIT_PROMU = GABARIT.replace("maîtrise {mait}%", "maîtrise —")
+        with open(self.chemin, "w", encoding="utf-8") as fh:
+            fh.write(GABARIT.format(**jour(1)))
+            fh.write(GABARIT.format(**jour(2)))
+            # Nuit de promotion : niveau 5 atteint, maîtrise non calculable (n=0/10).
+            fh.write(GABARIT_PROMU.format(**jour(3, niv=5)))
+        nuits = lire_journal(self.chemin)
+        self.assertEqual([n["j"] for n in nuits], [1, 2, 3], "la nuit de promotion est jetée")
+        self.assertEqual(nuits[-1]["niv"], 5)
+        self.assertNotIn("mait", nuits[-1], "la maîtrise indéfinie ne doit pas être posée")
+
+    def test_le_resume_compte_la_nuit_de_promotion_finale(self):
+        """Le cas réel de K8_NU_g144 : promu au DERNIER jour — `jours_final` doit valoir
+        ce jour, pas le précédent (sinon le run est déclaré INACHEVÉ)."""
+        GABARIT_PROMU = GABARIT.replace("maîtrise {mait}%", "maîtrise —")
+        with open(self.chemin, "w", encoding="utf-8") as fh:
+            for j in range(1, 10):
+                fh.write(GABARIT.format(**jour(j, mait=20)))
+            fh.write(GABARIT_PROMU.format(**jour(10, niv=5)))
+        resume = resumer_journal(lire_journal(self.chemin))
+        self.assertEqual(resume["jours_final"], 10)
+        self.assertEqual(resume["niv"], 5)
+        self.assertEqual(resume["mait"], 20, "la médiane ignore la nuit sans maîtrise")
+
 
 class TestResume(SocleJournal):
     def test_le_resume_expose_le_dernier_jour_atteint(self):
