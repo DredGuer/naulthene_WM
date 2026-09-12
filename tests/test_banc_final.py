@@ -214,6 +214,54 @@ class TestBrasIntrouvable(unittest.TestCase):
             self.assertIn("K8_NU_TYPO", str(ctx.exception))
 
 
+class TestCohorteIncomplete(unittest.TestCase):
+    """Règle MES-01 : une cohorte incomplète ne produit AUCUN résultat confirmatoire.
+    On la réutilise — on ne la réécrit pas."""
+
+    def test_un_cerveau_manquant_rend_la_campagne_invalide(self):
+        with tempfile.TemporaryDirectory() as d:
+            # manifeste : 2 graines, 2 bras ; on ne pose QUE 3 des 4 cerveaux.
+            with open(os.path.join(d, "manifeste.json"), "w", encoding="utf-8") as f:
+                json.dump({"campagne": "essai", "graines": [11, 22]}, f)
+            for bras in ("A", "B"):
+                os.mkdir(os.path.join(d, bras))
+            _toucher(os.path.join(d, "A", "A_g11.brain"))
+            _toucher(os.path.join(d, "A", "A_g22.brain"))
+            _toucher(os.path.join(d, "B", "B_g11.brain"))
+            # B_g22 manquant
+            metriques = {
+                os.path.join(d, "A", "A_g11.brain"): {"taux_franchissement": 0.5},
+                os.path.join(d, "A", "A_g22.brain"): {"taux_franchissement": 0.4},
+                os.path.join(d, "B", "B_g11.brain"): {"taux_franchissement": 0.2},
+            }
+            from naulthene.instruments.depouillement import CampagneInvalide
+            from naulthene.instruments.banc_final import construire_depouillement
+
+            with self.assertRaises(CampagneInvalide):
+                dp = construire_depouillement(d, ["A", "B"], [11, 22], metriques)
+                dp.apparie("A", "B", "taux_franchissement", "primaire")
+
+    def test_main_refuse_un_bras_absent_de_l_inventaire(self):
+        """Un bras listé dans `--bras` mais ABSENT de l'inventaire n'est pas dans le dict
+        résolu : `refuser_bras_vides` ne peut pas le voir. Sans ce second contrôle,
+        `--bras K8_NU K2_NU` avec un inventaire sans K2_NU sortait en 0 — même classe de
+        succès silencieux que I-3, sur le chemin OBLIGATOIRE de la tâche 9."""
+        with tempfile.TemporaryDirectory() as d:
+            chemin_brain = os.path.join(d, "K8_NU_g11.brain")
+            _toucher(chemin_brain)
+            with open(os.path.join(d, "manifeste.json"), "w", encoding="utf-8") as f:
+                json.dump({"campagne": "essai", "graines": [11]}, f)
+            inventaire = os.path.join(d, "cohorte.json")
+            with open(inventaire, "w", encoding="utf-8") as f:
+                json.dump({"K8_NU": {"11": chemin_brain}}, f)  # K2_NU absent
+            argv = ["banc_final", "--cohorte", d, "--bras", "K8_NU", "K2_NU",
+                    "--episodes", "1", "--cohorte-explicite", inventaire]
+            with mock.patch.object(sys, "argv", argv):
+                with self.assertRaises(BrasIntrouvable) as ctx:
+                    main()
+            self.assertIn("K2_NU", str(ctx.exception))
+
+
 class TestReproductibilite(unittest.TestCase):
     """Le banc ACTUEL du dépôt n'est pas reproductible : `noyau.py` échantillonne l'action
     (`Categorical(...).sample()`) et l'ancien outil ne fixait aucune graine torch.
@@ -304,8 +352,11 @@ class TestReproductibilite(unittest.TestCase):
                 episode["monde"]["graine"], episode["graine"],
                 "le monde de l'épisode doit être celui de son identité `graine`")
 
-        self.assertEqual(premiere, seconde,
-                         "deux évaluations du MÊME cerveau doivent être identiques en tout")
+        self.assertEqual(
+            premiere, seconde,
+            "deux cerveaux NÉS SOUS LA MÊME GRAINE, évalués UNE fois chacun, doivent donner "
+            "un résultat identique en tout (ce test ne compare plus deux appels sur un MÊME "
+            "état : un cerveau qui persiste d'un appel à l'autre n'est pas reproductible)")
 
 
 class TestEpisodeTronque(unittest.TestCase):

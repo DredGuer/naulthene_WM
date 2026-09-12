@@ -21,6 +21,7 @@ import re
 import statistics
 import sys
 import time
+from datetime import datetime, timezone
 from typing import Sequence
 
 import numpy as np
@@ -36,6 +37,7 @@ from naulthene.cerveau.noyau import (
     traiter_tick,
 )
 from naulthene.cerveau.persistance import PersistanceAnatomique
+from naulthene.instruments.depouillement import Depouillement, Manifeste
 from naulthene.instruments.primitives_banc import (
     longueur_normalisee,
     plus_court_chemin,
@@ -565,6 +567,199 @@ def evaluer_cerveau_sur_carte(etat, index_carte: int, graines: Sequence[int],
     }
 
 
+def construire_depouillement(cohorte: str, bras: Sequence[str], graines: Sequence[int],
+                             metriques_par_chemin: dict) -> Depouillement:
+    """Déclare la cohorte puis la collecte, en déléguant à MES-01.
+
+    Le `lecteur` rend les métriques DÉJÀ calculées, indexées par chemin de `.brain` ; un
+    cerveau absent ou non évalué rend `None`, ce que `collecter` transforme en violation
+    — c'est ainsi que la cohorte incomplète devient structurellement impossible.
+
+    ⚠️ `extension_log=".brain"` N'EST PAS COSMÉTIQUE : sans lui, le banc ne publie JAMAIS rien.
+    `Manifeste.cohorte` compose ses chemins en `<cohorte>/<bras>/<bras>_g<graine>` +
+    `extension_log`, dont le défaut est `.log`. Or `collecter` exige d'abord
+    `os.path.exists(chemin)`, et le `lecteur` cherche ensuite ce chemin dans
+    `metriques_par_chemin`, INDEXÉ PAR CHEMIN DE `.brain` (la seule grandeur que le banc
+    mesure). Mesuré : `Manifeste(...).cohorte` rend
+    `[('A_g11', '/cohorte/A/A_g11.log'), ('A_g22', '/cohorte/A/A_g22.log')]` par défaut, et
+    `[… '/cohorte/A/A_g11.brain']` avec `.brain`. Avec le défaut, les 4 (bras, graine) seraient
+    donc exclus pour « fichier absent », `dp.runs` resterait VIDE, et une campagne pourtant
+    complète serait déclarée invalide à chacune de ses exécutions.
+
+    Aucune statistique n'est recodée ici : appariement par graine d'entraînement, seuil de
+    Bonferroni (`seuil_t(n, comparaisons_prevues, alpha)`) et refus de publier viennent tous de
+    `depouillement.py` (MES-01).
+    """
+    manifeste = Manifeste(
+        campagne=os.path.basename(os.path.normpath(cohorte)),
+        mode="confirmatoire",
+        graines=[int(g) for g in graines],
+        bras={b: {"dossier": os.path.join(cohorte, b), "prefixe": b} for b in bras},
+        alpha=0.05,
+        comparaisons_prevues=len(FAMILLE_METRIQUES),
+        extension_log=".brain",
+    )
+    dp = Depouillement(manifeste, racine=cohorte)
+    dp.collecter(lambda chemin: metriques_par_chemin.get(chemin))
+    return dp
+
+
+def executer_banc(cohorte: str, bras: Sequence[str], cartes: Sequence[int],
+                  graines: Sequence[int], episodes: int, graine_eval_base: int,
+                  dossier_sortie: str, max_ticks: int = 0,
+                  cohorte_resolue: dict | None = None) -> dict:
+    """Évalue toute la cohorte, puis publie le rapport et l'agrégat JSON.
+
+    ⚠️ `cohorte_resolue` est le SEUL moyen de faire entrer la voie EXPLICITE jusqu'ici :
+    `resoudre_cohorte` passe par le glob, qui REFUSE 5 des 6 bras de la campagne SCI-01
+    (mesuré : 113 surnuméraires). Sans ce paramètre, `--cohorte-explicite` serait perdu au
+    moment de l'évaluation et la tâche 9 échouerait à la résolution — après dix tâches.
+    """
+    cartes = [int(c) for c in cartes]
+    graines_eval = list(range(int(graine_eval_base), int(graine_eval_base) + int(episodes)))
+    if cohorte_resolue is None:
+        cohorte_resolue = resoudre_cohorte(cohorte, bras, graines)
+
+    par_cerveau, metriques_par_chemin = {}, {}
+    for nom_bras, cerveaux in cohorte_resolue.items():
+        for graine, chemin in sorted(cerveaux.items()):
+            cle = f"{nom_bras}_g{graine}"
+            par_carte = {}
+            t0 = time.time()
+            for index_carte in cartes:
+                # ⚠️ L'ÉTAT EST RECHARGÉ ICI, DONC PAR (bras, carte) — ET C'EST STRUCTURANT.
+                # `evaluer_cerveau_sur_carte` n'est PAS une fonction pure de
+                # (fichier .brain, carte, graines) : le cerveau GARDE son état d'un appel à
+                # l'autre (mémoire, dopamine, patience), si bien que le MÊME épisode ne rend
+                # plus le même résultat selon ce qui a été joué avant lui. Mesuré par la revue
+                # indépendante de la tâche 4 : carte 0 → victoires **1, 2, 2** ; carte 4 (une
+                # carte GELÉE du plan) → **0, 0, 1** ; et une autre carte intercalée déplace un
+                # même épisode de 61 à **88** ticks, soit **+44 %** sur `longueur_normalisee`,
+                # une métrique de la FAMILLE. Ce n'est PAS un défaut de seeding : deux cerveaux
+                # nés sous la même graine, évalués UNE fois chacun, donnent des trajectoires
+                # identiques — c'est bien l'état du cerveau qui survit.
+                # Conséquence : recharger le `.brain` avant CHAQUE (bras, carte), pour que le
+                # chiffre d'une carte ne dépende pas de l'ORDRE d'évaluation dans le processus.
+                # Sans cela, deux bras évalués dans un ordre différent ne sont plus comparables
+                # et l'appariement par graine (tâche 9) perd son sens.
+                # Parade VÉRIFIÉE : deux `charger_ou_naitre()` du même `.brain` rendent un
+                # `state_dict` BIT-IDENTIQUE. Coût : une relecture de fichier par (bras, carte),
+                # négligeable devant les épisodes joués. Le flux aléatoire, lui, n'est pas
+                # décalé par cette relecture : `evaluer_cerveau_sur_carte` réamorce torch ET
+                # `np.random` à chaque épisode.
+                # REPRODUIT ET CHIFFRÉ ICI, sur un cerveau RÉEL de la campagne SCI-01
+                # (`brains/08092026_sci01_balayage_K/K8_NU/K8_NU_g11.brain`), carte 0, graines
+                # 10000-10002, MÊME carte évaluée 3 fois de suite — l'état partagé dérive,
+                # l'état frais non :
+                #   état PARTAGÉ : ticks de la graine 10000 = **10, 44, 25** et
+                #                 `longueur_normalisee` = **2,5 → 11,0 → 6,25** (+340 % du 1er
+                #                 au 2e appel) ;
+                #   état FRAIS   : les trois appels rendent le MÊME triplet `[10, 6, 5]`.
+                # (Sur la carte 4 du même cerveau l'effet n'est pas visible : il perd les trois
+                # épisodes au budget entier — l'effet dépend donc de la carte, ce qui est une
+                # raison de plus pour ne pas s'en remettre à l'ordre.)
+                # ⚠️ La parade suppose que le `.brain` EXISTE : les deux voies de résolution le
+                # garantissent (`lister_cerveaux` ne rend que des noms présents,
+                # `lire_cohorte_explicite` refuse un chemin absent) — sinon `charger_ou_naitre`
+                # ferait NAÎTRE un cerveau différent à chaque carte, ce qui serait pire.
+                etat = PersistanceAnatomique(fichier=chemin).charger_ou_naitre()
+                etat.agent.eval()  # jamais d'entraînement, jamais de sauvegarde
+                try:
+                    resultat = evaluer_cerveau_sur_carte(etat, index_carte, graines_eval,
+                                                         max_ticks)
+                finally:
+                    # `_forcer_carte` a ouvert un monde : on le referme même si la mesure est
+                    # refusée (`InstrumentIndisponible`), sinon l'évaluation suivante hériterait
+                    # d'un environnement resté ouvert.
+                    etat.env.close()
+                par_carte[resultat["nom_classe"]] = resultat
+                print(f"   ✅ {cle:22s} {resultat['nom_classe']:32s} "
+                      f"{resultat['taux']['taux'] * 100:5.1f}% "
+                      f"({resultat['gagnes']}/{resultat['taux']['n']}), "
+                      f"tronqués {resultat['tronques']}")
+            par_cerveau[cle] = {"chemin": chemin, "cartes": par_carte,
+                                "duree_s": time.time() - t0}
+            # Vue plate pour le test apparié MES-01 (une valeur scalaire par métrique).
+            premiere = par_carte[PROGRAMME[cartes[0]][1]]
+            metriques_par_chemin[chemin] = {
+                "taux_franchissement": premiere["taux"]["taux"],
+                "retour_moyen": premiere["retour_moyen"],
+                # None (jamais NaN, qui empoisonnerait le t, ni 0.0, qui serait un mensonge)
+                "longueur_normalisee": premiere["longueur_mediane"],
+                "jours_final": 0,  # le banc n'a pas de notion de jours
+            }
+
+    dp = construire_depouillement(cohorte, bras, graines, metriques_par_chemin)
+    print("\n" + dp.rapport())
+
+    comparaisons, ignorees = [], []
+    for i, bras_a in enumerate(bras):
+        for bras_b in list(bras)[i + 1:]:
+            for metrique in FAMILLE_METRIQUES:
+                manquants = [f"{b}_g{g}" for b in (bras_a, bras_b)
+                             for g in dp.manifeste.graines
+                             if dp.runs.get(f"{b}_g{g}", {}).get(metrique) is None]
+                if manquants:
+                    # Une métrique absente n'est PAS zéro : on refuse de la tester et on
+                    # DIT pourquoi, plutôt que de moyenner un NaN ou un faux 0,0.
+                    ignorees.append(
+                        f"{metrique} — {bras_a} vs {bras_b} : indisponible pour "
+                        f"{len(manquants)} cerveau(x) ({', '.join(manquants[:5])}"
+                        + ("…" if len(manquants) > 5 else "") + ")")
+                    continue
+                comparaisons.append(dp.apparie(bras_a, bras_b, metrique,
+                                               f"{metrique} — {bras_a} vs {bras_b}"))
+    print("\n=== TESTS APPARIÉS (famille de "
+          f"{len(FAMILLE_METRIQUES)} métriques, seuil Bonferroni) ===")
+    for resultat in comparaisons:
+        print("  " + resultat.ligne())
+    if ignorees:
+        print(f"\n⚠️  {len(ignorees)} comparaison(s) IGNORÉE(S) — métrique absente, jamais zéro :")
+        for motif in ignorees:
+            print("   - " + motif)
+
+    rapport = {
+        "campagne": os.path.basename(os.path.normpath(cohorte)),
+        "date_evaluation": datetime.now(timezone.utc).isoformat(),
+        "protocole": "PROTOCOLE_BANC_FINAL v1",
+        "cartes": cartes,
+        "episodes_par_carte": int(episodes),
+        "graine_eval_base": int(graine_eval_base),
+        "graines_entrainement": [int(g) for g in graines],
+        "bras": list(bras),
+        "cerveaux": par_cerveau,
+        "couverture": {"obtenus": len(dp.runs), "attendus": len(bras) * len(graines)},
+        "exclusions": dp.exclusions,
+        "violations": dp.violations,
+        "seuil_bonferroni": (comparaisons[0].seuil if comparaisons else None),
+        "comparaisons_ignorees": ignorees,
+        "comparaisons": [
+            {"label": r.label, "delta": r.delta, "t": r.t, "n": r.n,
+             "favorables": r.favorables, "seuil": r.seuil,
+             "significatif": r.significatif} for r in comparaisons],
+    }
+    if dp.violations:
+        # ⚠️ AUCUN AGRÉGAT N'EST PUBLIÉ SUR UNE CAMPAGNE INVALIDE — critère de succès de la
+        # tâche, et doctrine de `Depouillement.publier` (MES-01 : « à la moindre violation :
+        # aucun agrégat écrit et code de sortie non nul »). Le garde est nécessaire ICI, et pas
+        # seulement dans `apparie` : quand un cerveau manque, TOUTES les métriques des paires
+        # concernées sont absentes, donc aucune comparaison n'est tentée, donc rien ne lève —
+        # et le fichier s'écrirait sans une erreur. Il serait pourtant parfaitement lisible :
+        # `couverture` inférieure à `attendus`, `comparaisons` vide — un lecteur pressé y
+        # verrait un résultat. `main()` sort en 1, et le rapport ci-dessus nomme les exclusions.
+        print(f"\n⛔ Agrégat NON publié : campagne INVALIDE ({len(dp.violations)} violation(s), "
+              f"voir le rapport ci-dessus) — règle MES-01. Rien n'a été écrit dans "
+              f"{dossier_sortie}.")
+        return rapport
+    os.makedirs(dossier_sortie, exist_ok=True)
+    horodatage = datetime.now().strftime("%Y%m%d_%H%M%S")
+    chemin = os.path.join(dossier_sortie, f"banc_final_{horodatage}.json")
+    with open(chemin, "w", encoding="utf-8") as f:
+        json.dump(rapport, f, ensure_ascii=False, indent=2)
+    print(f"\n💾 Agrégat écrit dans {chemin} (aucun .brain n'a été modifié).")
+    return rapport
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Le banc final standardisé (EVA-01) — cartes figées, graines d'éval dédiées")
@@ -602,7 +797,20 @@ def main() -> int:
           f"{args.graine_eval_base + args.episodes - 1}).")
     print(f"   cerveaux résolus : "
           f"{ {b: len(v) for b, v in cohorte.items()} }")
-    return 0
+    # Cohérence --bras / inventaire (Minor différé de la tâche 3) : un bras déclaré dans --bras
+    # mais ABSENT de l'inventaire n'est pas dans le dict résolu, donc `refuser_bras_vides` ne peut
+    # pas le voir — `--bras K8_NU K2_NU` avec un inventaire sans K2_NU sortait en 0 en affichant
+    # `{'K8_NU': 1}`. Même classe de défaut que I-3 : succès silencieux.
+    absents = sorted(set(args.bras) - set(cohorte))
+    if absents:
+        raise BrasIntrouvable(
+            f"bras déclarés dans --bras mais ABSENTS de l'inventaire : {', '.join(absents)}")
+    rapport = executer_banc(
+        cohorte=args.cohorte, bras=args.bras, cartes=args.cartes, graines=graines,
+        episodes=args.episodes, graine_eval_base=args.graine_eval_base,
+        dossier_sortie=args.dossier_sortie, max_ticks=args.max_ticks,
+        cohorte_resolue=cohorte)  # la voie explicite doit SURVIVRE jusqu'ici
+    return 0 if not rapport["violations"] else 1
 
 
 if __name__ == "__main__":
