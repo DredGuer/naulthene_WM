@@ -1,6 +1,6 @@
 # EVA-01 — la dérivation de `n` par la mesure
 
-**Date** : 2026-09-13 · **Statut** : ✅ **`n` est dérivé, et il vaut 333** ·
+**Date** : 2026-09-13 · **Statut** : ✅ mesure réelle, non dégénérée ·
 **4 cerveaux × 2 cartes figées × 20 épisodes = 160 épisodes**, cohorte SCI-01 bras `K8_NU`,
 cohorte **EXPLICITE**, lecture seule.
 
@@ -11,6 +11,60 @@ cohorte **EXPLICITE**, lecture seule.
 > **Ce carnet est la première MESURE du chantier EVA-01.** Les six tâches précédentes ont
 > construit l'instrument ; celle-ci le **dimensionne**. `n` n'est pas une constante du
 > protocole : c'est un **RÉSULTAT**.
+
+---
+
+## 0. 🔴 ERRATUM DU 13/09/2026 (tour de correction 1) — `333` est une BORNE BASSE
+
+**Ce carnet n'est pas réécrit** : ses chiffres sont ceux du 20-épisodes, tels qu'ils ont été
+mesurés. Mais **la valeur de `n` qu'il publiait était biaisée**, et l'ancien chiffre doit
+rester lisible à côté du nouveau (Règle de Trace : une rétractation montre l'ancien chiffre
+en regard).
+
+| Grandeur | Publié le 13/09 (20 épisodes) — **inchangé, archivé** | Après dé-convolution du MÊME run | Après re-mesure à 200 épisodes |
+|---|---|---|---|
+| dispersion | `s = 0,071807` (observée, gonflée) | σ̂ = **0,024725** (v par carte) · **0,019790** (v « un seul binôme ») | `s = 0,024958`, **σ̂ = 0,012973** |
+| `n` | **333** (borne basse) | **2806** · **4380** | **10 810** (borne basse : 2921) |
+
+⚠️ **Les deux σ̂ de la colonne 3 diffèrent par la convention retenue pour `v`** : par carte
+(`Σ_c n_c·p_c(1−p_c)/N²`, la seule exacte quand les deux cartes n'ont pas le même taux) ou
+« un seul binôme pour les 40 épisodes » (`p̄(1−p̄)/N`, qui **majore** `v`). Le code publie la
+première ; la seconde est reportée parce que la revue l'avait employée. ⚠️ **L'écart NE se
+referme PAS en jouant plus d'épisodes** : à 200 épisodes il vaut encore un facteur **1,43**
+sur `n` (10 810 contre 15 478) — parce que σ̂² = `s² − v` est une **différence de deux
+quantités comparables**, donc mal conditionnée à 4 cerveaux. C'est écrit dans les limites du
+carnet de re-mesure.
+
+**La re-mesure confirme le diagnostic et déplace `n` de 333 à 10 810** — voir
+[`EVA01_N200_13092026`](EVA01_N200_13092026_la_dispersion_deconvoluee.md) : mêmes cerveaux,
+mêmes graines, 200 épisodes par carte (1 600 épisodes). L'étalement des taux poolés tombe de
+0,175 (20 épisodes) à **0,055** (200 épisodes) : le premier `s` était majoritairement du
+tirage, exactement ce que `E[s²] = σ² + v` annonce.
+
+**Pourquoi.** Le taux d'un cerveau est une MOYENNE de 20 épisodes, donc bruité. La
+dispersion observée entre cerveaux contient ce bruit en plus de la dispersion réelle :
+
+```
+E[s²] = σ² + v      σ = dispersion RÉELLE entre cerveaux
+                    v = variance d'ÉCHANTILLONNAGE du taux de chaque cerveau
+```
+
+Mesuré ici : `s² = 0,00515625`, dont **88,1 %** (`v = 0,00454492`) est de la variance
+d'échantillonnage. Le bruit de mesure ne dominait donc **pas** la dispersion réelle,
+contrairement à l'intention écrite du §8bis (« bruit < ~10 % de la variance ») : à `n = 333`,
+`SE = 0,023923` vaut **1,21 × σ̂**. Le `333` publié était donc une **borne basse**.
+
+⚠️ **Ce biais ne se corrige PAS en ajoutant des cerveaux** (`E[s²] = σ² + v` quel que soit
+leur nombre) : il se corrige en jouant plus **d'épisodes par cerveau**. D'où la campagne
+[`EVA01_pilote_n200_13092026`](../../../brains/EVA01_pilote_n200_13092026/LISEZ_MOI.md),
+mêmes cerveaux, mêmes graines, **200 épisodes par carte** (`v` divisé par 10).
+
+⚠️ **Conséquence de coût, à trancher en tâche 8 et pas ici** : σ̂ implique un `n` de l'ordre
+de **2 800 à 4 400** épisodes sur ce run, et la re-mesure à 200 épisodes le porte à
+**10 810** — soit ≈ **342 h ≈ 14 jours** pour la campagne de tâche 9 (6 bras × 20 graines ×
+2 cartes), un passage de l'ordre de l'heure à l'ordre de la **semaine**. Raboter `n` n'est pas
+une option ; réduire le nombre de cartes ou de bras, réviser le facteur `3,0`, ou augmenter
+le nombre de cerveaux du pilote sont des décisions à écrire.
 
 ---
 
@@ -49,8 +103,14 @@ Durée réelle **81 s** (00:31:36 → 00:32:57) pour une estimation de **~2 min*
 sonde de cadence (0,63 s/épisode sur la carte 3, 0,32 sur la carte 4). Cohorte complète :
 « couverture 4/4 runs », « tous les garde-fous passent », **0 épisode tronqué**.
 
-⚠️ Le glob était **impossible** : `K8_NU` porte 2 surnuméraires (`K8_NU_g122 2.brain`,
-`K8_NU_g122 3.brain`) et `lister_cerveaux` refuse alors le bras ENTIER.
+⚠️ **CORRECTION MESURÉE (tour de correction 1) — la voie explicite n'était PAS obligatoire
+ici.** Ce carnet écrivait que le glob rendait la mesure « impossible » : c'est **faux pour
+ces quatre graines**. Mesuré : `lister_cerveaux('K8_NU', [11, 22, 33, 44])` rend les 4
+cerveaux **sans lever**, et `resoudre_cohorte` non plus — le surnuméraire est
+`K8_NU_g122`, une graine **non demandée**. Le glob ne refuse `K8_NU` que si l'on demande les
+**20 graines du manifeste** (`NomAmbigue`, mesuré). La voie explicite a donc été un
+**CHOIX** — énumérer les cerveaux un par un, avec un chemin vérifié existant pour chacun —
+et non une nécessité. Aucun chiffre de ce carnet n'en dépend.
 
 ## 3. Les chiffres bruts — avant toute interprétation
 
@@ -109,31 +169,58 @@ sonde de cadence (0,63 s/épisode sur la carte 3, 0,32 sur la carte 4). Cohorte 
 | Position finale publiée = but | **33/41** |
 | **But ABSENT de la trajectoire publiée** | **8/41 (19,5 %)** |
 | dont le dernier point publié = le **départ** | 4/8 |
+| dont le dernier point publié = la case **d'avant le but** | 4/8 |
 
-Le mécanisme est lisible dans `banc_final.evaluer_cerveau_sur_carte` : la position est lue
-**après** `traiter_tick`, qui enchaîne LUI-MÊME sur l'épisode suivant dès que `fin_episode`
-bascule. Sur l'épisode gagnant, la lecture attrape donc parfois la position de l'épisode
-**suivant** (`[1, 1]`), et le pas qui atteint le but n'est jamais publié. Exemple mesuré :
-`K8_NU_g22`, carte 3, graine 10018 — 33 ticks, `retour = 0,908`, `longueur_normalisee = 2,75`
-(victoire authentique), trajectoire publiée
+⚠️ **MÉCANISME CORRIGÉ (tour de correction 1).** Ce carnet écrivait d'abord que la position
+est lue « après que `traiter_tick` a réenchaîné l'épisode suivant », et `banc_final.py`
+écrivait que `traiter_tick` « peut avoir **remplacé** `etat.env` par une carte du CURSUS ».
+**Les deux diagnostics étaient faux, et un correctif parti de là n'aurait rien corrigé.**
+
+Mesuré en rejouant une cellule ENTIÈRE (`K8_NU_g22`, carte 3, graines 10000-10019), mon
+propre replay reproduisant **20/20 trajectoires publiées à l'identique** :
+
+- **19 fois sur 20**, au tick de bascule, `etat.env` est un **NOUVEL objet** — et c'est
+  alors `environnement_episode` (l'ancien objet, resté sur le but) qui porte la **bonne**
+  position. Le « remplacement » décrit donc le cas où le rapport est **juste** ;
+- **1 fois sur 20** (graine 10018), `etat.env` n'est **pas** remplacé : le **MÊME objet** est
+  remis à zéro **en place** (`id(env)` constant sur toute la cellule, `agent_pos` passant de
+  `(6,7)` à `(1,1)`, `fin_episode=True`). La lecture d'après-bascule rend alors le **départ
+  de l'épisode suivant**, jamais le but.
+
+D'où les deux formes publiées : quand le départ `[1,1]` n'avait pas encore été vu, il est
+ajouté **en dernier** (4 cas) ; quand il l'avait déjà été, il est **dédupliqué** et le
+dernier point publié reste la **case d'avant le but** (4 cas). Exemple du premier type :
+`K8_NU_g22`, carte 3, graine 10018 — 33 ticks, `retour = 0,908`,
+`longueur_normalisee = 2,75` (victoire authentique), trajectoire publiée
 `[[2,1], …, [6,7], [1,1]]` : le but `[7,7]` n'y figure pas.
 
 ⚠️ **Cette anomalie ne touche AUCUN chiffre de ce pilote** : `p̄`, `sd_inter` et `n` viennent
 du compteur `gagnes` et de `ticks`, jamais de la trajectoire ; l'A/A est identique *y
 compris* sur les trajectoires (l'artefact est déterministe, ce n'est pas du bruit).
-`banc_final.py` n'est pas modifié ici (hors périmètre de la tâche 7) : le fait est
-**consigné** pour la tâche qui traitera l'instrument.
+Le **commentaire** de `banc_final.py` a été corrigé (tour de correction 1 — seule exception
+au gel de ce fichier, vérifiée par comparaison d'AST : **aucune ligne exécutable ne
+change**) ; le **comportement**, lui, n'est pas corrigé : c'est une tâche d'instrument, avec
+son propre test.
 
 ## 4. Les limites — écrites d'abord
 
-1. **4 cerveaux, c'est peu, et l'intervalle le dit** : `IC95(sd_inter) = [0,041 ; 0,268]`.
+1. 🔴 **`sd_inter` EST GONFLÉ PAR LE BRUIT DU PILOTE, ET `333` EST UNE BORNE BASSE**
+   (ajouté au tour de correction 1). La dispersion observée `s = 0,071807` mélange la
+   dispersion réelle entre cerveaux et la variance d'échantillonnage du pilote :
+   `E[s²] = σ² + v`, avec ici `s² = 0,00515625` et `v = 0,00454492` — **88,1 % de bruit**.
+   Dé-convoluée : **σ̂ = 0,024725** (convention de `v` par carte, la seule exacte ici) ou
+   σ̂ = 0,019790 (convention « un seul binôme sur 40 épisodes », qui majore `v`), soit
+   **`n` = 2806 à 4380** — jamais 333. À `n = 333`, `SE = 0,023923` vaut **1,21 × σ̂** : le
+   bruit de mesure **ne dominait pas** la dispersion réelle, contrairement à l'intention du
+   §8bis. Voir l'erratum (§0) et la re-mesure à 200 épisodes par cerveau.
+2. **4 cerveaux, c'est peu, et l'intervalle le dit** : `IC95(sd_inter) = [0,041 ; 0,268]`.
    Reporté sur `n`, cet intervalle implique **de 24 à 1037 épisodes** — un facteur **43**.
    Le `333` est une estimation, pas une borne : sa propre incertitude est publiée à côté de
    lui précisément pour qu'il ne soit pas lu comme un chiffre ferme.
-2. **La dispersion est mesurée sur un seul bras** (`K8_NU`). Elle décrit l'hétérogénéité
+3. **La dispersion est mesurée sur un seul bras** (`K8_NU`). Elle décrit l'hétérogénéité
    *intra-bras* — ce qui est la grandeur pertinente pour dimensionner un test apparié par
    graine — mais elle ne dit rien de l'écart entre deux bras.
-3. **Les deux cartes ne classent pas les cerveaux pareil** : `K8_NU_g11` est le meilleur sur
+4. **Les deux cartes ne classent pas les cerveaux pareil** : `K8_NU_g11` est le meilleur sur
    la carte 3 (50 %) et le dernier sur la carte 4 (0 %) ; `K8_NU_g33` fait l'inverse
    (30 % / 40 %). Corrélation inter-cartes des taux par cerveau mesurée : **ρ = −0,54**.
    Conséquence arithmétique : la dispersion **poolée** (0,072) est plus PETITE que chacune
@@ -142,9 +229,9 @@ compris* sur les trajectoires (l'artefact est déterministe, ce n'est pas du bru
    garantie générale** : avec des cartes positivement corrélées, la dispersion poolée serait
    plus grande et le `n` plus petit. À 4 cerveaux, ce ρ n'a évidemment aucune valeur
    statistique : il explique une arithmétique, il n'établit rien.
-4. **L'IC de la SD suppose la normalité** des taux par cerveau — approximation assumée à 4
-   valeurs, pas un résultat.
-5. **Un état de cerveau est incohérent dans le fichier** : pour `K8_NU_g11`, l'`env_id`
+5. **L'IC de la SD suppose la normalité** des taux par cerveau — approximation assumée à 4
+   valeurs, pas un résultat. La dé-convolution hérite de la même hypothèse.
+6. **Un état de cerveau est incohérent dans le fichier** : pour `K8_NU_g11`, l'`env_id`
    enregistré (`Empty-5x5`) diverge de son `niveau_actuel` enregistré (4), et `persistance`
    remappe le niveau **4 → 0** au chargement. Le banc **force** la carte et ne lit
    `niveau_actuel` que pour la télémétrie et le tirage du cursus, jamais dans la décision
@@ -152,9 +239,9 @@ compris* sur les trajectoires (l'artefact est déterministe, ce n'est pas du bru
    celui qui réussit le mieux la carte 3 — un cerveau « cassé » n'aurait pas fait 50 %.
    Reste que **l'archive SCI-01 contient un état incohérent**, ce qui est un fait à part
    entière (audit d'intégrité de `brains/`, hors périmètre d'EVA-01).
-6. **Le facteur 3,0 n'est pas mesuré** : il est posé (spec §8bis). C'est le seul paramètre
+7. **Le facteur 3,0 n'est pas mesuré** : il est posé (spec §8bis). C'est le seul paramètre
    de la règle qui ne vient pas des données.
-7. **Rien ici ne dit du cursus** : cartes imposées, règle « un banc forcé ne prouve rien sur
+8. **Rien ici ne dit du cursus** : cartes imposées, règle « un banc forcé ne prouve rien sur
    le cursus ». Et rien ne dit que le banc **juge juste** — il est dimensionné, pas certifié
    (le test d'acceptation D3 reste à faire).
 
@@ -171,29 +258,37 @@ compris* sur les trajectoires (l'artefact est déterministe, ce n'est pas du bru
    épisodes identiques, δ = 0 — le δ_A/A que la règle de mesure exige à côté de tout résultat.
 4. **La carte n'est pas un mur infranchissable** : 41 victoires sur 160 épisodes, aucun
    épisode tronqué. L'instrument a de quoi mesurer (aucune saturation à 0).
-5. **La voie `--cohorte-explicite` est validée en conditions réelles** : elle était
-   *obligatoire* (le glob refusait le bras) et elle a fonctionné de bout en bout.
+5. **La voie `--cohorte-explicite` fonctionne de bout en bout** — mais ⚠️ **elle n'était pas
+   obligatoire** (voir la correction du §2 : le glob rend ces 4 graines sans lever ; il ne
+   refuse `K8_NU` que pour les 20 graines du manifeste). Ce qui est fermé, c'est que la voie
+   explicite **marche** ; ce qui est corrigé, c'est qu'elle fût *nécessaire*.
 
 ## 6. Ce que ce pilote LAISSE OUVERT
 
-1. **La faisabilité de la campagne de la tâche 9**. À `n = 333`, chaque (bras, graine) coûte
-   `333 × 0,63 + 333 × 0,32 ≈ 316 s` : **≈ 10,5 h** pour 6 bras × 20 graines × 2 cartes
-   (**≈ 7,0 h** si l'on ne garde que la carte 3, qui est celle du test apparié). C'est un
-   facteur **3,3** au-dessus de l'ancien `n = 100` abandonné. Si ce budget est trop lourd, la
-   décision ne peut PAS être de raboter `n` en silence : elle doit être rédigée (facteur
-   autre que 3, ou famille de métriques réduite, ou moins de bras).
+1. 🔴 **La faisabilité de la tâche 9 change d'ordre de grandeur.** À `n = 333` (borne basse),
+   chaque (bras, graine) coûte `333 × 0,63 + 333 × 0,32 ≈ 316 s`, soit **≈ 10,5 h** pour
+   6 bras × 20 graines × 2 cartes. Mais `333` est un plancher : avec σ̂ ≈ 0,020-0,025, le
+   même calcul donne **des jours** (≈ 88 h à `n = 2806`, ≈ 137 h à `n = 4380`). Ce n'est
+   **pas à la tâche 7 de trancher** : c'est un arbitrage de la tâche 8 — réduire les cartes
+   ou les bras, ou contester le facteur `3,0` **par écrit** — **jamais** raboter `n` en
+   silence.
 2. **Le choix « poolé » plutôt que « par carte »** — la spec dit « cartes figées » au pluriel
    sans trancher. Ici les trois lectures donnent 333 / 176 / 43 ; le protocole devra écrire
    **laquelle il retient** (le présent carnet retient le poolé, le plus conservateur).
-3. **L'IC de la SD à 4 cerveaux** est trop large pour fixer `n` à mieux qu'un facteur 43.
-   Le seul moyen de resserrer serait d'**augmenter le nombre de cerveaux du pilote** (8 ou 12
-   au lieu de 4) — la spec borne à 4, donc c'est une décision à prendre.
-4. **L'artefact de `trajectoire`** (§3.5, 8 victoires sur 41) : l'artefact qui doit rendre le
-   comportement auditable est muet sur le pas décisif. À corriger dans une tâche
-   d'instrument, avec son propre test.
-5. **L'état incohérent de `K8_NU_g11`** (limite 5) : à verser à l'audit d'intégrité de
+3. **La convention de `v`** (par carte, ou « un seul binôme pour N épisodes ») déplace σ̂ de
+   0,0198 à 0,0247 sur ces données, donc `n` de 4380 à 2806 : à 20 épisodes par cerveau, le
+   choix n'est pas neutre. À 200 épisodes, il le devient (voir la campagne de re-mesure).
+4. **L'IC de la SD à 4 cerveaux** est trop large pour fixer `n` à mieux qu'un facteur 43.
+   Le seul moyen de resserrer l'**instabilité** — la dé-convolution, elle, ne corrige que le
+   **biais** — serait d'**augmenter le nombre de cerveaux du pilote** (8 ou 12 au lieu de
+   4) ; la spec borne à 4, donc c'est une décision à prendre.
+5. **L'artefact de `trajectoire`** (§3.5, 8 victoires sur 41) : l'artefact qui doit rendre le
+   comportement auditable est muet sur le pas décisif — et son mécanisme est désormais
+   correctement diagnostiqué (reset EN PLACE du même objet, pas remplacement). À corriger
+   dans une tâche d'instrument, avec son propre test.
+6. **L'état incohérent de `K8_NU_g11`** (limite 6) : à verser à l'audit d'intégrité de
    `brains/`, ouvert au registre.
-6. **Rien sur la justesse du banc** : le pilote dimensionne, il ne certifie pas. Tant que le
+7. **Rien sur la justesse du banc** : le pilote dimensionne, il ne certifie pas. Tant que le
    test d'acceptation D3 n'a pas reproduit l'ordre SCI-01, **aucune supériorité n'est
    revendiquée**.
 
@@ -203,5 +298,7 @@ compris* sur les trajectoires (l'artefact est déterministe, ce n'est pas du bru
 run), `cohorte_explicite.json`, `pilote.json`, `banc_final_20260913_003257.json` (rapport
 brut : 160 épisodes avec monde, trajectoire et budget), `pilote.log`, `sonde_cadence.txt`,
 `empreintes_avant.txt` / `empreintes_apres.txt`, `replicat_AA/` (l'A/A), `reproduction/`
-(la dérivation rejouée depuis le rapport). Code : `src/naulthene/instruments/pilote_banc.py`,
-`tests/test_pilote_banc.py` (16 tests).
+(la dérivation rejouée depuis le rapport). **Suite de la mesure** :
+[`EVA01_N200_13092026`](EVA01_N200_13092026_la_dispersion_deconvoluee.md) et
+`brains/EVA01_pilote_n200_13092026/`. Code : `src/naulthene/instruments/pilote_banc.py`,
+`tests/test_pilote_banc.py` (29 tests au tour de correction 1).

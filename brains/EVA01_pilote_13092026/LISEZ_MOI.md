@@ -63,12 +63,23 @@ mesure ne le soutiendrait.
 | `max_ticks` | budget natif du monde | jamais un plafond posé à la main |
 | Métrique de la règle | `gagnes` (taux de franchissement) | la métrique PRIMAIRE de la famille gelée |
 
-### Voie de résolution : EXPLICITE, et non par glob
+### Voie de résolution : EXPLICITE — un choix, pas une obligation
 
-`K8_NU` porte **2 surnuméraires** (`K8_NU_g122 2.brain`, `K8_NU_g122 3.brain`) : le glob
-`lister_cerveaux` refuse alors **le bras entier** (`NomAmbigue`). La cohorte est donc
-énumérée **un par un** dans `cohorte_explicite.json` (`{bras: {graine: chemin}}`), chaque
-chemin canonique étant vérifié existant.
+⚠️ **CORRECTION MESURÉE (tour de correction 1, 13/09).** Ce protocole affirmait que le glob
+rendait la mesure impossible : **c'est faux pour ces quatre graines**, et la version écrite
+avant le run est conservée ci-dessous telle quelle puis corrigée.
+
+*Ce qui avait été écrit avant le run* : « `K8_NU` porte **2 surnuméraires**
+(`K8_NU_g122 2.brain`, `K8_NU_g122 3.brain`) : le glob `lister_cerveaux` refuse alors **le
+bras entier** (`NomAmbigue`). »
+
+*Ce que la mesure dit* : `lister_cerveaux('K8_NU', [11, 22, 33, 44])` rend les **4 cerveaux
+sans lever**, et `resoudre_cohorte` non plus — le surnuméraire porte la graine **122**, qui
+n'est **pas demandée**. Le glob ne refuse `K8_NU` que si l'on demande les **20 graines du
+manifeste** (mesuré : `NomAmbigue`). La voie explicite a donc été un **CHOIX** — énumérer les
+cerveaux un par un dans `cohorte_explicite.json` (`{bras: {graine: chemin}}`), chaque chemin
+canonique vérifié existant — et non une nécessité. Aucun chiffre de cette campagne n'en
+dépend, et la voie explicite **fonctionne** : c'est la seule chose que ce choix démontre.
 
 ### Pré-vol (avant la mesure, jamais une estimation)
 

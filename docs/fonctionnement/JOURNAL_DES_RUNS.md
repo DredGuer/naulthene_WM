@@ -29,6 +29,18 @@
 
 ## Runs
 
+### ✅ `EVA01_pilote_n200_13092026` — la dispersion DÉ-CONVOLUÉE (tour de correction 1)
+
+| | |
+|---|---|
+| **Début** | **2026-09-13 00:55:36** — dossier de campagne créé à 00:55:36 (`stat`), `LISEZ_MOI.md` écrit à 00:56, **AVANT le premier processus**. Entrée ouverte à 00:56, avant le lancement |
+| **Fin estimée** | **~01:09** (≈ 13 min) — dérivée du rythme **MESURÉ** (`sonde_cadence.txt` du premier pilote) : 0,63 s/épisode sur la carte 3 et 0,32 sur la carte 4 ⇒ `4 cerveaux × 200 épisodes × 0,95 s` ≈ **760 s**, plus 8 chargements de `.brain` à 0,43 s |
+| **Fin réelle** | **2026-09-13 01:08:45** — run de **766 s (12 min 46)** (00:55:59 → 01:08:45), soit **≈ 30 s d'avance** sur l'estimation (~13 min) : la cadence du premier pilote s'est vérifiée. **Rejeu A/A** : 766 s de plus, **1 600/1 600 épisodes identiques** (δ_A/A = 0) |
+| **Coût** | 4 cerveaux `K8_NU` (graines 11, 22, 33, 44 — **les mêmes** que le premier pilote) × 2 cartes figées × **200 épisodes** (au lieu de 20), graines d'éval **10000…10199**, `NAULTHENE_DEVICE=cpu`, cohorte explicite (choix, pas obligation — mesuré), lecture seule |
+| **Pourquoi** | « La dispersion inter-cerveaux publiée est-elle celle des cerveaux, ou celle du pilote ? » Le premier pilote a publié `s = 0,071807` et `n = 333`, dont **88,1 %** de la variance observée était la variance d'échantillonnage du pilote (`v = 0,00454492` sur `s² = 0,00515625`) ⇒ `333` est une **borne basse**. Mêmes cerveaux, **200 épisodes par cerveau** (`v` divisé par 10) : `n` est dérivé de σ̂ = `sqrt(max(0, s² − v))`, pas de `s` |
+| **Résultat** | **`n` = 10 810 (dérivé de σ̂), borne basse 2 921 (dérivée de `s`).** `p̄` = **0,281250** (450/1 600), `s` = **0,024958**, `v` = **0,00045461** (**73,0 %** de la variance observée), **σ̂ = 0,012973**, **IC95(σ̂) = [0 ; 0,090583] — touche 0**. Le biais est confirmé par ses propres données : l'étalement des taux poolés tombe de 0,175 (20 épisodes) à **0,055** (200 épisodes). 🔴 Le coût de la tâche 9 passe de l'heure à la **semaine** (≈ 342 h ≈ 14 jours à `n = 10 810`) : **arbitrage de la tâche 8**, jamais un `n` raboté en silence. Carnet : [`docs/recherche/campagnes/EVA01_N200_13092026_la_dispersion_deconvoluee.md`](../../docs/recherche/campagnes/EVA01_N200_13092026_la_dispersion_deconvoluee.md) |
+| **Statut** | ✅ terminée — mesure non dégénérée, cohorte complète (4/4), aucun épisode tronqué, `.brain` inchangés (taille et mtime) |
+
 ### ✅ `EVA01_pilote_13092026` — la dispersion inter-cerveaux qui dérive `n` (tâche 7)
 
 | | |
@@ -36,9 +48,9 @@
 | **Début** | **2026-09-13 00:29:56** — dossier de campagne créé à 00:29:56 (`stat`), `LISEZ_MOI.md` écrit à 00:30:41, **AVANT le premier processus**. Entrée ouverte à 00:31, avant la sonde de cadence et avant la mesure officielle |
 | **Fin estimée** | **~00:35** (≈ 2 min) — dérivée du rythme **MESURÉ** par la sonde de cadence (`sonde_cadence.txt`, 1 cerveau × 2 épisodes par carte) : **0,63 s/épisode** sur la carte 3 (324 ticks, 1,96 ms/tick) et **0,32 s/épisode** sur la carte 4 (100 ticks, 3,21 ms/tick), plus 0,43 s par chargement de `.brain` ⇒ 4 × (20 × 0,63 + 20 × 0,32) + 8 × 0,43 ≈ **80 s de calcul**, démarrage du processus inclus |
 | **Fin réelle** | **2026-09-13 00:32:57** — run de **81 s** (00:31:36 → 00:32:57), soit **≈ 1 min d'avance** sur l'estimation (~2 min) : la cadence mesurée par la sonde s'est vérifiée au dixième près. Un seul run a suffi. **Rejeu A/A** ajouté pour la vérification : 81 s de plus (00:33:13 → 00:34:35), **160/160 épisodes identiques** au premier run |
-| **Coût** | 4 cerveaux `K8_NU` (graines d'entraînement 11, 22, 33, 44) × 2 cartes figées (3 = `SimpleCrossingS9N1`, 4 = `LavaGapS5`) × 20 épisodes, graines d'éval 10000…10019, `NAULTHENE_DEVICE=cpu`, cohorte **EXPLICITE** (le glob refuse `K8_NU` : 2 surnuméraires), lecture seule |
+| **Coût** | 4 cerveaux `K8_NU` (graines d'entraînement 11, 22, 33, 44) × 2 cartes figées (3 = `SimpleCrossingS9N1`, 4 = `LavaGapS5`) × 20 épisodes, graines d'éval 10000…10019, `NAULTHENE_DEVICE=cpu`, cohorte **EXPLICITE** (⚠️ **choix, pas obligation** — corrigé le 13/09 : le glob rend ces 4 graines sans lever, le surnuméraire `K8_NU_g122` n'étant pas demandé ; il ne refuse `K8_NU` que pour les 20 graines du manifeste), lecture seule |
 | **Pourquoi** | « Quelle est la dispersion inter-cerveaux du taux de franchissement sur les cartes figées 3 et 4 — et quel `n` cette dispersion impose-t-elle ? » (spec §8bis : `n` est un RÉSULTAT, le `20` du pilote est un budget de MESURE) |
-| **Résultat** | **`n` DÉRIVÉ = 333.** `p̄` = **0,256250** (41/160), `sd_inter` = **0,071807**, **IC95 = [0,040678 ; 0,267736]** — la dispersion d'un pilote à 4 cerveaux est mal connue, et l'intervalle implique de **24 à 1037** épisodes (facteur 43). Par carte : carte 3 = **28/80** (0,350), carte 4 = **13/80** (0,163). Carnet : [`docs/recherche/campagnes/EVA01_13092026_la_derivation_de_n.md`](../../docs/recherche/campagnes/EVA01_13092026_la_derivation_de_n.md) |
+| **Résultat** | **`n` = 333 — mais c'est une BORNE BASSE, publiée comme telle le 13/09 au tour de correction 1.** `p̄` = **0,256250** (41/160), `sd_inter` = **0,071807**, **IC95 = [0,040678 ; 0,267736]**. 🔴 La dispersion observée contenait **88,1 %** de variance d'échantillonnage (`v = 0,00454492` sur `s² = 0,00515625`) : dé-convoluée, **σ̂ = 0,024725** ⇒ **`n` = 2806** (4380 avec la convention « un seul binôme »). Par carte : carte 3 = **28/80** (0,350), carte 4 = **13/80** (0,163). Carnet : [`docs/recherche/campagnes/EVA01_13092026_la_derivation_de_n.md`](../../docs/recherche/campagnes/EVA01_13092026_la_derivation_de_n.md) — suite : `EVA01_pilote_n200_13092026` |
 | **Statut** | ✅ terminée — mesure non dégénérée, cohorte complète (4/4), aucun épisode tronqué, `.brain` inchangés (taille et mtime identiques avant/après) |
 
 ### ✅ `VIS01_etape2_fichier_10092026` — la structure relue par le serveur (tâche 11)

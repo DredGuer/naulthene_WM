@@ -596,9 +596,25 @@ def evaluer_cerveau_sur_carte(etat, index_carte: int, graines: Sequence[int],
         # On publie les positions OCCUPÉES, distinctes, dans l'ordre de première visite :
         # compact (une carte 9×9 en compte quelques dizaines) et fidèle à ce qui a été joué.
         #
-        # ⚠️ Lues dans `environnement_episode`, JAMAIS dans `etat.env` : au tick de bascule,
-        # `traiter_tick` peut avoir remplacé `etat.env` par une carte du CURSUS — la position
-        # lue serait alors celle d'un autre monde.
+        # ⚠️ Lues dans `environnement_episode`, JAMAIS dans `etat.env` — mais ce n'est PAS
+        # la raison qui avait été écrite ici, et la vraie raison est plus gênante.
+        #
+        # 🔴 MÉCANISME CORRIGÉ (13/09/2026, tour de correction de la tâche 7), MESURÉ EN
+        # REPLAYANT UNE CELLULE ENTIÈRE : l'ancienne justification (« `traiter_tick` peut
+        # avoir REMPLACÉ `etat.env` par une carte du CURSUS ») décrit le cas où le rapport
+        # est JUSTE. Mesuré sur `K8_NU_g22`, carte 3, graines 10000-10019 : au tick de
+        # bascule, `etat.env` est un NOUVEL objet 19 fois sur 20, et c'est alors
+        # `environnement_episode` — l'ANCIEN objet, resté sur le but — qui porte la bonne
+        # position. Le défaut est le cas RESTANT : quand `etat.env` n'est pas remplacé mais
+        # remis à zéro EN PLACE (`id(env)` constant toute la cellule, `agent_pos` passant de
+        # (6,7) à (1,1) sur le MÊME objet, `fin_episode=True`), la lecture ci-dessous rend
+        # la position de DÉPART de l'épisode suivant, et non le but qui vient d'être atteint.
+        # Conséquence mesurée sur le premier pilote : le but est ABSENT de la trajectoire
+        # publiée pour 8 victoires sur 41 (19,5 %) — 4 où le dernier point publié est le
+        # départ (jamais encore visité), 4 où c'est la case d'AVANT le but (le départ avait
+        # déjà été vu, donc dédupliqué). Un correctif partant de l'ancienne explication ne
+        # corrigerait donc rien. La lecture dans `environnement_episode` reste néanmoins la
+        # bonne ; c'est le MOMENT de la lecture qu'il faudrait déplacer.
         environnement_episode = etat.env
         positions_vues: list[list[int]] = []
         vues = set()

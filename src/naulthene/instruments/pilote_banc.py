@@ -15,18 +15,41 @@ pas une constante de confort (spec §8bis). La règle, déclarée d'avance :
 
 Le seul paramètre **posé** de la règle est `facteur = 3,0` : il est isolé dans une
 constante nommée, précisément pour pouvoir être contesté ou mesuré plus tard. Tout le
-reste — `p_barre`, `sd_inter`, et l'**intervalle de confiance de cette SD** — est MESURÉ
-par `mesurer_pilote`, puis publié dans `pilote.json` à côté de la ligne de calcul.
+reste — `p_barre`, la dispersion, et les **intervalles de confiance** — est MESURÉ par
+`mesurer_pilote`, puis publié dans `pilote.json` à côté de la ligne de calcul.
 
 ⚠️ LE `20` DU PILOTE N'EST PAS LE `n` DU PROTOCOLE. `EPISODES_PILOTE` est un **budget de
-MESURE** : il doit être assez grand pour que la dispersion inter-cerveaux soit estimable,
-et assez petit pour que le pilote reste quelques minutes. Le `n` qui entre au protocole
-est celui que la règle produit, et lui seul.
+MESURE**. Le `n` qui entre au protocole est celui que la règle produit, et lui seul.
+
+⚠️🔴 LA DISPERSION OBSERVÉE EST GONFLÉE PAR LE PILOTE LUI-MÊME — C'EST LA CORRECTION DU
+TOUR 1, ET ELLE CHANGE LA VALEUR PUBLIÉE. Un taux mesuré sur `n` épisodes est une MOYENNE,
+donc bruité. La dispersion observée entre cerveaux contient donc ce bruit en plus de la
+dispersion réelle :
+
+    E[s²] = σ² + v        σ = dispersion RÉELLE entre cerveaux
+                          v = variance d'échantillonnage du taux de chaque cerveau
+
+Mesuré sur le premier pilote (20 épisodes par carte) : `s² = 0,00515625`, dont **92 %**
+étaient de la variance d'échantillonnage. Le `333` dérivé de `s` était donc une **borne
+basse**, pas une estimation — et le bruit de mesure ne dominait PAS la dispersion réelle,
+contrairement à l'intention écrite du §8bis.
+
+⚠️ CE BIAIS NE SE CORRIGE PAS EN AJOUTANT DES CERVEAUX. `E[s²] = σ² + v` quel que soit leur
+nombre : c'est `v` qu'il faut faire baisser, donc jouer PLUS D'ÉPISODES PAR CERVEAU
+(`v ≈ p(1−p)/n`, divisé par 10 quand `n` passe de 20 à 200). D'où `EPISODES_PILOTE = 200`.
+
+La règle n'est pas changée pour autant : le §8bis nomme « l'écart-type inter-cerveaux de ce
+même taux », c'est-à-dire σ. `s` en est un estimateur biaisé, σ̂ = `sqrt(max(0, s² − v))` en
+est l'estimateur correct — voir `variance_echantillonnage`. Les deux sont PUBLIÉS côte à
+côte (`sd_inter`, `sd_inter_deconvoluee`), avec les deux `n` (`n_derive` de σ̂,
+`n_derive_sd_observee` de `s`, qui est la borne basse).
 
 ⚠️ UNE SD DE PILOTE EST INSTABLE. À 4 cerveaux, l'intervalle de confiance de la SD
 estimée est large (mesuré : pour `s = 0,15`, `IC95 = [0,085 ; 0,559]`). Publier la seule
 valeur ponctuelle ferait passer une dispersion mal connue pour un chiffre ferme — d'où
-`intervalle_confiance_sd`, qui entre dans `pilote.json` sous la clé `ic_sd`.
+`intervalle_confiance_sd`, et son équivalent dé-convolué, qui entrent dans `pilote.json`
+sous les clés `ic_sd` et `ic_sd_deconvoluee`. La dé-convolution corrige le BIAIS, pas
+l'instabilité : à 4 cerveaux `s²` reste estimé sur 3 degrés de liberté.
 
 ⚠️ CE MODULE EST PUR AU CHARGEMENT : `banc_final` (donc `noyau` et `torch`) n'est importé
 qu'à l'intérieur des fonctions qui mesurent réellement. C'est ce qui permet de tester la
@@ -50,22 +73,29 @@ from typing import Sequence
 __all__ = [
     "ALPHA_IC_SD",
     "CARTES_PILOTE",
+    "CORRECTION_MAX_DERIVER_N",
     "EPISODES_PILOTE",
     "FACTEUR_DOMINATION",
     "PiloteMalDimensionne",
     "PiloteNonDerive",
+    "TOLERANCE_RELATIVE_CONTRAINTE",
     "deriver_depuis_rapport",
     "deriver_n",
     "dispersion_inter_cerveaux",
     "intervalle_confiance_sd",
     "mesurer_pilote",
+    "variance_echantillonnage",
 ]
 
 # Les 2 cartes figées du protocole (spec §8, constantes gelées v1) :
 # 3 = MiniGrid-SimpleCrossingS9N1-v0 (le mur), 4 = MiniGrid-LavaGapS5-v0 (le palier suivant).
 CARTES_PILOTE: tuple[int, int] = (3, 4)
 # BUDGET DE MESURE du pilote — jamais le `n` du protocole (voir l'en-tête).
-EPISODES_PILOTE: int = 20
+#
+# ⚠️ 20 -> 200 (tour de correction 1). À 20, `v` valait 0,00454 pour une variance observée
+# de 0,00516, soit 92 % de bruit d'échantillonnage : la dispersion publiée était celle du
+# PILOTE, pas celle des cerveaux. À 200, `v` est divisé par 10.
+EPISODES_PILOTE: int = 200
 # Le SEUL paramètre posé de la règle (spec §8bis) : bruit de mesure <= 1/3 de la dispersion.
 FACTEUR_DOMINATION: float = 3.0
 ALPHA_IC_SD: float = 0.05
@@ -81,6 +111,11 @@ NB_CERVEAUX_PILOTE_MAX: int = 4     # borne de la spec §8bis (« 2 à 4 cerveau
 # ci-dessous vaut 1e-12, soit 5e-14 en absolu sur cette borne : très au-dessus de l'écart
 # de représentation, très en dessous de tout effet qui aurait un sens pour la mesure.
 TOLERANCE_RELATIVE_CONTRAINTE: float = 1e-12
+
+# Borne de la boucle de correction de `deriver_n` (voir la fonction) : l'estimation
+# analytique est le minimum de la contrainte, donc une correction de plus de quelques
+# unités signale une contrainte ALTÉRÉE, jamais un besoin réel. Au-delà, on lève.
+CORRECTION_MAX_DERIVER_N: int = 8
 
 
 class PiloteMalDimensionne(RuntimeError):
@@ -141,9 +176,23 @@ def deriver_n(p_barre: float, sd_inter: float, facteur: float = FACTEUR_DOMINATI
     # La boucle corrige les arrondis de l'estimation dans les DEUX sens : elle ne rend un
     # `n` que lorsque la contrainte est réellement tenue, et elle part du bas pour que le
     # résultat soit bien le PLUS PETIT qui la tienne.
-    while math.sqrt(variance / n) > cible:
+    #
+    # ⚠️ ELLE EST BORNÉE, ET PAS SEULEMENT PAR PRUDENCE. L'estimation ci-dessus est le
+    # minimum ANALYTIQUE (n >= variance/cible²) : la correction ne peut donc valoir que
+    # quelques unités, et seulement si l'arrondi flottant a fait descendre le plancher.
+    # Si elle en demandait davantage, c'est que la contrainte ou la cible a été altérée
+    # (garde neutralisé, tolérance portée à une valeur absurde) : boucler sans borne
+    # transformerait ce défaut en boucle infinie, c'est-à-dire en gel silencieux. On
+    # préfère crier.
+    for _ in range(CORRECTION_MAX_DERIVER_N):
+        if math.sqrt(variance / n) <= cible:
+            return n
         n += 1
-    return n
+    raise RuntimeError(
+        f"deriver_n : la contrainte n'est toujours pas tenue après "
+        f"{CORRECTION_MAX_DERIVER_N} corrections depuis n={n} — l'estimation analytique "
+        f"et la vérification divergent, ce qui signale une contrainte altérée "
+        f"(p_barre={p_barre!r}, sd_inter={sd_inter!r}, facteur={facteur!r})")
 
 
 def _quantile_chi2(p: float, df: int) -> float:
@@ -250,8 +299,47 @@ def intervalle_confiance_sd(sd: float, n: int, alpha: float = ALPHA_IC_SD
     return (bas, haut)
 
 
+def variance_echantillonnage(taux_par_carte: Sequence[float],
+                             episodes_par_carte: Sequence[int]) -> float:
+    """`v` — la variance d'ÉCHANTILLONNAGE du taux poolé d'un cerveau, en pur calcul.
+
+    ⚠️ POURQUOI CETTE FONCTION EXISTE, ET C'EST LE CŒUR DU PILOTE. Le taux d'un cerveau
+    n'est pas une constante : c'est une MOYENNE de `n` tirages. La dispersion observée
+    entre cerveaux mélange donc deux choses :
+
+        E[s²] = σ² + v        σ = la dispersion RÉELLE entre cerveaux,
+                              v = la variance d'échantillonnage du taux de chacun.
+
+    `s` est donc un estimateur **biaisé vers le haut** de σ — et d'autant plus que le
+    pilote joue peu d'épisodes. Mesuré sur le premier pilote (20 épisodes par carte) :
+    `s² = 0,00515625`, dont **92 %** de variance d'échantillonnage. Le `n` dérivé de `s`
+    était donc une **borne basse**, pas une estimation. ⚠️ Ce biais ne se corrige PAS en
+    ajoutant des cerveaux (`E[s²] = σ² + v` quel que soit leur nombre) : il se corrige en
+    jouant PLUS D'ÉPISODES PAR CERVEAU, ce qui réduit `v`.
+
+    La formule n'est PAS `p̄(1−p̄)/N` : les deux cartes n'ont pas le même taux, et les
+    traiter comme un seul binôme serait faux. Le taux par cerveau est
+    `r = Σ_c (n_c/N) · k_c/n_c`, donc, les cartes étant indépendantes :
+
+        v = Σ_c (n_c/N)² · p_c(1−p_c)/n_c = Σ_c n_c·p_c(1−p_c) / N²      N = Σ_c n_c
+    """
+    taux = [float(p) for p in taux_par_carte]
+    effectifs = [int(n) for n in episodes_par_carte]
+    if len(taux) != len(effectifs):
+        raise ValueError(f"{len(taux)} taux pour {len(effectifs)} effectifs")
+    if not taux:
+        raise ValueError("aucune carte : la variance d'échantillonnage n'est pas définie")
+    if any(n <= 0 for n in effectifs):
+        raise ValueError(f"effectif nul ou négatif dans {effectifs}")
+    if any(not 0.0 <= p <= 1.0 for p in taux):
+        raise ValueError(f"taux hors de [0, 1] dans {taux}")
+    total = sum(effectifs)
+    return sum(n * p * (1.0 - p) for p, n in zip(taux, effectifs)) / (total * total)
+
+
 def dispersion_inter_cerveaux(taux_par_cerveau: Sequence[float],
-                              alpha: float = ALPHA_IC_SD) -> dict:
+                              alpha: float = ALPHA_IC_SD,
+                              variance_echantillonnage_par_cerveau: float = 0.0) -> dict:
     """La dispersion qui entre dans la règle : celle des CERVEAUX, jamais des épisodes.
 
     Sur `taux_par_cerveau = [0,10 ; 0,30]`, l'écart-type vaut 0,1414 — c'est la
@@ -261,22 +349,61 @@ def dispersion_inter_cerveaux(taux_par_cerveau: Sequence[float],
 
     Au moins 2 cerveaux sont exigés : `stdev` d'une seule valeur n'existe pas, et rendre
     0,0 ferait croire à une dispersion nulle mesurée au lieu d'une dispersion non mesurée.
+
+    ⚠️ DÉ-CONVOLUTION QUAND `variance_echantillonnage_par_cerveau > 0`. La dispersion
+    OBSERVÉE `s` majore σ (voir `variance_echantillonnage`) : on publie donc les deux,
+
+        σ̂² = max(0, s² − v)          σ̂ = sqrt(σ̂²)
+
+    et l'IC de σ̂ s'obtient en appliquant à `τ² = σ² + v` l'IC du chi-deux déjà utilisé
+    pour `s`, puis en retranchant `v` (transformation monotone, même hypothèse de
+    normalité). Quand `τ²_bas <= v`, l'IC de σ̂ **touche 0** : la dispersion réelle n'est
+    alors PAS distinguable du bruit d'échantillonnage, et aucun `n` fini ne peut dominer
+    une dispersion qui pourrait être nulle. C'est un résultat, publié comme tel.
+
+    `sd_inter` reste la valeur OBSERVÉE (celle des carnets antérieurs) : la sortie porte
+    les deux, jamais l'une à la place de l'autre.
     """
     taux = [float(t) for t in taux_par_cerveau]
     if len(taux) < 2:
         raise ValueError(
             f"{len(taux)} valeur(s) : une dispersion inter-cerveaux exige au moins 2 "
             f"cerveaux (une dispersion non mesurée n'est pas une dispersion nulle)")
+    v = float(variance_echantillonnage_par_cerveau)
+    if v < 0.0:
+        raise ValueError(f"variance d'échantillonnage négative ({v!r})")
     sd = statistics.stdev(taux)  # ddof = 1 : échantillon, pas population
     bas, haut = intervalle_confiance_sd(sd, len(taux), alpha)
-    return {
+    sortie = {
         "n_cerveaux": len(taux),
         "taux_par_cerveau": taux,
         "taux_moyen_cerveaux": statistics.fmean(taux),
         "sd_inter": sd,
+        "sd_inter_ddof": 1,
         "ic_sd": [bas, haut],
         "ic_sd_alpha": alpha,
+        "variance_echantillonnage_par_cerveau": v,
+        "variance_observee": sd * sd,
+        "part_variance_echantillonnage": (v / (sd * sd)) if sd > 0.0 else None,
     }
+    if v > 0.0:
+        variance_deconvoluee = max(0.0, sd * sd - v)
+        sigma = math.sqrt(variance_deconvoluee)
+        # IC de τ² par le chi-deux, puis décalage de v et plancher à 0 : σ̂² ne peut pas
+        # être négatif, et « pourrait être 0 » est une information, pas une erreur.
+        df = len(taux) - 1
+        tau2_bas = df * sd * sd / _quantile_chi2(1.0 - alpha / 2.0, df)
+        tau2_haut = df * sd * sd / _quantile_chi2(alpha / 2.0, df)
+        sortie.update({
+            "sd_inter_deconvoluee": sigma,
+            "variance_deconvoluee": variance_deconvoluee,
+            "ic_sd_deconvoluee": [math.sqrt(max(0.0, tau2_bas - v)),
+                                  math.sqrt(max(0.0, tau2_haut - v))],
+            "ic_sd_deconvoluee_touche_zero": bool(tau2_bas <= v),
+            "formule_deconvolution": "sigma^2 = max(0, s^2 - v) ; IC(sigma) = "
+                                     "sqrt(max(0, IC(tau^2) - v)), tau^2 = sigma^2 + v",
+        })
+    return sortie
 
 
 # --- 2. LA DÉRIVATION DEPUIS UN RAPPORT DE BANC (rejouable sans remesurer) --------
@@ -302,6 +429,16 @@ def deriver_depuis_rapport(rapport: dict, facteur: float = FACTEUR_DOMINATION,
     Une dispersion nulle ou un taux saturé n'est PAS masqué : `deriver_n` refuse, et
     `n_derive` vaut `None` avec son motif écrit (`n_derive_motif`). Publier un `n` de
     secours serait exactement le chiffre inventé que la tâche interdit.
+
+    ⚠️ LE `n` PUBLIÉ EST DÉRIVÉ DE LA DISPERSION **DÉ-CONVOLUÉE** σ̂, PAS DE LA DISPERSION
+    OBSERVÉE `s`. Ce n'est PAS changer la règle : la spec §8bis nomme « l'écart-type
+    inter-cerveaux de ce même taux », c'est-à-dire σ, la dispersion RÉELLE entre cerveaux.
+    Or `s` en est un estimateur BIAISÉ vers le haut — `E[s²] = σ² + v`, où `v` est la
+    variance d'échantillonnage du taux de chaque cerveau (voir
+    `variance_echantillonnage`). Dimensionner l'instrument avec `s` reviendrait à lui
+    donner pour cible une partie de son propre bruit. Les DEUX `n` sont publiés :
+    `n_derive` (dérivé de σ̂, celui qui fait foi) et `n_derive_sd_observee` (dérivé de `s`,
+    **borne basse** du premier — c'est le `333` du premier pilote).
     """
     cerveaux = rapport.get("cerveaux") or {}
     if len(cerveaux) < 2:
@@ -325,17 +462,37 @@ def deriver_depuis_rapport(rapport: dict, facteur: float = FACTEUR_DOMINATION,
     k_total = sum(v["k"] for v in par_cerveau.values())
     n_total = sum(v["n"] for v in par_cerveau.values())
     p_barre = (k_total / n_total) if n_total else 0.0
-    dispersion = dispersion_inter_cerveaux([v["taux"] for v in par_cerveau.values()], alpha)
-    sd_inter = dispersion["sd_inter"]
 
-    # Sensibilité par carte : la dispersion est-elle portée par une carte ou par les deux ?
-    par_carte: dict[str, dict] = {}
+    # --- `v` : la variance d'échantillonnage que la dispersion observée contient -------
+    # Calculée sur les taux et effectifs PAR CARTE (les deux cartes n'ont pas le même
+    # taux : un seul binôme sur 400 épisodes serait faux), et supposée la même pour tous
+    # les cerveaux — hypothèse écrite ici et dans le carnet.
     noms_cartes = sorted({nom for bloc in cerveaux.values()
                           for nom in (bloc.get("cartes") or {})})
+    taux_par_carte_pooles, effectifs_par_carte = [], []
     for nom in noms_cartes:
+        resultats = [bloc["cartes"][nom] for bloc in cerveaux.values()
+                     if nom in (bloc.get("cartes") or {})]
+        k_carte = sum(int(r["gagnes"]) for r in resultats)
+        n_carte = sum(int(r["taux"]["n"]) for r in resultats)
+        taux_par_carte_pooles.append((k_carte / n_carte) if n_carte else 0.0)
+        effectifs_par_carte.append(n_carte // max(1, len(resultats)))
+    v = variance_echantillonnage(taux_par_carte_pooles, effectifs_par_carte)
+
+    dispersion = dispersion_inter_cerveaux([val["taux"] for val in par_cerveau.values()],
+                                           alpha, v)
+    sd_inter = dispersion["sd_inter"]
+    sd_deconvoluee = dispersion.get("sd_inter_deconvoluee")
+
+    # Sensibilité par carte : la dispersion est-elle portée par une carte ou par les deux ?
+    # (même dé-convolution, avec le `v` de la carte seule : p(1-p)/n)
+    par_carte: dict[str, dict] = {}
+    for nom, taux_poolé, effectif in zip(noms_cartes, taux_par_carte_pooles,
+                                         effectifs_par_carte):
         taux = [bloc["cartes"][nom]["taux"]["taux"] for bloc in cerveaux.values()
                 if nom in (bloc.get("cartes") or {})]
-        carte_disp = dispersion_inter_cerveaux(taux, alpha)
+        v_carte = variance_echantillonnage([taux_poolé], [effectif])
+        carte_disp = dispersion_inter_cerveaux(taux, alpha, v_carte)
         k_carte = sum(int(bloc["cartes"][nom]["gagnes"]) for bloc in cerveaux.values()
                       if nom in (bloc.get("cartes") or {}))
         n_carte = sum(int(bloc["cartes"][nom]["taux"]["n"]) for bloc in cerveaux.values()
@@ -344,39 +501,71 @@ def deriver_depuis_rapport(rapport: dict, facteur: float = FACTEUR_DOMINATION,
             "taux_poolé": (k_carte / n_carte) if n_carte else 0.0,
             "k": k_carte,
             "n": n_carte,
-            **{k: v for k, v in carte_disp.items() if k != "taux_par_cerveau"},
+            **{cle: val for cle, val in carte_disp.items() if cle != "taux_par_cerveau"},
         }
 
+    # Le `n` du protocole vient de σ̂ ; celui de `s` est publié comme BORNE BASSE.
     n_derive, motif = None, None
     try:
-        n_derive = deriver_n(p_barre, sd_inter, facteur)
+        n_derive = deriver_n(p_barre, sd_deconvoluee, facteur)
     except ValueError as erreur:
         motif = str(erreur)
+    n_borne_basse, motif_borne_basse = None, None
+    try:
+        n_borne_basse = deriver_n(p_barre, sd_inter, facteur)
+    except ValueError as erreur:
+        motif_borne_basse = str(erreur)
 
     resultat = {
         "regle": ("plus petit n >= 1 tel que sqrt(p_barre (1 - p_barre) / n) "
-                  "<= sd_inter / facteur"),
+                  "<= sigma / facteur, sigma = dispersion inter-cerveaux DECONVOLUEE"),
+        "n_derive_regle": "sd_inter_deconvoluee",
         "facteur": float(facteur),
         "episodes_par_carte_budget_pilote": rapport.get("episodes_par_carte"),
+        "tolerance_relative_contrainte": TOLERANCE_RELATIVE_CONTRAINTE,
         "cartes": rapport.get("cartes"),
         "graine_eval_base": rapport.get("graine_eval_base"),
         "graines_entrainement": rapport.get("graines_entrainement"),
         "bras": rapport.get("bras"),
         "campagne": rapport.get("campagne"),
         "p_barre": p_barre,
+        "p_barre_definition": ("taux poolé : somme des gagnés / somme des épisodes, sur "
+                               "tous les cerveaux et toutes les cartes"),
         "k_total": k_total,
         "episodes_total": n_total,
         "n_cerveaux": dispersion["n_cerveaux"],
         "taux_moyen_cerveaux": dispersion["taux_moyen_cerveaux"],
+        "taux_moyen_cerveaux_definition": ("moyenne NON pondérée des taux par cerveau "
+                                           "(égale au poolé si les effectifs sont égaux)"),
         "sd_inter": sd_inter,
+        "sd_inter_definition": ("écart-type inter-cerveaux des taux par cerveau, OBSERVÉ "
+                                "(contient la variance d'échantillonnage du pilote)"),
+        "sd_inter_ddof": 1,
         "ic_sd": list(dispersion["ic_sd"]),
         "ic_sd_alpha": alpha,
         "ic_sd_methode": ("loi du chi-deux sur la variance, df = n_cerveaux - 1 : "
                           "IC(sigma) = sqrt(df * s^2 / chi2)"),
-        "seuil_domination": sd_inter / float(facteur),
+        "variance_echantillonnage_par_cerveau": v,
+        "variance_echantillonnage_formule": ("v = somme_cartes(n_c * p_c * (1 - p_c)) / N^2, "
+                                             "N = nombre total d'episodes par cerveau"),
+        "part_variance_echantillonnage": dispersion["part_variance_echantillonnage"],
+        "sd_inter_deconvoluee": sd_deconvoluee,
+        "sd_inter_deconvoluee_definition": ("estimateur non biaise de la dispersion REELLE "
+                                            "entre cerveaux : sigma^2 = s^2 - v"),
+        "variance_deconvoluee": dispersion.get("variance_deconvoluee"),
+        "ic_sd_deconvoluee": dispersion.get("ic_sd_deconvoluee"),
+        "ic_sd_deconvoluee_touche_zero": dispersion.get("ic_sd_deconvoluee_touche_zero"),
+        "formule_deconvolution": dispersion.get("formule_deconvolution"),
+        "seuil_domination": ((sd_deconvoluee / float(facteur))
+                             if sd_deconvoluee is not None else None),
+        "seuil_domination_sd_observee": sd_inter / float(facteur),
         "n_derive": n_derive,
         "n_derive_motif": motif,
-        "ligne_de_calcul": _ligne_de_calcul(p_barre, sd_inter, facteur, n_derive),
+        "n_derive_sd_observee": n_borne_basse,
+        "n_derive_sd_observee_motif": motif_borne_basse,
+        "ligne_de_calcul": _ligne_de_calcul(p_barre, sd_deconvoluee, facteur, n_derive),
+        "ligne_de_calcul_sd_observee": _ligne_de_calcul(p_barre, sd_inter, facteur,
+                                                        n_borne_basse),
         "cerveaux": par_cerveau,
         "par_carte": par_carte,
     }
@@ -412,9 +601,14 @@ def mesurer_pilote(cohorte: str, bras: Sequence[str], cartes: Sequence[int],
     seedés par épisode), état FRAIS par (bras, carte), carte re-forcée à chaque épisode et
     rapport JSON sont ceux de l'instrument déjà vérifié — le pilote n'en réimplémente rien.
 
-    `cohorte_explicite` suit la voie JSON `{bras: {graine: chemin}}` de `banc_final` : elle
-    est OBLIGATOIRE dès qu'un bras porte des surnuméraires (mesuré : `K8_NU` en porte 2, et
-    le glob refuse alors le bras ENTIER — 5 bras sur 6 de SCI-01 sont refusés).
+    `cohorte_explicite` suit la voie JSON `{bras: {graine: chemin}}` de `banc_final`.
+    ⚠️ CORRECTION MESURÉE : elle n'était **PAS obligatoire** pour les 4 graines de ce
+    pilote — `lister_cerveaux('K8_NU', [11, 22, 33, 44])` rend les 4 sans lever (le
+    surnuméraire est `K8_NU_g122`, une graine non demandée), et `resoudre_cohorte` non
+    plus. Le glob ne refuse `K8_NU` que si l'on demande les **20 graines du manifeste**
+    (mesuré : `NomAmbigue`). La voie explicite est ici un CHOIX — elle énumère les
+    cerveaux un par un, donc elle reste préférable dès qu'un bras est ambigu — jamais une
+    obligation pour ces quatre graines. Elle **deviendra** obligatoire pour les 20.
 
     Écrit dans `dossier_sortie` : le rapport du banc (par `executer_banc`) et `pilote.json`
     (ici). Ne modifie aucun `.brain` : le banc ouvre en lecture seule et ne sauvegarde
@@ -489,17 +683,36 @@ def mesurer_pilote(cohorte: str, bras: Sequence[str], cartes: Sequence[int],
 
 
 def _afficher_derivation(resultat: dict) -> None:
-    """Le verdict du pilote, à l'écran, avec l'incertitude À CÔTÉ de la valeur."""
+    """Le verdict du pilote, à l'écran, avec l'incertitude À CÔTÉ de la valeur.
+
+    ⚠️ LES DEUX DISPERSIONS SONT AFFICHÉES ET L'ÉCART EST NOMMÉ. `s` (observée) majore σ :
+    n'afficher que `s` donnerait un `n` trop PETIT ; n'afficher que σ̂ cacherait d'où vient
+    la correction. La ligne de calcul publiée est celle de σ̂, parce que c'est elle qui fait
+    foi ; celle de `s` est affichée comme borne basse.
+    """
     print("\n=== DÉRIVATION DE n (règle de domination du bruit, spec §8bis) ===")
     print(f"  p̄ poolé                     : {resultat['p_barre']:.6f} "
           f"({resultat['k_total']}/{resultat['episodes_total']})")
-    print(f"  SD inter-cerveaux ({resultat['n_cerveaux']} cerveaux) : "
-          f"{resultat['sd_inter']:.6f}")
-    print(f"  IC{int((1 - resultat['ic_sd_alpha']) * 100)} de cette SD          : "
-          f"[{resultat['ic_sd'][0]:.6f} ; {resultat['ic_sd'][1]:.6f}]")
-    print(f"  seuil de domination (SD/{resultat['facteur']:.4g}) : "
-          f"{resultat['seuil_domination']:.6f}")
+    v = resultat.get("variance_echantillonnage_par_cerveau")
+    print(f"  SD inter-cerveaux OBSERVÉE   : {resultat['sd_inter']:.6f}   "
+          f"(IC{int((1 - resultat['ic_sd_alpha']) * 100)} "
+          f"[{resultat['ic_sd'][0]:.6f} ; {resultat['ic_sd'][1]:.6f}])")
+    if v:
+        part = resultat.get("part_variance_echantillonnage")
+        print(f"  dont bruit d'échantillonnage : {v:.8f} de variance"
+              + (f" — {100 * part:.1f} % de la variance observée" if part is not None else ""))
+    if resultat.get("sd_inter_deconvoluee") is not None:
+        ic = resultat.get("ic_sd_deconvoluee") or [float("nan"), float("nan")]
+        touche = ", touche 0" if resultat.get("ic_sd_deconvoluee_touche_zero") else ""
+        print(f"  SD inter-cerveaux RÉELLE σ̂   : {resultat['sd_inter_deconvoluee']:.6f}   "
+              f"(IC{int((1 - resultat['ic_sd_alpha']) * 100)} "
+              f"[{ic[0]:.6f} ; {ic[1]:.6f}]{touche})")
+    print(f"  seuil de domination (σ̂/{resultat['facteur']:.4g}) : "
+          f"{resultat['seuil_domination']}")
     print(f"  {resultat['ligne_de_calcul']}")
+    if resultat.get("n_derive_sd_observee") is not None:
+        print(f"  ⚠️ borne basse, dérivée de la SD OBSERVÉE (gonflée) : "
+              f"n = {resultat['n_derive_sd_observee']}")
     if resultat["n_derive"] is None:
         print(f"\n⛔ AUCUN `n` DÉRIVÉ — {resultat['n_derive_motif']}\n"
               f"   (le pilote publie la mesure ; il n'invente pas de `n` de secours)")
