@@ -1678,7 +1678,7 @@ son sens.
 - Un bras amputé d'un cerveau fait lever `CampagneInvalide` (règle MES-01), et **aucun** agrégat
   n'est publié.
 - Le rapport imprime le seuil Bonferroni de la famille de 3 (`seuil_t(n, 3, 0.05)`).
-- `NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m unittest discover -s tests -p "test_banc_final.py" -v` → **18 tests OK**.
+- `NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m unittest discover -s tests -p "test_banc_final.py" -v` → **20 tests OK**.
 
 - [ ] **Étape 1 : écrire le test qui échoue**
 
@@ -1897,7 +1897,7 @@ Puis compléter `main()` en remplaçant le bloc `print` final par :
 ```bash
 NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m unittest discover -s tests -p "test_banc_final.py" -v
 ```
-Attendu : **18 tests OK**.
+Attendu : **20 tests OK**.
 
 - [ ] **Étape 5 : commit ciblé avec `bash`**
 
@@ -1938,6 +1938,38 @@ or ce sont les deux piliers de cette tâche.
 Instrumenter est ici la bonne réponse, pas un luxe : c'est exactement ce qui a débloqué C1 à la
 tâche 4 — **un artefact qui ne montre pas ce qu'il a mesuré ne peut pas être audité.**
 
+### Correctif 2 — chemin DOUBLÉ (Critical) et verrou d'état frais AVEUGLE
+
+La revue indépendante a établi DEUX défauts, tous deux mesurés.
+
+**1. Critical — chemin doublé sur une cohorte RELATIVE.** `construire_depouillement` pose
+`dossier=os.path.join(cohorte, b)` ET `Depouillement(..., racine=cohorte)` ; or `Depouillement.chemin_run`
+rejoint `racine` au chemin **déjà préfixé** (`depouillement.py:248-249`, `:178-180`). Avec une
+`--cohorte` **relative** — celle de l'invocation documentée — **tout chemin est doublé**. Mesuré sur la
+cohorte RÉELLE (40 `.brain`, invocation exacte de la tâche 9) : **exit 1, 40 violations « fichier
+absent (brains/…/brains/…/K8_NU/K8_NU_g11.brain) », 0 run collecté, AUCUN agrégat**. Le banc est
+inutilisable sur son propre chemin documenté.
+
+⚠️ Le défaut **échappait aux tests parce qu'ils n'utilisent que des chemins ABSOLUS** (`tempfile`) : avec
+un chemin absolu, `os.path.join(racine, chemin_absolu)` rend le chemin absolu, donc le doublage
+disparaît **par accident**. Même cécité que le verrou `extension_log` — la leçon commence à être claire :
+**une garantie éprouvée seulement sur le chemin absolu ne dit rien du chemin relatif, qui est celui que
+le plan documente.**
+
+Correction : `"dossier": b` (prouvé : 4 runs / 0 violation sur le même cas relatif), **plus un cas de
+test à chemin de cohorte RELATIF** qui ÉCHOUE sous l'ancien code.
+
+**2. Important — le verrou d'état frais est aveugle au RETOUR du défaut qu'il annonce fermer.** Un
+mutant plus naturel que le mien — le **squelette du plan** : charger **une fois** par cerveau et calculer
+l'empreinte **à côté du chargement**, donc **HORS de la boucle des cartes** — laisse **18/18 VERTS** alors
+qu'il reproduit le défaut : mesuré sur cerveau réel, la carte 0 donne `traj=[3,2]` au lieu de `[8,2]`, et
+les empreintes publiées sont **identiques** — donc **l'artefact MENT**. Une empreinte calculée au mauvais
+endroit est un témoin qui atteste une propriété que le code n'a pas.
+
+Correction : une assertion d'**INDÉPENDANCE À L'ORDRE** — le même cerveau évalué avec `cartes=[0, 3]`
+puis `cartes=[3, 0]` doit rendre des résultats **par carte** ÉGAUX. Vraie sur le code livré, fausse sous
+le mutant.
+
 ---
 
 ### Tâche 6 — Archivage d'`evaluer_cerveau.py`
@@ -1955,7 +1987,7 @@ corriger `DOSSIER_EVALS_DEFAUT`, qui désigne un dossier **inexistant**.
 **Critères de succès :**
 - `grep -n "docs/notes/evals" src/naulthene/instruments/evaluer_cerveau.py` → **0 occurrence**.
 - Le bandeau nomme le successeur (`banc_final.py`) et la raison.
-- La suite complète reste verte : **189 tests OK** (156 + 12 + 2 + 11 + 3 + 4 + 1).
+- La suite complète reste verte : **191 tests OK** (156 + 12 + 2 + 11 + 3 + 6 + 1).
 
 - [ ] **Étape 1 : écrire le test qui échoue**
 
@@ -2000,7 +2032,7 @@ mécanique nouvelle ne doit y être ajoutée.
 ```bash
 NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m unittest discover -s tests -v
 ```
-Attendu : **189 tests OK**.
+Attendu : **191 tests OK**.
 
 - [ ] **Étape 5 : commit ciblé avec `bash`**
 
