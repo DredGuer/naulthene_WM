@@ -205,25 +205,39 @@ class TestPlusCourtChemin(unittest.TestCase):
 
 class TestLongueurNormalisee(unittest.TestCase):
     def test_convention_trajet_sur_optimum(self):
-        """12 cases parcourues sur un optimum de 6 => 2.0x, jamais 0.5x."""
+        """12 cases parcourues sur un optimum de 6 => 2.0x, jamais 0.5x.
+
+        C'est LE verrou de convention : la convention inverse (o/t) rendrait 0.5.
+        """
         self.assertEqual(longueur_normalisee(12, 6), 2.0)
 
     def test_optimum_inconnu_rend_none_jamais_zero(self):
         self.assertIsNone(longueur_normalisee(12, None))
         self.assertIsNone(longueur_normalisee(12, 0))
 
-    def test_le_rapport_ne_descend_jamais_sous_un(self):
-        self.assertGreaterEqual(longueur_normalisee(6, 6), 1.0)
+    def test_le_cas_d_egalite_vaut_un(self):
+        """6/6 vaut exactement 1.0 — mais ce cas NE DISCRIMINE RIEN : toute implémentation de
+        la forme t/o le rend, convention inverse comprise. Le verrou de convention est
+        test_convention_trajet_sur_optimum ; ici on ancre la valeur NON ENTIÈRE."""
+        self.assertEqual(longueur_normalisee(6, 6), 1.0)
+        self.assertAlmostEqual(longueur_normalisee(11, 6), 1.8333333, places=6)
 
 
 class TestIntervalleWilson(unittest.TestCase):
     def test_n_nul_rend_zero_zero(self):
         self.assertEqual(intervalle_wilson(0, 0), (0.0, 0.0))
 
-    def test_succes_total_ne_depasse_pas_un(self):
-        bas, haut = intervalle_wilson(10, 10)
-        self.assertLessEqual(haut, 1.0)
-        self.assertGreaterEqual(bas, 0.0)
+    def test_valeurs_de_reference(self):
+        """Ancrage NUMÉRIQUE. Sans lui, trois formules fausses franchissent la suite, dont
+        l'approximation NORMALE que ce module rejette : elle rend un intervalle de largeur
+        nulle à 0 %, là où la référence vaut 0.27754."""
+        bas, haut = intervalle_wilson(9, 10)
+        self.assertAlmostEqual(bas, 0.59584, places=5)
+        self.assertAlmostEqual(haut, 0.98212, places=5)
+        self.assertAlmostEqual(intervalle_wilson(0, 10)[1], 0.27754, places=5)
+        # k = n : ici c+m vaut EXACTEMENT 1.0 (vérifié) — le min() est un filet flottant.
+        self.assertEqual(intervalle_wilson(10, 10)[1], 1.0)
+        self.assertGreaterEqual(intervalle_wilson(10, 10)[0], 0.0)
 
     def test_la_largeur_decroit_avec_n(self):
         largeur_10 = intervalle_wilson(9, 10)[1] - intervalle_wilson(9, 10)[0]
@@ -236,6 +250,8 @@ class TestIntervalleWilson(unittest.TestCase):
         self.assertAlmostEqual(r["taux"], 0.9)
         self.assertEqual(r["k"], 9)
         self.assertEqual(r["n"], 10)
+        self.assertAlmostEqual(r["ic_bas"], 0.59584, places=5)
+        self.assertAlmostEqual(r["ic_haut"], 0.98212, places=5)
 
 
 if __name__ == "__main__":
@@ -264,7 +280,8 @@ ce module n'importe JAMAIS `noyau` (même règle d'absence de cycle que
 `bus_sensoriel.py`).
 
 Historique : `plus_court_chemin` et `intervalle_wilson` existaient en DEUX copies
-corps-identiques (`sonde_inertie_motrice.py`, `sonde_plancher_geometrique.py`), sans
+FONCTIONNELLEMENT identiques (`sonde_inertie_motrice.py`, `sonde_plancher_geometrique.py` —
+seuls les noms de variables et l'accès au type d'objet différaient), sans
 aucun test, et les deux copies affirmaient des conclusions OPPOSÉES de la même
 prémisse. Voir CHANTIER_EVA-01 §3.4.
 """
@@ -333,9 +350,14 @@ def intervalle_wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
 def longueur_normalisee(trajet: int, optimal: int | None) -> float | None:
     """`trajet / plus_court_chemin` — la convention est NOMMÉE ici, pas implicite.
 
-    Le rapport est >= 1 par construction (le trajet réel ne peut pas être plus court que
-    la borne inférieure `optimal`). Un `optimal` inconnu rend `None`, JAMAIS `0.0` :
-    une métrique absente doit être absente, pas nulle.
+    ⚠️ Cette fonction NE GARANTIT PAS `trajet >= optimal` : c'est un invariant des
+    APPELANTS (le banc ne mesure que des épisodes gagnés, dont la durée ne peut pas être
+    inférieure à la borne inférieure). `longueur_normalisee(2, 6)` rend donc `0.333…` —
+    une version antérieure de cette docstring affirmait « >= 1 par construction », ce qui
+    était faux et non vérifié par les tests.
+
+    Un `optimal` inconnu (`None` ou `<= 0`) rend `None`, JAMAIS `0.0` : une métrique
+    absente doit être absente, pas nulle.
     """
     if optimal is None or optimal <= 0:
         return None

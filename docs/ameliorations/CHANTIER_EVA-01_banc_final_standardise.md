@@ -218,7 +218,7 @@ Uniquement ce qui est **réellement appelé** ; aucune primitive « au cas où �
   (borne inférieure ⇒ directivité **surestimée**, cf. §3.4).
 - `intervalle_wilson(k, n, z=1.96) -> tuple[float, float]` — extrait à l'identique.
 - `longueur_normalisee(trajet: int, optimal: int | None) -> float | None` — **nomme** la convention
-  au lieu de la laisser implicite ; `None` si `optimal` est `None`.
+  au lieu de la laisser implicite ; `None` si `optimal` est `None` **ou ≤ 0**.
 - `taux_avec_ic(k, n) -> dict` — forme unique `{k, n, taux, ic_bas, ic_haut}` pour que tous les
   rapports soient comparables entre eux.
 
@@ -321,10 +321,21 @@ de choisir en silence — justifié par la mesure du §3.5.
 3. `lava` est bloquée ; `goal` est traversable.
 4. Pas de but ⇒ `None`.
 5. **Convention du ratio** : trajet 12 sur optimum 6 ⇒ `2.0`, **jamais** `0.5`. C'est le test qui
-   aurait attrapé la docstring inversée du §3.4.
-6. Wilson : `n=0` ⇒ `(0,0)` ; `k=n` ⇒ borne haute ≤ 1 ; largeur décroissante avec `n`.
+   aurait attrapé la docstring inversée du §3.4. ⚠️ Le **cas d'égalité** (`6/6 ⇒ 1,0`) **ne
+   discrimine rien** : toute implémentation de la forme `t/o` le rend, convention inverse comprise.
+   Le verrou est la valeur **non entière**, ancrée (`11/6 ≈ 1,8333`).
+6. Wilson : `n=0` ⇒ `(0,0)` ; `k=n` ⇒ borne haute ≤ 1 ; largeur décroissante avec `n` ; **et surtout
+   des VALEURS DE RÉFÉRENCE ancrées** — `intervalle_wilson(9, 10) ≈ (0,59584 ; 0,98212)` et
+   `intervalle_wilson(0, 10)` borne haute ≈ `0,27754`, à 5 décimales. Une revue indépendante du
+   12/09/2026 a montré que **trois formules fausses franchissent 12/12** sans ces ancrages, dont
+   l'approximation NORMALE que ce module rejette explicitement (elle rend un intervalle de largeur
+   **nulle** à 0 %). Des tests de forme ne verrouillent pas une formule.
 7. **Non-régression de migration** : après migration, les deux sondes doivent rendre, sur un cerveau
    donné, **exactement** les mêmes nombres qu'avant.
+8. **Le nom d'un test doit décrire ce qu'il vérifie.** Un test qui affirme un invariant que la
+   fonction ne garantit pas — ou vrai pour toute implémentation, convention inverse comprise — est un
+   défaut d'**instrument**, pas une formalité : il donne une fausse assurance et sera compté comme
+   couverture.
 
 ### 7b) Acceptation du banc — critère D3
 
