@@ -573,7 +573,6 @@ from naulthene.instruments.banc_final import (  # noqa: E402
     lire_graines_du_manifeste,
     lister_cerveaux,
     main,
-    refuser_bras_vides,
     resoudre_cohorte,
     verifier_graine_eval_base,
 )
@@ -606,7 +605,8 @@ class TestListerCerveaux(unittest.TestCase):
         d'un AUTRE bras écrase la même clé sans changer la liste des clés. Un motif qui
         ignorerait le préfixe de bras rendrait `{11: 'K8_NU_g11.brain'}` quand on demande
         K16_NU — contamination inter-bras invisible, et d'autant plus dangereuse que les
-        6 bras partagent les MÊMES 20 graines."""
+        6 bras partagent les MÊMES 20 graines.
+
         Les DEUX sens sont nécessaires : `sorted(os.listdir)` rend
         ['K16_NU_g11.brain', 'K8_NU_g11.brain'], donc pour le bras K8_NU le fichier demandé
         est traité EN DERNIER — un mutant « le dernier gagne » tombe alors sur le bon fichier
