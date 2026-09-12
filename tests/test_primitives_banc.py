@@ -93,25 +93,39 @@ class TestPlusCourtChemin(unittest.TestCase):
 
 class TestLongueurNormalisee(unittest.TestCase):
     def test_convention_trajet_sur_optimum(self):
-        """12 cases parcourues sur un optimum de 6 => 2.0x, jamais 0.5x."""
+        """12 cases parcourues sur un optimum de 6 => 2.0x, jamais 0.5x.
+
+        C'est LE verrou de convention : la convention inverse (o/t) rendrait 0.5.
+        """
         self.assertEqual(longueur_normalisee(12, 6), 2.0)
 
     def test_optimum_inconnu_rend_none_jamais_zero(self):
         self.assertIsNone(longueur_normalisee(12, None))
         self.assertIsNone(longueur_normalisee(12, 0))
 
-    def test_le_rapport_ne_descend_jamais_sous_un(self):
-        self.assertGreaterEqual(longueur_normalisee(6, 6), 1.0)
+    def test_le_cas_d_egalite_vaut_un(self):
+        """6/6 vaut exactement 1.0 — mais ce cas NE DISCRIMINE RIEN : toute implémentation de
+        la forme t/o le rend, convention inverse comprise. Le verrou de convention est
+        test_convention_trajet_sur_optimum ; ici on ancre la valeur NON ENTIÈRE."""
+        self.assertEqual(longueur_normalisee(6, 6), 1.0)
+        self.assertAlmostEqual(longueur_normalisee(11, 6), 1.8333333, places=6)
 
 
 class TestIntervalleWilson(unittest.TestCase):
     def test_n_nul_rend_zero_zero(self):
         self.assertEqual(intervalle_wilson(0, 0), (0.0, 0.0))
 
-    def test_succes_total_ne_depasse_pas_un(self):
-        bas, haut = intervalle_wilson(10, 10)
-        self.assertLessEqual(haut, 1.0)
-        self.assertGreaterEqual(bas, 0.0)
+    def test_valeurs_de_reference(self):
+        """Ancrage NUMÉRIQUE. Sans lui, trois formules fausses franchissent la suite, dont
+        l'approximation NORMALE que ce module rejette : elle rend un intervalle de largeur
+        nulle à 0 %, là où la référence vaut 0.27754."""
+        bas, haut = intervalle_wilson(9, 10)
+        self.assertAlmostEqual(bas, 0.59584, places=5)
+        self.assertAlmostEqual(haut, 0.98212, places=5)
+        self.assertAlmostEqual(intervalle_wilson(0, 10)[1], 0.27754, places=5)
+        # k = n : ici c+m vaut EXACTEMENT 1.0 (vérifié) — le min() est un filet flottant.
+        self.assertEqual(intervalle_wilson(10, 10)[1], 1.0)
+        self.assertGreaterEqual(intervalle_wilson(10, 10)[0], 0.0)
 
     def test_la_largeur_decroit_avec_n(self):
         largeur_10 = intervalle_wilson(9, 10)[1] - intervalle_wilson(9, 10)[0]
@@ -124,6 +138,8 @@ class TestIntervalleWilson(unittest.TestCase):
         self.assertAlmostEqual(r["taux"], 0.9)
         self.assertEqual(r["k"], 9)
         self.assertEqual(r["n"], 10)
+        self.assertAlmostEqual(r["ic_bas"], 0.59584, places=5)
+        self.assertAlmostEqual(r["ic_haut"], 0.98212, places=5)
 
 
 if __name__ == "__main__":

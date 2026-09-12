@@ -7,7 +7,8 @@ ce module n'importe JAMAIS `noyau` (même règle d'absence de cycle que
 `bus_sensoriel.py`).
 
 Historique : `plus_court_chemin` et `intervalle_wilson` existaient en DEUX copies
-corps-identiques (`sonde_inertie_motrice.py`, `sonde_plancher_geometrique.py`), sans
+FONCTIONNELLEMENT identiques (`sonde_inertie_motrice.py`, `sonde_plancher_geometrique.py` —
+seuls les noms de variables et l'accès au type d'objet différaient), sans
 aucun test, et les deux copies affirmaient des conclusions OPPOSÉES de la même
 prémisse. Voir CHANTIER_EVA-01 §3.4.
 """
@@ -76,9 +77,14 @@ def intervalle_wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
 def longueur_normalisee(trajet: int, optimal: int | None) -> float | None:
     """`trajet / plus_court_chemin` — la convention est NOMMÉE ici, pas implicite.
 
-    Le rapport est >= 1 par construction (le trajet réel ne peut pas être plus court que
-    la borne inférieure `optimal`). Un `optimal` inconnu rend `None`, JAMAIS `0.0` :
-    une métrique absente doit être absente, pas nulle.
+    ⚠️ Cette fonction NE GARANTIT PAS `trajet >= optimal` : c'est un invariant des
+    APPELANTS (le banc ne mesure que des épisodes gagnés, dont la durée ne peut pas être
+    inférieure à la borne inférieure). `longueur_normalisee(2, 6)` rend donc `0.333…` —
+    une version antérieure de cette docstring affirmait « >= 1 par construction », ce qui
+    était faux et non vérifié par les tests.
+
+    Un `optimal` inconnu (`None` ou `<= 0`) rend `None`, JAMAIS `0.0` : une métrique
+    absente doit être absente, pas nulle.
     """
     if optimal is None or optimal <= 0:
         return None
