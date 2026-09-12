@@ -1138,17 +1138,20 @@ La tête d'intention reste cohérente avec la thèse du projet, mais elle dépen
 7. ✅ QUA-01 : contrats noyau posés — **44 tests CPU** (v41.70). *(CI : en attente d'infra)*
 8. ✅ DOC-01 : corriger l'état courant et les termes statistiques. *(v41.69 + v41.71 — `ETAT_COURANT.md` unique + INDEX + miroir EN/FR)*
 
+**→ Phase A ENTIÈREMENT CLOSE (12/09/2026)** : les 8 chantiers soldés, l'environnement validé en venv vierge.
+
+
 ## Phase B — fiabilisation structurelle
 
 7. APP-03 : module/configuration uniques.
 8. PER-01/PER-02 : migrations et sauvegardes.
-9. ✅ ARC-01 : source de vérité — `noyau.py`, colab archive. *(v41.72)* · REP-01 : environnement (ouvert).
-10. EVA-01 : banc final standardisé.
+9. ✅ ARC-01 : source de vérité — `noyau.py`, colab archive. *(v41.72)* · ✅ REP-01 : environnement verrouillé et validé. *(v41.77)*
+10. EVA-01 : banc final standardisé. **← premier chantier recommandé (voir ci-dessous)**
 
 ## Phase C — campagnes
 
-11. SCI-01 : balayage des époques après correction du rejeu.
-12. Combinaison voix libre + detach C2 + meilleur régime d'époques.
+11. ✅ SCI-01 : balayage des époques après correction du rejeu. *(v41.78-mesure — cloche à n=20, optimum **K=8**, clip inerte)*
+12. Combinaison voix libre + detach C2 + meilleur régime d'époques. 🟡 **le socle optimal est désormais connu** (voix libre + `--detach-c2` + `K=8`) : ce point devient la **ligne de base de toutes les campagnes suivantes**.
 13. Campagne de soustraction : facultés complètes contre cœur minimal, sur un apprenant stabilisé.
 14. SCI-03 et SCI-04 selon les résultats.
 15. SCI-05 seulement si le rollout et l'utilité de C2 le justifient encore.
