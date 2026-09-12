@@ -5,6 +5,9 @@
   approuvées une par une). Il n'autorise **pas** encore l'implémentation : voir §12 « Porte ».
 - **Nature** : chantier d'**instrument**. Il ne change aucune mécanique cognitive et **ne modifie
   pas une seule ligne de `noyau.py`** — c'est un choix explicite (§2, décision D1).
+- **Avenant du 12/09/2026** : `n` **n'est plus une constante posée**. Il est **dérivé** par une règle
+  déclarée d'avance appliquée à une mesure pilote (§8bis). Décision de l'auteur, motivée par la
+  mesure de dispersion de SCI-01 qui disqualifie `vict` comme source de variance.
 
 ---
 
@@ -60,8 +63,10 @@ actuel disparaît par construction. Un score composite (succès × efficacité) 
 pondération serait arbitraire et il masquerait les désaccords entre métriques au lieu de les
 montrer.
 
-*Limite assumée* : binaire = peu sensible aux petits effets. Le nombre d'épisodes devra donc être
-suffisant pour la campagne de soustraction (voir §8).
+*Limite assumée* : binaire = peu sensible aux petits effets. Le nombre d'épisodes n'est donc **pas
+posé** : il est **dérivé** par une règle déclarée d'avance appliquée à une mesure pilote (voir §8bis).
+Un `n` choisi à l'aveugle exposerait soit au faux négatif, soit au gaspillage de calcul — et serait
+une constante posée, ce que le dogme n°1 interdit.
 
 ### D3 — Critère de succès du banc : reproduire un verdict déjà connu
 
@@ -90,7 +95,7 @@ version les a produits.
 
 ## 3. Découvertes mesurées pendant le cadrage
 
-Ces six points ont été établis **par lecture de code et par mesure**, avant toute écriture. Ils
+Ces sept points ont été établis **par lecture de code et par mesure**, avant toute écriture. Ils
 sont la raison d'être de plusieurs garde-fous (§6).
 
 ### 3.1 Le banc actuel n'est pas reproductible — fait de code
@@ -178,6 +183,19 @@ cerveaux** : la règle de cohorte (§6) est donc indispensable, et non une préc
   `etat.niveau_actuel`. La crainte initiale — que le forçage laisse des grandeurs accrochées au
   niveau du cursus — est **levée par la lecture du code**. Un test la figera néanmoins (§7a).
 
+### 3.7 La dispersion de SCI-01 disqualifie `vict` comme source de variance (12/09/2026)
+
+La première intention — dériver `n` de la variance de SCI-01 — a été **écartée sur mesure**. À niveau
+fixe, le CV de `vict` vaut **1,7 à 6,5 %** sur les bras sains : l'indicateur se comporte presque comme
+une **constante**, et il est dominé par le nombre d'épisodes joués plutôt que par la compétence. Le
+poolé (32,4 %) n'est tiré vers le haut que par `K16_NU`, le bras qui s'effondre. S'en servir
+reviendrait à dimensionner l'**instrument B avec le bruit de l'instrument A**, et produirait un `n`
+trop petit, donc exposé au faux négatif. Tableau complet et règle retenue : **§8bis**.
+
+En revanche, cette même lecture **confirme la prémisse de D3** : `K8_NU` atteint `niv=5` dans
+**18/20** cas contre **4/20** pour `K16_NU` (`K8_CLIP_e02` : 20/20). Le saut de phase sur lequel
+repose le test d'acceptation est **massif**, et non un artefact de bruit.
+
 ---
 
 ## 4. Architecture — les cinq artefacts
@@ -232,7 +250,7 @@ suivant. `victoire_aujourdhui` est en outre un drapeau de **journée**, jamais d
 ```
 PYTHONPATH=src venv/bin/python3 -m naulthene.instruments.banc_final \
   --cohorte brains/08092026_sci01_balayage_K --bras K8_NU K16_NU \
-  --cartes 3 4 --episodes 100 --graine-eval-base 10000 \
+  --cartes 3 4 --episodes <n_dérivé> --graine-eval-base 10000 \
   --dossier-sortie docs/recherche/evals/banc_final
 ```
 
@@ -241,7 +259,11 @@ PYTHONPATH=src venv/bin/python3 -m naulthene.instruments.banc_final \
   (`etat.env.close()` puis `etat.env = creer_env(PROGRAMME[index][0], DIM_VISUELLE)`) — il remplace
   l'environnement **sans** toucher `etat.niveau_actuel`. C'est exactement ce qu'exige le point 5 du
   registre : le niveau reste une **mesure de développement**.
-- `--graine-eval-base` **refuse** toute valeur `< 1000` (§3.2).
+- `--graine-eval-base` **refuse** toute valeur `< 1000` (§3.2). Le pool `10000…10099` est une
+  constante d'**isolation** d'ingénierie (arbitrage de l'auteur, 12/09/2026) : elle sépare
+  hermétiquement l'évaluation du vécu d'entraînement et n'a pas à être dérivée.
+- `--episodes` **exige** la valeur dérivée au pilote (§8bis) : aucun `n` de confort ne doit pouvoir
+  s'introduire par une valeur par défaut.
 
 ### Flux
 
@@ -282,6 +304,7 @@ annoncé **avant** tout `t`.
 | Niveau de cursus < carte forcée | **Accepté** : c'est le principe même du banc. Le niveau reste métadonnée. |
 | `n = 0` | IC Wilson `(0,0)` ; **aucun taux n'est publié sans IC**. |
 | Écriture d'un `.brain` | **Impossible par construction** : `banc_final.py` n'importe jamais la sauvegarde de `PersistanceAnatomique`. |
+| `--episodes` absent ou laissé par défaut | **Refus** : la valeur doit venir du pilote (§8bis). Aucune valeur par défaut n'est acceptée, sinon un `n` de confort se réintroduirait par la porte de derrière. |
 
 **Règle de cohorte** : seuls les noms canoniques `<BRAS>_g<GRAINE>.brain` sont éligibles. Les
 `<BRAS>_g<GRAINE> N.brain` sont **mis en quarantaine**, et le banc **refuse un nom ambigu** au lieu
@@ -325,6 +348,17 @@ Conformément à la Règle de Trace, le test d'acceptation **est une mesure** : 
 dans `docs/recherche/` **et** un agrégat machine, pas seulement un test vert. De même, le scan
 d'intégrité du §3.5 sera consigné avec son relevé complet (aucune mesure non écrite n'a eu lieu).
 
+### 7e) Pilote de dérivation de `n`
+
+Exécute la règle du §8bis **avant** le gel du protocole et **avant** le test d'acceptation D3 : 2 à 4
+cerveaux × ~20 épisodes sur les 2 cartes figées. Produit `p̄`, la SD inter-cerveaux, et le `n` retenu.
+C'est une **mesure** au sens de la Règle de Trace : carnet + agrégat.
+
+⚠️ Le pilote **ne remplace pas** le test d'acceptation : il dimensionne l'instrument, il ne certifie
+pas qu'il juge juste. Un petit `n` de pilote donne une SD inter-cerveaux **instable** — le carnet
+devra donc publier l'**intervalle de confiance de la SD estimée**, jamais seulement sa valeur
+ponctuelle.
+
 ---
 
 ## 8. Protocole gelé — `docs/fonctionnement/PROTOCOLE_BANC_FINAL.md`
@@ -336,7 +370,7 @@ d'intégrité du §3.5 sera consigné avec son relevé complet (aucune mesure no
 | Carte du blocage | index **3** = `MiniGrid-SimpleCrossingS9N1-v0` | Le mur réel du cursus au 12/09/2026. |
 | Palier suivant | index **4** = `MiniGrid-LavaGapS5-v0` | Exigé par le point 3 du registre. |
 | Pool de graines d'éval | **10000…10099** | Disjoint du pool d'entraînement (5…199). |
-| Épisodes par carte | **100** | IC Wilson ≈ ±6 pts à p=0,9. |
+| Épisodes par carte | **dérivé au pilote** — jamais posé | Règle de domination du bruit, §8bis. |
 | `max_ticks` | **budget natif du monde** (`max_steps`) | Jamais un plafond posé à la main. |
 | Famille de métriques | **3** (1 primaire + 2 secondaires) | Convention MES-04. |
 
@@ -349,6 +383,54 @@ d'intégrité du §3.5 sera consigné avec son relevé complet (aucune mesure no
 
 Règle de version : toute modification du protocole **incrémente sa version** et **invalide la
 comparabilité** des rapports antérieurs.
+
+### 8bis) Dérivation de `n` — règle déclarée d'avance
+
+`n` **n'est pas une constante du protocole** : c'est un **résultat**. Le protocole enregistre la
+**règle** et la **valeur** que la règle a produite.
+
+**La règle — domination du bruit de mesure.** Retenir le plus petit `n` tel que l'erreur-type
+binomiale du taux d'**un seul** cerveau reste ≤ **1/3** de l'écart-type **inter-cerveaux** de ce même
+taux, mesuré sur cartes figées :
+
+```
+p̄  = taux de franchissement poolé du pilote
+SE_binomiale(n) = sqrt( p̄ (1 − p̄) / n )
+contrainte      : SE_binomiale(n) ≤ (1/3) × SD_inter-cerveaux
+```
+
+**Pourquoi 1/3** : à ce seuil, le bruit d'échantillonnage contribue moins de ~10 % de la variance
+totale observée — la métrique est donc dominée par la variation réelle des cerveaux, pas par le
+tirage. Ce facteur est **le seul paramètre posé** de la règle : il est isolé et explicite, précisément
+pour pouvoir être contesté ou mesuré plus tard. **Tout le reste est mesuré.**
+
+**La mesure — le pilote.** 2 à 4 cerveaux × ~20 épisodes sur les 2 cartes figées (quelques minutes de
+calcul), exécuté **avant** le gel du protocole. Il fournit `p̄` et la SD inter-cerveaux. Le pilote
+**est une mesure** : carnet + agrégat machine (§7d).
+
+**Pourquoi PAS la variance de SCI-01** — tranché le 12/09/2026 sur mesure, contre l'intuition
+initiale (qui était d'y prendre la variance) :
+
+| Bras, à niveau fixe | n | CV de `vict` |
+|---|---|---|
+| `K4_NU` | 7 | **1,7 %** |
+| `K8_NU` | 2 | **2,3 %** |
+| `K2_NU` | 19 | **5,5 %** |
+| `K1_TEMOIN` | 20 | **6,5 %** |
+| `K16_NU` | 16 | 55,1 % |
+| poolé | 64 | 32,4 % |
+
+Sur les bras sains, le CV de `vict` est de **1,7 à 6,5 %** : un indicateur aussi peu dispersé se
+comporte presque comme une **constante**, et `vict` est un cumul sur 1 500 jours, donc dominé par le
+**nombre d'épisodes joués**, pas par la compétence. Le poolé à 32,4 % ne remonte que grâce à
+`K16_NU`, le bras qui s'effondre : c'est un mélange hétérogénéité + effet de bras, **pas** une
+variance intra-bras. Dimensionner le banc avec cette variance reviendrait à **dimensionner
+l'instrument B avec le bruit de l'instrument A**, et le `n` obtenu serait **trop petit**, donc exposé
+au faux négatif.
+
+Surtout, la variance pertinente est celle du taux **sur cartes figées** — qui n'existe pas avant que
+le banc existe. C'est cette circularité que le pilote rompt : **par la mesure, sans poser aucune
+constante.**
 
 ### Interdit explicite — invariant existant respecté
 
