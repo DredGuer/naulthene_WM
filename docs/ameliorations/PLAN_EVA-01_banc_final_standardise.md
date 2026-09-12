@@ -466,7 +466,7 @@ du manifeste de campagne, la résolution de cohorte qui **refuse tout nom ambigu
 - Un dossier contenant `K8_NU_g11.brain` **et** `K8_NU_g11 2.brain` lève `NomAmbigue` en **listant**
   le fichier fautif (ligne 453 ci-dessus : le message doit citer le nom exact).
 - `--graine-eval-base 500` lève `GraineEvalRefusee` ; `--episodes` absent lève `EpisodesNonDerive`.
-- `NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m unittest discover -s tests -p "test_banc_final.py" -v` → **6 tests OK**.
+- `NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m unittest discover -s tests -p "test_banc_final.py" -v` → **8 tests OK**.
 
 - [ ] **Étape 1 : écrire les tests qui échouent**
 
@@ -499,6 +499,7 @@ from naulthene.instruments.banc_final import (  # noqa: E402
     GraineEvalRefusee,
     NomAmbigue,
     exiger_episodes,
+    lire_cohorte_explicite,
     lire_graines_du_manifeste,
     lister_cerveaux,
     verifier_graine_eval_base,
@@ -554,6 +555,38 @@ class TestManifesteDeCampagne(unittest.TestCase):
             with open(os.path.join(d, "manifeste.json"), "w", encoding="utf-8") as f:
                 json.dump({"campagne": "essai", "graines": [11, 22, 33]}, f)
             self.assertEqual(lire_graines_du_manifeste(d), [11, 22, 33])
+
+
+
+
+
+class TestCohorteExplicite(unittest.TestCase):
+    """La spec exige une cohorte ENUMEREE quand un bras porte des surnumeraires : le glob
+    refuserait K8_NU (2 doublons mesures le 12/09/2026), rendant le test d'acceptation
+    impossible. Cette voie est l'echappatoire EXPLICITE et tracee."""
+
+    def test_enumere_les_chemins_et_verifie_leur_existence(self):
+        with tempfile.TemporaryDirectory() as d:
+            a = os.path.join(d, "K8_NU_g11.brain")
+            b = os.path.join(d, "K16_NU_g11.brain")
+            _toucher(a)
+            _toucher(b)
+            inventaire = os.path.join(d, "cohorte.json")
+            with open(inventaire, "w", encoding="utf-8") as f:
+                json.dump({"K8_NU": {"11": a}, "K16_NU": {"11": b}}, f)
+            cohorte = lire_cohorte_explicite(inventaire)
+            self.assertEqual(sorted(cohorte), ["K16_NU", "K8_NU"])
+            self.assertEqual(cohorte["K8_NU"][11], a)
+
+    def test_un_chemin_absent_est_refuse_en_le_nommant(self):
+        with tempfile.TemporaryDirectory() as d:
+            inventaire = os.path.join(d, "cohorte.json")
+            manquant = os.path.join(d, "absent.brain")
+            with open(inventaire, "w", encoding="utf-8") as f:
+                json.dump({"K8_NU": {"11": manquant}}, f)
+            with self.assertRaises(ValueError) as ctx:
+                lire_cohorte_explicite(inventaire)
+            self.assertIn("absent.brain", str(ctx.exception))
 
 
 if __name__ == "__main__":
@@ -700,6 +733,32 @@ def resoudre_cohorte(cohorte: str, bras: Sequence[str],
     return {b: lister_cerveaux(os.path.join(cohorte, b), b, graines) for b in bras}
 
 
+def lire_cohorte_explicite(chemin: str) -> dict[str, dict[int, str]]:
+    """Enumere la cohorte UN PAR UN : `{bras: {graine: chemin de .brain}}`.
+
+    La spec exige cette voie quand un bras contient des surnumeraires — le glob refuse
+    alors le bras entier (K8_NU en porte 2, mesures). Le glob reste le chemin par defaut
+    avec son refus d'ambiguite ; ici rien n'est devine, et CHAQUE chemin declare doit
+    exister, sinon le refus nomme les absents.
+    """
+    with open(chemin, "r", encoding="utf-8") as f:
+        donnees = json.load(f)
+    cohorte: dict[str, dict[int, str]] = {}
+    absents: list[str] = []
+    for nom_bras, par_graine in donnees.items():
+        cohorte[nom_bras] = {}
+        for graine, chemin_brain in par_graine.items():
+            if not os.path.exists(chemin_brain):
+                absents.append(chemin_brain)
+                continue
+            cohorte[nom_bras][int(graine)] = chemin_brain
+    if absents:
+        raise ValueError(
+            f"cohorte explicite : {len(absents)} chemin(s) declare(s) mais absent(s) — "
+            f"{', '.join(sorted(absents))}")
+    return cohorte
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Le banc final standardisé (EVA-01) — cartes figées, graines d'éval dédiées")
@@ -707,6 +766,10 @@ def main() -> int:
                         help="Dossier de campagne (contient manifeste.json et un dossier par bras)")
     parser.add_argument("--bras", type=str, nargs="+", required=True,
                         help="Noms des bras à comparer (ex. K8_NU K16_NU)")
+    parser.add_argument("--cohorte-explicite", type=str, default=None,
+                        help="JSON {bras: {graine: chemin}} enumerant les cerveaux UN PAR UN. "
+                             "Contourne volontairement le glob, qui refuse un bras portant des "
+                             "surnumeraires (K8_NU en a 2). Chaque chemin doit exister.")
     parser.add_argument("--cartes", type=int, nargs="+", default=list(CARTES_GELEES),
                         help=f"Indices PROGRAMME (défaut gelé : {list(CARTES_GELEES)})")
     parser.add_argument("--episodes", type=int, default=None,
@@ -721,7 +784,10 @@ def main() -> int:
     verifier_graine_eval_base(args.graine_eval_base)
     exiger_episodes(args.episodes)
     graines = lire_graines_du_manifeste(args.cohorte)
-    cohorte = resoudre_cohorte(args.cohorte, args.bras, graines)
+    if args.cohorte_explicite:
+        cohorte = lire_cohorte_explicite(args.cohorte_explicite)
+    else:
+        cohorte = resoudre_cohorte(args.cohorte, args.bras, graines)
     print(f"📋 {len(args.bras)} bras × {len(graines)} graines d'entraînement, "
           f"cartes {args.cartes}, {args.episodes} épisodes "
           f"(graines d'éval {args.graine_eval_base}…"
@@ -740,7 +806,7 @@ if __name__ == "__main__":
 ```bash
 NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m unittest discover -s tests -p "test_banc_final.py" -v
 ```
-Attendu : **6 tests OK**.
+Attendu : **8 tests OK**.
 
 Vérifier aussi le refus réel, sur le bras dont les doublons sont **mesurés** (`K1_TEMOIN` :
 40 `.brain` pour 20 graines, contenus divergents — CHANTIER_EVA-01 §3.5) :
@@ -957,7 +1023,7 @@ def evaluer_cerveau_sur_carte(etat, index_carte: int, graines: Sequence[int],
 ```bash
 NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m unittest discover -s tests -p "test_banc_final.py" -v
 ```
-Attendu : **8 tests OK**. Le test de reproductibilité peut prendre ~30 s (deux passes de 3 épisodes
+Attendu : **10 tests OK**. Le test de reproductibilité peut prendre ~30 s (deux passes de 3 épisodes
 sur 5×5) ; c'est normal.
 
 - [ ] **Étape 5 : commit ciblé avec `bash`**
@@ -988,7 +1054,7 @@ Bonferroni pour une famille de 3.
 - Un bras amputé d'un cerveau fait lever `CampagneInvalide` (règle MES-01), et **aucun** agrégat
   n'est publié.
 - Le rapport imprime le seuil Bonferroni de la famille de 3 (`seuil_t(n, 3, 0.05)`).
-- `NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m unittest discover -s tests -p "test_banc_final.py" -v` → **9 tests OK**.
+- `NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m unittest discover -s tests -p "test_banc_final.py" -v` → **11 tests OK**.
 
 - [ ] **Étape 1 : écrire le test qui échoue**
 
@@ -1170,7 +1236,7 @@ Puis compléter `main()` en remplaçant le bloc `print` final par :
 ```bash
 NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m unittest discover -s tests -p "test_banc_final.py" -v
 ```
-Attendu : **9 tests OK**.
+Attendu : **11 tests OK**.
 
 - [ ] **Étape 5 : commit ciblé avec `bash`**
 
@@ -1196,7 +1262,7 @@ corriger `DOSSIER_EVALS_DEFAUT`, qui désigne un dossier **inexistant**.
 **Critères de succès :**
 - `grep -n "docs/notes/evals" src/naulthene/instruments/evaluer_cerveau.py` → **0 occurrence**.
 - Le bandeau nomme le successeur (`banc_final.py`) et la raison.
-- La suite complète reste verte : **179 tests OK** (156 + 12 + 1 + 6 + 2 + 1 + 1).
+- La suite complète reste verte : **181 tests OK** (156 + 12 + 1 + 8 + 2 + 1 + 1).
 
 - [ ] **Étape 1 : écrire le test qui échoue**
 
@@ -1241,7 +1307,7 @@ mécanique nouvelle ne doit y être ajoutée.
 ```bash
 NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m unittest discover -s tests -v
 ```
-Attendu : **179 tests OK**.
+Attendu : **181 tests OK**.
 
 - [ ] **Étape 5 : commit ciblé avec `bash`**
 
@@ -1319,9 +1385,15 @@ int`, qui rend le plus petit `n ≥ 1` tel que `sqrt(p̄(1−p̄)/n) ≤ sd_inte
 D'abord créer le dossier de campagne **avant** le premier run (règle de Trace : une campagne
 s'archive avant de tourner), avec son `LISEZ_MOI.md` portant le protocole. Puis :
 
+⚠️ Le `20` ci-dessous est un **budget de MESURE du pilote**, PAS le `n` du protocole : le pilote
+mesure la dispersion, puis `n` en est **dérivé**. Les deux nombres sont distincts, et seul le second
+entre au protocole (tâche 8). `K8_NU` porte 2 surnuméraires mesurés : la voie explicite est
+obligatoire, le glob refuserait le bras.
+
 ```bash
 NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m naulthene.instruments.banc_final \
   --cohorte brains/08092026_sci01_balayage_K --bras K8_NU --cartes 3 4 --episodes 20 \
+  --cohorte-explicite brains/EVA01_pilote_<JJMMAAAA>/cohorte_explicite.json \
   --graine-eval-base 10000 --dossier-sortie brains/EVA01_pilote_<JJMMAAAA>
 ```
 Attendu : un JSON contenant les taux par cerveau, puis `pilote.json` avec `n_derive`.
@@ -1390,7 +1462,17 @@ le banc reproduit l'**ordre** connu : `K8_NU` devant `K16_NU`. **L'ordre, jamais
   supériorité n'est revendiquée**.
 
 - [ ] **Étape 1 :** créer le dossier de campagne et son `LISEZ_MOI.md` **avant** le run.
-- [ ] **Étape 2 :** lancer le banc avec le `n` du protocole, cohorte énumérée.
+- [ ] **Étape 2 :** écrire `cohorte_explicite.json` énumérant les 40 cerveaux **canoniques**
+      (`K8_NU_g<g>.brain` et `K16_NU_g<g>.brain` pour les 20 graines du manifeste), en **nommant**
+      les surnuméraires écartés — puis lancer avec le `n` du protocole :
+
+```bash
+NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m naulthene.instruments.banc_final \
+  --cohorte brains/08092026_sci01_balayage_K --bras K8_NU K16_NU --cartes 3 4 \
+  --episodes <n_du_protocole> --graine-eval-base 10000 \
+  --cohorte-explicite brains/EVA01_acceptation_<JJMMAAAA>/cohorte_explicite.json \
+  --dossier-sortie brains/EVA01_acceptation_<JJMMAAAA>
+```
 - [ ] **Étape 3 :** lancer deux fois le même cerveau pour mesurer δ_A/A ; le publier.
 - [ ] **Étape 4 :** écrire le carnet (question, protocole, chiffres bruts, vérifications, limites,
       ce que ça ferme et laisse ouvert).
