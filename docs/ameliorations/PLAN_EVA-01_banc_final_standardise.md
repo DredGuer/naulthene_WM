@@ -2098,7 +2098,7 @@ corriger `DOSSIER_EVALS_DEFAUT`, qui désigne un dossier **inexistant**.
 **Critères de succès :**
 - `grep -n "docs/notes/evals" src/naulthene/instruments/evaluer_cerveau.py` → **0 occurrence**.
 - Le bandeau nomme le successeur (`banc_final.py`) et la raison.
-- La suite complète reste verte : **191 tests OK** (156 + 12 + 2 + 11 + 3 + 6 + 1).
+- La suite complète reste verte : **192 tests OK** (156 + 12 + 2 + 11 + 3 + 6 + 2).
 
 - [ ] **Étape 1 : écrire le test qui échoue**
 
