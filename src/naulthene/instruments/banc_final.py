@@ -30,6 +30,7 @@ from naulthene.cerveau.noyau import (
     DIM_VISUELLE,
     PROGRAMME,
     _budget_natif_carte,
+    _graine_episode,
     creer_env,
     demarrer_journee,
     traiter_tick,
@@ -259,6 +260,55 @@ def _forcer_carte(etat, index_carte: int) -> tuple[str, str]:
     return env_id, nom_classe
 
 
+def _empreinte_monde(etat, graine_monde: int) -> dict:
+    """Empreinte LISIBLE du monde réellement semé pour l'épisode en cours.
+
+    ⚠️ POURQUOI ELLE EXISTE. Sans elle, le rapport ne disait RIEN de la carte jouée ni du
+    tirage : deux évaluations pouvaient diverger (mondes différents) en publiant un résultat
+    identique, et la dérive de carte était **invisible dans l'artefact** — il fallait muter
+    le code pour la voir. Mesuré : les trois leviers de graine retirés, les positions de
+    ressources différaient d'une passe à l'autre (`((3,1),(1,2))` contre `((2,1),(1,2))`)
+    pendant que le rapport, lui, restait identique.
+
+    Ce qu'elle porte, et pourquoi chaque champ :
+      - `graine` : la graine que le monde VA consommer (`_graine_episode(etat)` au moment du
+        reset). C'est le seul moyen de rendre lisible une carte dont le contenu ne dépend pas
+        du tirage — `MiniGrid-Empty-5x5-v0` a un but et un départ FIXES, donc son contenu ne
+        varie jamais avec la graine, alors que des cartes à disposition aléatoire, si ;
+      - `but`, `depart`, `direction` : la disposition engendrée par cette graine ;
+      - `food`, `water`, `nid` : les sources SEMÉES par `DetecteurRessourcesBiologiques`, qui
+        dépendent du `np.random` GLOBAL, pas de la graine d'environnement.
+
+    Tout est rendu en listes (jamais un `set` de tuples, qui ne se sérialise pas en JSON) et
+    TRIÉ, pour que deux mondes identiques donnent une empreinte identique au bit près.
+
+    ⚠️ Lecture seule : on lit la grille et les positions semées, on n'écrit rien. Le balayage
+    du but est local parce que `plus_court_chemin` rend la DISTANCE au but, pas sa position.
+    """
+    u = etat.env.unwrapped
+    but = None
+    for x in range(u.grid.width):
+        for y in range(u.grid.height):
+            objet = u.grid.get(x, y)
+            if objet is not None and getattr(objet, "type", None) == "goal":
+                but = [int(x), int(y)]
+    detecteur = getattr(etat, "detecteur_ressources_bio", None)
+
+    def _cases(positions):
+        return sorted([int(x), int(y)] for x, y in (positions or ()))
+
+    nid = getattr(detecteur, "nid_position", None)
+    return {
+        "graine": int(graine_monde),
+        "but": but,
+        "depart": [int(u.agent_pos[0]), int(u.agent_pos[1])],
+        "direction": int(u.agent_dir),
+        "food": _cases(getattr(detecteur, "positions_food", None)),
+        "water": _cases(getattr(detecteur, "positions_water", None)),
+        "nid": [int(nid[0]), int(nid[1])] if nid is not None else None,
+    }
+
+
 def evaluer_cerveau_sur_carte(etat, index_carte: int, graines: Sequence[int],
                               max_ticks: int = 0) -> dict:
     """Rejoue `graines` épisodes SEEDÉS sur `PROGRAMME[index_carte]`, en lecture seule.
@@ -276,6 +326,16 @@ def evaluer_cerveau_sur_carte(etat, index_carte: int, graines: Sequence[int],
 
     ⚠️ Le forçage remplace `etat.env` mais ne touche PAS `etat.niveau_actuel` : le niveau du
     cursus reste une mesure de développement (exigence 5 du registre).
+
+    ⚠️ CE QUE CHAQUE ÉPISODE PUBLIE, EN PLUS DE SES MÉTRIQUES. La mesure ne suffit pas : il
+    faut pouvoir AUDITER le monde qui l'a produite. Chaque entrée d'`episodes` porte donc
+    `env_id` (la carte réellement jouée), `budget` (les ticks réellement reçus) et `monde`
+    (empreinte du tirage : graine consommée, but, départ, ressources semées). Sans cela, un
+    épisode joué sur une AUTRE carte ou dans un AUTRE monde restait invisible dans le
+    résultat — mesuré : les trois leviers de graine retirés, les mondes différaient pendant
+    que le rapport, lui, restait identique. Le `budget` de tête est celui de la carte
+    imposée ; les `budget` par épisode doivent lui être égaux (re-forçage oblige), et une
+    divergence se lit désormais au lieu d'être tue.
     """
     if not 0 <= index_carte < len(PROGRAMME):
         raise CarteInvalide(f"index de carte {index_carte} hors PROGRAMME (0…{len(PROGRAMME) - 1})")
@@ -321,14 +381,28 @@ def evaluer_cerveau_sur_carte(etat, index_carte: int, graines: Sequence[int],
         etat.episodes_vecus = graine
         etat.env.reset(seed=graine)
         np.random.seed(graine)
+        # La graine que `_reset_seede` va consommer DANS `demarrer_journee` : lue ici, avant
+        # l'incrément du compteur, c'est exactement celle du monde de CET épisode. Elle entre
+        # dans l'empreinte publiée, sinon une carte à disposition FIXE (`Empty-5x5` : but et
+        # départ constants) ne laisserait aucune trace d'un changement de graine.
+        graine_monde = _graine_episode(etat)
         demarrer_journee(etat)
         torch.manual_seed(graine)  # D1 — reproductibilité de l'échantillonnage d'action
+
+        # --- CE QUE L'ÉPISODE A RÉELLEMENT JOUÉ, PUBLIÉ DANS LE RÉSULTAT ---
+        # La carte est lue ICI, après le forçage et le reset : c'est celle dans laquelle les
+        # ticks vont se dérouler. Le budget est celui de CETTE carte (borné par `max_ticks`
+        # s'il est posé) — avec le re-forçage il vaut le budget annoncé ; s'il en divergeait,
+        # l'artefact le DIRAIT au lieu de le taire.
+        carte_jouee = etat.env_id
+        budget_episode = int(max_ticks) if max_ticks > 0 else _budget_natif_carte(etat.env)
+        empreinte = _empreinte_monde(etat, graine_monde)
 
         optimal = plus_court_chemin(etat.env)
         recompense_avant = _recompense_env_cumulee(etat)
         gagne, ticks, tronque, recompense = False, None, True, 0.0
         with torch.no_grad():
-            for _tick in range(budget):
+            for _tick in range(budget_episode):
                 ticks_avant = etat.ticks_episode_courant
                 traiter_tick(etat)
                 # `traiter_tick` enchaîne LUI-MÊME sur un nouvel épisode dès que
@@ -349,6 +423,16 @@ def evaluer_cerveau_sur_carte(etat, index_carte: int, graines: Sequence[int],
             "tronque": tronque,
             "ticks": ticks,
             "retour": recompense,
+            # --- Ce que l'épisode a RÉELLEMENT joué (audit du JSON, sans muter le code) ---
+            # `env_id` : la carte des ticks. Un épisode joué ailleurs qu'annoncé se lit ici,
+            # au lieu d'être invisible dans l'artefact.
+            "env_id": carte_jouee,
+            # `budget` : le nombre de ticks que CET épisode a reçus. Avec le re-forçage il
+            # vaut le budget annoncé en tête de résultat ; une divergence signalerait que la
+            # carte n'a pas été tenue.
+            "budget": budget_episode,
+            # `monde` : empreinte du monde semé (graine consommée, but, départ, ressources).
+            "monde": empreinte,
             # La longueur n'a de sens que sur un épisode GAGNÉ : sur un échec, le
             # « trajet » est la durée du budget et le rapport ne mesurerait rien.
             "longueur_normalisee": longueur_normalisee(ticks, optimal) if gagne else None,
