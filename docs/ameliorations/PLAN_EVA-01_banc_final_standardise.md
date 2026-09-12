@@ -58,6 +58,7 @@ class NomAmbigue(RuntimeError): ...
 class GraineEvalRefusee(RuntimeError): ...
 class EpisodesNonDerive(RuntimeError): ...
 class CarteInvalide(RuntimeError): ...
+class BrasIntrouvable(RuntimeError): ...
 
 def verifier_graine_eval_base(valeur: int) -> int
 def exiger_episodes(valeur) -> int
@@ -68,7 +69,8 @@ def evaluer_cerveau_sur_carte(etat, index_carte: int, graines: Sequence[int], ma
 def construire_depouillement(cohorte: str, bras: Sequence[str], graines: Sequence[int],
                              metriques_par_chemin: dict) -> Depouillement
 def executer_banc(cohorte: str, bras: Sequence[str], cartes: Sequence[int], graines: Sequence[int],
-                  episodes: int, graine_eval_base: int, dossier_sortie: str, max_ticks: int = 0) -> dict
+                  episodes: int, graine_eval_base: int, dossier_sortie: str, max_ticks: int = 0,
+                  cohorte_resolue: dict | None = None) -> dict
 def main() -> int
 ```
 
@@ -532,7 +534,7 @@ du manifeste de campagne, la résolution de cohorte qui **refuse tout nom ambigu
 - Un dossier contenant `K8_NU_g11.brain` **et** `K8_NU_g11 2.brain` lève `NomAmbigue` en **listant**
   le fichier fautif (ligne 453 ci-dessus : le message doit citer le nom exact).
 - `--graine-eval-base 500` lève `GraineEvalRefusee` ; `--episodes` absent lève `EpisodesNonDerive`.
-- `NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m unittest discover -s tests -p "test_banc_final.py" -v` → **8 tests OK**.
+- `NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m unittest discover -s tests -p "test_banc_final.py" -v` → **10 tests OK**.
 
 - [ ] **Étape 1 : écrire les tests qui échouent**
 
@@ -561,6 +563,7 @@ import unittest
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
 
 from naulthene.instruments.banc_final import (  # noqa: E402
+    BrasIntrouvable,
     EpisodesNonDerive,
     GraineEvalRefusee,
     NomAmbigue,
@@ -568,6 +571,7 @@ from naulthene.instruments.banc_final import (  # noqa: E402
     lire_cohorte_explicite,
     lire_graines_du_manifeste,
     lister_cerveaux,
+    resoudre_cohorte,
     verifier_graine_eval_base,
 )
 
@@ -595,10 +599,18 @@ class TestListerCerveaux(unittest.TestCase):
             self.assertIn("K8_NU_g11 2.brain", str(ctx.exception))
 
     def test_ignore_les_autres_bras(self):
+        """Ne pas se contenter des CLÉS : le retour est indexé par graine, donc un cerveau
+        d'un AUTRE bras écrase la même clé sans changer la liste des clés. Un motif qui
+        ignorerait le préfixe de bras rendrait `{11: 'K8_NU_g11.brain'}` quand on demande
+        K16_NU — contamination inter-bras invisible, et d'autant plus dangereuse que les
+        6 bras partagent les MÊMES 20 graines."""
         with tempfile.TemporaryDirectory() as d:
             _toucher(os.path.join(d, "K8_NU_g11.brain"))
             _toucher(os.path.join(d, "K16_NU_g11.brain"))
-            self.assertEqual(sorted(lister_cerveaux(d, "K8_NU", [11])), [11])
+            trouves = lister_cerveaux(d, "K8_NU", [11])
+            self.assertEqual(sorted(trouves), [11])
+            self.assertTrue(trouves[11].endswith("K8_NU_g11.brain"),
+                            f"le chemin résolu doit être celui du bras DEMANDÉ : {trouves[11]}")
 
 
 class TestGardeFous(unittest.TestCase):
@@ -621,6 +633,18 @@ class TestManifesteDeCampagne(unittest.TestCase):
             with open(os.path.join(d, "manifeste.json"), "w", encoding="utf-8") as f:
                 json.dump({"campagne": "essai", "graines": [11, 22, 33]}, f)
             self.assertEqual(lire_graines_du_manifeste(d), [11, 22, 33])
+
+    def test_lit_les_graines_d_une_cohorte_explicite_runs(self):
+        """Le manifeste connaît DEUX formes ; `runs` est une LISTE de dicts `{"nom": ...}`.
+        N'en lire qu'une rendait un diagnostic FAUX sur un manifeste valide (cas réel :
+        brains/02092026_rejeu_banc_corrige, 20 runs, mode explicite)."""
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, "manifeste.json"), "w", encoding="utf-8") as f:
+                json.dump({"campagne": "essai", "mode": "confirmatoire",
+                           "runs": [{"nom": "A_g11", "fichier": "banc_A_g11.json"},
+                                    {"nom": "B_g11", "fichier": "banc_B_g11.json"},
+                                    {"nom": "B_g22", "fichier": "banc_B_g22.json"}]}, f)
+            self.assertEqual(lire_graines_du_manifeste(d), [11, 22])
 
 
 
@@ -653,6 +677,18 @@ class TestCohorteExplicite(unittest.TestCase):
             with self.assertRaises(ValueError) as ctx:
                 lire_cohorte_explicite(inventaire)
             self.assertIn("absent.brain", str(ctx.exception))
+
+
+class TestBrasIntrouvable(unittest.TestCase):
+    """Un bras qui ne résout RIEN est une faute de frappe, pas une cohorte vide : sortir en 0
+    en affichant `{'K16_NU_TYPO': 0}` était un succès silencieux (constat I-3)."""
+
+    def test_un_bras_sans_cerveau_est_refuse_en_le_nommant(self):
+        with tempfile.TemporaryDirectory() as d:
+            _toucher(os.path.join(d, "K8_NU_g11.brain"))
+            with self.assertRaises(BrasIntrouvable) as ctx:
+                resoudre_cohorte(d, ["K8_NU_TYPO"], [11])
+            self.assertIn("K8_NU_TYPO", str(ctx.exception))
 
 
 if __name__ == "__main__":
@@ -723,6 +759,14 @@ class CarteInvalide(RuntimeError):
     """Index de carte hors du PROGRAMME."""
 
 
+class BrasIntrouvable(RuntimeError):
+    """Un bras déclaré ne résout AUCUN cerveau : faute de frappe, pas cohorte vide.
+
+    Sans ce refus, `--bras K16_NU_TYPO` affichait `{'K16_NU_TYPO': 0}` et sortait en 0 —
+    un succès silencieux, exactement ce que MES-01 interdit.
+    """
+
+
 def verifier_graine_eval_base(valeur: int) -> int:
     """Refuse une base de graines d'évaluation sous `GRAINE_EVAL_BASE_MINIMUM`.
 
@@ -755,9 +799,21 @@ def lire_graines_du_manifeste(cohorte: str) -> list[int]:
     chemin = os.path.join(cohorte, "manifeste.json")
     with open(chemin, "r", encoding="utf-8") as f:
         donnees = json.load(f)
+
     graines = donnees.get("graines")
+    if not graines and donnees.get("runs"):
+        # Le manifeste du dépôt connaît DEUX formes (voir `depouillement.Manifeste`) :
+        # `bras` × `graines`, ou une cohorte explicite `runs` — une LISTE de dicts
+        # `{"nom": "A_g11", "fichier": "banc_A_g11.json"}`. N'en lire qu'une rendait un
+        # diagnostic FAUX (« ne déclare aucune graine ») sur un manifeste parfaitement
+        # valide (cas réel : brains/02092026_rejeu_banc_corrige, 20 runs).
+        graines = sorted({int(m.group(1))
+                          for entree in donnees["runs"]
+                          for m in [re.search(r"_g(\d+)", str(entree.get("nom", "")))] if m})
     if not graines:
-        raise ValueError(f"{chemin} ne déclare aucune graine")
+        raise ValueError(
+            f"{chemin} : aucune graine lisible — formes reconnues : la clé `graines`, ou une "
+            f"cohorte explicite `runs` dont les entrées portent « _g<graine> » dans `nom`")
     return [int(g) for g in graines]
 
 
@@ -794,9 +850,22 @@ def lister_cerveaux(dossier_bras: str, prefixe: str, graines: Sequence[int]) -> 
 
 def resoudre_cohorte(cohorte: str, bras: Sequence[str],
                      graines: Sequence[int]) -> dict[str, dict[int, str]]:
-    """Rend `{bras: {graine: chemin}}`. L'absence d'un cerveau n'est PAS traitée ici :
-    c'est `Depouillement.collecter` qui refuse une cohorte incomplète (MES-01)."""
-    return {b: lister_cerveaux(os.path.join(cohorte, b), b, graines) for b in bras}
+    """Rend `{bras: {graine: chemin}}`. L'absence d'un cerveau DANS une cohorte résolue
+    n'est PAS traitée ici : c'est `Depouillement.collecter` qui refuse une cohorte
+    incomplète (MES-01).
+
+    En revanche un bras qui ne résout RIEN est refusé ici : c'est une faute de frappe, pas
+    une cohorte vide. Sans ce garde, `--bras K16_NU_TYPO` affichait `0` cerveau et sortait
+    en 0 — un succès silencieux.
+    """
+    resolue = {b: lister_cerveaux(os.path.join(cohorte, b), b, graines) for b in bras}
+    vides = sorted(b for b, v in resolue.items() if not v)
+    if vides:
+        raise BrasIntrouvable(
+            f"aucun cerveau résolu pour {len(vides)} bras : {', '.join(vides)} — "
+            f"vérifie l'orthographe du bras et la présence des fichiers canoniques "
+            f"`<bras>_g<graine>.brain` dans {cohorte}")
+    return resolue
 
 
 def lire_cohorte_explicite(chemin: str) -> dict[str, dict[int, str]]:
@@ -872,7 +941,7 @@ if __name__ == "__main__":
 ```bash
 NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m unittest discover -s tests -p "test_banc_final.py" -v
 ```
-Attendu : **8 tests OK**.
+Attendu : **10 tests OK**.
 
 Vérifier aussi le refus réel, sur le bras dont les doublons sont **mesurés** (`K1_TEMOIN` :
 40 `.brain` pour 20 graines, contenus divergents — CHANTIER_EVA-01 §3.5) :
@@ -1089,7 +1158,7 @@ def evaluer_cerveau_sur_carte(etat, index_carte: int, graines: Sequence[int],
 ```bash
 NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m unittest discover -s tests -p "test_banc_final.py" -v
 ```
-Attendu : **10 tests OK**. Le test de reproductibilité peut prendre ~30 s (deux passes de 3 épisodes
+Attendu : **12 tests OK**. Le test de reproductibilité peut prendre ~30 s (deux passes de 3 épisodes
 sur 5×5) ; c'est normal.
 
 - [ ] **Étape 5 : commit ciblé avec `bash`**
@@ -1120,7 +1189,7 @@ Bonferroni pour une famille de 3.
 - Un bras amputé d'un cerveau fait lever `CampagneInvalide` (règle MES-01), et **aucun** agrégat
   n'est publié.
 - Le rapport imprime le seuil Bonferroni de la famille de 3 (`seuil_t(n, 3, 0.05)`).
-- `NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m unittest discover -s tests -p "test_banc_final.py" -v` → **11 tests OK**.
+- `NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m unittest discover -s tests -p "test_banc_final.py" -v` → **13 tests OK**.
 
 - [ ] **Étape 1 : écrire le test qui échoue**
 
@@ -1195,11 +1264,19 @@ def construire_depouillement(cohorte: str, bras: Sequence[str], graines: Sequenc
 
 def executer_banc(cohorte: str, bras: Sequence[str], cartes: Sequence[int],
                   graines: Sequence[int], episodes: int, graine_eval_base: int,
-                  dossier_sortie: str, max_ticks: int = 0) -> dict:
-    """Évalue toute la cohorte, puis publie le rapport et l'agrégat JSON."""
+                  dossier_sortie: str, max_ticks: int = 0,
+                  cohorte_resolue: dict | None = None) -> dict:
+    """Évalue toute la cohorte, puis publie le rapport et l'agrégat JSON.
+
+    ⚠️ `cohorte_resolue` est le SEUL moyen de faire entrer la voie EXPLICITE jusqu'ici :
+    `resoudre_cohorte` passe par le glob, qui REFUSE 5 des 6 bras de la campagne SCI-01
+    (mesuré : 113 surnuméraires). Sans ce paramètre, `--cohorte-explicite` serait perdu au
+    moment de l'évaluation et la tâche 9 échouerait à la résolution — après dix tâches.
+    """
     cartes = [int(c) for c in cartes]
     graines_eval = list(range(int(graine_eval_base), int(graine_eval_base) + int(episodes)))
-    cohorte_resolue = resoudre_cohorte(cohorte, bras, graines)
+    if cohorte_resolue is None:
+        cohorte_resolue = resoudre_cohorte(cohorte, bras, graines)
 
     par_cerveau, metriques_par_chemin = {}, {}
     for nom_bras, cerveaux in cohorte_resolue.items():
@@ -1293,7 +1370,8 @@ Puis compléter `main()` en remplaçant le bloc `print` final par :
     rapport = executer_banc(
         cohorte=args.cohorte, bras=args.bras, cartes=args.cartes, graines=graines,
         episodes=args.episodes, graine_eval_base=args.graine_eval_base,
-        dossier_sortie=args.dossier_sortie, max_ticks=args.max_ticks)
+        dossier_sortie=args.dossier_sortie, max_ticks=args.max_ticks,
+        cohorte_resolue=cohorte)  # la voie explicite doit SURVIVRE jusqu'ici
     return 0 if not rapport["violations"] else 1
 ```
 
@@ -1302,7 +1380,7 @@ Puis compléter `main()` en remplaçant le bloc `print` final par :
 ```bash
 NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m unittest discover -s tests -p "test_banc_final.py" -v
 ```
-Attendu : **11 tests OK**.
+Attendu : **13 tests OK**.
 
 - [ ] **Étape 5 : commit ciblé avec `bash`**
 
@@ -1328,7 +1406,7 @@ corriger `DOSSIER_EVALS_DEFAUT`, qui désigne un dossier **inexistant**.
 **Critères de succès :**
 - `grep -n "docs/notes/evals" src/naulthene/instruments/evaluer_cerveau.py` → **0 occurrence**.
 - Le bandeau nomme le successeur (`banc_final.py`) et la raison.
-- La suite complète reste verte : **182 tests OK** (156 + 12 + 2 + 8 + 2 + 1 + 1).
+- La suite complète reste verte : **184 tests OK** (156 + 12 + 2 + 10 + 2 + 1 + 1).
 
 - [ ] **Étape 1 : écrire le test qui échoue**
 
@@ -1373,7 +1451,7 @@ mécanique nouvelle ne doit y être ajoutée.
 ```bash
 NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m unittest discover -s tests -v
 ```
-Attendu : **182 tests OK**.
+Attendu : **184 tests OK**.
 
 - [ ] **Étape 5 : commit ciblé avec `bash`**
 
