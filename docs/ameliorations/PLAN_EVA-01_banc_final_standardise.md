@@ -1424,7 +1424,7 @@ def evaluer_cerveau_sur_carte(etat, index_carte: int, graines: Sequence[int],
 ```bash
 NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m unittest discover -s tests -p "test_banc_final.py" -v
 ```
-Attendu : **13 tests OK**. Le test de reproductibilité peut prendre ~30 s (deux passes de 3 épisodes
+Attendu : **14 tests OK**. Le test de reproductibilité peut prendre ~30 s (deux passes de 3 épisodes
 sur 5×5) ; c'est normal.
 
 - [ ] **Étape 5 : commit ciblé avec `bash`**
@@ -1433,6 +1433,44 @@ sur 5×5) ; c'est normal.
 git add src/naulthene/instruments/banc_final.py tests/test_banc_final.py && \
 git commit -m "feat(EVA-01): coeur d'evaluation reproductible — graine env ET torch par episode, victoire captivee au tick de bascule"
 ```
+
+### Correctif C1 / I2 / I3 — revue indépendante du 12/09/2026
+
+La revue a établi que **la propriété centrale de la tâche n'était PAS démontrée**, mesure à l'appui :
+dans le scénario du test (cerveau neuf, carte 3, deux passes), **176 ticks sur 972 divergent** — le
+premier au tick 36 — **alors que l'égalité passe**. Raison : sur la carte 3, tout ce qui est publié est
+**aveugle à la trajectoire** (3 épisodes `gagne=False`, `ticks=324` = le budget entier, `retour=0.0`,
+but/départ/direction constants). Et le levier **torch** — celui que D1 nomme — n'est tué par **aucun**
+test : retirer la ligne `torch.manual_seed(graine)` laisse **13/13 verts**.
+
+**1. Rendre l'artefact sensible à la TRAJECTOIRE** (tue I2, et rend C1 testable). Chaque épisode publie
+un résumé de trajectoire : les positions occupées par l'agent au fil des ticks, sous forme compacte mais
+**fidèle** — au minimum la liste des positions visitées distinctes dans l'ordre de première visite.
+Lecture seule, via `env.unwrapped.agent_pos` après chaque `traiter_tick`. Sans cela, **deux trajectoires
+différentes produisent le même rapport**.
+
+**2. Rendre le test INDÉPENDANT DE L'ORDRE** (tue C1). La fonction n'est pas pure : l'état du cerveau
+(mémoire, dopamine, patience) **persiste entre deux appels**, donc deux passes sur le MÊME `etat` ne
+mesurent pas la même chose. Le test compare désormais **deux cerveaux nés sous la même graine**, chacun
+évalué **une fois** — la revue a mesuré que deux naissances seedées donnent des trajectoires identiques
+(0/261 ticks divergents). La carte reste **3** (la seule où la dérive est réelle) et l'assertion
+explicite `env_id == carte_imposée` est conservée. La naissance est donc seedée : `torch.manual_seed`
+AVANT `charger_ou_naitre()`.
+
+**3. Des garde-fous qui CRIENT** (tue I3). `etat.mix_somme.get("Env", 0.0)` et les
+`getattr(detecteur, "positions_food", None)` dégradent en **silence** : désactiver la sonde de mixage
+fait tomber **tous les retours à 0,0** — et `retour_moyen` est une métrique de la **famille gelée** —
+tandis que renommer les positions rend des listes **vides sans erreur**, or M1 n'est tué que par ces
+deux champs. Ajouter l'exception nommée `InstrumentIndisponible(RuntimeError)` et **exiger** la
+présence : de la clé `"Env"`, et des attributs de positions. Un instrument absent doit **empêcher** la
+mesure, jamais la fausser.
+
+**4. Prouver que le garde est BRANCHÉ** (leçon de la tâche 3 : un garde non prouvé branché ne garde
+rien). Un test retire l'instrument en mémoire et exige `InstrumentIndisponible`.
+
+**Preuve exigée à la livraison** : le tableau de mutations passe à **six mutants + un contrôle**, et le
+levier **torch** doit désormais être tué : M1 sans `np.random.seed` · M2 sans graine du monde · M3 les
+trois leviers · **M4 sans `torch.manual_seed`** · M5 sans re-forçage · T tous ensemble · C contrôle vert.
 
 ---
 
@@ -1446,6 +1484,22 @@ git commit -m "feat(EVA-01): coeur d'evaluation reproductible — graine env ET 
 `depouillement.py` : refus de cohorte incomplète, appariement par graine d'entraînement, seuil
 Bonferroni pour une famille de 3.
 
+### PRÉREQUIS — l'évaluation n'est PAS pure : chaque (bras, carte) part d'un état FRAIS
+
+La revue indépendante de la tâche 4 a **mesuré** que `evaluer_cerveau_sur_carte` n'est pas une fonction
+pure de `(fichier .brain, carte, graines)` : l'état du cerveau (mémoire, dopamine, patience) **persiste
+entre deux appels**, si bien que le MÊME appel donne des résultats différents — carte 0 : victoires
+**1, 2, 2** ; carte **4** (une carte GELÉE du plan) : **0, 0, 1** ; et évaluer une autre carte intercalée
+déplace le même épisode de 61 à **88** ticks, soit **+44 %** sur `longueur_normalisee`, une métrique de
+la famille. La cause est **exclue du seeding** : deux cerveaux nés sous la même graine, évalués une fois
+chacun, donnent des trajectoires identiques.
+
+**Conséquence OBLIGATOIRE pour `executer_banc`** : un **état FRAIS par (bras, carte)** — recharger le
+`.brain` (ou repartir d'une naissance identique au même point) avant CHAQUE évaluation, pour que le
+chiffre d'une carte ne dépende pas de l'**ordre** d'évaluation dans le processus. Sans cela, deux bras
+évalués dans un ordre différent ne sont plus comparables, et l'appariement par graine de la tâche 9 perd
+son sens.
+
 **Dépendances et interfaces :**
 - Consomme : tâches 3 et 4 ; `depouillement.Manifeste`, `depouillement.Depouillement`.
 - Produit : `executer_banc(...) -> dict` ; écrit un JSON horodaté dans `--dossier-sortie` et
@@ -1455,7 +1509,7 @@ Bonferroni pour une famille de 3.
 - Un bras amputé d'un cerveau fait lever `CampagneInvalide` (règle MES-01), et **aucun** agrégat
   n'est publié.
 - Le rapport imprime le seuil Bonferroni de la famille de 3 (`seuil_t(n, 3, 0.05)`).
-- `NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m unittest discover -s tests -p "test_banc_final.py" -v` → **15 tests OK**.
+- `NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m unittest discover -s tests -p "test_banc_final.py" -v` → **16 tests OK**.
 
 - [ ] **Étape 1 : écrire le test qui échoue**
 
@@ -1674,7 +1728,7 @@ Puis compléter `main()` en remplaçant le bloc `print` final par :
 ```bash
 NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m unittest discover -s tests -p "test_banc_final.py" -v
 ```
-Attendu : **15 tests OK**.
+Attendu : **16 tests OK**.
 
 - [ ] **Étape 5 : commit ciblé avec `bash`**
 
@@ -1700,7 +1754,7 @@ corriger `DOSSIER_EVALS_DEFAUT`, qui désigne un dossier **inexistant**.
 **Critères de succès :**
 - `grep -n "docs/notes/evals" src/naulthene/instruments/evaluer_cerveau.py` → **0 occurrence**.
 - Le bandeau nomme le successeur (`banc_final.py`) et la raison.
-- La suite complète reste verte : **186 tests OK** (156 + 12 + 2 + 11 + 2 + 2 + 1).
+- La suite complète reste verte : **187 tests OK** (156 + 12 + 2 + 11 + 3 + 2 + 1).
 
 - [ ] **Étape 1 : écrire le test qui échoue**
 
@@ -1745,7 +1799,7 @@ mécanique nouvelle ne doit y être ajoutée.
 ```bash
 NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m unittest discover -s tests -v
 ```
-Attendu : **186 tests OK**.
+Attendu : **187 tests OK**.
 
 - [ ] **Étape 5 : commit ciblé avec `bash`**
 
