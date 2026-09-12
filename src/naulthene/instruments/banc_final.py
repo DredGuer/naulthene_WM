@@ -79,6 +79,18 @@ class BrasIntrouvable(RuntimeError):
     """
 
 
+class InstrumentIndisponible(RuntimeError):
+    """Un instrument dont le banc dépend a disparu : on REFUSE de mesurer, jamais fausser.
+
+    ⚠️ MESURÉ. Sans ce garde, un simple renommage dans `noyau.py` faisait tomber **tous** les
+    `retour` à `0,0` (`etat.mix_somme.get("Env", 0.0)` → défaut silencieux) et **toutes** les
+    empreintes de monde à vide (`getattr(detecteur, "positions_food", None)` → `[]`) : le banc
+    aurait publié des métriques parfaitement fausses, sans une seule erreur — et `retour_moyen`
+    appartient à la **famille de métriques gelée**. Un instrument absent doit EMPÊCHER la
+    mesure, pas la dégrader en silence.
+    """
+
+
 def verifier_graine_eval_base(valeur: int) -> int:
     """Refuse une base de graines d'évaluation sous `GRAINE_EVAL_BASE_MINIMUM`.
 
@@ -231,8 +243,61 @@ def _recompense_env_cumulee(etat) -> float:
 
     ⚠️ Lecture seule : le banc n'ajoute rien à la sonde, ne la réarme pas, et ne
     dépend d'aucune mécanique de `noyau.py` pour la mesurer.
+
+    ⚠️ Le `0,0` de repli n'est PAS un silence : `_exiger_instruments` passe avant **et** après
+    les ticks de chaque épisode, et refuse la mesure si la sonde a disparu ou s'est tue. Ici,
+    un accumulateur vide est l'état LÉGITIME du début d'épisode (`demarrer_journee` vient de
+    le réarmer).
     """
     return float(etat.mix_somme.get("Env", 0.0))
+
+
+def _exiger_instruments(etat, ticks_joues: bool = False) -> None:
+    """CRIE si un instrument dont le banc dépend a disparu ou s'est tu (voir la classe).
+
+    Appelé DEUX fois par épisode :
+      - AVANT la journée : l'accumulateur porte encore les canaux de l'épisode précédent, ce
+        qui permet de voir un canal DISPARU sous un buffer non vide ;
+      - APRÈS les ticks : la sonde doit avoir accumulé, sinon elle est morte et tous les
+        retours seraient publiés à `0,0`.
+
+    Ce qu'il exige, et pourquoi chacun :
+      - `etat.mix_somme` est un dict — sans lui, `retour` tombe à `0,0` en silence ;
+      - il n'a pas PERDU le canal `"Env"` — un buffer non vide qui ne le porte plus signale
+        une sonde changée sous nos pieds ;
+      - après ≥ 1 tick, il PORTE `"Env"` — une sonde muette rendrait tous les retours nuls ;
+      - `detecteur_ressources_bio` expose `positions_food`/`positions_water` — sans eux,
+        l'empreinte du monde serait publiée VIDE et un tirage de ressources différent
+        redeviendrait invisible (c'est par ce champ que M1 est tué).
+
+    Doctrine : une mesure REFUSÉE bruyamment vaut mieux qu'une mesure fausse et silencieuse.
+    """
+    accumulateur = getattr(etat, "mix_somme", None)
+    if not isinstance(accumulateur, dict):
+        raise InstrumentIndisponible(
+            "etat.mix_somme a disparu (ou n'est plus un dict) : la sonde de mixage de "
+            "`noyau.py` (v41.32) n'alimente plus le retour d'épisode, qui serait publié à "
+            "0,0 SANS erreur. Vérifier `_sonder_mixage` et son réarmement dans "
+            "`_reinitialiser_buffers_journee`.")
+    if accumulateur and "Env" not in accumulateur:
+        raise InstrumentIndisponible(
+            f"etat.mix_somme cumule {len(accumulateur)} canal(aux) mais plus « Env » : la "
+            f"récompense d'environnement n'est plus cumulée par la sonde de mixage de "
+            f"`noyau.py`. Or `retour_moyen` appartient à la famille de métriques gelée — "
+            f"vérifier `_sonder_mixage(etat, Env=…)` dans `traiter_tick`.")
+    if ticks_joues and "Env" not in accumulateur:
+        raise InstrumentIndisponible(
+            "aucune récompense d'environnement accumulée alors que des ticks ont été joués : "
+            "la sonde de mixage est MUETTE. Tous les retours seraient mesurés à 0,0 sans "
+            "erreur — vérifier `_sonder_mixage(etat, Env=…)` dans `traiter_tick`.")
+    detecteur = getattr(etat, "detecteur_ressources_bio", None)
+    for attribut in ("positions_food", "positions_water"):
+        if not hasattr(detecteur, attribut):
+            raise InstrumentIndisponible(
+                f"etat.detecteur_ressources_bio.{attribut} a disparu : l'empreinte du monde "
+                f"serait publiée VIDE, et un tirage de ressources différent redeviendrait "
+                f"invisible. Vérifier "
+                f"`DetecteurRessourcesBiologiques.reinitialiser_episode`.")
 
 
 def _forcer_carte(etat, index_carte: int) -> tuple[str, str]:
@@ -328,14 +393,29 @@ def evaluer_cerveau_sur_carte(etat, index_carte: int, graines: Sequence[int],
     cursus reste une mesure de développement (exigence 5 du registre).
 
     ⚠️ CE QUE CHAQUE ÉPISODE PUBLIE, EN PLUS DE SES MÉTRIQUES. La mesure ne suffit pas : il
-    faut pouvoir AUDITER le monde qui l'a produite. Chaque entrée d'`episodes` porte donc
-    `env_id` (la carte réellement jouée), `budget` (les ticks réellement reçus) et `monde`
-    (empreinte du tirage : graine consommée, but, départ, ressources semées). Sans cela, un
-    épisode joué sur une AUTRE carte ou dans un AUTRE monde restait invisible dans le
-    résultat — mesuré : les trois leviers de graine retirés, les mondes différaient pendant
-    que le rapport, lui, restait identique. Le `budget` de tête est celui de la carte
-    imposée ; les `budget` par épisode doivent lui être égaux (re-forçage oblige), et une
-    divergence se lit désormais au lieu d'être tue.
+    faut pouvoir AUDITER le monde qui l'a produite **et le comportement qu'elle a suivi**.
+    Chaque entrée d'`episodes` porte donc `env_id` (la carte réellement jouée), `budget` (les
+    ticks réellement reçus), `monde` (empreinte du tirage : graine consommée, but, départ,
+    ressources semées) et `trajectoire` (positions occupées, distinctes, dans l'ordre de
+    première visite). Sans `monde`, un épisode joué dans un AUTRE monde restait invisible ;
+    sans `trajectoire`, deux politiques différentes produisaient le MÊME rapport — mesuré par
+    la revue indépendante : **176 ticks divergents sur 972 avec un dict publié identique**.
+    Le `budget` de tête est celui de la carte imposée ; les `budget` par épisode doivent lui
+    être égaux (re-forçage oblige), et une divergence se lit désormais au lieu d'être tue.
+
+    ⚠️ AUCUN INSTRUMENT MANQUANT NE DÉGRADE LA MESURE EN SILENCE : `_exiger_instruments`
+    passe avant chaque épisode **et** après ses ticks, et lève `InstrumentIndisponible`
+    plutôt que de publier des retours à `0,0` ou une empreinte vide.
+
+    ⚠️ LES TROIS LEVIERS DE GRAINE SONT L'ENSEMBLE DU DISPOSITIF (voir le commentaire de la
+    boucle) — un quatrième a été cherché et **écarté par la mesure**. Hypothèse testée : la
+    NAISSANCE d'un cerveau tirerait elle aussi du `np.random` GLOBAL, ce qui exigerait un `np.random.seed(...)` avant
+    `charger_ou_naitre()`. Mesuré : faux, et de trois façons — `np.random.get_state()[2]` vaut
+    **624 avant et après** une naissance complète (zéro tirage consommé) ; deux naissances
+    seedées en torch donnent le même `state_dict` (`sha256 = 134895af4844680b`) que
+    `np.random` soit seedé ou non ; leur empreinte LARGE (`4817393f8d31475d`) reste identique
+    quand les deux naissances partent d'états `np.random` DIFFÉRENTS. La naissance est tirée
+    par `nn.init.xavier_uniform_` sur `base_weight`, donc par torch seul.
     """
     if not 0 <= index_carte < len(PROGRAMME):
         raise CarteInvalide(f"index de carte {index_carte} hors PROGRAMME (0…{len(PROGRAMME) - 1})")
@@ -346,6 +426,9 @@ def evaluer_cerveau_sur_carte(etat, index_carte: int, graines: Sequence[int],
     episodes = []
     for graine in graines:
         graine = int(graine)
+        # AVANT la journée : l'accumulateur de la sonde porte encore l'épisode précédent, donc
+        # un canal disparu s'y voit. Un instrument manquant REFUSE la mesure (voir la classe).
+        _exiger_instruments(etat)
         if etat.env_id != env_id:
             # ⚠️ LA CARTE DÉRIVE EN COURS D'ÉVALUATION. `traiter_tick` appelle, à la bascule
             # de `fin_episode`, `_appliquer_niveau_episode(_tirer_niveau_episode(etat))` :
@@ -401,13 +484,33 @@ def evaluer_cerveau_sur_carte(etat, index_carte: int, graines: Sequence[int],
         optimal = plus_court_chemin(etat.env)
         recompense_avant = _recompense_env_cumulee(etat)
         gagne, ticks, tronque, recompense = False, None, True, 0.0
+        # --- LA TRAJECTOIRE, SANS LAQUELLE L'ARTEFACT EST AVEUGLE AU COMPORTEMENT ---
+        # Mesuré par la revue indépendante : sur la carte 3, 176 ticks sur 972 divergeaient
+        # entre deux passes ALORS QUE le rapport publié était identique — les 3 épisodes
+        # donnent `gagne=False`, `ticks=324` (le budget entier), `retour=0.0`, et le monde
+        # semé est constant. Tout ce qui était publié était donc aveugle à la trajectoire.
+        # On publie les positions OCCUPÉES, distinctes, dans l'ordre de première visite :
+        # compact (une carte 9×9 en compte quelques dizaines) et fidèle à ce qui a été joué.
+        #
+        # ⚠️ Lues dans `environnement_episode`, JAMAIS dans `etat.env` : au tick de bascule,
+        # `traiter_tick` peut avoir remplacé `etat.env` par une carte du CURSUS — la position
+        # lue serait alors celle d'un autre monde.
+        environnement_episode = etat.env
+        positions_vues: list[list[int]] = []
+        vues = set()
         with torch.no_grad():
             for _tick in range(budget_episode):
                 ticks_avant = etat.ticks_episode_courant
                 traiter_tick(etat)
+                position = environnement_episode.unwrapped.agent_pos
+                cle = (int(position[0]), int(position[1]))
+                if cle not in vues:
+                    vues.add(cle)
+                    positions_vues.append([cle[0], cle[1]])
                 # `traiter_tick` enchaîne LUI-MÊME sur un nouvel épisode dès que
                 # `fin_episode` bascule : on lit la victoire au tick MÊME de la bascule.
                 if etat.fin_episode:
+                    _exiger_instruments(etat, ticks_joues=True)
                     gagne = bool(etat.victoire_aujourdhui)
                     ticks = ticks_avant + 1
                     tronque = False
@@ -416,6 +519,7 @@ def evaluer_cerveau_sur_carte(etat, index_carte: int, graines: Sequence[int],
             if tronque:
                 # Un épisode tronqué n'a pas de victoire, mais sa récompense partielle
                 # reste une information MESURÉE : on la calcule, on ne la laisse pas à 0,0.
+                _exiger_instruments(etat, ticks_joues=True)
                 recompense = _recompense_env_cumulee(etat) - recompense_avant
         episodes.append({
             "graine": graine,
@@ -433,6 +537,11 @@ def evaluer_cerveau_sur_carte(etat, index_carte: int, graines: Sequence[int],
             "budget": budget_episode,
             # `monde` : empreinte du monde semé (graine consommée, but, départ, ressources).
             "monde": empreinte,
+            # `trajectoire` : les positions occupées, distinctes, dans l'ordre de première
+            # visite. C'est le seul champ SENSIBLE AU COMPORTEMENT — sans lui, deux
+            # trajectoires différentes (donc deux politiques) produisent le MÊME rapport :
+            # mesuré, 176 ticks divergents sur 972 avec un dict publié identique.
+            "trajectoire": positions_vues,
             # La longueur n'a de sens que sur un épisode GAGNÉ : sur un échec, le
             # « trajet » est la durée du budget et le rapport ne mesurerait rien.
             "longueur_normalisee": longueur_normalisee(ticks, optimal) if gagne else None,
