@@ -1013,6 +1013,9 @@ git commit -m "feat(EVA-01): banc_final — resolution de cohorte, refus des nom
 **Fichiers :**
 - Modifier : `src/naulthene/instruments/banc_final.py` (imports + `evaluer_cerveau_sur_carte`)
 - Tester : `tests/test_banc_final.py` (ajout d'un test d'intégration léger)
+- Nettoyage (Minor différé de la tâche 3) : retirer de `tests/test_banc_final.py` la ligne d'import
+  `refuser_bras_vides`, **inutilisée**. Le CONTRÔLEUR l'avait ajoutée à tort au tour 2 de la tâche 3 ;
+  le fichier livré l'a conservée verbatim puisqu'elle figurait dans la référence gelée.
 
 **Action :** ajouter la boucle d'évaluation d'un cerveau sur une carte. **La reproductibilité est le
 cœur de la tâche** : graine d'environnement **et** graine torch, pour la même valeur `s`.
@@ -1237,7 +1240,7 @@ Bonferroni pour une famille de 3.
 - Un bras amputé d'un cerveau fait lever `CampagneInvalide` (règle MES-01), et **aucun** agrégat
   n'est publié.
 - Le rapport imprime le seuil Bonferroni de la famille de 3 (`seuil_t(n, 3, 0.05)`).
-- `NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m unittest discover -s tests -p "test_banc_final.py" -v` → **14 tests OK**.
+- `NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m unittest discover -s tests -p "test_banc_final.py" -v` → **15 tests OK**.
 
 - [ ] **Étape 1 : écrire le test qui échoue**
 
@@ -1270,6 +1273,26 @@ class TestCohorteIncomplete(unittest.TestCase):
             with self.assertRaises(CampagneInvalide):
                 dp = construire_depouillement(d, ["A", "B"], [11, 22], metriques)
                 dp.apparie("A", "B", "taux_franchissement", "primaire")
+
+    def test_main_refuse_un_bras_absent_de_l_inventaire(self):
+        """Un bras listé dans `--bras` mais ABSENT de l'inventaire n'est pas dans le dict
+        résolu : `refuser_bras_vides` ne peut pas le voir. Sans ce second contrôle,
+        `--bras K8_NU K2_NU` avec un inventaire sans K2_NU sortait en 0 — même classe de
+        succès silencieux que I-3, sur le chemin OBLIGATOIRE de la tâche 9."""
+        with tempfile.TemporaryDirectory() as d:
+            chemin_brain = os.path.join(d, "K8_NU_g11.brain")
+            _toucher(chemin_brain)
+            with open(os.path.join(d, "manifeste.json"), "w", encoding="utf-8") as f:
+                json.dump({"campagne": "essai", "graines": [11]}, f)
+            inventaire = os.path.join(d, "cohorte.json")
+            with open(inventaire, "w", encoding="utf-8") as f:
+                json.dump({"K8_NU": {"11": chemin_brain}}, f)  # K2_NU absent
+            argv = ["banc_final", "--cohorte", d, "--bras", "K8_NU", "K2_NU",
+                    "--episodes", "1", "--cohorte-explicite", inventaire]
+            with mock.patch.object(sys, "argv", argv):
+                with self.assertRaises(BrasIntrouvable) as ctx:
+                    main()
+            self.assertIn("K2_NU", str(ctx.exception))
 ```
 
 - [ ] **Étape 2 : exécuter le test avec `bash`**
@@ -1415,6 +1438,14 @@ def executer_banc(cohorte: str, bras: Sequence[str], cartes: Sequence[int],
 Puis compléter `main()` en remplaçant le bloc `print` final par :
 
 ```python
+    # Cohérence --bras / inventaire (Minor différé de la tâche 3) : un bras déclaré dans --bras
+    # mais ABSENT de l'inventaire n'est pas dans le dict résolu, donc `refuser_bras_vides` ne peut
+    # pas le voir — `--bras K8_NU K2_NU` avec un inventaire sans K2_NU sortait en 0 en affichant
+    # `{'K8_NU': 1}`. Même classe de défaut que I-3 : succès silencieux.
+    absents = sorted(set(args.bras) - set(cohorte))
+    if absents:
+        raise BrasIntrouvable(
+            f"bras déclarés dans --bras mais ABSENTS de l'inventaire : {', '.join(absents)}")
     rapport = executer_banc(
         cohorte=args.cohorte, bras=args.bras, cartes=args.cartes, graines=graines,
         episodes=args.episodes, graine_eval_base=args.graine_eval_base,
@@ -1428,7 +1459,7 @@ Puis compléter `main()` en remplaçant le bloc `print` final par :
 ```bash
 NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m unittest discover -s tests -p "test_banc_final.py" -v
 ```
-Attendu : **14 tests OK**.
+Attendu : **15 tests OK**.
 
 - [ ] **Étape 5 : commit ciblé avec `bash`**
 
@@ -1454,7 +1485,7 @@ corriger `DOSSIER_EVALS_DEFAUT`, qui désigne un dossier **inexistant**.
 **Critères de succès :**
 - `grep -n "docs/notes/evals" src/naulthene/instruments/evaluer_cerveau.py` → **0 occurrence**.
 - Le bandeau nomme le successeur (`banc_final.py`) et la raison.
-- La suite complète reste verte : **185 tests OK** (156 + 12 + 2 + 11 + 2 + 1 + 1).
+- La suite complète reste verte : **186 tests OK** (156 + 12 + 2 + 11 + 2 + 2 + 1).
 
 - [ ] **Étape 1 : écrire le test qui échoue**
 
@@ -1499,7 +1530,7 @@ mécanique nouvelle ne doit y être ajoutée.
 ```bash
 NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m unittest discover -s tests -v
 ```
-Attendu : **185 tests OK**.
+Attendu : **186 tests OK**.
 
 - [ ] **Étape 5 : commit ciblé avec `bash`**
 
