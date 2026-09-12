@@ -2143,7 +2143,7 @@ mécanique nouvelle ne doit y être ajoutée.
 ```bash
 NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m unittest discover -s tests -v
 ```
-Attendu : **191 tests OK**.
+Attendu : **192 tests OK**.
 
 - [ ] **Étape 5 : commit ciblé avec `bash`**
 
