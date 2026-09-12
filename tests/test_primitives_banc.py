@@ -156,6 +156,49 @@ class TestMigrationDesSondes(unittest.TestCase):
             self.assertIs(sonde.plus_court_chemin, primitives_banc.plus_court_chemin)
             self.assertIs(sonde.intervalle_wilson, primitives_banc.intervalle_wilson)
 
+    def test_aucun_nom_global_non_resolu_dans_les_sondes(self):
+        """La migration a retiré deux corps de fonction, donc potentiellement des imports.
+        AUCUN test n'exécute ces sondes de bout en bout : un `NameError` y dormirait jusqu'à
+        ce qu'un humain lance la sonde à la main.
+
+        Contrôle par LOAD_GLOBAL, qui est EXACT : l'accès d'attribut (`os.path`) passe par
+        LOAD_ATTR, donc `os` ne peut être confondu avec `path`. Les noms liés sont déduits du
+        SOURCE (STORE_NAME au niveau module) et non de l'état du module importé — c'est ce qui
+        rend le détecteur capable de voir un import retiré à tort.
+
+        (Mesure du 12/09/2026 : la preuve portée par un smoke test manuel vivait dans
+        `.superpowers/`, ignoré par Git — elle disparaissait à tout clone neuf.)
+        """
+        import builtins
+        import dis
+        from pathlib import Path
+
+        from naulthene.instruments import sonde_inertie_motrice, sonde_plancher_geometrique
+
+        dunder_module = {"__name__", "__file__", "__doc__", "__spec__", "__package__",
+                         "__loader__", "__builtins__", "__annotations__"}
+
+        def noms_non_resolus(source, fichier):
+            code = compile(source, fichier, "exec")
+            lies, charges, pile = set(), set(), [code]
+            while pile:
+                c = pile.pop()
+                est_module = c is code
+                for instr in dis.get_instructions(c):
+                    if est_module and instr.opname == "STORE_NAME":
+                        lies.add(instr.argval)
+                    elif instr.opname == "LOAD_GLOBAL":
+                        charges.add(instr.argval)
+                pile += [k for k in c.co_consts if hasattr(k, "co_code")]
+            return sorted(charges - lies - dunder_module - set(dir(builtins)))
+
+        for sonde in (sonde_inertie_motrice, sonde_plancher_geometrique):
+            with self.subTest(sonde=sonde.__name__):
+                self.assertEqual(
+                    noms_non_resolus(Path(sonde.__file__).read_text(encoding="utf-8"),
+                                     sonde.__file__),
+                    [], f"{sonde.__name__} référence un nom global non résolu")
+
 
 if __name__ == "__main__":
     unittest.main()
