@@ -185,24 +185,23 @@ class TestBrasIntrouvable(unittest.TestCase):
 
 
 class TestReproductibilite(unittest.TestCase):
-    """Le banc ACTUEL n'est pas reproductible : noyau.py échantillonne l'action
-    (Categorical(...).sample()) et evaluer_cerveau.py ne fixe aucune graine torch.
-    Ce test verrouille le correctif : même cerveau + mêmes graines => mêmes résultats."""
+    """Le banc ACTUEL du dépôt n'est pas reproductible : `noyau.py` échantillonne l'action
+    (`Categorical(...).sample()`) et l'ancien outil ne fixait aucune graine torch.
+
+    ⚠️ Ce test évalue LE MÊME cerveau deux fois. Une version antérieure en construisait un
+    NOUVEAU à chaque passe : la naissance tire `base_weight`/`norme_naissance` du RNG torch,
+    donc les deux individus DIFFÉRAIENT (max|Δ| = 1,13 sur le `state_dict`) — le test ne
+    comparait rien de ce qu'il annonçait, passait par coïncidence en fichier isolé et
+    ÉCHOUAIT sur la suite complète (`(1, 0, 4) != (0, 0, 4)`).
+
+    ⚠️ L'assertion porte sur le résultat COMPLET, pas sur un triplet. Trois générateurs
+    décident d'un épisode (le monde via `_graine_episode`, le `np.random` global, torch) :
+    deux passes peuvent partager un nombre de victoires tout en ayant joué des trajectoires
+    différentes. Comparer `(gagnes, tronques, optimal)` est un critère FAIBLE ; ce que D1
+    promet — un δ_A/A nul — est l'identité de l'évaluation, pas celle d'un résumé.
+    """
 
     def test_deux_evaluations_identiques_donnent_le_meme_resultat(self):
-        """⚠️ LE CERVEAU EST CONSTRUIT UNE SEULE FOIS, et c'est le POINT du test.
-
-        La référence gelée appelait `une_passe()` deux fois avec, DANS chaque passe, un
-        `charger_ou_naitre()` : elle comparait donc DEUX INDIVIDUS différents. La naissance
-        n'est pas reproductible — `base_weight`/`norme_naissance` de chaque
-        `NaultheneLinearSynaptique` sont tirés du RNG torch au moment de la naissance —
-        et le test ne passait que lorsque les deux cerveaux tiraient le même nombre de
-        victoires. Mesuré : `(1, 0, 4)` contre `(0, 0, 4)` sur la suite complète.
-
-        Ce que le banc promet — le δ_A/A, attendu nul — est la reproductibilité pour un
-        MÊME cerveau (c'est le cas réel : les tâches 5 à 9 rechargent des `.brain`). Le
-        test le vérifie donc ainsi, sans changer ce qui est comparé.
-        """
         from naulthene.cerveau.persistance import PersistanceAnatomique
         from naulthene.instruments.banc_final import evaluer_cerveau_sur_carte
 
@@ -214,9 +213,8 @@ class TestReproductibilite(unittest.TestCase):
             seconde = evaluer_cerveau_sur_carte(etat, 0, [10000, 10001, 10002])
             etat.env.close()
 
-        self.assertEqual(
-            (premiere["gagnes"], premiere["tronques"], premiere["optimal"]),
-            (seconde["gagnes"], seconde["tronques"], seconde["optimal"]))
+        self.assertEqual(premiere, seconde,
+                         "deux évaluations du MÊME cerveau doivent être identiques en tout")
 
 
 class TestEpisodeTronque(unittest.TestCase):
