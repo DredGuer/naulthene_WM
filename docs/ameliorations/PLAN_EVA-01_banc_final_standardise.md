@@ -1678,7 +1678,7 @@ son sens.
 - Un bras amputé d'un cerveau fait lever `CampagneInvalide` (règle MES-01), et **aucun** agrégat
   n'est publié.
 - Le rapport imprime le seuil Bonferroni de la famille de 3 (`seuil_t(n, 3, 0.05)`).
-- `NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m unittest discover -s tests -p "test_banc_final.py" -v` → **16 tests OK**.
+- `NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m unittest discover -s tests -p "test_banc_final.py" -v` → **18 tests OK**.
 
 - [ ] **Étape 1 : écrire le test qui échoue**
 
@@ -1897,7 +1897,7 @@ Puis compléter `main()` en remplaçant le bloc `print` final par :
 ```bash
 NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m unittest discover -s tests -p "test_banc_final.py" -v
 ```
-Attendu : **16 tests OK**.
+Attendu : **18 tests OK**.
 
 - [ ] **Étape 5 : commit ciblé avec `bash`**
 
@@ -1905,6 +1905,38 @@ Attendu : **16 tests OK**.
 git add src/naulthene/instruments/banc_final.py tests/test_banc_final.py && \
 git commit -m "feat(EVA-01): rapport de cohorte — refus MES-01, appariement par graine, seuil Bonferroni de la famille de 3"
 ```
+
+### Correctif — deux coquilles de ce plan, mesurées à l'implémentation
+
+L'implémentation a établi DEUX défauts de ce plan, **tous deux vérifiés par le contrôleur** :
+
+1. **`extension_log=".brain"` manquait.** `Manifeste.cohorte` construit ses chemins avec
+   `self.extension_log`, dont le DÉFAUT est `.log` (`depouillement.py:151` et `:180`). Sur une cohorte
+   **COMPLÈTE**, le banc collectait donc **0 run sur 4** et déclarait **4 violations** (au lieu de 4/0) :
+   tel quel, il ne publiait **JAMAIS rien**, et la tâche 9 aurait échoué.
+2. **L'agrégat était écrit INCONDITIONNELLEMENT**, contredisant le critère de cette tâche (« aucun
+   agrégat n'est publié » sur cohorte incomplète). Le garde `if dp.violations: return rapport` est
+   **nécessaire** : sans cerveau manquant, aucune comparaison n'est tentée, donc **rien ne lève**.
+
+### Deux garanties à VERROUILLER par un test (le compte passe de 16 à 18)
+
+Leçon des tâches 1, 3 et 4 : **un correctif non verrouillé par un test régresse en silence.** Ces deux
+propriétés ont été prouvées par sonde et par mutation, mais **aucun test de la suite ne les défend** —
+or ce sont les deux piliers de cette tâche.
+
+1. **`extension_log=".brain"`** : un test exige qu'une cohorte **complète** soit collectée **entièrement**
+   (autant de runs que de cerveaux attendus, **aucune** violation). Sous la mutation « extension_log
+   retiré », ce test doit **ÉCHOUER**. C'est la plus grave des deux coquilles : sans elle, le banc
+   n'écrit rien du tout.
+2. **L'état FRAIS par (bras, carte)** — prérequis I1, cœur de cette tâche. Pour qu'un mutant
+   « états mis en cache » soit **visible dans l'artefact** et pas seulement détectable par sonde, chaque
+   (bras, carte) du rapport publie une **empreinte de l'état de départ** du cerveau chargé (au minimum
+   un hachage du `state_dict`), et un test exige que **les deux cartes d'un même cerveau partent de la
+   MÊME empreinte**. Sous un cache, la seconde carte porterait une empreinte différente → le test
+   ÉCHOUE.
+
+Instrumenter est ici la bonne réponse, pas un luxe : c'est exactement ce qui a débloqué C1 à la
+tâche 4 — **un artefact qui ne montre pas ce qu'il a mesuré ne peut pas être audité.**
 
 ---
 
@@ -1923,7 +1955,7 @@ corriger `DOSSIER_EVALS_DEFAUT`, qui désigne un dossier **inexistant**.
 **Critères de succès :**
 - `grep -n "docs/notes/evals" src/naulthene/instruments/evaluer_cerveau.py` → **0 occurrence**.
 - Le bandeau nomme le successeur (`banc_final.py`) et la raison.
-- La suite complète reste verte : **187 tests OK** (156 + 12 + 2 + 11 + 3 + 2 + 1).
+- La suite complète reste verte : **189 tests OK** (156 + 12 + 2 + 11 + 3 + 4 + 1).
 
 - [ ] **Étape 1 : écrire le test qui échoue**
 
@@ -1968,7 +2000,7 @@ mécanique nouvelle ne doit y être ajoutée.
 ```bash
 NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m unittest discover -s tests -v
 ```
-Attendu : **187 tests OK**.
+Attendu : **189 tests OK**.
 
 - [ ] **Étape 5 : commit ciblé avec `bash`**
 
