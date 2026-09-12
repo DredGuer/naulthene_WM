@@ -45,8 +45,6 @@ LANCEMENT
 from __future__ import annotations
 
 import argparse
-import collections
-import math
 import os
 import random
 import shutil
@@ -54,50 +52,13 @@ import shutil
 import numpy as np
 import torch
 
+from naulthene.instruments.primitives_banc import intervalle_wilson, plus_court_chemin
+
 
 ENV_DEFAUT = "MiniGrid-SimpleCrossingS9N1-v0"
 
 
-# --- 1. LE PLUS COURT CHEMIN RÉEL (BFS sur la grille) --------------------------------
-def plus_court_chemin(env) -> int | None:
-    """Nombre de PAS D'AVANCE minimal entre l'agent et le but, murs contournés.
-
-    ⚠️ Compte les cases, pas les actions : une rotation coûte un tick de plus dans le
-    jeu. C'est donc une borne INFÉRIEURE du trajet optimal — elle ne peut que
-    SURESTIMER la directivité, jamais la flatter à la baisse.
-    """
-    u = env.unwrapped
-    grille = u.grid
-    depart = tuple(u.agent_pos)
-    but = None
-    for x in range(grille.width):
-        for y in range(grille.height):
-            o = grille.get(x, y)
-            if o is not None and getattr(o, "type", None) == "goal":
-                but = (x, y)
-    if but is None:
-        return None
-    vus = {depart}
-    file = collections.deque([(depart, 0)])
-    while file:
-        (x, y), d = file.popleft()
-        if (x, y) == but:
-            return d
-        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-            nx, ny = x + dx, y + dy
-            if not (0 <= nx < grille.width and 0 <= ny < grille.height):
-                continue
-            if (nx, ny) in vus:
-                continue
-            o = grille.get(nx, ny)
-            if o is not None and getattr(o, "type", None) in ("wall", "lava"):
-                continue
-            vus.add((nx, ny))
-            file.append(((nx, ny), d + 1))
-    return None
-
-
-# --- 2. LES TROIS POLITIQUES ----------------------------------------------------------
+# --- 1. LES TROIS POLITIQUES ----------------------------------------------------------
 def jouer(politique, env_id, episodes, graine_base, agent=None, etat_fab=None,
           patience=None):
     """Retourne (taux_succes, [(ticks, optimal)] des victoires)."""
@@ -140,17 +101,7 @@ def jouer(politique, env_id, episodes, graine_base, agent=None, etat_fab=None,
     return succes / episodes, trajets
 
 
-def intervalle_wilson(k, n, z=1.96):
-    if n == 0:
-        return (0.0, 0.0)
-    p = k / n
-    d = 1 + z * z / n
-    c = (p + z * z / (2 * n)) / d
-    m = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / d
-    return (max(0.0, c - m), min(1.0, c + m))
-
-
-# --- 3. PROGRAMME ---------------------------------------------------------------------
+# --- 2. PROGRAMME ---------------------------------------------------------------------
 def main() -> None:
     p = argparse.ArgumentParser(description="Les 15 % sont-ils une compétence ou un tirage ?")
     p.add_argument("--brain", required=True, help="cerveau entraîné (lu depuis une COPIE)")

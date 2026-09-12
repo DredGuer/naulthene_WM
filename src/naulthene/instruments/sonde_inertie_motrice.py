@@ -46,13 +46,13 @@ LANCEMENT
 from __future__ import annotations
 
 import argparse
-import collections
-import math
 import os
 import shutil
 
 import numpy as np
 import torch
+
+from naulthene.instruments.primitives_banc import intervalle_wilson, plus_court_chemin
 
 
 ENV_DEFAUT = "MiniGrid-SimpleCrossingS9N1-v0"
@@ -63,42 +63,7 @@ ENV_DEFAUT = "MiniGrid-SimpleCrossingS9N1-v0"
 N_ACTIONS = 7
 
 
-# --- 1. LE PLUS COURT CHEMIN (BFS) ----------------------------------------------------
-def plus_court_chemin(env) -> int | None:
-    """Distance en CASES entre l'agent et le but, obstacles contournés.
-
-    ⚠️ Compte les cases, pas les actions : une rotation coûte un tick de plus dans le
-    jeu réel. C'est donc une borne INFÉRIEURE du trajet optimal — la directivité
-    mesurée est par construction un peu PESSIMISTE, jamais optimiste.
-    """
-    g = env.unwrapped.grid
-    depart = tuple(env.unwrapped.agent_pos)
-    but = None
-    for x in range(g.width):
-        for y in range(g.height):
-            c = g.get(x, y)
-            if c is not None and c.type == "goal":
-                but = (x, y)
-    if but is None:
-        return None
-    vus = {depart}
-    file = collections.deque([(depart, 0)])
-    while file:
-        (x, y), d = file.popleft()
-        if (x, y) == but:
-            return d
-        for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
-            if not (0 <= nx < g.width and 0 <= ny < g.height) or (nx, ny) in vus:
-                continue
-            c = g.get(nx, ny)
-            if c is not None and c.type in ("wall", "lava"):
-                continue
-            vus.add((nx, ny))
-            file.append(((nx, ny), d + 1))
-    return None
-
-
-# --- 2. LE FILTRE D'INERTIE -----------------------------------------------------------
+# --- 1. LE FILTRE D'INERTIE -----------------------------------------------------------
 class Inertie:
     """`L_t = λ·L_{t-1} + (1−λ)·logits_t` — une masse cinématique sur la décision.
 
@@ -137,7 +102,7 @@ def echantillonner(logits: np.ndarray, rng) -> int:
     return int(rng.choices(range(N_ACTIONS), weights=pr.tolist())[0])
 
 
-# --- 3. LA BOUCLE DE JEU --------------------------------------------------------------
+# --- 2. LA BOUCLE DE JEU --------------------------------------------------------------
 def jouer(env_id, episodes, graine_base, decideur, inertie, patience=None):
     """Retourne (taux, [(ticks, optimal)], stats_actions)."""
     import random
@@ -175,17 +140,7 @@ def jouer(env_id, episodes, graine_base, decideur, inertie, patience=None):
     return succes / episodes, trajets, compte_actions
 
 
-def intervalle_wilson(k, n, z=1.96):
-    if n == 0:
-        return (0.0, 0.0)
-    p = k / n
-    d = 1 + z * z / n
-    c = (p + z * z / (2 * n)) / d
-    m = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / d
-    return (max(0.0, c - m), min(1.0, c + m))
-
-
-# --- 4. EXÉCUTION ---------------------------------------------------------------------
+# --- 3. EXÉCUTION ---------------------------------------------------------------------
 def main() -> None:
     p = argparse.ArgumentParser(description="L'inertie motrice tend-elle le trajet ?")
     p.add_argument("--brain", required=True)

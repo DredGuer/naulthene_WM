@@ -142,5 +142,20 @@ class TestIntervalleWilson(unittest.TestCase):
         self.assertAlmostEqual(r["ic_haut"], 0.98212, places=5)
 
 
+class TestMigrationDesSondes(unittest.TestCase):
+    """Les deux sondes ne doivent plus porter leur PROPRE copie : sans ce test, une
+    troisième duplication réapparaîtrait au prochain chantier (défaut MES-01/MES-02)."""
+
+    def test_les_sondes_reutilisent_la_primitive_partagee(self):
+        from naulthene.instruments import (
+            primitives_banc,
+            sonde_inertie_motrice,
+            sonde_plancher_geometrique,
+        )
+        for sonde in (sonde_inertie_motrice, sonde_plancher_geometrique):
+            self.assertIs(sonde.plus_court_chemin, primitives_banc.plus_court_chemin)
+            self.assertIs(sonde.intervalle_wilson, primitives_banc.intervalle_wilson)
+
+
 if __name__ == "__main__":
     unittest.main()
