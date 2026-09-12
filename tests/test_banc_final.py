@@ -22,6 +22,7 @@ import unittest
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
 
 from naulthene.instruments.banc_final import (  # noqa: E402
+    BrasIntrouvable,
     EpisodesNonDerive,
     GraineEvalRefusee,
     NomAmbigue,
@@ -29,6 +30,7 @@ from naulthene.instruments.banc_final import (  # noqa: E402
     lire_cohorte_explicite,
     lire_graines_du_manifeste,
     lister_cerveaux,
+    resoudre_cohorte,
     verifier_graine_eval_base,
 )
 
@@ -56,10 +58,18 @@ class TestListerCerveaux(unittest.TestCase):
             self.assertIn("K8_NU_g11 2.brain", str(ctx.exception))
 
     def test_ignore_les_autres_bras(self):
+        """Ne pas se contenter des CLÉS : le retour est indexé par graine, donc un cerveau
+        d'un AUTRE bras écrase la même clé sans changer la liste des clés. Un motif qui
+        ignorerait le préfixe de bras rendrait `{11: 'K8_NU_g11.brain'}` quand on demande
+        K16_NU — contamination inter-bras invisible, et d'autant plus dangereuse que les
+        6 bras partagent les MÊMES 20 graines."""
         with tempfile.TemporaryDirectory() as d:
             _toucher(os.path.join(d, "K8_NU_g11.brain"))
             _toucher(os.path.join(d, "K16_NU_g11.brain"))
-            self.assertEqual(sorted(lister_cerveaux(d, "K8_NU", [11])), [11])
+            trouves = lister_cerveaux(d, "K8_NU", [11])
+            self.assertEqual(sorted(trouves), [11])
+            self.assertTrue(trouves[11].endswith("K8_NU_g11.brain"),
+                            f"le chemin résolu doit être celui du bras DEMANDÉ : {trouves[11]}")
 
 
 class TestGardeFous(unittest.TestCase):
@@ -82,6 +92,21 @@ class TestManifesteDeCampagne(unittest.TestCase):
             with open(os.path.join(d, "manifeste.json"), "w", encoding="utf-8") as f:
                 json.dump({"campagne": "essai", "graines": [11, 22, 33]}, f)
             self.assertEqual(lire_graines_du_manifeste(d), [11, 22, 33])
+
+    def test_lit_les_graines_d_une_cohorte_explicite_runs(self):
+        """Le manifeste connaît DEUX formes ; `runs` est une LISTE de dicts `{"nom": ...}`.
+        N'en lire qu'une rendait un diagnostic FAUX sur un manifeste valide (cas réel :
+        brains/02092026_rejeu_banc_corrige, 20 runs, mode explicite)."""
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, "manifeste.json"), "w", encoding="utf-8") as f:
+                json.dump({"campagne": "essai", "mode": "confirmatoire",
+                           "runs": [{"nom": "A_g11", "fichier": "banc_A_g11.json"},
+                                    {"nom": "B_g11", "fichier": "banc_B_g11.json"},
+                                    {"nom": "B_g22", "fichier": "banc_B_g22.json"}]}, f)
+            self.assertEqual(lire_graines_du_manifeste(d), [11, 22])
+
+
+
 
 
 class TestCohorteExplicite(unittest.TestCase):
@@ -111,6 +136,18 @@ class TestCohorteExplicite(unittest.TestCase):
             with self.assertRaises(ValueError) as ctx:
                 lire_cohorte_explicite(inventaire)
             self.assertIn("absent.brain", str(ctx.exception))
+
+
+class TestBrasIntrouvable(unittest.TestCase):
+    """Un bras qui ne résout RIEN est une faute de frappe, pas une cohorte vide : sortir en 0
+    en affichant `{'K16_NU_TYPO': 0}` était un succès silencieux (constat I-3)."""
+
+    def test_un_bras_sans_cerveau_est_refuse_en_le_nommant(self):
+        with tempfile.TemporaryDirectory() as d:
+            _toucher(os.path.join(d, "K8_NU_g11.brain"))
+            with self.assertRaises(BrasIntrouvable) as ctx:
+                resoudre_cohorte(d, ["K8_NU_TYPO"], [11])
+            self.assertIn("K8_NU_TYPO", str(ctx.exception))
 
 
 if __name__ == "__main__":

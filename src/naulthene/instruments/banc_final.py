@@ -50,6 +50,14 @@ class CarteInvalide(RuntimeError):
     """Index de carte hors du PROGRAMME."""
 
 
+class BrasIntrouvable(RuntimeError):
+    """Un bras déclaré ne résout AUCUN cerveau : faute de frappe, pas cohorte vide.
+
+    Sans ce refus, `--bras K16_NU_TYPO` affichait `{'K16_NU_TYPO': 0}` et sortait en 0 —
+    un succès silencieux, exactement ce que MES-01 interdit.
+    """
+
+
 def verifier_graine_eval_base(valeur: int) -> int:
     """Refuse une base de graines d'évaluation sous `GRAINE_EVAL_BASE_MINIMUM`.
 
@@ -82,9 +90,21 @@ def lire_graines_du_manifeste(cohorte: str) -> list[int]:
     chemin = os.path.join(cohorte, "manifeste.json")
     with open(chemin, "r", encoding="utf-8") as f:
         donnees = json.load(f)
+
     graines = donnees.get("graines")
+    if not graines and donnees.get("runs"):
+        # Le manifeste du dépôt connaît DEUX formes (voir `depouillement.Manifeste`) :
+        # `bras` × `graines`, ou une cohorte explicite `runs` — une LISTE de dicts
+        # `{"nom": "A_g11", "fichier": "banc_A_g11.json"}`. N'en lire qu'une rendait un
+        # diagnostic FAUX (« ne déclare aucune graine ») sur un manifeste parfaitement
+        # valide (cas réel : brains/02092026_rejeu_banc_corrige, 20 runs).
+        graines = sorted({int(m.group(1))
+                          for entree in donnees["runs"]
+                          for m in [re.search(r"_g(\d+)", str(entree.get("nom", "")))] if m})
     if not graines:
-        raise ValueError(f"{chemin} ne déclare aucune graine")
+        raise ValueError(
+            f"{chemin} : aucune graine lisible — formes reconnues : la clé `graines`, ou une "
+            f"cohorte explicite `runs` dont les entrées portent « _g<graine> » dans `nom`")
     return [int(g) for g in graines]
 
 
@@ -121,9 +141,22 @@ def lister_cerveaux(dossier_bras: str, prefixe: str, graines: Sequence[int]) -> 
 
 def resoudre_cohorte(cohorte: str, bras: Sequence[str],
                      graines: Sequence[int]) -> dict[str, dict[int, str]]:
-    """Rend `{bras: {graine: chemin}}`. L'absence d'un cerveau n'est PAS traitée ici :
-    c'est `Depouillement.collecter` qui refuse une cohorte incomplète (MES-01)."""
-    return {b: lister_cerveaux(os.path.join(cohorte, b), b, graines) for b in bras}
+    """Rend `{bras: {graine: chemin}}`. L'absence d'un cerveau DANS une cohorte résolue
+    n'est PAS traitée ici : c'est `Depouillement.collecter` qui refuse une cohorte
+    incomplète (MES-01).
+
+    En revanche un bras qui ne résout RIEN est refusé ici : c'est une faute de frappe, pas
+    une cohorte vide. Sans ce garde, `--bras K16_NU_TYPO` affichait `0` cerveau et sortait
+    en 0 — un succès silencieux.
+    """
+    resolue = {b: lister_cerveaux(os.path.join(cohorte, b), b, graines) for b in bras}
+    vides = sorted(b for b, v in resolue.items() if not v)
+    if vides:
+        raise BrasIntrouvable(
+            f"aucun cerveau résolu pour {len(vides)} bras : {', '.join(vides)} — "
+            f"vérifie l'orthographe du bras et la présence des fichiers canoniques "
+            f"`<bras>_g<graine>.brain` dans {cohorte}")
+    return resolue
 
 
 def lire_cohorte_explicite(chemin: str) -> dict[str, dict[int, str]]:
