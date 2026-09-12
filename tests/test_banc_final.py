@@ -199,6 +199,14 @@ class TestReproductibilite(unittest.TestCase):
     deux passes peuvent partager un nombre de victoires tout en ayant joué des trajectoires
     différentes. Comparer `(gagnes, tronques, optimal)` est un critère FAIBLE ; ce que D1
     promet — un δ_A/A nul — est l'identité de l'évaluation, pas celle d'un résumé.
+
+    ⚠️ LA CARTE ÉVALUÉE EST LA 3, PAS LA 0 — et c'est mesuré. Sur la carte 0, un cerveau neuf
+    est SUR SA PROPRE CARTE DE CURSUS : le tirage vaut 0 trois fois sur trois, donc
+    `_appliquer_niveau_episode` ne remplace jamais l'environnement et un re-forçage manquant
+    est **invisible** — mutation rejouée : 13 tests `OK` malgré le retrait. Sur la carte 3 (une
+    carte du plan, `CARTES_GELEES = (3, 4)`), la dérive est réelle : épisode 1 à 324 ticks,
+    puis les suivants sur `Empty-5x5` à 100 ticks. C'est aussi pourquoi la carte IMPOSÉE est
+    nommée explicitement pour chaque épisode, au lieu de dépendre d'une égalité globale.
     """
 
     def test_deux_evaluations_identiques_donnent_le_meme_resultat(self):
@@ -209,9 +217,16 @@ class TestReproductibilite(unittest.TestCase):
             etat = PersistanceAnatomique(
                 fichier=os.path.join(d, "neuf.brain")).charger_ou_naitre()
             etat.agent.eval()
-            premiere = evaluer_cerveau_sur_carte(etat, 0, [10000, 10001, 10002])
-            seconde = evaluer_cerveau_sur_carte(etat, 0, [10000, 10001, 10002])
+            premiere = evaluer_cerveau_sur_carte(etat, 3, [10000, 10001, 10002])
+            seconde = evaluer_cerveau_sur_carte(etat, 3, [10000, 10001, 10002])
             etat.env.close()
+
+        from naulthene.cerveau.noyau import PROGRAMME
+        carte_imposee = PROGRAMME[3][0]
+        for episode in premiere["episodes"]:
+            self.assertEqual(
+                episode["env_id"], carte_imposee,
+                "chaque épisode doit avoir joué la carte IMPOSÉE, pas une carte du cursus")
 
         self.assertEqual(premiere, seconde,
                          "deux évaluations du MÊME cerveau doivent être identiques en tout")
