@@ -32,7 +32,6 @@ from naulthene.instruments.banc_final import (  # noqa: E402
     lire_graines_du_manifeste,
     lister_cerveaux,
     main,
-    refuser_bras_vides,
     resoudre_cohorte,
     verifier_graine_eval_base,
 )
@@ -183,6 +182,62 @@ class TestBrasIntrouvable(unittest.TestCase):
             with self.assertRaises(BrasIntrouvable) as ctx:
                 resoudre_cohorte(d, ["K8_NU_TYPO"], [11])
             self.assertIn("K8_NU_TYPO", str(ctx.exception))
+
+
+class TestReproductibilite(unittest.TestCase):
+    """Le banc ACTUEL n'est pas reproductible : noyau.py échantillonne l'action
+    (Categorical(...).sample()) et evaluer_cerveau.py ne fixe aucune graine torch.
+    Ce test verrouille le correctif : même cerveau + mêmes graines => mêmes résultats."""
+
+    def test_deux_evaluations_identiques_donnent_le_meme_resultat(self):
+        """⚠️ LE CERVEAU EST CONSTRUIT UNE SEULE FOIS, et c'est le POINT du test.
+
+        La référence gelée appelait `une_passe()` deux fois avec, DANS chaque passe, un
+        `charger_ou_naitre()` : elle comparait donc DEUX INDIVIDUS différents. La naissance
+        n'est pas reproductible — `base_weight`/`norme_naissance` de chaque
+        `NaultheneLinearSynaptique` sont tirés du RNG torch au moment de la naissance —
+        et le test ne passait que lorsque les deux cerveaux tiraient le même nombre de
+        victoires. Mesuré : `(1, 0, 4)` contre `(0, 0, 4)` sur la suite complète.
+
+        Ce que le banc promet — le δ_A/A, attendu nul — est la reproductibilité pour un
+        MÊME cerveau (c'est le cas réel : les tâches 5 à 9 rechargent des `.brain`). Le
+        test le vérifie donc ainsi, sans changer ce qui est comparé.
+        """
+        from naulthene.cerveau.persistance import PersistanceAnatomique
+        from naulthene.instruments.banc_final import evaluer_cerveau_sur_carte
+
+        with tempfile.TemporaryDirectory() as d:
+            etat = PersistanceAnatomique(
+                fichier=os.path.join(d, "neuf.brain")).charger_ou_naitre()
+            etat.agent.eval()
+            premiere = evaluer_cerveau_sur_carte(etat, 0, [10000, 10001, 10002])
+            seconde = evaluer_cerveau_sur_carte(etat, 0, [10000, 10001, 10002])
+            etat.env.close()
+
+        self.assertEqual(
+            (premiere["gagnes"], premiere["tronques"], premiere["optimal"]),
+            (seconde["gagnes"], seconde["tronques"], seconde["optimal"]))
+
+
+class TestEpisodeTronque(unittest.TestCase):
+    def test_un_episode_non_termine_est_compte_comme_echec_et_marque(self):
+        """Un épisode qui n'atteint pas `fin_episode` dans le budget doit apparaître
+        comme ÉCHEC avec `tronque=True` — jamais disparaître du dénominateur."""
+        from naulthene.cerveau.persistance import PersistanceAnatomique
+        from naulthene.instruments.banc_final import evaluer_cerveau_sur_carte
+
+        with tempfile.TemporaryDirectory() as d:
+            etat = PersistanceAnatomique(
+                fichier=os.path.join(d, "neuf.brain")).charger_ou_naitre()
+            etat.agent.eval()
+            r = evaluer_cerveau_sur_carte(etat, 0, [10000], max_ticks=3)  # budget ridicule
+            etat.env.close()
+        self.assertEqual(len(r["episodes"]), 1)
+        self.assertTrue(r["episodes"][0]["tronque"])
+        self.assertFalse(r["episodes"][0]["gagne"])
+        self.assertEqual(r["gagnes"], 0)
+        self.assertIsInstance(r["episodes"][0]["retour"], float)
+        self.assertIsNone(r["episodes"][0]["longueur_normalisee"])  # pas de gain => absente
 
 
 if __name__ == "__main__":
