@@ -414,7 +414,7 @@ déjà la famille 3 (v41.65) et les dépouillements affichent déjà les seuils 
 
 ## EVA-01 — L'évaluation principale est trop bruitée et dépend du cursus
 
-- **Priorité / statut** : **P1 — 🔵 À mesurer**
+- **Priorité / statut** : **P1 — 🔵 À mesurer** (design validé le 12/09/2026, spec écrite, ⏳ **approbation en attente**)
 
 ### Constat
 
@@ -437,6 +437,38 @@ Une promotion change aussi la carte finale sur laquelle la maîtrise est lue.
 - Protocole standard versionné.
 - Banc final obligatoire dans les nouvelles campagnes majeures.
 - Séparation claire entre graines d'entraînement et d'évaluation.
+
+### Design validé (12/09/2026) — ⏳ en attente d'approbation du document
+
+Spec écrite et auto-relue :
+[`CHANTIER_EVA-01_banc_final_standardise.md`](CHANTIER_EVA-01_banc_final_standardise.md).
+
+Quatre décisions arbitrées par l'auteur : reproductibilité **côté banc** sans toucher `noyau.py` ·
+métrique **primaire binaire** sur cartes figées (secondaires déclarées d'avance) · acceptation par
+**reproduction de l'ordre SCI-01** établi par mesure directe · banc neuf + **primitives partagées
+testées**. Aucune ligne de code n'est autorisée avant l'approbation du document (voir §12 « Porte »
+de la spec).
+
+**Défauts mesurés au cadrage** — ils ne figuraient pas dans le constat initial ci-dessus :
+
+1. **Le banc actuel n'est pas reproductible** : `noyau.py` échantillonne l'action
+   (`Categorical(...).sample()`, lignes 9956-9962) sans branchement sur `self.training`, et
+   `evaluer_cerveau.py` ne fixe **aucune** graine torch — seul l'environnement est seedé.
+   ⚠️ La non-reproductibilité est un **fait de code** ; son **ampleur** (δ_A/A) n'est **pas** mesurée.
+2. **`DOSSIER_EVALS_DEFAUT = "docs/notes/evals"` désigne un dossier inexistant** (le dossier réel est
+   `docs/recherche/evals`).
+3. **`plus_court_chemin` et `intervalle_wilson` sont dupliquées** dans `sonde_inertie_motrice.py` et
+   `sonde_plancher_geometrique.py`, **sans aucun test**, et leurs docstrings énoncent des
+   conclusions **opposées** de la même prémisse : celle d'`sonde_inertie_motrice.py` est **fausse**
+   (le ratio étant `trajet / plus_court_chemin`, une borne inférieure du trajet **surestime** la
+   directivité).
+
+**Chantier distinct proposé, hors périmètre EVA-01** : l'**audit d'intégrité de `brains/`**. Un scan
+a relevé des doublons divergents (`K1_TEMOIN` : 40 `.brain` pour 20 graines ; `K2_NU` : 67 ;
+`K4_NU` : 63) dont les contenus diffèrent réellement, ainsi que des fichiers non lisibles.
+⚠️ Ces échecs de lecture sont des `OSError` **errno 11** (*Resource deadlock avoided*) — la même
+erreur iCloud déjà rencontrée sur `git` — donc une **indisponibilité de synchronisation**, **pas**
+une preuve de corruption. Le verdict SCI-01 publié n'est pas menacé (calculé sur les **logs**).
 
 ---
 
