@@ -1,0 +1,3 @@
+CADENCE carte 3 (Primaire 1 (Contourner), budget 324): 1.27s pour 2 episodes -> 0.63s/episode, 1.96 ms/tick, gagnes=2/2
+CADENCE carte 4 (Primaire 2 (Éviter le danger), budget 100): 0.64s pour 2 episodes -> 0.32s/episode, 3.21 ms/tick, gagnes=0/2
+CADENCE chargement .brain: 0.43s

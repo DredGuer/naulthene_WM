@@ -29,6 +29,18 @@
 
 ## Runs
 
+### ✅ `EVA01_pilote_13092026` — la dispersion inter-cerveaux qui dérive `n` (tâche 7)
+
+| | |
+|---|---|
+| **Début** | **2026-09-13 00:29:56** — dossier de campagne créé à 00:29:56 (`stat`), `LISEZ_MOI.md` écrit à 00:30:41, **AVANT le premier processus**. Entrée ouverte à 00:31, avant la sonde de cadence et avant la mesure officielle |
+| **Fin estimée** | **~00:35** (≈ 2 min) — dérivée du rythme **MESURÉ** par la sonde de cadence (`sonde_cadence.txt`, 1 cerveau × 2 épisodes par carte) : **0,63 s/épisode** sur la carte 3 (324 ticks, 1,96 ms/tick) et **0,32 s/épisode** sur la carte 4 (100 ticks, 3,21 ms/tick), plus 0,43 s par chargement de `.brain` ⇒ 4 × (20 × 0,63 + 20 × 0,32) + 8 × 0,43 ≈ **80 s de calcul**, démarrage du processus inclus |
+| **Fin réelle** | **2026-09-13 00:32:57** — run de **81 s** (00:31:36 → 00:32:57), soit **≈ 1 min d'avance** sur l'estimation (~2 min) : la cadence mesurée par la sonde s'est vérifiée au dixième près. Un seul run a suffi. **Rejeu A/A** ajouté pour la vérification : 81 s de plus (00:33:13 → 00:34:35), **160/160 épisodes identiques** au premier run |
+| **Coût** | 4 cerveaux `K8_NU` (graines d'entraînement 11, 22, 33, 44) × 2 cartes figées (3 = `SimpleCrossingS9N1`, 4 = `LavaGapS5`) × 20 épisodes, graines d'éval 10000…10019, `NAULTHENE_DEVICE=cpu`, cohorte **EXPLICITE** (le glob refuse `K8_NU` : 2 surnuméraires), lecture seule |
+| **Pourquoi** | « Quelle est la dispersion inter-cerveaux du taux de franchissement sur les cartes figées 3 et 4 — et quel `n` cette dispersion impose-t-elle ? » (spec §8bis : `n` est un RÉSULTAT, le `20` du pilote est un budget de MESURE) |
+| **Résultat** | **`n` DÉRIVÉ = 333.** `p̄` = **0,256250** (41/160), `sd_inter` = **0,071807**, **IC95 = [0,040678 ; 0,267736]** — la dispersion d'un pilote à 4 cerveaux est mal connue, et l'intervalle implique de **24 à 1037** épisodes (facteur 43). Par carte : carte 3 = **28/80** (0,350), carte 4 = **13/80** (0,163). Carnet : [`docs/recherche/campagnes/EVA01_13092026_la_derivation_de_n.md`](../../docs/recherche/campagnes/EVA01_13092026_la_derivation_de_n.md) |
+| **Statut** | ✅ terminée — mesure non dégénérée, cohorte complète (4/4), aucun épisode tronqué, `.brain` inchangés (taille et mtime identiques avant/après) |
+
 ### ✅ `VIS01_etape2_fichier_10092026` — la structure relue par le serveur (tâche 11)
 
 | | |

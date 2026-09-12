@@ -1,0 +1,4 @@
+brains/08092026_sci01_balayage_K/K8_NU/K8_NU_g11.brain 6520023 1788877755
+brains/08092026_sci01_balayage_K/K8_NU/K8_NU_g22.brain 6908247 1788876480
+brains/08092026_sci01_balayage_K/K8_NU/K8_NU_g33.brain 6291799 1788878969
+brains/08092026_sci01_balayage_K/K8_NU/K8_NU_g44.brain 6442967 1788878789

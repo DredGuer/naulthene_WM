@@ -1,0 +1,106 @@
+{
+  "regle": "plus petit n >= 1 tel que sqrt(p_barre (1 - p_barre) / n) <= sd_inter / facteur",
+  "facteur": 3.0,
+  "episodes_par_carte_budget_pilote": 20,
+  "cartes": [
+    3,
+    4
+  ],
+  "graine_eval_base": 10000,
+  "graines_entrainement": [
+    11,
+    22,
+    33,
+    44
+  ],
+  "bras": [
+    "K8_NU"
+  ],
+  "campagne": "08092026_sci01_balayage_K",
+  "p_barre": 0.25625,
+  "k_total": 41,
+  "episodes_total": 160,
+  "n_cerveaux": 4,
+  "taux_moyen_cerveaux": 0.25625,
+  "sd_inter": 0.07180703308172535,
+  "ic_sd": [
+    0.040677933613319096,
+    0.2677359175821398
+  ],
+  "ic_sd_alpha": 0.05,
+  "ic_sd_methode": "loi du chi-deux sur la variance, df = n_cerveaux - 1 : IC(sigma) = sqrt(df * s^2 / chi2)",
+  "seuil_domination": 0.02393567769390845,
+  "n_derive": 333,
+  "n_derive_motif": null,
+  "ligne_de_calcul": "n = plus petit entier >= 332.659091 tel que sqrt(0.256250 × (1 − 0.256250) / n) <= 0.071807 / 3.0 = 0.023936  ⇒  n = 333",
+  "cerveaux": {
+    "K8_NU_g11": {
+      "k": 10,
+      "n": 40,
+      "taux": 0.25,
+      "taux_par_carte": {
+        "Primaire 1 (Contourner)": 0.5,
+        "Primaire 2 (Éviter le danger)": 0.0
+      }
+    },
+    "K8_NU_g22": {
+      "k": 7,
+      "n": 40,
+      "taux": 0.175,
+      "taux_par_carte": {
+        "Primaire 1 (Contourner)": 0.25,
+        "Primaire 2 (Éviter le danger)": 0.1
+      }
+    },
+    "K8_NU_g33": {
+      "k": 14,
+      "n": 40,
+      "taux": 0.35,
+      "taux_par_carte": {
+        "Primaire 1 (Contourner)": 0.3,
+        "Primaire 2 (Éviter le danger)": 0.4
+      }
+    },
+    "K8_NU_g44": {
+      "k": 10,
+      "n": 40,
+      "taux": 0.25,
+      "taux_par_carte": {
+        "Primaire 1 (Contourner)": 0.35,
+        "Primaire 2 (Éviter le danger)": 0.15
+      }
+    }
+  },
+  "par_carte": {
+    "Primaire 1 (Contourner)": {
+      "taux_poolé": 0.35,
+      "k": 28,
+      "n": 80,
+      "n_cerveaux": 4,
+      "taux_moyen_cerveaux": 0.35,
+      "sd_inter": 0.10801234497346433,
+      "ic_sd": [
+        0.061187864331463226,
+        0.402729134606577
+      ],
+      "ic_sd_alpha": 0.05
+    },
+    "Primaire 2 (Éviter le danger)": {
+      "taux_poolé": 0.1625,
+      "k": 13,
+      "n": 80,
+      "n_cerveaux": 4,
+      "taux_moyen_cerveaux": 0.1625,
+      "sd_inter": 0.17017148213885117,
+      "ic_sd": [
+        0.09640036576147006,
+        0.6344924161523833
+      ],
+      "ic_sd_alpha": 0.05
+    }
+  },
+  "date_mesure": "2026-09-12T22:32:57.274756+00:00",
+  "protocole": "PILOTE_EVA-01 v1",
+  "cohorte_explicite": "brains/EVA01_pilote_13092026/cohorte_explicite.json",
+  "rapport_banc": "brains/EVA01_pilote_13092026/banc_final_20260913_003257.json"
+}
