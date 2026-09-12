@@ -18,6 +18,7 @@ import os
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
 
@@ -30,6 +31,8 @@ from naulthene.instruments.banc_final import (  # noqa: E402
     lire_cohorte_explicite,
     lire_graines_du_manifeste,
     lister_cerveaux,
+    main,
+    refuser_bras_vides,
     resoudre_cohorte,
     verifier_graine_eval_base,
 )
@@ -62,14 +65,24 @@ class TestListerCerveaux(unittest.TestCase):
         d'un AUTRE bras écrase la même clé sans changer la liste des clés. Un motif qui
         ignorerait le préfixe de bras rendrait `{11: 'K8_NU_g11.brain'}` quand on demande
         K16_NU — contamination inter-bras invisible, et d'autant plus dangereuse que les
-        6 bras partagent les MÊMES 20 graines."""
+        6 bras partagent les MÊMES 20 graines.
+        Les DEUX sens sont nécessaires : `sorted(os.listdir)` rend
+        ['K16_NU_g11.brain', 'K8_NU_g11.brain'], donc pour le bras K8_NU le fichier demandé
+        est traité EN DERNIER — un mutant « le dernier gagne » tombe alors sur le bon fichier
+        par accident alphabétique. Seul le sens K16_NU, où le fichier demandé est traité en
+        PREMIER, rend ce mutant visible — et « le dernier gagne » est exactement la sémantique
+        du code réel (`canoniques[graine] = ...`, sans condition).
+        """
         with tempfile.TemporaryDirectory() as d:
             _toucher(os.path.join(d, "K8_NU_g11.brain"))
             _toucher(os.path.join(d, "K16_NU_g11.brain"))
-            trouves = lister_cerveaux(d, "K8_NU", [11])
-            self.assertEqual(sorted(trouves), [11])
-            self.assertTrue(trouves[11].endswith("K8_NU_g11.brain"),
-                            f"le chemin résolu doit être celui du bras DEMANDÉ : {trouves[11]}")
+            for bras in ("K8_NU", "K16_NU"):
+                with self.subTest(bras=bras):
+                    trouves = lister_cerveaux(d, bras, [11])
+                    self.assertEqual(sorted(trouves), [11])
+                    self.assertTrue(
+                        trouves[11].endswith(f"{bras}_g11.brain"),
+                        f"le chemin résolu doit être celui du bras DEMANDÉ ({bras}) : {trouves[11]}")
 
 
 class TestGardeFous(unittest.TestCase):
@@ -136,6 +149,28 @@ class TestCohorteExplicite(unittest.TestCase):
             with self.assertRaises(ValueError) as ctx:
                 lire_cohorte_explicite(inventaire)
             self.assertIn("absent.brain", str(ctx.exception))
+
+
+class TestMainRefuseUnInventaireAMasVide(unittest.TestCase):
+    """Le défaut I-3 était dans `main()`, pas dans le garde : il faut donc l'exercer par
+    `main()` elle-même. Un garde posé sur le seul chemin glob laissait le succès silencieux
+    intact sur la voie explicite — le chemin OBLIGATOIRE de la tâche 9."""
+
+    def test_main_refuse_un_inventaire_explicite_avec_un_bras_vide(self):
+        with tempfile.TemporaryDirectory() as d:
+            chemin_brain = os.path.join(d, "K8_NU_g11.brain")
+            _toucher(chemin_brain)
+            with open(os.path.join(d, "manifeste.json"), "w", encoding="utf-8") as f:
+                json.dump({"campagne": "essai", "graines": [11]}, f)
+            inventaire = os.path.join(d, "cohorte.json")
+            with open(inventaire, "w", encoding="utf-8") as f:
+                json.dump({"K8_NU": {"11": chemin_brain}, "K2_NU": {}}, f)
+            argv = ["banc_final", "--cohorte", d, "--bras", "K8_NU", "K2_NU",
+                    "--episodes", "1", "--cohorte-explicite", inventaire]
+            with mock.patch.object(sys, "argv", argv):
+                with self.assertRaises(BrasIntrouvable) as ctx:
+                    main()
+            self.assertIn("K2_NU", str(ctx.exception))
 
 
 class TestBrasIntrouvable(unittest.TestCase):

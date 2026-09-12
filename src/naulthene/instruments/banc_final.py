@@ -139,6 +139,23 @@ def lister_cerveaux(dossier_bras: str, prefixe: str, graines: Sequence[int]) -> 
     return canoniques
 
 
+def refuser_bras_vides(resolue: dict[str, dict[int, str]]) -> dict[str, dict[int, str]]:
+    """Refuse tout bras qui ne résout AUCUN cerveau : faute de frappe, pas cohorte vide.
+
+    Appelé par `resoudre_cohorte` (chemin GLOB) **et** par `main()` APRÈS les deux branches —
+    car la voie EXPLICITE ne passe pas par `resoudre_cohorte`, et c'est pourtant le chemin
+    OBLIGATOIRE de la tâche 9 (5 bras sur 6 sont refusés par le glob). Un garde posé sur le
+    seul chemin glob laissait donc le succès silencieux intact précisément là où il compte.
+    """
+    vides = sorted(b for b, v in resolue.items() if not v)
+    if vides:
+        raise BrasIntrouvable(
+            f"aucun cerveau résolu pour {len(vides)} bras : {', '.join(vides)} — "
+            f"vérifie l'orthographe du bras et la présence des fichiers canoniques "
+            f"`<bras>_g<graine>.brain`")
+    return resolue
+
+
 def resoudre_cohorte(cohorte: str, bras: Sequence[str],
                      graines: Sequence[int]) -> dict[str, dict[int, str]]:
     """Rend `{bras: {graine: chemin}}`. L'absence d'un cerveau DANS une cohorte résolue
@@ -149,14 +166,8 @@ def resoudre_cohorte(cohorte: str, bras: Sequence[str],
     une cohorte vide. Sans ce garde, `--bras K16_NU_TYPO` affichait `0` cerveau et sortait
     en 0 — un succès silencieux.
     """
-    resolue = {b: lister_cerveaux(os.path.join(cohorte, b), b, graines) for b in bras}
-    vides = sorted(b for b, v in resolue.items() if not v)
-    if vides:
-        raise BrasIntrouvable(
-            f"aucun cerveau résolu pour {len(vides)} bras : {', '.join(vides)} — "
-            f"vérifie l'orthographe du bras et la présence des fichiers canoniques "
-            f"`<bras>_g<graine>.brain` dans {cohorte}")
-    return resolue
+    return refuser_bras_vides(
+        {b: lister_cerveaux(os.path.join(cohorte, b), b, graines) for b in bras})
 
 
 def lire_cohorte_explicite(chemin: str) -> dict[str, dict[int, str]]:
@@ -214,6 +225,8 @@ def main() -> int:
         cohorte = lire_cohorte_explicite(args.cohorte_explicite)
     else:
         cohorte = resoudre_cohorte(args.cohorte, args.bras, graines)
+    # APRÈS les deux branches : la voie explicite ne passe pas par `resoudre_cohorte`.
+    cohorte = refuser_bras_vides(cohorte)
     print(f"📋 {len(args.bras)} bras × {len(graines)} graines d'entraînement, "
           f"cartes {args.cartes}, {args.episodes} épisodes "
           f"(graines d'éval {args.graine_eval_base}…"
