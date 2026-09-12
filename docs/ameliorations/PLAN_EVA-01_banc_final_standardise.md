@@ -2106,7 +2106,7 @@ Ajouter à `tests/test_banc_final.py` :
 
 ```python
 class TestOutilsArchives(unittest.TestCase):
-    def test_le_dossier_de_sortie_de_l_outil_archive_existe_vraiment(self):
+    def test_le_dossier_de_sortie_ne_designe_plus_un_dossier_fantome(self):
         """`docs/notes/evals` n'a jamais existé : chaque évaluation écrivait dans un
         dossier fantôme (constat EVA-01 §3.3)."""
         from naulthene.instruments import evaluer_cerveau
