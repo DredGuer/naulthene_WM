@@ -3,6 +3,14 @@
 """
 Le Contrôle de Connaissances (expérimental) — mesure de rétention par niveau.
 
+⚠️ ARCHIVE HISTORIQUE (chantier EVA-01, 12/09/2026). Remplacé par
+`naulthene.instruments.banc_final`, seul juge standardisé : celui-ci fige les cartes, dédie un
+pool de graines d'évaluation et fixe une graine torch par épisode — donc reproductible, ce que
+cet outil n'était pas (`noyau.py` échantillonne l'action, `Categorical(...).sample()`, et aucune
+graine torch n'était fixée ici : deux évaluations du même `.brain` donnaient des chiffres
+différents). Conservé pour ses rapports déjà publiés dans `docs/recherche/evals/` et pour
+l'exploration ponctuelle. Aucune mécanique nouvelle ne doit y être ajoutée.
+
 Ce module ne vit que dans l'écosystème local de test (voir CLAUDE.md, section
 "Variante Locale de Test"), pas encore porté sur `agi_google_colab.py`. Répond à un
 besoin absent des instruments existants (`irm_cerveau.py`, `arene_visuelle.py`) : ils
@@ -16,7 +24,7 @@ Principe : charger un `.brain` en lecture seule, forcer temporairement son
 environnement sur UN niveau donné du `PROGRAMME` (indépendamment du niveau réel où le
 cursus l'a laissé), lui faire jouer N épisodes SEEDÉS (reproductibles d'un run à
 l'autre) et compter le taux de victoire + la vitesse moyenne de résolution. Le
-résultat est écrit dans un fichier JSON horodaté (`docs/notes/evals/`) — comparer deux
+résultat est écrit dans un fichier JSON horodaté (`docs/recherche/evals/`) — comparer deux
 JSON (`--comparer`) montre si le cerveau a progressé, stagné ou régressé sur un niveau
 qu'il ne pratique plus activement.
 
@@ -56,7 +64,10 @@ from naulthene.cerveau.noyau import (
 )
 from naulthene.cerveau.persistance import PersistanceAnatomique
 
-DOSSIER_EVALS_DEFAUT = "docs/notes/evals"
+# Le dossier RÉEL des évaluations publiées : l'ancienne valeur visait un dossier « notes » sous
+# `docs/`, qui n'a JAMAIS existé — chaque évaluation écrivait donc dans un dossier FANTÔME
+# (constat EVA-01 §3.3, corrigé en tâche 6). `--dossier-sortie` en dérive son défaut et son aide.
+DOSSIER_EVALS_DEFAUT = "docs/recherche/evals"
 
 
 def evaluer_niveau(etat, index_niveau: int, nb_episodes: int, seed_base: int,

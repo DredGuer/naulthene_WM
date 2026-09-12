@@ -405,9 +405,10 @@ class TestEtatFraisParCarte(unittest.TestCase):
     que celle où l'empreinte est **RECALCULÉE** à chaque carte. Sous la variante NATURELLE — le
     squelette même du plan : charger une fois par cerveau et hisser l'empreinte hors de la boucle
     des cartes — les deux empreintes publiées sont IDENTIQUES, ce test reste **VERT**, et l'artefact
-    **certifie une fraîcheur qu'il n'a pas vérifiée** (vérifié en mémoire : `M-ETAT-NATUREL` →
-    `VERT`, 20 tests, 0 échec). La propriété réellement promise est l'**indépendance à l'ordre**,
-    et c'est `TestIndependanceALOrdre` qui la garde : lui seul tue cette variante.
+    **certifie une fraîcheur qu'il n'a pas vérifiée** (vérifié en mémoire : `M-ETAT-NATUREL` → le
+    verrou d'empreinte **SEUL** reste vert, c'est `TestIndependanceALOrdre` qui tue cette variante).
+    La propriété réellement promise est l'**indépendance à l'ordre**, et c'est
+    `TestIndependanceALOrdre` qui la garde.
     """
 
     def test_les_deux_cartes_d_un_meme_cerveau_partent_du_meme_etat(self):
@@ -674,6 +675,64 @@ class TestInstrumentIndisponible(unittest.TestCase):
             self.assertIn("positions_food", str(ctx.exception))
 
             etat.env.close()
+
+
+class TestOutilsArchives(unittest.TestCase):
+    """Les outils remplacés sont ARCHIVÉS, jamais supprimés (précédent `colab.py`, ARC-01) — mais
+    un outil archivé garde ses défauts corrigés ET son bandeau, sinon la session suivante le
+    relit comme un outil vivant et le reprend pour juge.
+
+    `evaluer_cerveau.py` porte DEUX défauts mesurés au cadrage EVA-01, qu'aucun autre test ne
+    lit (il n'a jamais eu de test) :
+
+    1. il n'est PAS reproductible — il ne fixe aucune graine torch, alors que `noyau.py`
+       échantillonne l'action (`Categorical(...).sample()`) : deux évaluations du même `.brain`
+       donnent des chiffres différents. C'est `banc_final.py` qui ferme ce défaut (cartes
+       figées, pool de graines d'évaluation dédié, graine torch par épisode) ;
+    2. son dossier de sortie par défaut désignait un dossier FANTÔME — `docs/notes/evals`,
+       jamais créé : chaque évaluation écrivait donc ailleurs que dans le dossier réel
+       (`docs/recherche/evals/`), et ses rapports n'étaient pas là où on les cherchait.
+    """
+
+    def test_le_dossier_de_sortie_de_l_outil_archive_existe_vraiment(self):
+        """`docs/notes/evals` n'a jamais existé : chaque évaluation écrivait dans un
+        dossier fantôme (constat EVA-01 §3.3)."""
+        from naulthene.instruments import evaluer_cerveau
+
+        chemin = evaluer_cerveau.DOSSIER_EVALS_DEFAUT
+        self.assertEqual(
+            chemin, "docs/recherche/evals",
+            "le défaut doit désigner le dossier RÉEL des évaluations publiées — l'ancienne "
+            "valeur pointait un dossier qui n'a jamais existé")
+
+    def test_le_bandeau_d_archive_nomme_le_successeur(self):
+        """Un outil archivé sans bandeau se relit comme un outil vivant : la docstring du module
+        doit donc dire QU'IL EST ARCHIVÉ, PAR QUI il est remplacé, POURQUOI, et qu'on ne doit
+        plus y ajouter de mécanique.
+
+        Le bandeau est cherché sur des formulations PROPRES au bandeau (« archive
+        historique », le successeur `banc_final`, la « graine torch », l'interdiction de
+        mécanique nouvelle) : aucune d'elles n'existe dans le corps de la docstring, donc
+        retirer le bandeau fait tomber ce test au lieu de le laisser vert sur un mot
+        d'emprunt."""
+        from naulthene.instruments import evaluer_cerveau
+
+        doc = evaluer_cerveau.__doc__ or ""
+        self.assertTrue(doc.strip(), "un module sans docstring ne peut pas porter de bandeau")
+        doc_minuscule = doc.lower()
+        for extrait, raison in (
+            ("archive historique",
+             "le lecteur doit savoir qu'il ouvre une pièce ARCHIVÉE, pas un outil vivant"),
+            ("banc_final",
+             "le bandeau doit NOMMER le successeur (`naulthene.instruments.banc_final`)"),
+            ("graine torch",
+             "le bandeau doit dire POURQUOI l'outil est remplacé : sans graine torch par "
+             "épisode, ses mesures n'étaient pas reproductibles"),
+            ("aucune mécanique",
+             "le bandeau doit interdire d'ajouter une mécanique nouvelle à une archive"),
+        ):
+            with self.subTest(extrait=extrait):
+                self.assertIn(extrait, doc_minuscule, f"{raison} (extrait absent : {extrait!r})")
 
 
 if __name__ == "__main__":
