@@ -2100,7 +2100,7 @@ corriger `DOSSIER_EVALS_DEFAUT`, qui désigne un dossier **inexistant**.
 - Le bandeau nomme le successeur (`banc_final.py`) et la raison.
 - La suite complète reste verte : **192 tests OK** (156 + 12 + 2 + 11 + 3 + 6 + 2).
 
-- [ ] **Étape 1 : écrire le test qui échoue**
+- [x] **Étape 1 : écrire le test qui échoue**
 
 Ajouter à `tests/test_banc_final.py` :
 
@@ -2114,14 +2114,14 @@ class TestOutilsArchives(unittest.TestCase):
         self.assertEqual(chemin, "docs/recherche/evals")
 ```
 
-- [ ] **Étape 2 : exécuter le test avec `bash`**
+- [x] **Étape 2 : exécuter le test avec `bash`**
 
 ```bash
 NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m unittest discover -s tests -p "test_banc_final.py" -v
 ```
 Attendu : **échec** — `'docs/notes/evals' != 'docs/recherche/evals'`.
 
-- [ ] **Étape 3 : écrire l'implémentation minimale**
+- [x] **Étape 3 : écrire l'implémentation minimale**
 
 1. Remplacer la constante :
 ```python
@@ -2138,14 +2138,14 @@ déjà publiés dans `docs/recherche/evals/` et pour l'exploration ponctuelle. A
 mécanique nouvelle ne doit y être ajoutée.
 ```
 
-- [ ] **Étape 4 : réexécuter les tests avec `bash`**
+- [x] **Étape 4 : réexécuter les tests avec `bash`**
 
 ```bash
 NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m unittest discover -s tests -v
 ```
 Attendu : **192 tests OK**.
 
-- [ ] **Étape 5 : commit ciblé avec `bash`**
+- [x] **Étape 5 : commit ciblé avec `bash`**
 
 ```bash
 git add src/naulthene/instruments/evaluer_cerveau.py tests/test_banc_final.py && \
