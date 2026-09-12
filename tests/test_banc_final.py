@@ -262,6 +262,109 @@ class TestCohorteIncomplete(unittest.TestCase):
             self.assertIn("K2_NU", str(ctx.exception))
 
 
+class TestCohorteComplete(unittest.TestCase):
+    """Verrou de `extension_log=".brain"` (correctif de la tâche 5).
+
+    `Manifeste.cohorte` compose ses chemins en `<cohorte>/<bras>/<bras>_g<graine>` +
+    `extension_log`, dont le défaut est `.log`. Or `collecter` exige `os.path.exists(chemin)`, et
+    le lecteur cherche ensuite ce chemin dans un dict INDEXÉ PAR CHEMIN DE `.brain`. Avec le
+    défaut, une cohorte **complète** rendait `dp.runs` VIDE et 4 violations sur 4 cerveaux — le
+    banc ne publiait jamais rien, et la tâche 9 aurait échoué là, après dix tâches.
+
+    ⚠️ Ce test verrouille une propriété qu'aucun autre ne voyait : sous la mutation « `extension_log`
+    retiré », il ÉCHOUE (0 run collecté au lieu de 4). C'est la preuve exigée, à rejouer — la
+    mutation SURVIVAIT aux 16 tests précédents.
+    """
+
+    def test_une_cohorte_complete_est_collectee_entierement(self):
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, "manifeste.json"), "w", encoding="utf-8") as f:
+                json.dump({"campagne": "essai", "graines": [11, 22]}, f)
+            # 2 bras × 2 graines : les 4 cerveaux sont posés, la cohorte est COMPLÈTE.
+            metriques = {}
+            for bras in ("A", "B"):
+                os.mkdir(os.path.join(d, bras))
+                for graine in (11, 22):
+                    chemin = os.path.join(d, bras, f"{bras}_g{graine}.brain")
+                    _toucher(chemin)
+                    metriques[chemin] = {"taux_franchissement": 0.5}
+
+            from naulthene.instruments.banc_final import construire_depouillement
+
+            dp = construire_depouillement(d, ["A", "B"], [11, 22], metriques)
+
+        self.assertEqual(
+            sorted(dp.runs), ["A_g11", "A_g22", "B_g11", "B_g22"],
+            "une cohorte complète doit être collectée EN ENTIER : les chemins du manifeste "
+            "doivent être ceux des `.brain` (index des métriques), pas des `.log`")
+        self.assertEqual(len(dp.runs), 4)
+        self.assertEqual(
+            dp.violations, [],
+            "aucune violation n'est tolérable sur une cohorte complète : une violation ici "
+            "signifie que le banc refuse de publier une campagne pourtant valide")
+
+
+class TestEtatFraisParCarte(unittest.TestCase):
+    """PRÉREQUIS I1 verrouillé par L'INSTRUMENTATION, pas par une sonde externe.
+
+    `executer_banc` recharge le `.brain` avant CHAQUE (bras, carte) : les deux cartes d'un même
+    cerveau doivent donc partir du MÊME état — et l'artefact doit le MONTRER. Sans cela, le chiffre
+    d'une carte dépend de l'ORDRE d'évaluation (mesuré : carte 0 → victoires 1, 2, 2 ; carte 4 →
+    0, 0, 1 ; un même épisode de 61 à **88** ticks, soit +44 % sur `longueur_normalisee`), et
+    l'appariement par graine de la tâche 9 perd son sens.
+
+    ⚠️ LE HACHAGE DU SEUL `state_dict` NE SUFFIT PAS, ET C'EST MESURÉ : une évaluation le laisse
+    **BIT-IDENTIQUE** (`de0884ff9a9acbcc` avant ET après — sous `torch.no_grad()` et en `eval()`,
+    les poids et les buffers ne bougent pas), alors qu'elle fait bouger l'état VOLATIL (dopamine
+    `7,006 → 9,991`, `tick_absolu` `541824 → 541845`). Un verrou posé sur le seul `state_dict`
+    aurait donc laissé SURVIVRE le mutant « états mis en cache » : les deux cartes auraient porté
+    la même empreinte. L'empreinte publiée couvre LES DEUX, et ce test exige qu'elle soit égale
+    pour les deux cartes d'un même cerveau.
+    """
+
+    def test_les_deux_cartes_d_un_meme_cerveau_partent_du_meme_etat(self):
+        import torch
+
+        from naulthene.cerveau.noyau import PROGRAMME
+        from naulthene.cerveau.persistance import PersistanceAnatomique
+        from naulthene.instruments.banc_final import executer_banc
+
+        torch.manual_seed(GRAINE_DE_NAISSANCE)  # la naissance tire du RNG torch
+        with tempfile.TemporaryDirectory() as d:
+            os.mkdir(os.path.join(d, "K8_NU"))
+            chemin = os.path.join(d, "K8_NU", "K8_NU_g11.brain")
+            # Un `.brain` RÉEL, sauvé sur disque : sans fichier, `charger_ou_naitre` ferait NAÎTRE
+            # un cerveau DIFFÉRENT à chaque carte, et le test ne verrouillerait rien.
+            etat = PersistanceAnatomique(fichier=chemin).charger_ou_naitre()
+            PersistanceAnatomique(fichier=chemin).sauvegarder(etat)
+            etat.env.close()
+            with open(os.path.join(d, "manifeste.json"), "w", encoding="utf-8") as f:
+                json.dump({"campagne": "essai", "graines": [11]}, f)
+            rapport = executer_banc(
+                cohorte=d, bras=["K8_NU"], cartes=[0, 3], graines=[11], episodes=1,
+                graine_eval_base=10000, dossier_sortie=os.path.join(d, "sortie"), max_ticks=5)
+
+        cerveau = rapport["cerveaux"]["K8_NU_g11"]
+        empreintes = cerveau["empreinte_etat_initial"]
+        self.assertEqual(sorted(empreintes), sorted([PROGRAMME[0][1], PROGRAMME[3][1]]),
+                         "l'empreinte doit être publiée pour CHAQUE (bras, carte), pas une fois "
+                         "par cerveau : c'est la seule façon de voir l'état de départ de chaque "
+                         "mesure")
+        for nom_classe, empreinte in empreintes.items():
+            # Contre le succès VIDE : deux `None` égaux satisferaient l'égalité ci-dessous.
+            self.assertRegex(
+                empreinte["sha256"], r"^[0-9a-f]{64}$",
+                f"{nom_classe} : l'empreinte doit être un sha256 hexadécimal, pas {empreinte!r}")
+            self.assertRegex(empreinte["sha256_state_dict"], r"^[0-9a-f]{64}$")
+        distinctes = {e["sha256"] for e in empreintes.values()}
+        self.assertEqual(
+            len(distinctes), 1,
+            "les deux cartes d'un MÊME cerveau doivent partir du MÊME état : `executer_banc` "
+            "recharge le `.brain` avant chaque (bras, carte). Deux empreintes différentes "
+            "signifient que l'état a persisté d'une carte à l'autre — le chiffre publié "
+            "dépendrait alors de l'ORDRE d'évaluation, et l'appariement par graine serait perdu")
+
+
 class TestReproductibilite(unittest.TestCase):
     """Le banc ACTUEL du dépôt n'est pas reproductible : `noyau.py` échantillonne l'action
     (`Categorical(...).sample()`) et l'ancien outil ne fixait aucune graine torch.

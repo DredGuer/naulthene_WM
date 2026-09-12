@@ -15,6 +15,7 @@ Conception : docs/ameliorations/CHANTIER_EVA-01_banc_final_standardise.md
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -252,6 +253,107 @@ def _recompense_env_cumulee(etat) -> float:
     le réarmer).
     """
     return float(etat.mix_somme.get("Env", 0.0))
+
+
+def _canonique(valeur, vus: set, profondeur_objet: int = 1):
+    """Réduction DÉTERMINISTE et JSON-compatible d'une valeur quelconque, pour hachage.
+
+    Les tenseurs et les tableaux entrent par leur empreinte (jamais par leur `repr`, qui est
+    tronqué), les conteneurs récursivement, et les objets par le NOM DE LEUR TYPE **et** le
+    contenu de leur `vars()` — jamais une adresse mémoire, qui rendrait l'empreinte différente
+    d'un processus à l'autre sans qu'une seule grandeur ait bougé.
+
+    ⚠️ `profondeur_objet=1` N'EST PAS UN DÉTAIL : à 0, 17 des 209 champs de `vars(etat)` se
+    réduisaient à leur nom de type, et parmi eux `memoire_episodique_spatiale` — c'est-à-dire la
+    MÉMOIRE, l'un des trois états que le brief nomme comme persistant avec la dopamine et la
+    patience. Mesuré : à 0, un champ sur 12 était aveugle ; à 1, la mémoire rentre dans
+    l'empreinte. La profondeur est BORNÉE à 1 pour ne pas descendre dans l'arbre des modules de
+    l'agent (ses paramètres sont déjà hachés par le `state_dict`, et son optimiseur — inerte en
+    évaluation — ne fait pas partie de l'état depuis lequel la mesure PART).
+
+    Aucune troncature silencieuse : les séquences sont parcourues EN ENTIER (un plafond de
+    longueur cacherait un changement de mémoire au-delà de la coupe, exactement le défaut que
+    MES-01 interdit). Le seul garde est un anti-cycle par identité.
+    """
+    if isinstance(valeur, torch.Tensor):
+        tenseur = valeur.detach().to("cpu").contiguous()
+        try:
+            octets = tenseur.numpy().tobytes()
+        except TypeError:  # dtype sans vue numpy (bfloat16)
+            octets = tenseur.float().numpy().tobytes()
+        return ["tensor", list(tenseur.shape), str(tenseur.dtype),
+                hashlib.sha256(octets).hexdigest()]
+    if isinstance(valeur, np.ndarray):
+        return ["array", list(valeur.shape), str(valeur.dtype),
+                hashlib.sha256(np.ascontiguousarray(valeur).tobytes()).hexdigest()]
+    if valeur is None or isinstance(valeur, (bool, int, float, str)):
+        return valeur
+    if isinstance(valeur, np.generic):
+        return valeur.item()
+    if isinstance(valeur, dict):
+        if id(valeur) in vus:
+            return ["cycle"]
+        vus.add(id(valeur))
+        reduit = ["dict", [[str(cle), _canonique(valeur[cle], vus, profondeur_objet)]
+                           for cle in sorted(valeur, key=str)]]
+        vus.discard(id(valeur))
+        return reduit
+    if isinstance(valeur, (list, tuple)):
+        if id(valeur) in vus:
+            return ["cycle"]
+        vus.add(id(valeur))
+        reduit = ["seq", [_canonique(element, vus, profondeur_objet) for element in valeur]]
+        vus.discard(id(valeur))
+        return reduit
+    if isinstance(valeur, (set, frozenset)):
+        # Trié par la forme CANONIQUE de chaque élément : l'ordre d'itération d'un `set` de
+        # chaînes dépend du hachage du processus (PYTHONHASHSEED) et n'est pas reproductible.
+        return ["set", sorted(repr(_canonique(element, vus, profondeur_objet))
+                              for element in valeur)]
+    attributs = vars(valeur) if profondeur_objet > 0 else None
+    if isinstance(attributs, dict):
+        if id(valeur) in vus:
+            return ["cycle"]
+        vus.add(id(valeur))
+        # Un objet dont `vars()` n'est pas un dict (slots, C-extension) garde son seul type.
+        reduit = ["objet", type(valeur).__name__,
+                  {str(cle): _canonique(attributs[cle], vus, profondeur_objet - 1)
+                   for cle in sorted(attributs, key=str)}]
+        vus.discard(id(valeur))
+        return reduit
+    return ["objet", type(valeur).__name__]
+
+
+def _empreinte_etat(etat) -> dict:
+    """Empreinte sha256 de l'état de DÉPART du cerveau : poids/buffers **et** état volatil.
+
+    Publiée par (bras, carte) dans le rapport : c'est l'artefact qui rend AUDITABLE la promesse
+    « un état FRAIS par (bras, carte) ». Sans elle, la seule preuve de cette promesse était une
+    sonde externe — et un artefact qui ne montre pas ce qu'il a mesuré ne peut pas être audité.
+
+    ⚠️ POURQUOI L'ÉTAT VOLATIL EST INCLUS, ET PAS SEULEMENT LE `state_dict`. Mesuré sur un
+    cerveau réel de la campagne SCI-01 (`K8_NU_g11.brain`, carte 0, graines 10000-10002) : une
+    évaluation laisse le `state_dict` **BIT-IDENTIQUE** (`de0884ff9a9acbcc` avant ET après — en
+    `eval()` et sous `torch.no_grad()`, poids et buffers ne bougent pas), alors qu'elle fait
+    bouger l'état qui, LUI, persiste d'un appel à l'autre : dopamine `7,006 → 9,991`,
+    `tick_absolu` `541824 → 541845`, plus la mémoire et les compteurs de journée. Un hachage du
+    seul `state_dict` aurait donc été **AVEUGLE au défaut que la tâche 5 ferme** : avec un état
+    PARTAGÉ entre deux cartes, les deux empreintes seraient restées ÉGALES et le mutant aurait
+    survécu. `sha256_state_dict` est publié à côté pour que cette invariance se LISE.
+
+    ⚠️ Déterminisme : deux `charger_ou_naitre()` du même `.brain` rendent la MÊME empreinte
+    (`515d863f33f7545e`, mesuré) — sans quoi ce verrou échouerait au hasard au lieu de garder.
+
+    Lecture seule : on lit `vars(etat)` et le `state_dict`, on ne modifie rien.
+    """
+    volatil = {cle: _canonique(valeur, set()) for cle, valeur in sorted(vars(etat).items())}
+    poids = _canonique(etat.agent.state_dict(), set())
+
+    def _sha(charge) -> str:
+        return hashlib.sha256(json.dumps(
+            charge, sort_keys=True, ensure_ascii=False, default=repr).encode("utf-8")).hexdigest()
+
+    return {"sha256": _sha([volatil, poids]), "sha256_state_dict": _sha(poids)}
 
 
 def _exiger_instruments(etat, ticks_joues: bool = False) -> None:
@@ -625,6 +727,9 @@ def executer_banc(cohorte: str, bras: Sequence[str], cartes: Sequence[int],
         for graine, chemin in sorted(cerveaux.items()):
             cle = f"{nom_bras}_g{graine}"
             par_carte = {}
+            # L'empreinte de l'état de DÉPART de chaque carte : publiée plus bas à côté de
+            # `cartes`, elle est la seule pièce qui rend la fraîcheur de l'état AUDITABLE.
+            empreintes_etat_initial = {}
             t0 = time.time()
             for index_carte in cartes:
                 # ⚠️ L'ÉTAT EST RECHARGÉ ICI, DONC PAR (bras, carte) — ET C'EST STRUCTURANT.
@@ -664,6 +769,13 @@ def executer_banc(cohorte: str, bras: Sequence[str], cartes: Sequence[int],
                 # ferait NAÎTRE un cerveau différent à chaque carte, ce qui serait pire.
                 etat = PersistanceAnatomique(fichier=chemin).charger_ou_naitre()
                 etat.agent.eval()  # jamais d'entraînement, jamais de sauvegarde
+                # ⚠️ L'EMPREINTE DE L'ÉTAT DE DÉPART, CALCULÉE JUSTE APRÈS LE CHARGEMENT ET
+                # PUBLIÉE PAR (bras, carte). C'est l'artefact qui rend la promesse ci-dessus
+                # AUDITABLE : les deux cartes d'un même cerveau doivent porter la MÊME empreinte,
+                # et une divergence se LIT dans le rapport au lieu d'exiger une sonde externe.
+                # Elle est prise AVANT `evaluer_cerveau_sur_carte` : elle décrit l'état depuis
+                # lequel la mesure PART, pas celui qu'elle laisse derrière elle.
+                empreinte_etat = _empreinte_etat(etat)
                 try:
                     resultat = evaluer_cerveau_sur_carte(etat, index_carte, graines_eval,
                                                          max_ticks)
@@ -673,11 +785,13 @@ def executer_banc(cohorte: str, bras: Sequence[str], cartes: Sequence[int],
                     # d'un environnement resté ouvert.
                     etat.env.close()
                 par_carte[resultat["nom_classe"]] = resultat
+                empreintes_etat_initial[resultat["nom_classe"]] = empreinte_etat
                 print(f"   ✅ {cle:22s} {resultat['nom_classe']:32s} "
                       f"{resultat['taux']['taux'] * 100:5.1f}% "
                       f"({resultat['gagnes']}/{resultat['taux']['n']}), "
                       f"tronqués {resultat['tronques']}")
             par_cerveau[cle] = {"chemin": chemin, "cartes": par_carte,
+                                "empreinte_etat_initial": empreintes_etat_initial,
                                 "duree_s": time.time() - t0}
             # Vue plate pour le test apparié MES-01 (une valeur scalaire par métrique).
             premiere = par_carte[PROGRAMME[cartes[0]][1]]
