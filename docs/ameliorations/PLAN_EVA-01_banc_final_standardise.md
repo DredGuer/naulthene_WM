@@ -1032,7 +1032,11 @@ cœur de la tâche** : graine d'environnement **et** graine torch, pour la même
 **Critères de succès :**
 - Sur un cerveau neuf et la carte 0 (`MiniGrid-Empty-5x5-v0`), 3 épisodes seedés : le même appel
   répété deux fois rend **exactement** les mêmes `gagnes` (c'est le δ_A/A du banc, attendu nul).
-- `tronques` compte les épisodes non terminés ; aucun épisode n'est absent du rapport.
+- `tronques` compte les épisodes tronqués **par le banc**, aucun épisode n'est absent du rapport.
+- ⚠️ **Réserve écrite** : avec `max_ticks = 0` (budget natif du monde), `tronques` vaut toujours 0. Un
+  épisode coupé par le `max_steps` du monde bascule `fin_episode` et est compté `tronque=False` : c'est
+  un **échec légitime du monde** (l'agent n'a pas gagné dans le temps accordé), pas une mesure tronquée.
+  Le drapeau signale une troncature **du banc**, jamais un délai du monde.
 
 - [ ] **Étape 1 : écrire le test qui échoue**
 
@@ -1040,24 +1044,36 @@ Ajouter à `tests/test_banc_final.py` :
 
 ```python
 class TestReproductibilite(unittest.TestCase):
-    """Le banc ACTUEL n'est pas reproductible : noyau.py échantillonne l'action
-    (Categorical(...).sample()) et evaluer_cerveau.py ne fixe aucune graine torch.
-    Ce test verrouille le correctif : même cerveau + mêmes graines => mêmes résultats."""
+    """Le banc ACTUEL du dépôt n'est pas reproductible : `noyau.py` échantillonne l'action
+    (`Categorical(...).sample()`) et l'ancien outil ne fixait aucune graine torch.
+
+    ⚠️ Ce test évalue LE MÊME cerveau deux fois. Une version antérieure en construisait un
+    NOUVEAU à chaque passe : la naissance tire `base_weight`/`norme_naissance` du RNG torch,
+    donc les deux individus DIFFÉRAIENT (max|Δ| = 1,13 sur le `state_dict`) — le test ne
+    comparait rien de ce qu'il annonçait, passait par coïncidence en fichier isolé et
+    ÉCHOUAIT sur la suite complète (`(1, 0, 4) != (0, 0, 4)`).
+
+    ⚠️ L'assertion porte sur le résultat COMPLET, pas sur un triplet. Trois générateurs
+    décident d'un épisode (le monde via `_graine_episode`, le `np.random` global, torch) :
+    deux passes peuvent partager un nombre de victoires tout en ayant joué des trajectoires
+    différentes. Comparer `(gagnes, tronques, optimal)` est un critère FAIBLE ; ce que D1
+    promet — un δ_A/A nul — est l'identité de l'évaluation, pas celle d'un résumé.
+    """
 
     def test_deux_evaluations_identiques_donnent_le_meme_resultat(self):
         from naulthene.cerveau.persistance import PersistanceAnatomique
         from naulthene.instruments.banc_final import evaluer_cerveau_sur_carte
 
-        def une_passe():
-            with tempfile.TemporaryDirectory() as d:
-                etat = PersistanceAnatomique(
-                    fichier=os.path.join(d, "neuf.brain")).charger_ou_naitre()
-                etat.agent.eval()
-                r = evaluer_cerveau_sur_carte(etat, 0, [10000, 10001, 10002])
-                etat.env.close()
-                return r["gagnes"], r["tronques"], r["optimal"]
+        with tempfile.TemporaryDirectory() as d:
+            etat = PersistanceAnatomique(
+                fichier=os.path.join(d, "neuf.brain")).charger_ou_naitre()
+            etat.agent.eval()
+            premiere = evaluer_cerveau_sur_carte(etat, 0, [10000, 10001, 10002])
+            seconde = evaluer_cerveau_sur_carte(etat, 0, [10000, 10001, 10002])
+            etat.env.close()
 
-        self.assertEqual(une_passe(), une_passe())
+        self.assertEqual(premiere, seconde,
+                         "deux évaluations du MÊME cerveau doivent être identiques en tout")
 
 
 class TestEpisodeTronque(unittest.TestCase):
@@ -1120,6 +1136,70 @@ from naulthene.instruments.primitives_banc import (
 Puis ajouter la fonction :
 
 ```python
+import statistics
+import time
+
+import numpy as np
+import torch
+
+from naulthene.cerveau.noyau import (
+    DIM_VISUELLE,
+    PROGRAMME,
+    _budget_natif_carte,
+    creer_env,
+    demarrer_journee,
+    traiter_tick,
+)
+from naulthene.cerveau.persistance import PersistanceAnatomique
+from naulthene.instruments.primitives_banc import (
+    longueur_normalisee,
+    plus_court_chemin,
+    taux_avec_ic,
+)
+
+def _recompense_env_cumulee(etat) -> float:
+    """Σ des récompenses d'ENVIRONNEMENT depuis le début de la journée courante.
+
+    ⚠️ `noyau.py` n'expose PAS `etat.recompense_env` : la récompense rendue par
+    `env.step` n'y vit que le temps du tick (variable locale de `traiter_tick`) et
+    n'est portée par AUCUN champ de l'état (vérifié : `vars(etat)` ne contient que
+    `recompenses_journee`, qui cumule la récompense INTERNE, pas celle du monde). La
+    seule lecture possible sans modifier `noyau.py` (ARC-01) est celle de la sonde de
+    mixage, qui la CUMULE tick par tick dans `etat.mix_somme["Env"]` — et que
+    `demarrer_journee` réarme (via `_reinitialiser_buffers_journee`). Le retour d'un
+    épisode est donc la DIFFÉRENCE de cette accumulation sur la fenêtre de l'épisode.
+
+    ⚠️ Lecture seule : le banc n'ajoute rien à la sonde, ne la réarme pas, et ne
+    dépend d'aucune mécanique de `noyau.py` pour la mesurer.
+    """
+    return float(etat.mix_somme.get("Env", 0.0))
+
+
+def _forcer_carte(etat, index_carte: int) -> tuple[str, str]:
+    """Remplace l'environnement de `etat` par `PROGRAMME[index_carte]` ; rend `(env_id, nom_classe)`.
+
+    ⚠️ Ne touche PAS `etat.niveau_actuel` : le niveau du cursus reste une mesure de
+    développement (exigence 5 du registre) — le banc n'impose qu'une carte de travail.
+
+    ⚠️ Appelé aussi À CHAQUE ÉPISODE, et c'est nécessaire : dès que `fin_episode` bascule,
+    `traiter_tick` rebascule lui-même sur une carte TIRÉE DU CURSUS
+    (`_appliquer_niveau_episode(_tirer_niveau_episode(etat))`). Sans ce rappel, les épisodes
+    suivants n'étaient plus joués sur la carte imposée — le rapport aurait décrit une carte
+    jamais mesurée.
+
+    Un détecteur neuf par carte : celui d'un autre niveau resterait accroché (leçon
+    d'evaluer_cerveau.py l.77-81).
+    """
+    env_id, nom_classe = PROGRAMME[index_carte]
+    etat.env.close()
+    etat.env = creer_env(env_id, DIM_VISUELLE)
+    etat.env_id = env_id
+    etat.nom_classe = nom_classe
+    etat.detecteur = None
+    etat.palier_cible = 1
+    return env_id, nom_classe
+
+
 def evaluer_cerveau_sur_carte(etat, index_carte: int, graines: Sequence[int],
                               max_ticks: int = 0) -> dict:
     """Rejoue `graines` épisodes SEEDÉS sur `PROGRAMME[index_carte]`, en lecture seule.
@@ -1129,35 +1209,64 @@ def evaluer_cerveau_sur_carte(etat, index_carte: int, graines: Sequence[int],
     La seconde est l'apport d'EVA-01 : sans elle, `Categorical(...).sample()` dans
     `noyau.py` tire une suite d'actions différente à chaque exécution.
 
+    ⚠️ La première ne suffit PAS seule : depuis la v41.9, `demarrer_journee` réamorce
+    l'environnement avec une graine DÉRIVÉE (`_graine_episode`), ce qui rend
+    `env.reset(seed=s)` inopérant. Le banc fixe donc aussi les deux termes de cette
+    dérivation (`graine_run`, `episodes_vecus`) — voir le commentaire de la boucle, qui
+    porte la mesure du défaut.
+
     ⚠️ Le forçage remplace `etat.env` mais ne touche PAS `etat.niveau_actuel` : le niveau du
     cursus reste une mesure de développement (exigence 5 du registre).
     """
     if not 0 <= index_carte < len(PROGRAMME):
         raise CarteInvalide(f"index de carte {index_carte} hors PROGRAMME (0…{len(PROGRAMME) - 1})")
 
-    env_id, nom_classe = PROGRAMME[index_carte]
-    etat.env.close()
-    etat.env = creer_env(env_id, DIM_VISUELLE)
-    etat.env_id = env_id
-    etat.nom_classe = nom_classe
-    # Un détecteur neuf par carte : celui d'un autre niveau resterait accroché (leçon
-    # d'evaluer_cerveau.py l.77-81).
-    etat.detecteur = None
-    etat.palier_cible = 1
+    env_id, nom_classe = _forcer_carte(etat, index_carte)
 
     budget = int(max_ticks) if max_ticks > 0 else _budget_natif_carte(etat.env)
     episodes = []
     for graine in graines:
         graine = int(graine)
-        # On seede l'env AVANT demarrer_journee : celui-ci appelle env.reset() sans seed et
-        # consomme donc la graine posée ici (comportement Gymnasium). Un second reset
-        # désynchroniserait les détecteurs déjà calibrés sur la carte tirée.
+        if etat.env_id != env_id:
+            # ⚠️ LA CARTE DÉRIVE EN COURS D'ÉVALUATION. `traiter_tick` appelle, à la bascule
+            # de `fin_episode`, `_appliquer_niveau_episode(_tirer_niveau_episode(etat))` :
+            # l'épisode suivant partait alors sur la carte du CURSUS, plus sur la carte
+            # imposée. Mesuré sur la carte 3 (`SimpleCrossingS9N1`, budget 324) : premier
+            # épisode à 324 ticks, second à **100** — le budget de `Empty-5x5`, avec
+            # `env_id` final `MiniGrid-Empty-5x5-v0`. Le rapport aurait donc attribué à la
+            # carte 3 des épisodes joués ailleurs. On re-force à CHAQUE épisode.
+            _forcer_carte(etat, index_carte)
+        # --- L'IDENTITÉ D'ÉPISODE EST `graine` : LES TROIS GÉNÉRATEURS QUI EN DÉCIDENT ---
+        #
+        # 1. LE MONDE. `demarrer_journee` ne consomme PAS la graine posée par
+        #    `env.reset(seed=…)` : il appelle `_reset_seede`, qui réamorce l'environnement
+        #    avec `_graine_episode(etat)` = `etat.graine_run × GRAINE_ECART_ENTRE_RUNS +
+        #    etat.episodes_vecus` (v41.9). Un `env.reset(seed=graine)` seul est donc un
+        #    NO-OP — mesuré : deux passes du même cerveau gagnaient l'épisode 10001 en
+        #    **64** puis en **82** ticks. Le banc fixe les DEUX termes de cette dérivation,
+        #    sans quoi la carte d'un épisode dépend du nombre d'épisodes déjà vécus dans le
+        #    processus : deux bras n'affronteraient plus le même monde pour la même graine.
+        #    (`episodes_vecus` n'a qu'un rôle mécanique dans tout `noyau.py` — vérifié.)
+        # 2. LES RESSOURCES SEMÉES dans le monde et le TIRAGE DU CURSUS passent, eux, par le
+        #    `np.random` GLOBAL (`DetecteurRessourcesBiologiques`, `_tirer_niveau_episode`) —
+        #    que ni la graine d'environnement ni `torch.manual_seed` ne contrôlent. Mesuré :
+        #    sans ce seed, deux passes identiques divergeaient (graine 10000 gagnée en 75
+        #    ticks d'un côté, perdue de l'autre) ; avec lui, elles sont bit-identiques.
+        # 3. L'ACTION est échantillonnée par `torch` (`Categorical(...).sample()` dans
+        #    `noyau.py`) — c'est l'apport D1 d'EVA-01, sans lequel la suite d'actions
+        #    change à chaque exécution.
+        #
+        # On seede AVANT `demarrer_journee` : c'est là que le monde est semé, et un second
+        # reset après coup désynchroniserait les détecteurs déjà calibrés sur la carte tirée.
+        etat.graine_run = 0
+        etat.episodes_vecus = graine
         etat.env.reset(seed=graine)
+        np.random.seed(graine)
         demarrer_journee(etat)
         torch.manual_seed(graine)  # D1 — reproductibilité de l'échantillonnage d'action
 
         optimal = plus_court_chemin(etat.env)
-        recompense_avant = float(etat.recompense_env)
+        recompense_avant = _recompense_env_cumulee(etat)
         gagne, ticks, tronque, recompense = False, None, True, 0.0
         with torch.no_grad():
             for _tick in range(budget):
@@ -1169,12 +1278,12 @@ def evaluer_cerveau_sur_carte(etat, index_carte: int, graines: Sequence[int],
                     gagne = bool(etat.victoire_aujourdhui)
                     ticks = ticks_avant + 1
                     tronque = False
-                    recompense = float(etat.recompense_env) - recompense_avant
+                    recompense = _recompense_env_cumulee(etat) - recompense_avant
                     break
             if tronque:
                 # Un épisode tronqué n'a pas de victoire, mais sa récompense partielle
                 # reste une information MESURÉE : on la calcule, on ne la laisse pas à 0,0.
-                recompense = float(etat.recompense_env) - recompense_avant
+                recompense = _recompense_env_cumulee(etat) - recompense_avant
         episodes.append({
             "graine": graine,
             "gagne": gagne,
@@ -1202,6 +1311,7 @@ def evaluer_cerveau_sur_carte(etat, index_carte: int, graines: Sequence[int],
         "retour_moyen": float(statistics.mean([e["retour"] for e in episodes])) if episodes else 0.0,
         "longueur_mediane": (float(statistics.median(longueurs)) if longueurs else None),
     }
+
 ```
 
 - [ ] **Étape 4 : réexécuter les tests avec `bash`**

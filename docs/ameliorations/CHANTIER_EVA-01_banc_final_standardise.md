@@ -196,6 +196,32 @@ En revanche, cette même lecture **confirme la prémisse de D3** : `K8_NU` attei
 **18/20** cas contre **4/20** pour `K16_NU` (`K8_CLIP_e02` : 20/20). Le saut de phase sur lequel
 repose le test d'acceptation est **massif**, et non un artefact de bruit.
 
+### 3.8 La référence d'évaluation était fausse sur CINQ points (12/09/2026)
+
+Les cinq défauts ont été trouvés **à l'implémentation**, mesurés, et **aucun n'était visible au
+cadrage** — ils venaient tous de la référence recopiée d'`evaluer_cerveau.py` (v41.9 antérieure
+incluse). Ils sont consignés ici parce que la Règle de Trace l'exige, et parce que les tâches 5 à 9
+recopiaient cette référence.
+
+| # | Défaut constaté | Mesure | Correction |
+|---|---|---|---|
+| 1 | `etat.recompense_env` **n'existe pas** | `AttributeError` ; `vars(etat)` ne porte que `recompenses_journee` (récompense INTERNE) | retour lu comme **différence** de `etat.mix_somme["Env"]` sur la fenêtre de l'épisode |
+| 2 | `env.reset(seed=s)` est un **NO-OP** | épisode 10001 gagné en **64 puis 82** ticks | fixer `graine_run` et `episodes_vecus`, les deux termes de `_graine_episode` |
+| 3 | Le `np.random` **GLOBAL** décide du monde | sans seed : même `.brain` rechargé → graine 10000 gagnée d'un côté, perdue de l'autre | **troisième graine** : `np.random.seed(s)` |
+| 4 | **La carte dérive à chaque bascule** | carte 3 : 324 ticks puis **100** ; `env_id` final `Empty-5x5` | re-forcer la carte **à chaque épisode** |
+| 5 | Le test de reproductibilité comparait **deux cerveaux neufs DIFFÉRENTS** | la naissance tire `base_weight` du RNG torch : max\|Δ\| = **1,13** sur le `state_dict` ; le test passait par coïncidence et **échouait sur la suite complète** | naître **un** cerveau et l'évaluer **deux fois**, comme le promettait sa propre docstring |
+
+Le défaut n° 4 est le plus grave : sur `CARTES_GELEES = (3, 4)` — **les cartes du plan** — le banc
+aurait publié un `index_carte` décrivant une carte jamais jouée. Le défaut n° 5 est instructif : le
+test censé verrouiller D1 **comparait deux individus**, et ne passait que par coïncidence sur un
+fichier isolé.
+
+**Réserve assumée, écrite** : avec `max_ticks = 0` (budget natif du monde), `tronques` vaut toujours
+0. Un épisode coupé par le `max_steps` du monde bascule `fin_episode` et est donc compté
+`tronque=False` — c'est un **échec légitime du monde** (l'agent n'a pas gagné dans le temps accordé),
+pas une mesure tronquée par le banc. Le drapeau signale une troncature **du banc**, jamais un délai
+du monde.
+
 ---
 
 ## 4. Architecture — les cinq artefacts
@@ -231,12 +257,29 @@ duplication. Le seuil Bonferroni n'est **pas** ici : il est importé de `depouil
 
 ### Identité d'un épisode = un seul entier `s`
 
-C'est la clé de D1 :
+**Trois générateurs décident d'un épisode**, et les trois doivent être seedés (mesuré le
+12/09/2026 — la version initiale de ce paragraphe était FAUSSE, cf. §3.8) :
+
 ```
-etat.env.reset(seed=s)     ← mécanisme existant de evaluer_cerveau.py, préservé tel quel
-demarrer_journee(etat)     ← ne passe pas de seed : consomme celui du reset ci-dessus
-torch.manual_seed(s)       ← AJOUT EVA-01 : rend l'échantillonnage de l'action reproductible
+etat.graine_run = 0                     ← terme 1 : le MONDE (dérivation v41.9)
+etat.episodes_vecus = s                 ←          _graine_episode = graine_run × 1 000 003 + episodes_vecus
+np.random.seed(s)                       ← terme 2 : ressources semées + tirage du cursus (np.random GLOBAL)
+torch.manual_seed(s)                    ← terme 3 : l'échantillonnage de l'action (Categorical.sample)
+demarrer_journee(etat)                  ← sème le monde avec la graine DÉRIVÉE ci-dessus
 ```
+
+⚠️ **`etat.env.reset(seed=s)` est un NO-OP** : depuis la v41.9, `demarrer_journee` → `_reset_seede`
+réamorce l'environnement avec `_graine_episode(etat)`. Poser la graine d'environnement ne suffit donc
+pas — mesuré : deux passes du même cerveau gagnaient l'épisode 10001 en **64** puis en **82** ticks.
+
+⚠️ **LA CARTE DÉRIVE EN COURS D'ÉVALUATION.** À la bascule de `fin_episode`, `traiter_tick` appelle
+`_appliquer_niveau_episode(_tirer_niveau_episode(etat))` et **remplace l'environnement**. La carte
+imposée doit donc être **re-forcée à chaque épisode** : mesuré sur la carte 3
+(`SimpleCrossingS9N1`, budget 324), le premier épisode dure 324 ticks puis le second **100** — le
+budget d'`Empty-5x5`, avec `env_id` final `MiniGrid-Empty-5x5-v0`. Sans ce rappel, le banc publiait
+sous `index_carte=3` des épisodes joués **ailleurs** : exactement le mode d'échec « plausible et
+faux » que ce chantier existe pour supprimer.
+
 L'épisode devient adressable par un nombre, et **tout résultat devient rejouable à l'identique**.
 
 ⚠️ **Piège documenté dans le code existant** (`evaluer_cerveau.py`, lignes 103-117) et à ne pas
