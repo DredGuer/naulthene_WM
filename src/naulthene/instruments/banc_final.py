@@ -691,18 +691,39 @@ def construire_depouillement(cohorte: str, bras: Sequence[str], graines: Sequenc
     Aucune statistique n'est recodée ici : appariement par graine d'entraînement, seuil de
     Bonferroni (`seuil_t(n, comparaisons_prevues, alpha)`) et refus de publier viennent tous de
     `depouillement.py` (MES-01).
+
+    ⚠️ `dossier` EST LE NOM DU BRAS, JAMAIS `os.path.join(cohorte, b)` — ET CE DÉFAUT RENDAIT LE BANC
+    INUTILISABLE SUR SON PROPRE CHEMIN DOCUMENTÉ. `Manifeste.cohorte` compose
+    `<dossier>/<prefixe>_g<graine>.brain`, et `Depouillement.chemin_run` RE-préfixe ce chemin par sa
+    `racine` (posée à `cohorte` ici). Un `dossier` déjà préfixé DOUBLAIT donc tout : mesuré sur la
+    cohorte réelle (`--cohorte brains/08092026_sci01_balayage_K`, invocation du plan, 40 `.brain`),
+    le manifeste réclamait `brains/08092026_sci01_balayage_K/brains/08092026_sci01_balayage_K/
+    K16_NU/K16_NU_g11.brain` → **0 run collecté, 40 violations « fichier absent », aucun agrégat,
+    dossier de sortie non créé**. Avec une cohorte ABSOLUE, `os.path.join(racine, chemin_absolu)`
+    rend le chemin absolu : le doublage disparaissait **par accident**, et TOUS les tests, qui
+    passent par `tempfile` donc par des chemins absolus, étaient aveugles à ce défaut.
+
+    ⚠️ LA RENCONTRE ENTRE LE MANIFESTE ET LES MÉTRIQUES EST CANONICALISÉE (`os.path.abspath`), ET NE
+    DOIT PAS ÊTRE UNE COÏNCIDENCE TEXTUELLE. Le manifeste recompose ses chemins, et les clés de
+    `metriques_par_chemin` viennent de la résolution (`resoudre_cohorte`) ou, en voie EXPLICITE,
+    d'un inventaire JSON écrit à la main : rien ne garantit la même écriture des deux côtés
+    (`./brains/…` contre `brains/…`, relatif contre absolu). Mesuré : des clés relatives face à une
+    racine absolue suffisaient à tout exclure en « source illisible ou vide ». On compare donc les
+    chemins canoniques, jamais leur orthographe.
     """
     manifeste = Manifeste(
         campagne=os.path.basename(os.path.normpath(cohorte)),
         mode="confirmatoire",
         graines=[int(g) for g in graines],
-        bras={b: {"dossier": os.path.join(cohorte, b), "prefixe": b} for b in bras},
+        bras={b: {"dossier": b, "prefixe": b} for b in bras},
         alpha=0.05,
         comparaisons_prevues=len(FAMILLE_METRIQUES),
         extension_log=".brain",
     )
     dp = Depouillement(manifeste, racine=cohorte)
-    dp.collecter(lambda chemin: metriques_par_chemin.get(chemin))
+    metriques_canoniques = {os.path.abspath(chemin): metriques
+                            for chemin, metriques in metriques_par_chemin.items()}
+    dp.collecter(lambda chemin: metriques_canoniques.get(os.path.abspath(chemin)))
     return dp
 
 
@@ -775,6 +796,12 @@ def executer_banc(cohorte: str, bras: Sequence[str], cartes: Sequence[int],
                 # et une divergence se LIT dans le rapport au lieu d'exiger une sonde externe.
                 # Elle est prise AVANT `evaluer_cerveau_sur_carte` : elle décrit l'état depuis
                 # lequel la mesure PART, pas celui qu'elle laisse derrière elle.
+                # ⚠️ ELLE DOIT RESTER ICI, DANS LA BOUCLE DES CARTES, ET PAS SEULEMENT PARCE QU'ELLE
+                # Y TROUVE SON SENS : hissée à côté du chargement, elle publierait DEUX FOIS la
+                # même empreinte alors que l'état serait partagé — l'artefact CERTIFIERAIT une
+                # fraîcheur qu'il n'aurait pas vérifiée (mesuré : la variante « squelette du plan »
+                # laisse le verrou d'empreinte VERT). La propriété qui garde réellement ce banc est
+                # l'INDÉPENDANCE À L'ORDRE, tenue par le test `TestIndependanceALOrdre`.
                 empreinte_etat = _empreinte_etat(etat)
                 try:
                     resultat = evaluer_cerveau_sur_carte(etat, index_carte, graines_eval,

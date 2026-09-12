@@ -304,6 +304,86 @@ class TestCohorteComplete(unittest.TestCase):
             "signifie que le banc refuse de publier une campagne pourtant valide")
 
 
+class TestCohorteACheminRelatif(unittest.TestCase):
+    """C1 — le défaut le plus grave de la tâche 5 : avec une cohorte RELATIVE, tout chemin était
+    DOUBLÉ, et le banc ne collectait RIEN.
+
+    `construire_depouillement` donnait au manifeste un `dossier` DÉJÀ préfixé par `<cohorte>`
+    (`os.path.join(cohorte, bras)`), et `Depouillement` re-préfixait ce chemin par sa `racine`
+    (`depouillement.chemin_run`). Avec une `racine` ABSOLUE, `os.path.join(racine, chemin_absolu)`
+    rend le chemin absolu : le doublage **disparaissait par accident**. Avec une cohorte relative —
+    c'est-à-dire l'invocation du plan, `--cohorte brains/08092026_sci01_balayage_K` — le manifeste
+    réclamait `brains/X/brains/X/K8_NU/K8_NU_g11.brain`. Mesuré sur la cohorte réelle : **exit 1,
+    40 violations « fichier absent », 0 run collecté, aucun agrégat, dossier de sortie NON créé**.
+    Le banc était inutilisable sur son propre chemin documenté.
+
+    ⚠️ POURQUOI AUCUN TEST NE LE VOYAIT : TOUS passaient par `tempfile`, donc des chemins ABSOLUS.
+    C'est la même cécité que la coquille `extension_log` — un test qui ne fait pas varier le
+    paramètre fautif ne garde rien.
+
+    ⚠️ ET LE CHEMIN RELATIF DOIT ÊTRE « PUR » — SANS UN SEUL `..` — SINON LE DÉFAUT DISPARAÎT UNE
+    SECONDE FOIS PAR ACCIDENT, CE QUI EST MESURÉ. Un premier jet de ce test utilisait
+    `os.path.relpath(dossier_temporaire)`, ce qui donne par exemple
+    `../../../../../../var/folders/gf/…/tmpabc` : le chemin DOUBLÉ
+    `../../../../../../var/…/tmpabc/../../../../../../var/…/tmpabc/A/A_g11.brain` remonte au-delà de
+    `/` (où les `..` supplémentaires sont des **no-op**) et **re-désigne le MÊME fichier**
+    (`os.path.exists` → `True`, vérifié). Le mutant C1 survivait donc à ce test. La campagne réelle
+    s'écrit `brains/08092026_sci01_balayage_K` — un chemin relatif PUR : c'est CELUI-LÀ qu'il faut
+    reproduire, en se plaçant DANS le dossier temporaire.
+
+    ⚠️ LES CLÉS SONT VOLONTAIREMENT ABSOLUES face à une cohorte RELATIVE : la coïncidence entre le
+    chemin recomposé par le manifeste et la clé des métriques était **purement textuelle**, et
+    `--cohorte-explicite` peut parfaitement fournir des chemins écrits autrement. La première
+    assertion verrouille donc l'égalité des chemins CANONIQUES (`os.path.abspath`), pas leur
+    écriture.
+    """
+
+    def test_une_cohorte_relative_est_collectee_entierement(self):
+        from naulthene.instruments.banc_final import construire_depouillement
+
+        ancien_cwd = os.getcwd()
+        with tempfile.TemporaryDirectory() as racine:
+            try:
+                # On se place DANS la racine temporaire : la cohorte est alors `campagne`, un
+                # chemin relatif PUR, exactement comme `brains/08092026_sci01_balayage_K`.
+                os.chdir(racine)
+                os.mkdir("campagne")
+                with open(os.path.join("campagne", "manifeste.json"), "w", encoding="utf-8") as f:
+                    json.dump({"campagne": "essai", "graines": [11, 22]}, f)
+                metriques = {}
+                for bras in ("A", "B"):
+                    os.mkdir(os.path.join("campagne", bras))
+                    for graine in (11, 22):
+                        chemin = os.path.join(os.getcwd(), "campagne", bras,
+                                              f"{bras}_g{graine}.brain")
+                        _toucher(chemin)
+                        metriques[chemin] = {"taux_franchissement": 0.5}
+
+                dp = construire_depouillement("campagne", ["A", "B"], [11, 22], metriques)
+                # Comparaison des chemins CANONIQUES, faite ici : `os.path.abspath` dépend du
+                # répertoire courant, qu'on vient de changer.
+                reclames = {os.path.abspath(os.path.join("campagne", chemin_relatif))
+                            for _, chemin_relatif in dp.manifeste.cohorte}
+                attendus = {os.path.abspath(chemin) for chemin in metriques}
+                collectes = sorted(dp.runs)
+                violations = list(dp.violations)
+            finally:
+                os.chdir(ancien_cwd)
+
+        self.assertEqual(
+            reclames, attendus,
+            "le manifeste doit réclamer EXACTEMENT les `.brain` dont on détient les métriques : "
+            "un chemin DOUBLÉ (`campagne/campagne/A/…`) ne désigne aucun fichier, et la cohorte "
+            "entière est alors exclue pour « fichier absent »")
+        self.assertEqual(
+            collectes, ["A_g11", "A_g22", "B_g11", "B_g22"],
+            "une cohorte RELATIVE complète doit être collectée EN ENTIER — c'est l'invocation "
+            "même du plan (`--cohorte brains/<campagne>`), pas un cas exotique")
+        self.assertEqual(
+            violations, [],
+            "aucune violation n'est tolérable sur une cohorte complète à chemin relatif")
+
+
 class TestEtatFraisParCarte(unittest.TestCase):
     """PRÉREQUIS I1 verrouillé par L'INSTRUMENTATION, pas par une sonde externe.
 
@@ -320,6 +400,14 @@ class TestEtatFraisParCarte(unittest.TestCase):
     aurait donc laissé SURVIVRE le mutant « états mis en cache » : les deux cartes auraient porté
     la même empreinte. L'empreinte publiée couvre LES DEUX, et ce test exige qu'elle soit égale
     pour les deux cartes d'un même cerveau.
+
+    ⚠️ CE VERROU NE COUVRE PAS *TOUTES* LES VARIANTES DU DÉFAUT, ET IL FAUT LE SAVOIR : il n'attrape
+    que celle où l'empreinte est **RECALCULÉE** à chaque carte. Sous la variante NATURELLE — le
+    squelette même du plan : charger une fois par cerveau et hisser l'empreinte hors de la boucle
+    des cartes — les deux empreintes publiées sont IDENTIQUES, ce test reste **VERT**, et l'artefact
+    **certifie une fraîcheur qu'il n'a pas vérifiée** (vérifié en mémoire : `M-ETAT-NATUREL` →
+    `VERT`, 20 tests, 0 échec). La propriété réellement promise est l'**indépendance à l'ordre**,
+    et c'est `TestIndependanceALOrdre` qui la garde : lui seul tue cette variante.
     """
 
     def test_les_deux_cartes_d_un_meme_cerveau_partent_du_meme_etat(self):
@@ -363,6 +451,71 @@ class TestEtatFraisParCarte(unittest.TestCase):
             "recharge le `.brain` avant chaque (bras, carte). Deux empreintes différentes "
             "signifient que l'état a persisté d'une carte à l'autre — le chiffre publié "
             "dépendrait alors de l'ORDRE d'évaluation, et l'appariement par graine serait perdu")
+
+
+class TestIndependanceALOrdre(unittest.TestCase):
+    """I1 — LA seule propriété que le prérequis promet vraiment : le chiffre d'une carte ne doit
+    pas dépendre de l'ORDRE d'évaluation dans le processus.
+
+    ⚠️ POURQUOI CE TEST EST NÉCESSAIRE ALORS QUE L'EMPREINTE EST DÉJÀ VERROUILLÉE. Le verrou
+    d'empreinte (`TestEtatFraisParCarte`) ne voit que la variante de mutant où l'empreinte est
+    RECALCULÉE à chaque carte. Sous la variante **naturelle** — celle du squelette du plan :
+    charger UNE fois par cerveau et hisser l'empreinte à côté du chargement, donc HORS de la boucle
+    des cartes — les deux empreintes publiées sont **IDENTIQUES** et ce verrou reste **VERT**, alors
+    que la mesure, elle, dépend de l'ordre. Mesuré par la revue indépendante sur un cerveau réel
+    (`K8_NU_g11.brain`, cartes [0, 3]) : empreintes égales des deux côtés, mais la trajectoire de la
+    carte « Primaire 1 » passe de `[8, 2]` à `[3, 2]`. L'artefact **CERTIFIE alors une fraîcheur
+    qu'il n'a pas vérifiée** — c'est plus grave qu'une absence d'artefact.
+
+    ⚠️ LE BUDGET NATIF EST OBLIGATOIRE ICI, ET C'EST MESURÉ. Avec `max_ticks=5`, deux évaluations
+    trop courtes ne divergent pas : le mutant NATUREL passe (`EGAL ? True`), le test ne garde rien.
+    Avec le budget natif de la carte (`max_ticks=0`), le PROPRE code rend des résultats par carte
+    ÉGAUX dans les deux ordres et le mutant NATUREL les rend DIFFÉRENTS — c'est la seule
+    configuration qui discrimine.
+    """
+
+    def test_l_ordre_des_cartes_ne_change_aucun_resultat(self):
+        import torch
+
+        from naulthene.cerveau.persistance import PersistanceAnatomique
+        from naulthene.instruments.banc_final import executer_banc
+
+        torch.manual_seed(GRAINE_DE_NAISSANCE)
+        with tempfile.TemporaryDirectory() as d:
+            os.mkdir(os.path.join(d, "K8_NU"))
+            chemin = os.path.join(d, "K8_NU", "K8_NU_g11.brain")
+            # Un `.brain` RÉEL sur disque : sans fichier, chaque (bras, carte) ferait NAÎTRE un
+            # cerveau DIFFÉRENT et la comparaison des deux ordres ne mesurerait rien.
+            etat = PersistanceAnatomique(fichier=chemin).charger_ou_naitre()
+            PersistanceAnatomique(fichier=chemin).sauvegarder(etat)
+            etat.env.close()
+            with open(os.path.join(d, "manifeste.json"), "w", encoding="utf-8") as f:
+                json.dump({"campagne": "essai", "graines": [11]}, f)
+
+            def passe(ordre, sortie):
+                return executer_banc(
+                    cohorte=d, bras=["K8_NU"], cartes=ordre, graines=[11], episodes=1,
+                    graine_eval_base=10000, dossier_sortie=os.path.join(d, sortie))
+
+            premier, second = passe([0, 3], "s1"), passe([3, 0], "s2")
+
+        def par_carte(rapport):
+            cerveau = rapport["cerveaux"]["K8_NU_g11"]
+            return {nom: {"resultat": resultat,
+                          "empreinte": cerveau["empreinte_etat_initial"][nom]}
+                    for nom, resultat in cerveau["cartes"].items()}
+
+        # `duree_s` est exclue par construction : elle mesure le temps machine, pas la mesure.
+        self.assertEqual(
+            sorted(par_carte(premier)), sorted(par_carte(second)),
+            "les deux ordres doivent avoir couvert les mêmes cartes")
+        self.assertEqual(
+            par_carte(premier), par_carte(second),
+            "l'ordre d'évaluation NE DOIT PAS changer le résultat d'une carte : chaque "
+            "(bras, carte) part d'un état FRAIS. Une différence ici signifie que l'état du "
+            "cerveau a persisté d'une carte à l'autre — l'appariement par graine de la tâche 9 "
+            "serait alors perdu, et deux bras évalués dans un ordre différent ne seraient plus "
+            "comparables")
 
 
 class TestReproductibilite(unittest.TestCase):
