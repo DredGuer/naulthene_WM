@@ -1,6 +1,6 @@
 {
   "regle": "plus petit n >= 1 tel que sqrt(p_barre (1 - p_barre) / n) <= sigma / facteur, sigma = dispersion inter-cerveaux DECONVOLUEE",
-  "n_derive_regle": "sd_inter_deconvoluee",
+  "n_derive_poole_regle": "sd_inter_deconvoluee",
   "facteur": 3.0,
   "episodes_par_carte_budget_pilote": 1145,
   "tolerance_relative_contrainte": 1e-12,
@@ -49,12 +49,15 @@
   "formule_deconvolution": "sigma^2 = max(0, s^2 - v) ; IC(sigma) = sqrt(max(0, IC(tau^2) - v)), tau^2 = sigma^2 + v",
   "seuil_domination": 0.007375510268052623,
   "seuil_domination_sd_observee": 0.007955378993851353,
-  "n_derive": 3732,
-  "n_derive_motif": null,
-  "n_derive_sd_observee": 3208,
-  "n_derive_sd_observee_motif": null,
-  "ligne_de_calcul": "n = plus petit entier >= 3731.605795 tel que sqrt(0.283188 × (1 − 0.283188) / n) <= 0.022127 / 3.0 = 0.007376  ⇒  n = 3732",
-  "ligne_de_calcul_sd_observee": "n = plus petit entier >= 3207.437144 tel que sqrt(0.283188 × (1 − 0.283188) / n) <= 0.023866 / 3.0 = 0.007955  ⇒  n = 3208",
+  "n_derive_poole": 3732,
+  "n_derive_poole_motif": null,
+  "n_derive_poole_sd_observee": 3208,
+  "n_derive_poole_sd_observee_motif": null,
+  "ligne_de_calcul_poole": "n = plus petit entier >= 3731.605795 tel que sqrt(0.283188 × (1 − 0.283188) / n) <= 0.022127 / 3.0 = 0.007376  ⇒  n = 3732",
+  "ligne_de_calcul_poole_sd_observee": "n = plus petit entier >= 3207.437144 tel que sqrt(0.283188 × (1 − 0.283188) / n) <= 0.023866 / 3.0 = 0.007955  ⇒  n = 3208",
+  "n_final": 1868,
+  "n_final_regle": "maximum des n derives PAR CARTE (par_carte[*].n_derive) — la carte qui contraint est celle de plus petit sigma-chapeau ; jamais le n poole",
+  "protocole_gel": "docs/fonctionnement/PROTOCOLE_BANC_FINAL.md",
   "cerveaux": {
     "K8_NU_g11": {
       "k": 607,
@@ -117,7 +120,10 @@
         0.13823822930177676
       ],
       "ic_sd_deconvoluee_touche_zero": false,
-      "formule_deconvolution": "sigma^2 = max(0, s^2 - v) ; IC(sigma) = sqrt(max(0, IC(tau^2) - v)), tau^2 = sigma^2 + v"
+      "formule_deconvolution": "sigma^2 = max(0, s^2 - v) ; IC(sigma) = sqrt(max(0, IC(tau^2) - v)), tau^2 = sigma^2 + v",
+      "n_derive": 1868,
+      "n_derive_motif": null,
+      "ligne_de_calcul": "n = plus petit entier >= 1867.757392 tel que sqrt(0.423799 × (1 − 0.423799) / n) <= 0.034303 / 3.0 = 0.011434  ⇒  n = 1868"
     },
     "Primaire 2 (Éviter le danger)": {
       "taux_poolé": 0.1425764192139738,
@@ -142,10 +148,13 @@
         0.2912500365659811
       ],
       "ic_sd_deconvoluee_touche_zero": false,
-      "formule_deconvolution": "sigma^2 = max(0, s^2 - v) ; IC(sigma) = sqrt(max(0, IC(tau^2) - v)), tau^2 = sigma^2 + v"
+      "formule_deconvolution": "sigma^2 = max(0, s^2 - v) ; IC(sigma) = sqrt(max(0, IC(tau^2) - v)), tau^2 = sigma^2 + v",
+      "n_derive": 184,
+      "n_derive_motif": null,
+      "ligne_de_calcul": "n = plus petit entier >= 183.291978 tel que sqrt(0.142576 × (1 − 0.142576) / n) <= 0.077477 / 3.0 = 0.025826  ⇒  n = 184"
     }
   },
-  "date_mesure": "2026-09-15T09:04:51.588905+00:00",
+  "date_mesure": "2026-09-15T09:27:04.693725+00:00",
   "protocole": "PILOTE_EVA-01 v1",
   "rapport_banc": "brains/EVA01_pilote_n1145_15092026/banc_final_20260915_110341.json"
 }

@@ -450,19 +450,28 @@ binomiale du taux d'**un seul** cerveau reste ≤ **1/3** de l'écart-type **int
 taux, mesuré sur cartes figées :
 
 ```
-p̄  = taux de franchissement poolé du pilote
+p̄  = taux de franchissement PAR CARTE (jamais poolé : ρ inter-cartes ≈ −0,88)
 SE_binomiale(n) = sqrt( p̄ (1 − p̄) / n )
 contrainte      : SE_binomiale(n) ≤ (1/3) × SD_inter-cerveaux
+n_final         : max( n par carte ) — la carte qui contraint est celle de plus petit σ̂
 ```
+
+⚠️ **Par carte, jamais poolé.** La corrélation inter-cartes est fortement négative
+(ρ ≈ −0,88, mesuré) : les cerveaux s'échangent les cartes, le taux poolé devient presque
+indépendant du cerveau et sa dispersion n'est pas identifiable. Chaque carte porte donc son
+propre `n`, et le protocole gèle **`n_final = max(n par carte)`** — la carte qui contraint est
+celle de plus **petit** σ̂ (la variance est au dénominateur de la règle).
 
 **Pourquoi 1/3** : à ce seuil, le bruit d'échantillonnage contribue moins de ~10 % de la variance
 totale observée — la métrique est donc dominée par la variation réelle des cerveaux, pas par le
 tirage. Ce facteur est **le seul paramètre posé** de la règle : il est isolé et explicite, précisément
 pour pouvoir être contesté ou mesuré plus tard. **Tout le reste est mesuré.**
 
-**La mesure — le pilote.** 2 à 4 cerveaux × ~20 épisodes sur les 2 cartes figées (quelques minutes de
-calcul), exécuté **avant** le gel du protocole. Il fournit `p̄` et la SD inter-cerveaux. Le pilote
-**est une mesure** : carnet + agrégat machine (§7d).
+**La mesure — le pilote.** 2 à 4 cerveaux × les 2 cartes figées, exécuté **avant** le gel du
+protocole. Le budget d'épisodes est un **budget de MESURE**, jamais le `n` du protocole : il a
+été porté de ~20 à **~1 145 épisodes par carte** (re-mesure de sauvetage du 15/09/2026) pour que
+l'IC95 de la dispersion **exclue zéro** et rende σ̂ identifiable. Il fournit `p̄` et la SD
+inter-cerveaux **par carte**. Le pilote **est une mesure** : carnet + agrégat machine (§7d).
 
 **Pourquoi PAS la variance de SCI-01** — tranché le 12/09/2026 sur mesure, contre l'intuition
 initiale (qui était d'y prendre la variance) :

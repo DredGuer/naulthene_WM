@@ -28,6 +28,13 @@ pilote, la corrélation inter-cartes des taux par cerveau vaut
 ρ = −0,8807  (à 200 épisodes/carte, cov = −0,00299375)   →   ρ = −0,8958  (à 1 145, cov = −0,00261049)
 ```
 
+⚠️ **ρ est une estimation sur 4 points, sans test** : à n = 4 cerveaux, ce ρ n'est pas
+significatif à 5 % (p ≈ 0,104). La séparation des cartes ne repose donc **pas** sur la seule
+valeur de ρ, mais sur deux faits mesurés robustes : l'**échange des rangs** (`g11` premier sur
+la carte 3 et dernier sur la 4, `g44` l'inverse) et la dispersion poolée **inférieure** à celle
+de chaque carte (0,0221 < 0,0343 et 0,0775) — signature d'un fort échange qui **annule** le
+signal. Le poolage est écarté par ces deux faits, pas par un test de corrélation.
+
 Les cerveaux **s'échangent** les cartes : `K8_NU_g11` est premier sur la carte 3 (0,477) et
 dernier sur la carte 4 (0,053) ; `K8_NU_g44` est l'inverse (0,391 / 0,244). Le taux poolé
 devient donc **presque indépendant du cerveau** (0,265 → 0,317), et la dispersion poolée
@@ -56,6 +63,13 @@ carte qui **contraint** est celle de plus **petit** σ̂. Le protocole gèle don
 ```
 n_final = max( n_carte3, n_carte4 )
 ```
+
+⚠️ **`pilote.json` publie deux familles de `n`, et une seule est le gel.** Le `n` POOLÉ
+(`n_derive_poole` = 3 732, et sa borne basse `n_derive_poole_sd_observee` = 3 208) est une
+grandeur **poolée, interdite pour dimensionner** (voir §1) : il est publié pour mémoire, jamais
+comme gel. Le gel est **`n_final`** (clé racine) et les `n` **par carte**
+(`par_carte[*].n_derive` + `par_carte[*].ligne_de_calcul`). Un lecteur de `pilote.json` doit
+lire `n_final`, pas `n_derive_poole`.
 
 ### La mesure de sauvetage qui fonde ce `n` (2026-09-15)
 
@@ -91,7 +105,7 @@ graines d'évaluation = 10000 … 10000 + n_final − 1   (n_final graines)
 donc les `n` graines 10000…10000+n−1, borne haute exclue.)
 
 - La **base** `10000` est une constante d'**isolation** : elle sépare hermétiquement
-  l'évaluation du vécu d'entraînement (graines réelles 5…222).
+  l'évaluation du vécu d'entraînement (graines réelles 11…222).
 - L'**étendue** suit `n` : **le code la dérive déjà** (`banc_final.py:758` —
   `range(graine_eval_base, graine_eval_base + episodes)`), aucune constante ne fige une borne
   haute. La spécification §8 (qui écrivait encore « 10000…10099 », héritée de l'ancien
@@ -158,7 +172,9 @@ d'acceptation D3 séparé, qui doit reproduire l'ordre SCI-01 avant toute revend
 
 - **Mesure de sauvetage** (le `n` gelé) :
   [`docs/recherche/campagnes/EVA01_N1145_15092026_la_dispersion_identifiee.md`](../recherche/campagnes/EVA01_N1145_15092026_la_dispersion_identifiee.md)
-  et `brains/EVA01_pilote_n1145_15092026/pilote.json`.
+  et `brains/EVA01_pilote_n1145_15092026/pilote.json` — ⚠️ dans ce fichier, lire
+  **`n_final`** (et `par_carte[*].n_derive`), jamais `n_derive_poole` (grandeur POOLÉE,
+  interdite pour le gel).
 - **Dé-convolution** (le `n = 10 810` rétracté comme point de plug-in, jamais dimensionnement) :
   [`docs/recherche/campagnes/EVA01_N200_13092026_la_dispersion_deconvoluee.md`](../recherche/campagnes/EVA01_N200_13092026_la_dispersion_deconvoluee.md).
 - **Premier pilote** (`n = 333`, rétracté comme borne basse) :

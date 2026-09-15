@@ -2259,13 +2259,13 @@ la règle qui l'a produit.
 - Produit : le document normatif que tout rapport du banc doit référencer.
 
 **Critères de succès :**
-- Le document contient : les deux cartes et leurs index, le pool `10000…10099`, le `n` **dérivé avec
-  sa ligne de calcul**, la famille de 3 métriques, le seuil Bonferroni, la règle de version, et
+- Le document contient : les deux cartes et leurs index, le pool `[10000, 10000 + n]`, le `n` **dérivé avec
+  sa ligne de calcul** (gelé au **maximum des cartes**), la famille de 3 métriques, le seuil Bonferroni, la règle de version, et
   l'interdit « banc forcé ».
 - `docs/INDEX.md` référence le document.
 
 - [ ] **Étape 1 :** rédiger le document avec les valeurs **mesurées** à la tâche 7.
-- [ ] **Étape 2 :** vérifier la cohérence par `grep` : `n` du protocole ≡ `n_derive` de `pilote.json`.
+- [ ] **Étape 2 :** vérifier la cohérence par `grep` : `n` du protocole ≡ `n_final` de `pilote.json` (jamais `n_derive_poole`, grandeur poolée).
 - [ ] **Étape 3 :** inscrire le document dans `docs/INDEX.md` (section `fonctionnement/`).
 - [ ] **Étape 4 :** relire le document et retirer tout énoncé non mesuré.
 - [ ] **Étape 5 :** commit.

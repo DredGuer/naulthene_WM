@@ -24,10 +24,14 @@ condition d'exclusion de 0 :  σ² / v  >  χ²(0,975 ; df)/df − 1  =  2,1161 
                             v ∝ 1 / n_ep   ⇒   n_ep ≈ 1 145 épisodes par carte et par cerveau
 ```
 
-À `n_ep = 1 145`, `v` (carte 3) est divisé par ~5,7 par rapport à 200. **Condition de
-validité** : que le point `σ̂²` mesuré à 200 épisodes soit proche de la vérité — sinon on ne
-précise qu'un intervalle autour d'un point faux. C'est précisément ce que cette re-mesure
-**teste**, sans rien raboter.
+⚠️ **Origine du budget « 1 145 »** : il se reproduit depuis le point **POOLÉ** du pilote à 200
+épisodes (`σ²/v = 0,370` → ×5,72). L'exigence propre de la **carte 3** serait ≈ **1 065**
+épisodes ; celle de la carte 4 est largement moindre. Le budget retenu est donc
+**conservateur** (au-dessus de la carte la plus exigeante), pas un chiffre minimal.
+
+**Condition de validité** : que le point `σ̂²` mesuré à 200 épisodes soit proche de la vérité —
+sinon on ne précise qu'un intervalle autour d'un point faux. C'est précisément ce que cette
+re-mesure **teste**, sans rien raboter.
 
 ## 2. La règle — inchangée, et le dimensionnement se fait PAR CARTE
 
@@ -61,7 +65,7 @@ n_final = max( n_carte3, n_carte4 )
 | Cerveaux | graines d'entraînement **11, 22, 33, 44** (canoniques) | **IDENTIQUES** — c'est le budget qui change, pas l'échantillon |
 | Cartes | **3** `SimpleCrossingS9N1` (budget 324), **4** `LavaGapS5` (budget 100) | identiques |
 | Épisodes par carte | **1 145** | ⚠️ **200 → 1 145** (budget de MESURE, jamais le `n` du protocole) |
-| Graines d'évaluation | **10000 … 11144** | ⚠️ 200 → 1 145 graines : le pool « 10000…10099 » de la spec §8 est **dépassé** (dimensionné pour l'ancien `n = 100`). Disjoint de l'entraînement (5…222) : aucun recouvrement. |
+| Graines d'évaluation | **10000 … 11144** | ⚠️ 200 → 1 145 graines : le pool « 10000…10099 » de la spec §8 est **dépassé** (dimensionné pour l'ancien `n = 100`). Disjoint de l'entraînement (11…222) : aucun recouvrement. |
 | `max_ticks` | budget natif du monde | identique |
 | Voie de résolution | `cohorte_explicite.json` | **CHOIX, pas obligation** (le glob rend ces 4 graines sans lever ; le surnuméraire `K8_NU_g122` n'est pas demandé) |
 

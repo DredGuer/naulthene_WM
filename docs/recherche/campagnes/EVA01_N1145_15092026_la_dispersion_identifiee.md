@@ -34,6 +34,12 @@ plus d'épisodes par cerveau.
 | Épisodes par carte | **1 145** (BUDGET DE MESURE, jamais le `n` du protocole) |
 | Graines d'évaluation | **10000 … 11144** (pool dérivé : `range(base, base + episodes)`) |
 
+> **Origine du budget « 1 145 »** (précision) : il se reproduit depuis le point **POOLÉ** du
+> pilote à 200 épisodes (`σ²/v = 0,370` → ×5,72). L'exigence propre de la **carte 3** serait
+> ≈ **1 065** épisodes. Le budget est donc **conservateur** : à 1 145, la condition
+> `σ²/v > 2,1161` est tenue **largement** sur les deux cartes (carte 3 : **5,517** ; carte 4 :
+> **56,22**), pas tout juste.
+
 ```bash
 NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m naulthene.instruments.pilote_banc \
   --cohorte brains/08092026_sci01_balayage_K --bras K8_NU --cartes 3 4 \
@@ -42,7 +48,7 @@ NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m naulthene.instruments.pil
   --dossier-sortie brains/EVA01_pilote_n1145_15092026
 ```
 
-Durée réelle **4 536,6 s (75 min 36 s)** — 09:48:01 → 11:03:41 — pour une estimation de ~76 min
+Durée réelle **≈ 4 540 s (75 min 40 s)** — 09:48:01 → 11:03:41 — pour une estimation de ~76 min
 dérivée du rythme mesuré. Cohorte complète (4/4), **0 épisode tronqué**, `.brain` inchangés.
 
 ## 3. Les chiffres bruts — avant toute interprétation

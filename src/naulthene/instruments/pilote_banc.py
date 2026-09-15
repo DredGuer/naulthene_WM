@@ -41,8 +41,9 @@ nombre : c'est `v` qu'il faut faire baisser, donc jouer PLUS D'ÉPISODES PAR CER
 La règle n'est pas changée pour autant : le §8bis nomme « l'écart-type inter-cerveaux de ce
 même taux », c'est-à-dire σ. `s` en est un estimateur biaisé, σ̂ = `sqrt(max(0, s² − v))` en
 est l'estimateur correct — voir `variance_echantillonnage`. Les deux sont PUBLIÉS côte à
-côte (`sd_inter`, `sd_inter_deconvoluee`), avec les deux `n` (`n_derive` de σ̂,
-`n_derive_sd_observee` de `s`, qui est la borne basse).
+côte (`sd_inter`, `sd_inter_deconvoluee`). Le `n` POOLÉ (`n_derive_poole`, dérivé de σ̂, et
+`n_derive_poole_sd_observee`, dérivé de `s` — borne basse) est publié POUR MÉMOIRE, jamais
+comme gel ; le gel est `n_final = max(n PAR CARTE)`.
 
 ⚠️ UNE SD DE PILOTE EST INSTABLE. À 4 cerveaux, l'intervalle de confiance de la SD
 estimée est large (mesuré : pour `s = 0,15`, `IC95 = [0,085 ; 0,559]`). Publier la seule
@@ -427,18 +428,18 @@ def deriver_depuis_rapport(rapport: dict, facteur: float = FACTEUR_DOMINATION,
     unique reposerait sur un agrégat dont on ne saurait rien.
 
     Une dispersion nulle ou un taux saturé n'est PAS masqué : `deriver_n` refuse, et
-    `n_derive` vaut `None` avec son motif écrit (`n_derive_motif`). Publier un `n` de
-    secours serait exactement le chiffre inventé que la tâche interdit.
+    `n_derive_poole` (ainsi que chaque `par_carte[*].n_derive`) vaut `None` avec son motif
+    écrit. Publier un `n` de secours serait exactement le chiffre inventé que la tâche
+    interdit.
 
-    ⚠️ LE `n` PUBLIÉ EST DÉRIVÉ DE LA DISPERSION **DÉ-CONVOLUÉE** σ̂, PAS DE LA DISPERSION
-    OBSERVÉE `s`. Ce n'est PAS changer la règle : la spec §8bis nomme « l'écart-type
-    inter-cerveaux de ce même taux », c'est-à-dire σ, la dispersion RÉELLE entre cerveaux.
-    Or `s` en est un estimateur BIAISÉ vers le haut — `E[s²] = σ² + v`, où `v` est la
-    variance d'échantillonnage du taux de chaque cerveau (voir
-    `variance_echantillonnage`). Dimensionner l'instrument avec `s` reviendrait à lui
-    donner pour cible une partie de son propre bruit. Les DEUX `n` sont publiés :
-    `n_derive` (dérivé de σ̂, celui qui fait foi) et `n_derive_sd_observee` (dérivé de `s`,
-    **borne basse** du premier — c'est le `333` du premier pilote).
+    ⚠️ LE `n` QUI FAIT FOI EST DÉRIVÉ PAR CARTE, JAMAIS POOLÉ. La corrélation inter-cartes
+    est fortement négative (ρ ≈ −0,88) : le taux poolé est presque indépendant du cerveau,
+    donc sa dispersion n'est pas identifiable. Chaque carte porte son propre `n` dérivé de
+    sa dispersion **dé-convoluée** σ̂ (`σ̂² = max(0, s² − v)`), et le gel est
+    `n_final = max(n PAR CARTE)` — la carte qui contraint est celle de plus petit σ̂ (la
+    variance est au dénominateur). Le `n` POOLÉ (`n_derive_poole`, dérivé de σ̂, et
+    `n_derive_poole_sd_observee`, dérivé de `s` — borne basse, c'est le `333` du premier
+    pilote) est publié POUR MÉMOIRE, jamais comme gel.
     """
     cerveaux = rapport.get("cerveaux") or {}
     if len(cerveaux) < 2:
@@ -497,14 +498,38 @@ def deriver_depuis_rapport(rapport: dict, facteur: float = FACTEUR_DOMINATION,
                       if nom in (bloc.get("cartes") or {}))
         n_carte = sum(int(bloc["cartes"][nom]["taux"]["n"]) for bloc in cerveaux.values()
                       if nom in (bloc.get("cartes") or {}))
+        p_carte = (k_carte / n_carte) if n_carte else 0.0
+        sigma_carte = carte_disp.get("sd_inter_deconvoluee")
+        n_carte_derive, motif_carte = None, None
+        if sigma_carte is None:
+            motif_carte = ("dispersion dé-convoluée indisponible sur cette carte "
+                           "(variance d'échantillonnage nulle ou absente)")
+        else:
+            try:
+                n_carte_derive = deriver_n(p_carte, sigma_carte, facteur)
+            except ValueError as erreur:
+                motif_carte = str(erreur)
         par_carte[nom] = {
-            "taux_poolé": (k_carte / n_carte) if n_carte else 0.0,
+            "taux_poolé": p_carte,
             "k": k_carte,
             "n": n_carte,
             **{cle: val for cle, val in carte_disp.items() if cle != "taux_par_cerveau"},
+            "n_derive": n_carte_derive,
+            "n_derive_motif": motif_carte,
+            "ligne_de_calcul": _ligne_de_calcul(p_carte, sigma_carte, facteur,
+                                                n_carte_derive),
         }
 
-    # Le `n` du protocole vient de σ̂ ; celui de `s` est publié comme BORNE BASSE.
+    # `n_final` : le maximum des `n` PAR CARTE — la carte qui contraint est celle de plus
+    # petit σ̂ (la variance est au dénominateur de la règle). C'est CETTE valeur que le
+    # protocole gèle. Le `n` POOLÉ publié plus bas (n_derive_poole) est la grandeur que le
+    # §1 du protocole interdit pour dimensionner (ρ inter-cartes ≈ −0,88).
+    n_par_carte_valides = [c["n_derive"] for c in par_carte.values()
+                           if c.get("n_derive") is not None]
+    n_final = max(n_par_carte_valides) if n_par_carte_valides else None
+
+    # Le `n` POOLÉ vient de σ̂ ; celui de `s` est publié comme BORNE BASSE. ⚠️ AUCUN des
+    # deux n'est le gel : ce sont des grandeurs POOLÉES, interdites pour dimensionner.
     n_derive, motif = None, None
     try:
         n_derive = deriver_n(p_barre, sd_deconvoluee, facteur)
@@ -519,7 +544,7 @@ def deriver_depuis_rapport(rapport: dict, facteur: float = FACTEUR_DOMINATION,
     resultat = {
         "regle": ("plus petit n >= 1 tel que sqrt(p_barre (1 - p_barre) / n) "
                   "<= sigma / facteur, sigma = dispersion inter-cerveaux DECONVOLUEE"),
-        "n_derive_regle": "sd_inter_deconvoluee",
+        "n_derive_poole_regle": "sd_inter_deconvoluee",
         "facteur": float(facteur),
         "episodes_par_carte_budget_pilote": rapport.get("episodes_par_carte"),
         "tolerance_relative_contrainte": TOLERANCE_RELATIVE_CONTRAINTE,
@@ -559,13 +584,18 @@ def deriver_depuis_rapport(rapport: dict, facteur: float = FACTEUR_DOMINATION,
         "seuil_domination": ((sd_deconvoluee / float(facteur))
                              if sd_deconvoluee is not None else None),
         "seuil_domination_sd_observee": sd_inter / float(facteur),
-        "n_derive": n_derive,
-        "n_derive_motif": motif,
-        "n_derive_sd_observee": n_borne_basse,
-        "n_derive_sd_observee_motif": motif_borne_basse,
-        "ligne_de_calcul": _ligne_de_calcul(p_barre, sd_deconvoluee, facteur, n_derive),
-        "ligne_de_calcul_sd_observee": _ligne_de_calcul(p_barre, sd_inter, facteur,
-                                                        n_borne_basse),
+        "n_derive_poole": n_derive,
+        "n_derive_poole_motif": motif,
+        "n_derive_poole_sd_observee": n_borne_basse,
+        "n_derive_poole_sd_observee_motif": motif_borne_basse,
+        "ligne_de_calcul_poole": _ligne_de_calcul(p_barre, sd_deconvoluee, facteur, n_derive),
+        "ligne_de_calcul_poole_sd_observee": _ligne_de_calcul(p_barre, sd_inter, facteur,
+                                                              n_borne_basse),
+        "n_final": n_final,
+        "n_final_regle": ("maximum des n derives PAR CARTE (par_carte[*].n_derive) — la "
+                          "carte qui contraint est celle de plus petit sigma-chapeau ; "
+                          "jamais le n poole"),
+        "protocole_gel": "docs/fonctionnement/PROTOCOLE_BANC_FINAL.md",
         "cerveaux": par_cerveau,
         "par_carte": par_carte,
     }
@@ -709,13 +739,22 @@ def _afficher_derivation(resultat: dict) -> None:
               f"[{ic[0]:.6f} ; {ic[1]:.6f}]{touche})")
     print(f"  seuil de domination (σ̂/{resultat['facteur']:.4g}) : "
           f"{resultat['seuil_domination']}")
-    print(f"  {resultat['ligne_de_calcul']}")
-    if resultat.get("n_derive_sd_observee") is not None:
-        print(f"  ⚠️ borne basse, dérivée de la SD OBSERVÉE (gonflée) : "
-              f"n = {resultat['n_derive_sd_observee']}")
-    if resultat["n_derive"] is None:
-        print(f"\n⛔ AUCUN `n` DÉRIVÉ — {resultat['n_derive_motif']}\n"
-              f"   (le pilote publie la mesure ; il n'invente pas de `n` de secours)")
+    print(f"  ⚠️ n POOLÉ (jamais gelé)     : {resultat['ligne_de_calcul_poole']}")
+    if resultat.get("n_derive_poole_sd_observee") is not None:
+        print(f"  ⚠️ borne basse POOLÉE (SD OBSERVÉE, gonflée) : "
+              f"n = {resultat['n_derive_poole_sd_observee']}")
+    if resultat["n_derive_poole"] is None:
+        print(f"\n⛔ AUCUN `n` POOLÉ — {resultat['n_derive_poole_motif']}")
+
+    print("\n=== n_final = max(n PAR CARTE) — c'est CE QUI EST GELÉ ===")
+    for nom, carte in resultat.get("par_carte", {}).items():
+        sigma = carte.get("sd_inter_deconvoluee")
+        sigma_txt = f"{sigma:.6f}" if sigma is not None else "indisponible"
+        print(f"  {nom:32s} σ̂ = {sigma_txt:12s} {carte.get('ligne_de_calcul', '')}")
+    print(f"  n_final = {resultat['n_final']}   ({resultat['n_final_regle']})")
+    if resultat["n_final"] is None:
+        print(f"\n⛔ AUCUN `n_final` DÉRIVÉ — aucune carte n'a de dispersion identifiable "
+              f"(le pilote publie la mesure ; il n'invente pas de `n` de secours)")
 
 
 # --- 4. POINT D'ENTRÉE ------------------------------------------------------------
@@ -768,7 +807,7 @@ def main(argv: Sequence[str] | None = None) -> int:
               f"relancée).")
         _afficher_derivation(resultat)
         print(f"\n💾 {chemin} écrit.")
-        return 0 if resultat["n_derive"] is not None else 1
+        return 0 if resultat["n_final"] is not None else 1
 
     if not args.cohorte or not args.bras or not args.graines_pilote:
         parser.error("--cohorte, --bras et --graines-pilote sont requis (ou utilise "
@@ -779,7 +818,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         graine_eval_base=args.graine_eval_base, dossier_sortie=args.dossier_sortie,
         cohorte_explicite=args.cohorte_explicite, max_ticks=args.max_ticks,
         facteur=args.facteur)
-    return 0 if resultat["n_derive"] is not None else 1
+    return 0 if resultat["n_final"] is not None else 1
 
 
 if __name__ == "__main__":
