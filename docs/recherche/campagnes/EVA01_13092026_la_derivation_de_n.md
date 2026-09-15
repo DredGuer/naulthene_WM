@@ -153,6 +153,14 @@ et non une nécessité. Aucun chiffre de ce carnet n'en dépend.
 |---|---|
 | **A/A** — protocole rejoué à l'identique (2ᵉ run, 81 s) | **160/160 épisodes identiques** (`gagne`, `ticks`, `retour`, `trajectoire`, `monde`) ; seuls les `duree_s` (temps mural) diffèrent. `p̄`, `sd_inter`, `ic_sd`, `n` : **identiques**. δ_A/A = **0** |
 | **Dérivation rejouable** — `--depuis-rapport banc_final_*.json` | `p̄`, `sd_inter`, `ic_sd`, `n_derive`, `ligne_de_calcul`, `cerveaux`, `par_carte` : **8/8 champs identiques** |
+
+> ⚠️ **Nomenclature révisée le 15/09/2026 (tâche 8, tour de correction 1, commit `1c3ca60`)** — la
+> mesure ci-dessus est datée et **n'est pas réécrite**, mais la clé qu'elle nomme a changé de nom : la
+> clé racine `n_derive` **n'existe plus**. Ce qu'elle contenait (le `n` dérivé de la dispersion
+> **poolée**) s'appelle désormais `n_derive_poole`, et le `n` **gelé** publié à la racine est
+> `n_final` (le **maximum des `n` par carte**, sous `par_carte[*].n_derive`). Un lecteur qui
+> `grep n_derive` sur `pilote.json` trouverait donc la grandeur **interdite pour dimensionner** :
+> lire `n_final`.
 | **« Plus petit » `n`** | `sqrt(p̄(1−p̄)/333) = 0,023922 <= 0,023936` ✅ · `n = 332` → 0,023958 > 0,023936 ❌ |
 | **Lecture seule** | taille **et** mtime des 4 `.brain` identiques avant/après (`empreintes_avant.txt` / `empreintes_apres.txt`) ; aucun `.brain` dans `git status` |
 | **Saturation** | `p̄ = 0,256` : ni 0 ni 1, **aucune cellule saturée** ; les 4 cerveaux ont un taux poolé non nul (0,175 à 0,350) |

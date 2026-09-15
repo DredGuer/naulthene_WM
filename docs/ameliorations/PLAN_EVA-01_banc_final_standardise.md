@@ -2168,7 +2168,8 @@ puis en **dériver** `n`. C'est l'étape qui remplace la constante posée `n=100
 **Dépendances et interfaces :**
 - Consomme : tâches 4 et 5.
 - Produit : `deriver_n(p_barre, sd_inter, facteur=3.0) -> int` et `pilote.json` contenant
-  `p_barre`, `sd_inter`, `ic_sd`, `n_derive`.
+  `p_barre`, `sd_inter`, `ic_sd`, `n_final` (le `n` **par carte** est sous `par_carte[*].n_derive`,
+  la grandeur **poolée** est isolée en `n_derive_poole` — tour de correction 1, commit `1c3ca60`).
 
 **Critères de succès :**
 - `pilote.json` existe et contient les quatre grandeurs.
@@ -2232,7 +2233,8 @@ NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m naulthene.instruments.ban
   --cohorte-explicite brains/EVA01_pilote_<JJMMAAAA>/cohorte_explicite.json \
   --graine-eval-base 10000 --dossier-sortie brains/EVA01_pilote_<JJMMAAAA>
 ```
-Attendu : un JSON contenant les taux par cerveau, puis `pilote.json` avec `n_derive`.
+Attendu : un JSON contenant les taux par cerveau, puis `pilote.json` avec `n_final` (gel) et
+`par_carte[*].n_derive` (le `n` par carte, avec sa `ligne_de_calcul`).
 
 - [ ] **Étape 5 : commit ciblé avec `bash`**
 
@@ -2275,6 +2277,22 @@ git add docs/fonctionnement/PROTOCOLE_BANC_FINAL.md docs/INDEX.md && \
 git commit -m "docs(EVA-01): protocole du banc final gele v1 — n derive au pilote, cartes et pool d'eval figes"
 ```
 
+**Livré (tâche 8 close)** — commits `b1a6cf4` (mesure) + `1c3ca60` (tour de correction 1), revue
+indépendante **ALL_ADDRESSED**. Valeurs gelées, relisibles dans
+`docs/fonctionnement/PROTOCOLE_BANC_FINAL.md` **et** dans
+`brains/EVA01_pilote_n1145_15092026/pilote.json` :
+
+| Carte | `env_id` | `p̄` | `σ̂` | IC95 de `σ̂` | `n` par carte |
+|---|---|---|---|---|---|
+| 3 (affichée 4/15) | `MiniGrid-SimpleCrossingS9N1-v0` | 0,4237991 | 0,034302676 | [0,0152570574 ; 0,1382382293] | **1 868** |
+| 4 (affichée 5/15) | `MiniGrid-LavaGapS5-v0` | 0,1425764 | 0,077476696 | [0,0430558318 ; 0,2912500366] | 184 |
+
+**`n_final = max(1868, 184) = 1 868`** — la règle divise par `σ̂²`, donc la carte qui gèle est celle
+dont `σ̂` est le **plus petit** (carte 3), pas le plus grand. `ρ = −0,8958` inter-cartes ⇒ **cartes
+publiées séparément, jamais poolées**. Clés machine : `n_final` (le gel) ·
+`par_carte[*].n_derive` + `par_carte[*].ligne_de_calcul` · `n_derive_poole` (grandeur **poolée**,
+interdite pour dimensionner).
+
 ---
 
 ### Tâche 9 — Test d'acceptation D3
@@ -2297,18 +2315,24 @@ le banc reproduit l'**ordre** connu : `K8_NU` devant `K16_NU`. **L'ordre, jamais
 - Si l'ordre n'est pas reproduit : **le banc est refusé**, l'écart est enquêté, et **aucune
   supériorité n'est revendiquée**.
 
-- [ ] **Étape 1 :** créer le dossier de campagne et son `LISEZ_MOI.md` **avant** le run.
+- [ ] **Étape 1 :** créer le dossier de campagne et son `LISEZ_MOI.md` **avant** le run, et ouvrir
+      l'entrée `JOURNAL_DES_RUNS.md` **au lancement** (date de début réelle, fin estimée, statut 🟡).
 - [ ] **Étape 2 :** écrire `cohorte_explicite.json` énumérant les 40 cerveaux **canoniques**
       (`K8_NU_g<g>.brain` et `K16_NU_g<g>.brain` pour les 20 graines du manifeste), en **nommant**
-      les surnuméraires écartés — puis lancer avec le `n` du protocole :
+      les surnuméraires écartés — puis lancer avec le `n` **gelé** (`n_final = 1 868`, cf. tâche 8) :
 
 ```bash
 NAULTHENE_DEVICE=cpu PYTHONPATH=src venv/bin/python -m naulthene.instruments.banc_final \
   --cohorte brains/08092026_sci01_balayage_K --bras K8_NU K16_NU --cartes 3 4 \
-  --episodes <n_du_protocole> --graine-eval-base 10000 \
+  --episodes 1868 --graine-eval-base 10000 \
   --cohorte-explicite brains/EVA01_acceptation_<JJMMAAAA>/cohorte_explicite.json \
   --dossier-sortie brains/EVA01_acceptation_<JJMMAAAA>
 ```
+
+⚠️ **`--episodes 1868` est le `n_final` du protocole**, jamais `n_derive_poole` (3 732, la grandeur
+poolée interdite pour dimensionner — elle doublerait le coût). Coût attendu : **149 440 épisodes
+≈ 20,8 h**. À lancer en **tâche de fond suivie** : le run dépasse toute session, le journal des runs
+(et l'agrégat régénéré après chaque point) est la mémoire du run, pas la conversation.
 - [ ] **Étape 3 :** lancer deux fois le même cerveau pour mesurer δ_A/A ; le publier.
 - [ ] **Étape 4 :** écrire le carnet (question, protocole, chiffres bruts, vérifications, limites,
       ce que ça ferme et laisse ouvert).
