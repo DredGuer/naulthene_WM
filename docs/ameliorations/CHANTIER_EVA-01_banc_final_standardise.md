@@ -302,9 +302,11 @@ PYTHONPATH=src venv/bin/python3 -m naulthene.instruments.banc_final \
   (`etat.env.close()` puis `etat.env = creer_env(PROGRAMME[index][0], DIM_VISUELLE)`) — il remplace
   l'environnement **sans** toucher `etat.niveau_actuel`. C'est exactement ce qu'exige le point 5 du
   registre : le niveau reste une **mesure de développement**.
-- `--graine-eval-base` **refuse** toute valeur `< 1000` (§3.2). Le pool `10000…10099` est une
+- `--graine-eval-base` **refuse** toute valeur `< 1000` (§3.2). La **base** `10000` est une
   constante d'**isolation** d'ingénierie (arbitrage de l'auteur, 12/09/2026) : elle sépare
-  hermétiquement l'évaluation du vécu d'entraînement et n'a pas à être dérivée.
+  hermétiquement l'évaluation du vécu d'entraînement. L'**étendue** du pool, elle, est
+  dérivée du `n` (`10000 … 10000 + n` — le code la dérive déjà, `banc_final.py:758`), pas
+  figée à 100.
 - `--episodes` **exige** la valeur dérivée au pilote (§8bis) : aucun `n` de confort ne doit pouvoir
   s'introduire par une valeur par défaut.
 
@@ -423,7 +425,7 @@ ponctuelle.
 |---|---|---|
 | Carte du blocage | index **3** = `MiniGrid-SimpleCrossingS9N1-v0` | Le mur réel du cursus au 12/09/2026. |
 | Palier suivant | index **4** = `MiniGrid-LavaGapS5-v0` | Exigé par le point 3 du registre. |
-| Pool de graines d'éval | **10000…10099** | Disjoint du pool d'entraînement (5…199). |
+| Pool de graines d'éval | **`10000 … 10000 + n`** (étendue dérivée) | Base 10000 = isolation (disjoint du pool d'entraînement 5…199) ; étendue = le `n` dérivé — le code la dérive déjà (`banc_final.py:758`). |
 | Épisodes par carte | **dérivé au pilote** — jamais posé | Règle de domination du bruit, §8bis. |
 | `max_ticks` | **budget natif du monde** (`max_steps`) | Jamais un plafond posé à la main. |
 | Famille de métriques | **3** (1 primaire + 2 secondaires) | Convention MES-04. |

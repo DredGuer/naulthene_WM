@@ -1,0 +1,151 @@
+{
+  "regle": "plus petit n >= 1 tel que sqrt(p_barre (1 - p_barre) / n) <= sigma / facteur, sigma = dispersion inter-cerveaux DECONVOLUEE",
+  "n_derive_regle": "sd_inter_deconvoluee",
+  "facteur": 3.0,
+  "episodes_par_carte_budget_pilote": 1145,
+  "tolerance_relative_contrainte": 1e-12,
+  "cartes": [
+    3,
+    4
+  ],
+  "graine_eval_base": 10000,
+  "graines_entrainement": [
+    11,
+    22,
+    33,
+    44
+  ],
+  "bras": [
+    "K8_NU"
+  ],
+  "campagne": "08092026_sci01_balayage_K",
+  "p_barre": 0.2831877729257642,
+  "p_barre_definition": "taux poolé : somme des gagnés / somme des épisodes, sur tous les cerveaux et toutes les cartes",
+  "k_total": 2594,
+  "episodes_total": 9160,
+  "n_cerveaux": 4,
+  "taux_moyen_cerveaux": 0.2831877729257642,
+  "taux_moyen_cerveaux_definition": "moyenne NON pondérée des taux par cerveau (égale au poolé si les effectifs sont égaux)",
+  "sd_inter": 0.02386613698155406,
+  "sd_inter_definition": "écart-type inter-cerveaux des taux par cerveau, OBSERVÉ (contient la variance d'échantillonnage du pilote)",
+  "sd_inter_ddof": 1,
+  "ic_sd": [
+    0.013519917117827662,
+    0.08898602002710518
+  ],
+  "ic_sd_alpha": 0.05,
+  "ic_sd_methode": "loi du chi-deux sur la variance, df = n_cerveaux - 1 : IC(sigma) = sqrt(df * s^2 / chi2)",
+  "variance_echantillonnage_par_cerveau": 8.000912899495536e-05,
+  "variance_echantillonnage_formule": "v = somme_cartes(n_c * p_c * (1 - p_c)) / N^2, N = nombre total d'episodes par cerveau",
+  "part_variance_echantillonnage": 0.14046731615749783,
+  "sd_inter_deconvoluee": 0.022126530804157867,
+  "sd_inter_deconvoluee_definition": "estimateur non biaise de la dispersion REELLE entre cerveaux : sigma^2 = s^2 - v",
+  "variance_deconvoluee": 0.0004895833654273469,
+  "ic_sd_deconvoluee": [
+    0.01013799930351024,
+    0.08853531855293349
+  ],
+  "ic_sd_deconvoluee_touche_zero": false,
+  "formule_deconvolution": "sigma^2 = max(0, s^2 - v) ; IC(sigma) = sqrt(max(0, IC(tau^2) - v)), tau^2 = sigma^2 + v",
+  "seuil_domination": 0.007375510268052623,
+  "seuil_domination_sd_observee": 0.007955378993851353,
+  "n_derive": 3732,
+  "n_derive_motif": null,
+  "n_derive_sd_observee": 3208,
+  "n_derive_sd_observee_motif": null,
+  "ligne_de_calcul": "n = plus petit entier >= 3731.605795 tel que sqrt(0.283188 × (1 − 0.283188) / n) <= 0.022127 / 3.0 = 0.007376  ⇒  n = 3732",
+  "ligne_de_calcul_sd_observee": "n = plus petit entier >= 3207.437144 tel que sqrt(0.283188 × (1 − 0.283188) / n) <= 0.023866 / 3.0 = 0.007955  ⇒  n = 3208",
+  "cerveaux": {
+    "K8_NU_g11": {
+      "k": 607,
+      "n": 2290,
+      "taux": 0.26506550218340613,
+      "taux_par_carte": {
+        "Primaire 1 (Contourner)": 0.47685589519650656,
+        "Primaire 2 (Éviter le danger)": 0.05327510917030567
+      }
+    },
+    "K8_NU_g22": {
+      "k": 644,
+      "n": 2290,
+      "taux": 0.2812227074235808,
+      "taux_par_carte": {
+        "Primaire 1 (Contourner)": 0.4200873362445415,
+        "Primaire 2 (Éviter le danger)": 0.1423580786026201
+      }
+    },
+    "K8_NU_g33": {
+      "k": 616,
+      "n": 2290,
+      "taux": 0.2689956331877729,
+      "taux_par_carte": {
+        "Primaire 1 (Contourner)": 0.4069868995633188,
+        "Primaire 2 (Éviter le danger)": 0.13100436681222707
+      }
+    },
+    "K8_NU_g44": {
+      "k": 727,
+      "n": 2290,
+      "taux": 0.3174672489082969,
+      "taux_par_carte": {
+        "Primaire 1 (Contourner)": 0.39126637554585153,
+        "Primaire 2 (Éviter le danger)": 0.24366812227074236
+      }
+    }
+  },
+  "par_carte": {
+    "Primaire 1 (Contourner)": {
+      "taux_poolé": 0.4237991266375546,
+      "k": 1941,
+      "n": 4580,
+      "n_cerveaux": 4,
+      "taux_moyen_cerveaux": 0.4237991266375546,
+      "sd_inter": 0.037281939106535364,
+      "sd_inter_ddof": 1,
+      "ic_sd": [
+        0.021119828780913775,
+        0.1390074724932483
+      ],
+      "ic_sd_alpha": 0.05,
+      "variance_echantillonnage_par_cerveau": 0.00021326936847056814,
+      "variance_observee": 0.001389942983543411,
+      "part_variance_echantillonnage": 0.1534374941962555,
+      "sd_inter_deconvoluee": 0.03430267650013396,
+      "variance_deconvoluee": 0.0011766736150728427,
+      "ic_sd_deconvoluee": [
+        0.015257057359286084,
+        0.13823822930177676
+      ],
+      "ic_sd_deconvoluee_touche_zero": false,
+      "formule_deconvolution": "sigma^2 = max(0, s^2 - v) ; IC(sigma) = sqrt(max(0, IC(tau^2) - v)), tau^2 = sigma^2 + v"
+    },
+    "Primaire 2 (Éviter le danger)": {
+      "taux_poolé": 0.1425764192139738,
+      "k": 653,
+      "n": 4580,
+      "n_cerveaux": 4,
+      "taux_moyen_cerveaux": 0.1425764192139738,
+      "sd_inter": 0.07816268605040931,
+      "sd_inter_ddof": 1,
+      "ic_sd": [
+        0.044278344581910094,
+        0.2914332701446329
+      ],
+      "ic_sd_alpha": 0.05,
+      "variance_echantillonnage_par_cerveau": 0.00010676714750925327,
+      "variance_observee": 0.00610940549061485,
+      "part_variance_echantillonnage": 0.01747586531508948,
+      "sd_inter_deconvoluee": 0.07747669548390404,
+      "variance_deconvoluee": 0.006002638343105597,
+      "ic_sd_deconvoluee": [
+        0.04305583179320908,
+        0.2912500365659811
+      ],
+      "ic_sd_deconvoluee_touche_zero": false,
+      "formule_deconvolution": "sigma^2 = max(0, s^2 - v) ; IC(sigma) = sqrt(max(0, IC(tau^2) - v)), tau^2 = sigma^2 + v"
+    }
+  },
+  "date_mesure": "2026-09-15T09:04:51.588905+00:00",
+  "protocole": "PILOTE_EVA-01 v1",
+  "rapport_banc": "brains/EVA01_pilote_n1145_15092026/banc_final_20260915_110341.json"
+}
